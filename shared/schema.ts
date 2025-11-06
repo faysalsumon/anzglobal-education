@@ -126,6 +126,36 @@ export const adminTeamMembers = pgTable("admin_team_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Documents table for student-university document exchange
+export const documents = pgTable("documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull(), // 'transcript', 'ielts', 'pte', 'offer_letter', 'coe', 'visa_document', 'other'
+  title: text("title").notNull(),
+  description: text("description"),
+  filePath: text("file_path").notNull(), // Object storage path
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"), // in bytes
+  mimeType: varchar("mime_type", { length: 100 }),
+  
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Who uploaded the document
+  senderType: varchar("sender_type", { length: 20 }).notNull(), // 'student' or 'university'
+  
+  recipientId: varchar("recipient_id").references(() => users.id, { onDelete: "cascade" }), // Who receives the document (can be null for general submissions)
+  recipientType: varchar("recipient_type", { length: 20 }), // 'student', 'university', or null
+  
+  applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }), // Optional link to application
+  universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }), // Optional link to university
+  
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewed', 'approved', 'rejected'
+  reviewNotes: text("review_notes"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   university: one(universities, {
@@ -196,6 +226,29 @@ export const adminTeamMembersRelations = relations(adminTeamMembers, ({ one }) =
   }),
 }));
 
+export const documentsRelations = relations(documents, ({ one }) => ({
+  sender: one(users, {
+    fields: [documents.senderId],
+    references: [users.id],
+  }),
+  recipient: one(users, {
+    fields: [documents.recipientId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [documents.reviewedBy],
+    references: [users.id],
+  }),
+  application: one(applications, {
+    fields: [documents.applicationId],
+    references: [applications.id],
+  }),
+  university: one(universities, {
+    fields: [documents.universityId],
+    references: [universities.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -239,6 +292,12 @@ export const insertAdminTeamMemberSchema = createInsertSchema(adminTeamMembers).
   updatedAt: true,
 });
 
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -266,3 +325,6 @@ export type InsertUniversityTeamMember = z.infer<typeof insertUniversityTeamMemb
 
 export type AdminTeamMember = typeof adminTeamMembers.$inferSelect;
 export type InsertAdminTeamMember = z.infer<typeof insertAdminTeamMemberSchema>;
+
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
