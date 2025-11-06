@@ -10,10 +10,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages } from "lucide-react";
-import { insertStudentProfileSchema, type StudentProfile } from "@shared/schema";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2 } from "lucide-react";
+import { insertStudentProfileSchema, insertStudentEducationSchema, type StudentProfile, type StudentEducation } from "@shared/schema";
 import { z } from "zod";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
@@ -39,6 +41,16 @@ const bioSchema = z.object({
   educationLevel: z.string().optional(),
   fieldOfStudy: z.string().optional(),
   previousEducation: z.string().optional(),
+});
+
+const educationFormSchema = z.object({
+  level: z.string().min(1, "Education level is required"),
+  institution: z.string().min(1, "Institution is required"),
+  fieldOfStudy: z.string().min(1, "Field of study is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().optional(),
+  gpa: z.string().optional(),
+  documentsUrl: z.string().optional(),
 });
 
 interface ProfileCompletionResult {
