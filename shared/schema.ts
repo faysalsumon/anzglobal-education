@@ -10,6 +10,7 @@ import {
   boolean,
   integer,
   decimal,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -81,6 +82,14 @@ export const courses = pgTable("courses", {
 export const studentProfiles = pgTable("student_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  phone: varchar("phone", { length: 20 }),
+  dateOfBirth: date("date_of_birth"),
+  nationality: text("nationality"),
+  profileImageUrl: text("profile_image_url"),
+  
   bio: text("bio"),
   educationLevel: text("education_level"),
   fieldOfStudy: text("field_of_study"),
@@ -99,6 +108,41 @@ export const applications = pgTable("applications", {
   status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewing', 'accepted', 'rejected'
   personalStatement: text("personal_statement"),
   additionalInfo: text("additional_info"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Student Education History table
+export const studentEducations = pgTable("student_educations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  level: varchar("level", { length: 50 }).notNull(), // 'high_school', 'bachelor', 'master', 'phd', 'diploma', 'certificate'
+  institution: text("institution").notNull(),
+  country: text("country"),
+  fieldOfStudy: text("field_of_study"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isCurrentlyStudying: boolean("is_currently_studying").default(false),
+  gpa: decimal("gpa", { precision: 5, scale: 2 }),
+  gradeScale: varchar("grade_scale", { length: 20 }), // e.g., '4.0', '5.0', '100'
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Student Language Test Scores table
+export const studentLanguageScores = pgTable("student_language_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  testType: varchar("test_type", { length: 20 }).notNull(), // 'ielts', 'toefl', 'pte', 'duolingo'
+  overallScore: decimal("overall_score", { precision: 4, scale: 1 }).notNull(),
+  listeningScore: decimal("listening_score", { precision: 4, scale: 1 }),
+  readingScore: decimal("reading_score", { precision: 4, scale: 1 }),
+  writingScore: decimal("writing_score", { precision: 4, scale: 1 }),
+  speakingScore: decimal("speaking_score", { precision: 4, scale: 1 }),
+  testDate: date("test_date"),
+  expiryDate: date("expiry_date"),
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -195,6 +239,30 @@ export const studentProfilesRelations = relations(studentProfiles, ({ one, many 
     references: [users.id],
   }),
   applications: many(applications),
+  educations: many(studentEducations),
+  languageScores: many(studentLanguageScores),
+}));
+
+export const studentEducationsRelations = relations(studentEducations, ({ one }) => ({
+  studentProfile: one(studentProfiles, {
+    fields: [studentEducations.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+  document: one(documents, {
+    fields: [studentEducations.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const studentLanguageScoresRelations = relations(studentLanguageScores, ({ one }) => ({
+  studentProfile: one(studentProfiles, {
+    fields: [studentLanguageScores.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+  document: one(documents, {
+    fields: [studentLanguageScores.documentId],
+    references: [documents.id],
+  }),
 }));
 
 export const applicationsRelations = relations(applications, ({ one }) => ({
@@ -280,6 +348,18 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   updatedAt: true,
 });
 
+export const insertStudentEducationSchema = createInsertSchema(studentEducations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStudentLanguageScoreSchema = createInsertSchema(studentLanguageScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUniversityTeamMemberSchema = createInsertSchema(universityTeamMembers).omit({
   id: true,
   createdAt: true,
@@ -319,6 +399,12 @@ export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;
 
 export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
+
+export type StudentEducation = typeof studentEducations.$inferSelect;
+export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema>;
+
+export type StudentLanguageScore = typeof studentLanguageScores.$inferSelect;
+export type InsertStudentLanguageScore = z.infer<typeof insertStudentLanguageScoreSchema>;
 
 export type UniversityTeamMember = typeof universityTeamMembers.$inferSelect;
 export type InsertUniversityTeamMember = z.infer<typeof insertUniversityTeamMemberSchema>;
