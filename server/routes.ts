@@ -677,6 +677,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Please create student profile first" });
       }
 
+      // Check profile completion before allowing application
+      const educations = await storage.getEducationsByStudentProfileId(profile.id);
+      const languageScores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+      const completionResult = calculateProfileCompletion(profile, educations, languageScores);
+
+      if (!completionResult.isComplete) {
+        return res.status(403).json({
+          message: "Please complete your profile 100% before applying to courses",
+          completion: completionResult,
+        });
+      }
+
       const data = insertApplicationSchema.parse({
         ...req.body,
         studentId: profile.id,
