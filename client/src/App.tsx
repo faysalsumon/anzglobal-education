@@ -15,17 +15,21 @@ import CourseForm from "@/pages/course-form";
 import UniversityApplications from "@/pages/university-applications";
 import UniversityAIAssistant from "@/pages/university-ai-assistant";
 import StudentCourses from "@/pages/student-courses";
+import CourseDetail from "@/pages/course-detail";
 import StudentProfilePage from "@/pages/student-profile";
 import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
+import UserTypeSelection from "@/pages/user-type-selection";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
+      ) : !user?.userType ? (
+        <Route path="/" component={UserTypeSelection} />
       ) : (
         <>
           <Route path="/" component={Home} />
@@ -36,6 +40,7 @@ function Router() {
           <Route path="/university/applications" component={UniversityApplications} />
           <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
           <Route path="/student/courses" component={StudentCourses} />
+          <Route path="/student/courses/:id" component={CourseDetail} />
           <Route path="/student/profile" component={StudentProfilePage} />
           <Route path="/student/applications" component={StudentApplications} />
           <Route path="/student/ai-assistant" component={StudentAIAssistant} />
@@ -47,14 +52,14 @@ function Router() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated || !user?.userType) {
     return <Router />;
   }
 

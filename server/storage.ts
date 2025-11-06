@@ -24,6 +24,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
 
   // University operations
+  getUniversityById(id: string): Promise<University | undefined>;
   getUniversityByUserId(userId: string): Promise<University | undefined>;
   createUniversity(university: InsertUniversity): Promise<University>;
   updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University>;
@@ -71,6 +72,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // University operations
+  async getUniversityById(id: string): Promise<University | undefined> {
+    const [university] = await db
+      .select()
+      .from(universities)
+      .where(eq(universities.id, id));
+    return university;
+  }
+
   async getUniversityByUserId(userId: string): Promise<University | undefined> {
     const [university] = await db
       .select()

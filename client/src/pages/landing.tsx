@@ -34,19 +34,22 @@ export default function Landing() {
               Empowering universities to showcase their programs and students to achieve their dreams.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <Button size="lg" asChild className="gap-2" data-testid="button-get-started">
-                <a href="/api/login">
+              <Button size="lg" asChild className="gap-2" data-testid="button-student-login">
+                <a href="/api/login?type=student">
                   <GraduationCap className="h-5 w-5" />
-                  Get Started
+                  I'm a Student
                 </a>
               </Button>
-              <Button size="lg" variant="outline" asChild data-testid="button-browse-courses">
-                <a href="#courses">
-                  <Search className="h-5 w-5 mr-2" />
-                  Browse Courses
+              <Button size="lg" variant="outline" asChild data-testid="button-university-login">
+                <a href="/api/login?type=university">
+                  <Building2 className="h-5 w-5 mr-2" />
+                  I'm a University
                 </a>
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Create account or login to get started
+            </p>
           </div>
         </div>
       </section>
@@ -202,12 +205,20 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">Ready to Get Started?</h2>
           <p className="mb-8 text-lg text-white/90">Join thousands of universities and students connecting worldwide</p>
-          <Button size="lg" variant="secondary" asChild data-testid="button-join-now">
-            <a href="/api/login" className="gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Join Now
-            </a>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Button size="lg" variant="secondary" asChild data-testid="button-join-student">
+              <a href="/api/login?type=student" className="gap-2">
+                <GraduationCap className="h-5 w-5" />
+                I'm a Student
+              </a>
+            </Button>
+            <Button size="lg" variant="outline" asChild data-testid="button-join-university" className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+              <a href="/api/login?type=university" className="gap-2">
+                <Building2 className="h-5 w-5" />
+                I'm a University
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
 

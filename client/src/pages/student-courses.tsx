@@ -66,12 +66,12 @@ export default function StudentCourses() {
             />
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Select value={subject} onValueChange={setSubject}>
+            <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
               <SelectTrigger data-testid="select-subject">
                 <SelectValue placeholder="All Subjects" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Subjects</SelectItem>
+                <SelectItem value="all">All Subjects</SelectItem>
                 <SelectItem value="Computer Science">Computer Science</SelectItem>
                 <SelectItem value="Business">Business</SelectItem>
                 <SelectItem value="Engineering">Engineering</SelectItem>
@@ -80,12 +80,12 @@ export default function StudentCourses() {
               </SelectContent>
             </Select>
 
-            <Select value={level} onValueChange={setLevel}>
+            <Select value={level || "all"} onValueChange={(val) => setLevel(val === "all" ? "" : val)}>
               <SelectTrigger data-testid="select-level">
                 <SelectValue placeholder="All Levels" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Levels</SelectItem>
+                <SelectItem value="all">All Levels</SelectItem>
                 <SelectItem value="undergraduate">Undergraduate</SelectItem>
                 <SelectItem value="postgraduate">Postgraduate</SelectItem>
                 <SelectItem value="certificate">Certificate</SelectItem>
@@ -93,12 +93,12 @@ export default function StudentCourses() {
               </SelectContent>
             </Select>
 
-            <Select value={country} onValueChange={setCountry}>
+            <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
               <SelectTrigger data-testid="select-country">
                 <SelectValue placeholder="All Countries" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Countries</SelectItem>
+                <SelectItem value="all">All Countries</SelectItem>
                 <SelectItem value="Australia">Australia</SelectItem>
                 <SelectItem value="United Kingdom">United Kingdom</SelectItem>
                 <SelectItem value="United States">United States</SelectItem>

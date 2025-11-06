@@ -31,6 +31,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/set-user-type", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { userType } = req.body;
+
+      if (!["university", "student"].includes(userType)) {
+        return res.status(400).json({ message: "Invalid user type" });
+      }
+
+      const user = await storage.upsertUser({
+        id: userId,
+        userType,
+      });
+
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error setting user type:", error);
+      res.status(500).json({ message: "Failed to set user type" });
+    }
+  });
+
   // University routes
   app.get("/api/university/profile", isAuthenticated, async (req: any, res) => {
     try {
@@ -86,7 +107,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      res.json(course);
+
+      // Fetch the associated university
+      const university = await storage.getUniversityById(course.universityId);
+      
+      res.json({
+        ...course,
+        university,
+      });
     } catch (error) {
       console.error("Error fetching course:", error);
       res.status(500).json({ message: "Failed to fetch course" });
