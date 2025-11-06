@@ -6,6 +6,8 @@ import {
   applications,
   universityTeamMembers,
   adminTeamMembers,
+  studentEducations,
+  studentLanguageScores,
   type User,
   type UpsertUser,
   type University,
@@ -20,6 +22,10 @@ import {
   type InsertUniversityTeamMember,
   type AdminTeamMember,
   type InsertAdminTeamMember,
+  type StudentEducation,
+  type InsertStudentEducation,
+  type StudentLanguageScore,
+  type InsertStudentLanguageScore,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or } from "drizzle-orm";
@@ -69,6 +75,20 @@ export interface IStorage {
   createAdminTeamMember(teamMember: InsertAdminTeamMember): Promise<AdminTeamMember>;
   updateAdminTeamMemberRole(id: string, role: string): Promise<AdminTeamMember>;
   deleteAdminTeamMember(id: string): Promise<void>;
+  
+  // Student education operations
+  getEducationsByStudentProfileId(studentProfileId: string): Promise<StudentEducation[]>;
+  getEducationById(id: string): Promise<StudentEducation | undefined>;
+  createEducation(education: InsertStudentEducation): Promise<StudentEducation>;
+  updateEducation(id: string, data: Partial<InsertStudentEducation>): Promise<StudentEducation>;
+  deleteEducation(id: string): Promise<void>;
+  
+  // Student language score operations
+  getLanguageScoresByStudentProfileId(studentProfileId: string): Promise<StudentLanguageScore[]>;
+  getLanguageScoreById(id: string): Promise<StudentLanguageScore | undefined>;
+  createLanguageScore(score: InsertStudentLanguageScore): Promise<StudentLanguageScore>;
+  updateLanguageScore(id: string, data: Partial<InsertStudentLanguageScore>): Promise<StudentLanguageScore>;
+  deleteLanguageScore(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -326,6 +346,80 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAdminTeamMember(id: string): Promise<void> {
     await db.delete(adminTeamMembers).where(eq(adminTeamMembers.id, id));
+  }
+  
+  // Student education operations
+  async getEducationsByStudentProfileId(studentProfileId: string): Promise<StudentEducation[]> {
+    return await db
+      .select()
+      .from(studentEducations)
+      .where(eq(studentEducations.studentProfileId, studentProfileId));
+  }
+
+  async getEducationById(id: string): Promise<StudentEducation | undefined> {
+    const [education] = await db
+      .select()
+      .from(studentEducations)
+      .where(eq(studentEducations.id, id));
+    return education;
+  }
+
+  async createEducation(educationData: InsertStudentEducation): Promise<StudentEducation> {
+    const [education] = await db
+      .insert(studentEducations)
+      .values(educationData)
+      .returning();
+    return education;
+  }
+
+  async updateEducation(id: string, data: Partial<InsertStudentEducation>): Promise<StudentEducation> {
+    const [education] = await db
+      .update(studentEducations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(studentEducations.id, id))
+      .returning();
+    return education;
+  }
+
+  async deleteEducation(id: string): Promise<void> {
+    await db.delete(studentEducations).where(eq(studentEducations.id, id));
+  }
+  
+  // Student language score operations
+  async getLanguageScoresByStudentProfileId(studentProfileId: string): Promise<StudentLanguageScore[]> {
+    return await db
+      .select()
+      .from(studentLanguageScores)
+      .where(eq(studentLanguageScores.studentProfileId, studentProfileId));
+  }
+
+  async getLanguageScoreById(id: string): Promise<StudentLanguageScore | undefined> {
+    const [score] = await db
+      .select()
+      .from(studentLanguageScores)
+      .where(eq(studentLanguageScores.id, id));
+    return score;
+  }
+
+  async createLanguageScore(scoreData: InsertStudentLanguageScore): Promise<StudentLanguageScore> {
+    const [score] = await db
+      .insert(studentLanguageScores)
+      .values(scoreData)
+      .returning();
+    return score;
+  }
+
+  async updateLanguageScore(id: string, data: Partial<InsertStudentLanguageScore>): Promise<StudentLanguageScore> {
+    const [score] = await db
+      .update(studentLanguageScores)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(studentLanguageScores.id, id))
+      .returning();
+    return score;
+  }
+
+  async deleteLanguageScore(id: string): Promise<void> {
+    await db.delete(studentLanguageScores).where(eq(studentLanguageScores.id, id));
   }
 }
 
