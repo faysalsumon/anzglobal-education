@@ -96,6 +96,10 @@ export const studentProfiles = pgTable("student_profiles", {
   country: text("country"),
   careerGoals: text("career_goals"),
   previousEducation: text("previous_education"),
+  
+  referralCode: varchar("referral_code", { length: 10 }).unique(),
+  referredByCode: varchar("referred_by_code", { length: 10 }),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -108,6 +112,20 @@ export const applications = pgTable("applications", {
   status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewing', 'accepted', 'rejected'
   personalStatement: text("personal_statement"),
   additionalInfo: text("additional_info"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Referrals table for student affiliate/referral system
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }), // Student who referred
+  referredId: varchar("referred_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }), // Student who was referred
+  referralCode: varchar("referral_code", { length: 10 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'completed', 'cancelled'
+  bonusAmount: decimal("bonus_amount", { precision: 10, scale: 2 }), // Bonus amount (to be set later)
+  bonusCurrency: varchar("bonus_currency", { length: 3 }).default("AUD"),
+  bonusPaidAt: timestamp("bonus_paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -276,6 +294,17 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
   }),
 }));
 
+export const referralsRelations = relations(referrals, ({ one }) => ({
+  referrer: one(studentProfiles, {
+    fields: [referrals.referrerId],
+    references: [studentProfiles.id],
+  }),
+  referred: one(studentProfiles, {
+    fields: [referrals.referredId],
+    references: [studentProfiles.id],
+  }),
+}));
+
 export const universityTeamMembersRelations = relations(universityTeamMembers, ({ one }) => ({
   university: one(universities, {
     fields: [universityTeamMembers.universityId],
@@ -378,6 +407,12 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   updatedAt: true,
 });
 
+export const insertReferralSchema = createInsertSchema(referrals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -414,3 +449,6 @@ export type InsertAdminTeamMember = z.infer<typeof insertAdminTeamMemberSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type Referral = typeof referrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
