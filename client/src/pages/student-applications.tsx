@@ -87,10 +87,10 @@ export default function StudentApplications() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {application.coverLetter && (
+                {application.personalStatement && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Cover Letter</h4>
-                    <p className="text-sm text-muted-foreground">{application.coverLetter}</p>
+                    <h4 className="text-sm font-medium mb-2">Personal Statement</h4>
+                    <p className="text-sm text-muted-foreground">{application.personalStatement}</p>
                   </div>
                 )}
                 {application.additionalInfo && (
