@@ -8,6 +8,7 @@ import {
   adminTeamMembers,
   studentEducations,
   studentLanguageScores,
+  referrals,
   type User,
   type UpsertUser,
   type University,
@@ -26,9 +27,11 @@ import {
   type InsertStudentEducation,
   type StudentLanguageScore,
   type InsertStudentLanguageScore,
+  type Referral,
+  type InsertReferral,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or } from "drizzle-orm";
+import { eq, and, like, or, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -360,6 +363,113 @@ export class DatabaseStorage implements IStorage {
       institutionCount: allUniversities.length,
       courseCount: allCourses.length,
     };
+  }
+  
+  // Referral operations
+  async generateReferralCode(): Promise<string> {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    let isUnique = false;
+    
+    while (!isUnique) {
+      code = '';
+      for (let i = 0; i < 8; i++) {
+        code += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      
+      const existing = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.referralCode, code))
+        .limit(1);
+      
+      if (existing.length === 0) {
+        isUnique = true;
+      }
+    }
+    
+    return code;
+  }
+  
+  async validateReferralCode(code: string): Promise<StudentProfile | null> {
+    const [profile] = await db
+      .select()
+      .from(studentProfiles)
+      .where(eq(studentProfiles.referralCode, code))
+      .limit(1);
+    
+    return profile || null;
+  }
+  
+  async createReferral(data: InsertReferral): Promise<Referral> {
+    const [referral] = await db.insert(referrals).values(data).returning();
+    return referral;
+  }
+  
+  async getReferralsByReferrerId(referrerId: string): Promise<Array<Referral & { referredStudent: StudentProfile }>> {
+    const results = await db
+      .select({
+        referral: referrals,
+        referredStudent: studentProfiles,
+      })
+      .from(referrals)
+      .innerJoin(studentProfiles, eq(referrals.referredId, studentProfiles.id))
+      .where(eq(referrals.referrerId, referrerId))
+      .orderBy(desc(referrals.createdAt));
+    
+    return results.map(r => ({
+      ...r.referral,
+      referredStudent: r.referredStudent,
+    }));
+  }
+  
+  async getReferralStats(studentProfileId: string): Promise<{
+    totalReferrals: number;
+    pendingReferrals: number;
+    completedReferrals: number;
+    totalBonus: number;
+  }> {
+    const allReferrals = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.referrerId, studentProfileId));
+    
+    const totalReferrals = allReferrals.length;
+    const pendingReferrals = allReferrals.filter(r => r.status === 'pending').length;
+    const completedReferrals = allReferrals.filter(r => r.status === 'completed').length;
+    const totalBonus = allReferrals
+      .filter(r => r.bonusAmount)
+      .reduce((sum, r) => sum + parseFloat(r.bonusAmount || '0'), 0);
+    
+    return {
+      totalReferrals,
+      pendingReferrals,
+      completedReferrals,
+      totalBonus,
+    };
+  }
+  
+  async updateReferralStatus(referralId: string, status: string, bonusAmount?: number): Promise<Referral> {
+    const updateData: any = {
+      status,
+      updatedAt: new Date(),
+    };
+    
+    if (bonusAmount !== undefined) {
+      updateData.bonusAmount = bonusAmount.toString();
+    }
+    
+    if (status === 'completed' && bonusAmount !== undefined) {
+      updateData.bonusPaidAt = new Date();
+    }
+    
+    const [updated] = await db
+      .update(referrals)
+      .set(updateData)
+      .where(eq(referrals.id, referralId))
+      .returning();
+    
+    return updated;
   }
   
   // Student education operations
