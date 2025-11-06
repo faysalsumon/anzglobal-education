@@ -4,6 +4,7 @@ import {
   courses,
   studentProfiles,
   applications,
+  universityTeamMembers,
   type User,
   type UpsertUser,
   type University,
@@ -14,6 +15,8 @@ import {
   type InsertStudentProfile,
   type Application,
   type InsertApplication,
+  type UniversityTeamMember,
+  type InsertUniversityTeamMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or } from "drizzle-orm";
@@ -47,6 +50,14 @@ export interface IStorage {
   getApplicationsByUniversityId(universityId: string): Promise<Application[]>;
   createApplication(application: InsertApplication): Promise<Application>;
   updateApplicationStatus(id: string, status: string): Promise<Application>;
+  
+  // Team member operations
+  getTeamMembersByUniversityId(universityId: string): Promise<UniversityTeamMember[]>;
+  getTeamMemberByUserAndUniversity(userId: string, universityId: string): Promise<UniversityTeamMember | undefined>;
+  createTeamMember(teamMember: InsertUniversityTeamMember): Promise<UniversityTeamMember>;
+  updateTeamMemberRole(id: string, role: string): Promise<UniversityTeamMember>;
+  deactivateTeamMember(id: string): Promise<UniversityTeamMember>;
+  deleteTeamMember(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,6 +220,57 @@ export class DatabaseStorage implements IStorage {
       .where(eq(applications.id, id))
       .returning();
     return application;
+  }
+
+  // Team member operations
+  async getTeamMembersByUniversityId(universityId: string): Promise<UniversityTeamMember[]> {
+    return await db
+      .select()
+      .from(universityTeamMembers)
+      .where(eq(universityTeamMembers.universityId, universityId));
+  }
+
+  async getTeamMemberByUserAndUniversity(userId: string, universityId: string): Promise<UniversityTeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(universityTeamMembers)
+      .where(
+        and(
+          eq(universityTeamMembers.userId, userId),
+          eq(universityTeamMembers.universityId, universityId)
+        )
+      );
+    return member;
+  }
+
+  async createTeamMember(teamMemberData: InsertUniversityTeamMember): Promise<UniversityTeamMember> {
+    const [member] = await db
+      .insert(universityTeamMembers)
+      .values(teamMemberData)
+      .returning();
+    return member;
+  }
+
+  async updateTeamMemberRole(id: string, role: string): Promise<UniversityTeamMember> {
+    const [member] = await db
+      .update(universityTeamMembers)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(universityTeamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deactivateTeamMember(id: string): Promise<UniversityTeamMember> {
+    const [member] = await db
+      .update(universityTeamMembers)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(universityTeamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deleteTeamMember(id: string): Promise<void> {
+    await db.delete(universityTeamMembers).where(eq(universityTeamMembers.id, id));
   }
 }
 

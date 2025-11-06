@@ -103,6 +103,18 @@ export const applications = pgTable("applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// University Team Members table
+export const universityTeamMembers = pgTable("university_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 30 }).notNull().default("course_manager"), // 'super_admin', 'admin', 'course_manager', 'application_manager'
+  isActive: boolean("is_active").default(true),
+  invitedBy: varchar("invited_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   university: one(universities, {
@@ -121,6 +133,7 @@ export const universitiesRelations = relations(universities, ({ one, many }) => 
     references: [users.id],
   }),
   courses: many(courses),
+  teamMembers: many(universityTeamMembers),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -147,6 +160,17 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
   student: one(studentProfiles, {
     fields: [applications.studentId],
     references: [studentProfiles.id],
+  }),
+}));
+
+export const universityTeamMembersRelations = relations(universityTeamMembers, ({ one }) => ({
+  university: one(universities, {
+    fields: [universityTeamMembers.universityId],
+    references: [universities.id],
+  }),
+  user: one(users, {
+    fields: [universityTeamMembers.userId],
+    references: [users.id],
   }),
 }));
 
@@ -181,6 +205,12 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   updatedAt: true,
 });
 
+export const insertUniversityTeamMemberSchema = createInsertSchema(universityTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -202,3 +232,6 @@ export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;
 
 export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
+
+export type UniversityTeamMember = typeof universityTeamMembers.$inferSelect;
+export type InsertUniversityTeamMember = z.infer<typeof insertUniversityTeamMemberSchema>;
