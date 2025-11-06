@@ -13,6 +13,7 @@ import UniversityProfile from "@/pages/university-profile";
 import UniversityCourses from "@/pages/university-courses";
 import CourseForm from "@/pages/course-form";
 import UniversityApplications from "@/pages/university-applications";
+import UniversityTeam from "@/pages/university-team";
 import UniversityAIAssistant from "@/pages/university-ai-assistant";
 import StudentCourses from "@/pages/student-courses";
 import CourseDetail from "@/pages/course-detail";
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/university/courses/new" component={CourseForm} />
           <Route path="/university/courses/:id/edit" component={CourseForm} />
           <Route path="/university/applications" component={UniversityApplications} />
+          <Route path="/university/team" component={UniversityTeam} />
           <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
           <Route path="/student/courses" component={StudentCourses} />
           <Route path="/student/courses/:id" component={CourseDetail} />
