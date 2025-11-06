@@ -1,18 +1,204 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import {
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+  boolean,
+  integer,
+  decimal,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table (mandatory for Replit Auth)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table (mandatory for Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student' or 'university'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// Universities table
+export const universities = pgTable("universities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  logo: text("logo"),
+  website: text("website"),
+  location: text("location"),
+  country: text("country"),
+  establishedYear: integer("established_year"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+// Courses table
+export const courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  subject: text("subject").notNull(),
+  level: text("level").notNull(), // 'undergraduate', 'postgraduate', 'certificate', 'diploma'
+  duration: text("duration"), // e.g., "2 years", "6 months"
+  durationMonths: integer("duration_months"), // For filtering
+  fees: decimal("fees", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }).default("AUD"),
+  location: text("location"),
+  country: text("country"),
+  startDate: text("start_date"),
+  applicationDeadline: text("application_deadline"),
+  prerequisites: text("prerequisites"),
+  thumbnailUrl: text("thumbnail_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Student profiles table
+export const studentProfiles = pgTable("student_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  bio: text("bio"),
+  educationLevel: text("education_level"),
+  fieldOfStudy: text("field_of_study"),
+  country: text("country"),
+  careerGoals: text("career_goals"),
+  previousEducation: text("previous_education"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Applications table
+export const applications = pgTable("applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  studentId: varchar("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewing', 'accepted', 'rejected'
+  personalStatement: text("personal_statement"),
+  additionalInfo: text("additional_info"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations
+export const usersRelations = relations(users, ({ one }) => ({
+  university: one(universities, {
+    fields: [users.id],
+    references: [universities.userId],
+  }),
+  studentProfile: one(studentProfiles, {
+    fields: [users.id],
+    references: [studentProfiles.userId],
+  }),
+}));
+
+export const universitiesRelations = relations(universities, ({ one, many }) => ({
+  user: one(users, {
+    fields: [universities.userId],
+    references: [users.id],
+  }),
+  courses: many(courses),
+}));
+
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  university: one(universities, {
+    fields: [courses.universityId],
+    references: [universities.id],
+  }),
+  applications: many(applications),
+}));
+
+export const studentProfilesRelations = relations(studentProfiles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [studentProfiles.userId],
+    references: [users.id],
+  }),
+  applications: many(applications),
+}));
+
+export const applicationsRelations = relations(applications, ({ one }) => ({
+  course: one(courses, {
+    fields: [applications.courseId],
+    references: [courses.id],
+  }),
+  student: one(studentProfiles, {
+    fields: [applications.studentId],
+    references: [studentProfiles.id],
+  }),
+}));
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUniversitySchema = createInsertSchema(universities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCourseSchema = createInsertSchema(courses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApplicationSchema = createInsertSchema(applications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const upsertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
+
+export type University = typeof universities.$inferSelect;
+export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
+
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+
+export type StudentProfile = typeof studentProfiles.$inferSelect;
+export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;
+
+export type Application = typeof applications.$inferSelect;
+export type InsertApplication = z.infer<typeof insertApplicationSchema>;
