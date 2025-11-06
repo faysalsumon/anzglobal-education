@@ -31,7 +31,7 @@ export default function StudentReferrals() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild data-testid="button-back">
-          <Link href="/student/dashboard">
+          <Link href="/">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -108,7 +108,7 @@ export default function StudentReferrals() {
               <p className="text-lg font-medium mb-2">No referrals yet</p>
               <p className="text-sm">Share your referral code with friends to get started!</p>
               <Button variant="outline" asChild className="mt-4" data-testid="button-back-to-dashboard">
-                <Link href="/student/dashboard">Back to Dashboard</Link>
+                <Link href="/">Back to Dashboard</Link>
               </Button>
             </div>
           ) : (
