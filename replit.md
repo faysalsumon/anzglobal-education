@@ -6,6 +6,15 @@ ANZ Global Education is an AI-powered educational platform that connects univers
 
 ## Recent Changes (November 6, 2025)
 
+### Student Referral System (Complete)
+- **Database Schema**: Added `referralCode` field to `studentProfiles` table (varchar, unique, auto-generated 8-character codes) and created `referrals` table to track referral relationships with status tracking (pending/completed/cancelled) and bonus amounts
+- **Automatic Code Generation**: All student profiles automatically receive a unique referral code upon creation; existing profiles were backfilled with codes
+- **Referral Tracking**: New students can enter a referral code during profile creation, creating a referral record linking them to the referrer
+- **API Endpoints**: Added `/api/student/referral/code`, `/api/student/referral/stats`, and `/api/student/referral/list` endpoints for retrieving referral information
+- **Dashboard Integration**: Student dashboard displays referral section with shareable code and link (with copy-to-clipboard functionality), plus statistics showing total/pending/completed referrals and total bonus amount
+- **Referral List Page**: Created `/student/referrals` page showing complete history of referred students with names, status badges, bonus amounts, and join dates
+- **Query Parameter Support**: Landing page accepts `?ref=CODE` query parameter to pre-populate referral code in profile creation form
+
 ### Team Management System (Complete)
 - **Role-Based Access Control**: Implemented comprehensive team management system allowing universities to add multiple team members with granular permissions (super_admin, admin, course_manager, application_manager)
 - **Team Management Page**: Full-featured UI for super admins to view team members, add new members by email, update roles, and remove members
@@ -86,8 +95,9 @@ Preferred communication style: Simple, everyday language.
 - `universities` - University profiles linked to user accounts
 - `universityTeamMembers` - Team member records with role-based permissions (super_admin, admin, course_manager, application_manager)
 - `courses` - Course offerings with rich metadata (fees, duration, location, etc.)
-- `studentProfiles` - Student profile information including education level and career goals
+- `studentProfiles` - Student profile information including education level, career goals, and unique referral code
 - `applications` - Application records linking students to courses with status tracking
+- `referrals` - Referral tracking table linking referrers to referred students with status and bonus information
 
 **Schema Management**: Drizzle Kit for migrations with configuration in `drizzle.config.ts`. Schema file uses relations to define entity connections for type-safe querying.
 
