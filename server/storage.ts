@@ -53,6 +53,7 @@ export interface IStorage {
   
   // Team member operations
   getTeamMembersByUniversityId(universityId: string): Promise<UniversityTeamMember[]>;
+  getTeamMemberByUserId(userId: string): Promise<UniversityTeamMember | undefined>;
   getTeamMemberByUserAndUniversity(userId: string, universityId: string): Promise<UniversityTeamMember | undefined>;
   createTeamMember(teamMember: InsertUniversityTeamMember): Promise<UniversityTeamMember>;
   updateTeamMemberRole(id: string, role: string): Promise<UniversityTeamMember>;
@@ -228,6 +229,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(universityTeamMembers)
       .where(eq(universityTeamMembers.universityId, universityId));
+  }
+
+  async getTeamMemberByUserId(userId: string): Promise<UniversityTeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(universityTeamMembers)
+      .where(eq(universityTeamMembers.userId, userId));
+    return member;
   }
 
   async getTeamMemberByUserAndUniversity(userId: string, universityId: string): Promise<UniversityTeamMember | undefined> {

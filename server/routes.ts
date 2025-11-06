@@ -18,6 +18,35 @@ import {
   generateCareerGoals,
 } from "./ai";
 
+type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
+
+async function checkUniversityAccess(
+  userId: string,
+  requiredRoles?: UniversityRole[]
+): Promise<{ university: any; role: UniversityRole } | null> {
+  const university = await storage.getUniversityByUserId(userId);
+  
+  if (university) {
+    return { university, role: 'super_admin' };
+  }
+  
+  const teamMember = await storage.getTeamMemberByUserId(userId);
+  if (!teamMember || !teamMember.isActive) {
+    return null;
+  }
+  
+  const universityData = await storage.getUniversityById(teamMember.universityId);
+  if (!universityData) {
+    return null;
+  }
+  
+  if (requiredRoles && !requiredRoles.includes(teamMember.role as UniversityRole)) {
+    return null;
+  }
+  
+  return { university: universityData, role: teamMember.role as UniversityRole };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -59,11 +88,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/university/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
-      if (!university) {
+      const access = await checkUniversityAccess(userId);
+      
+      if (!access) {
         return res.status(404).json({ message: "University profile not found" });
       }
-      res.json(university);
+      
+      res.json(access.university);
     } catch (error) {
       console.error("Error fetching university:", error);
       res.status(500).json({ message: "Failed to fetch university" });
@@ -73,15 +104,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const data = insertUniversitySchema.parse({ ...req.body, userId });
-
-      const existing = await storage.getUniversityByUserId(userId);
+      
+      // Check if user is creating or updating
+      const ownerUniversity = await storage.getUniversityByUserId(userId);
+      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
       let university;
-
-      if (existing) {
-        university = await storage.updateUniversity(existing.id, data);
+      
+      if (ownerUniversity) {
+        // User owns a university - they can update it
+        const data = insertUniversitySchema.parse({ ...req.body, userId: ownerUniversity.userId });
+        university = await storage.updateUniversity(ownerUniversity.id, data);
+      } else if (teamAccess) {
+        // User is a team member with admin/super_admin role - they can update
+        const data = insertUniversitySchema.parse({ ...req.body, userId: teamAccess.university.userId });
+        university = await storage.updateUniversity(teamAccess.university.id, data);
       } else {
-        // Update user type to university
+        // User doesn't own a university and isn't a team member - allow creation
+        const data = insertUniversitySchema.parse({ ...req.body, userId });
         await storage.upsertUser({ id: userId, userType: "university" });
         university = await storage.createUniversity(data);
       }
@@ -127,13 +167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/university/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId);
 
-      if (!university) {
+      if (!access) {
         return res.json([]);
       }
 
-      const courses = await storage.getCoursesByUniversityId(university.id);
+      const courses = await storage.getCoursesByUniversityId(access.university.id);
       res.json(courses);
     } catch (error) {
       console.error("Error fetching university courses:", error);
@@ -144,15 +184,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'course_manager']);
 
-      if (!university) {
-        return res.status(400).json({ message: "Please create university profile first" });
+      if (!access) {
+        return res.status(403).json({ message: "Only course managers and admins can create courses" });
       }
 
       const data = insertCourseSchema.parse({
         ...req.body,
-        universityId: university.id,
+        universityId: access.university.id,
       });
 
       const course = await storage.createCourse(data);
@@ -166,20 +206,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'course_manager']);
 
-      if (!university) {
-        return res.status(403).json({ message: "Unauthorized" });
+      if (!access) {
+        return res.status(403).json({ message: "Only course managers and admins can update courses" });
       }
 
       const course = await storage.getCourseById(req.params.id);
-      if (!course || course.universityId !== university.id) {
+      if (!course || course.universityId !== access.university.id) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
       const data = insertCourseSchema.parse({
         ...req.body,
-        universityId: university.id,
+        universityId: access.university.id,
       });
 
       const updated = await storage.updateCourse(req.params.id, data);
@@ -251,13 +291,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/university/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId);
 
-      if (!university) {
+      if (!access) {
         return res.json([]);
       }
 
-      const applications = await storage.getApplicationsByUniversityId(university.id);
+      const applications = await storage.getApplicationsByUniversityId(access.university.id);
       res.json(applications);
     } catch (error) {
       console.error("Error fetching applications:", error);
@@ -269,13 +309,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/university/team", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId);
 
-      if (!university) {
+      if (!access) {
         return res.status(404).json({ message: "University not found" });
       }
 
-      const teamMembers = await storage.getTeamMembersByUniversityId(university.id);
+      const teamMembers = await storage.getTeamMembersByUniversityId(access.university.id);
       res.json(teamMembers);
     } catch (error) {
       console.error("Error fetching team members:", error);
@@ -286,18 +326,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/team", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
 
-      if (!university) {
-        return res.status(404).json({ message: "University not found" });
-      }
-
-      // Check if current user is super admin (owner)
-      if (university.userId !== userId) {
-        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
-        if (!currentMember || currentMember.role !== 'super_admin') {
-          return res.status(403).json({ message: "Only super admins can add team members" });
-        }
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins and admins can add team members" });
       }
 
       const { email, role } = req.body;
@@ -324,13 +356,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if already a team member
-      const existing = await storage.getTeamMemberByUserAndUniversity(teamMemberUser.id, university.id);
+      const existing = await storage.getTeamMemberByUserAndUniversity(teamMemberUser.id, access.university.id);
       if (existing) {
         return res.status(400).json({ message: "User is already a team member" });
       }
 
       const teamMember = await storage.createTeamMember({
-        universityId: university.id,
+        universityId: access.university.id,
         userId: teamMemberUser.id,
         role,
         invitedBy: userId,
@@ -347,18 +379,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/university/team/:id/role", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
 
-      if (!university) {
-        return res.status(404).json({ message: "University not found" });
-      }
-
-      // Check if current user is super admin
-      if (university.userId !== userId) {
-        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
-        if (!currentMember || currentMember.role !== 'super_admin') {
-          return res.status(403).json({ message: "Only super admins can update roles" });
-        }
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins and admins can update roles" });
       }
 
       const { role } = req.body;
@@ -378,18 +402,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/university/team/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const university = await storage.getUniversityByUserId(userId);
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
 
-      if (!university) {
-        return res.status(404).json({ message: "University not found" });
-      }
-
-      // Check if current user is super admin
-      if (university.userId !== userId) {
-        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
-        if (!currentMember || currentMember.role !== 'super_admin') {
-          return res.status(403).json({ message: "Only super admins can remove team members" });
-        }
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins and admins can remove team members" });
       }
 
       await storage.deleteTeamMember(req.params.id);
@@ -424,14 +440,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/applications/:id/status", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { status } = req.body;
 
       if (!["pending", "reviewing", "accepted", "rejected"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
 
-      const application = await storage.updateApplicationStatus(req.params.id, status);
-      res.json(application);
+      // Get the application and verify access
+      const application = await storage.getApplicationById(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      const course = await storage.getCourseById(application.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Check if user has access to this university
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'application_manager']);
+      if (!access || access.university.id !== course.universityId) {
+        return res.status(403).json({ message: "Only application managers and admins can update application status" });
+      }
+
+      const updated = await storage.updateApplicationStatus(req.params.id, status);
+      res.json(updated);
     } catch (error) {
       console.error("Error updating application:", error);
       res.status(500).json({ message: "Failed to update application" });
