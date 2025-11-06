@@ -24,7 +24,7 @@ export default function StudentCourses() {
   const [country, setCountry] = useState<string>("");
 
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
-    queryKey: ["/api/courses", { search: searchTerm, subject, level, country }],
+    queryKey: ["/api/courses"],
   });
 
   const filteredCourses = courses.filter((course) => {

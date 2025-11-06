@@ -4,6 +4,26 @@
 
 ANZ Global Education is an AI-powered educational platform that connects universities with prospective students worldwide. The platform enables universities to showcase their courses and manage applications while providing students with intelligent course discovery tools and AI-assisted profile creation. Built with a modern web stack, it features dual user experiences optimized for both institutional and student needs.
 
+## Recent Changes (November 6, 2025)
+
+### Improved Landing Page & User Type Selection
+- **Separate Login CTAs**: Landing page now features distinct "I'm a Student" and "I'm a University" buttons that pass user type intent via query parameters (`/api/login?type=student` or `?type=university`)
+- **Post-Authentication Flow**: New user type selection page displayed for authenticated users without a `userType`. Users explicitly choose their role (student or university) which is persisted via `POST /api/auth/set-user-type`
+- **Enhanced UX**: Clear messaging ("Create account or login to get started") and visual distinction between student and university paths
+
+### Application Submission Flow (Complete)
+- **Course Detail Page**: Full course information display with university details, fees, duration, location, and comprehensive descriptions
+- **Application Form**: Integrated application submission form for students with personal statement (minimum 50 characters) and additional info fields
+- **End-to-End Flow**: Students can now browse courses → view details → submit applications → track application status
+- **Data Integrity**: Backend properly joins course data with university information for complete course detail views
+
+### Bug Fixes
+- **SelectItem Empty Values**: Fixed Radix UI SelectItem components that were using empty strings as values, which caused runtime errors. All select dropdowns now use "all" as the default value instead of empty strings
+- **Course Query Serialization**: Fixed queryKey object serialization issue where filter objects were being stringified as `[object Object]` in API requests. Course filtering is now handled client-side after fetching all active courses
+
+### Test Data
+- Created comprehensive test dataset with 5 universities (University, College, School, VET, TAFE), 10 diverse courses across multiple subjects and levels, and 3 student profiles for development and testing
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
