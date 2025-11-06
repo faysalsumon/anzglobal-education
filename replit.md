@@ -6,6 +6,13 @@ ANZ Global Education is an AI-powered educational platform that connects univers
 
 ## Recent Changes (November 6, 2025)
 
+### Team Management System (Complete)
+- **Role-Based Access Control**: Implemented comprehensive team management system allowing universities to add multiple team members with granular permissions (super_admin, admin, course_manager, application_manager)
+- **Team Management Page**: Full-featured UI for super admins to view team members, add new members by email, update roles, and remove members
+- **Backend Authorization**: All university endpoints now enforce role-based permissions through `checkUniversityAccess` middleware
+- **End-to-End Testing**: Complete flow validated from adding members to updating roles to removing members
+- **Navigation**: Team Management link added to university sidebar for easy access
+
 ### Improved Landing Page & User Type Selection
 - **Separate Login CTAs**: Landing page now features distinct "I'm a Student" and "I'm a University" buttons that pass user type intent via query parameters (`/api/login?type=student` or `?type=university`)
 - **Post-Authentication Flow**: New user type selection page displayed for authenticated users without a `userType`. Users explicitly choose their role (student or university) which is persisted via `POST /api/auth/set-user-type`
@@ -54,7 +61,8 @@ Preferred communication style: Simple, everyday language.
 
 **API Design**: RESTful API endpoints organized by user type:
 - `/api/auth/*` - Authentication and user management
-- `/api/university/*` - University-specific operations (profile, courses, applications)
+- `/api/university/*` - University-specific operations (profile, courses, applications, team management)
+- `/api/university/team` - Team member management (list, add, update roles, remove members)
 - `/api/student/*` - Student-specific operations (profile, applications, course browsing)
 - `/api/courses` - Public course listing with filtering
 - `/api/applications/*` - Application management
@@ -76,6 +84,7 @@ Preferred communication style: Simple, everyday language.
 - `sessions` - Session storage for Replit Auth
 - `users` - User accounts with `userType` field distinguishing universities from students
 - `universities` - University profiles linked to user accounts
+- `universityTeamMembers` - Team member records with role-based permissions (super_admin, admin, course_manager, application_manager)
 - `courses` - Course offerings with rich metadata (fees, duration, location, etc.)
 - `studentProfiles` - Student profile information including education level and career goals
 - `applications` - Application records linking students to courses with status tracking
