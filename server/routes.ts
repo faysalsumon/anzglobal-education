@@ -1,13 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertUniversitySchema,
   insertCourseSchema,
   insertStudentProfileSchema,
   insertApplicationSchema,
+  users,
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import {
   generateUniversityDescription,
   generateCourseDescription,
@@ -259,6 +262,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
+    }
+  });
+
+  // Team Management Routes
+  app.get("/api/university/team", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const university = await storage.getUniversityByUserId(userId);
+
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+
+      const teamMembers = await storage.getTeamMembersByUniversityId(university.id);
+      res.json(teamMembers);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  app.post("/api/university/team", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const university = await storage.getUniversityByUserId(userId);
+
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+
+      // Check if current user is super admin (owner)
+      if (university.userId !== userId) {
+        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
+        if (!currentMember || currentMember.role !== 'super_admin') {
+          return res.status(403).json({ message: "Only super admins can add team members" });
+        }
+      }
+
+      const { email, role } = req.body;
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email and role are required" });
+      }
+
+      if (!['super_admin', 'admin', 'course_manager', 'application_manager'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      // Check if user exists by email
+      const existingUsers = await db.select().from(users).where(eq(users.email, email));
+      let teamMemberUser = existingUsers[0];
+
+      // If user doesn't exist, create a placeholder
+      if (!teamMemberUser) {
+        const [newUser] = await db.insert(users).values({
+          email,
+          userType: 'university',
+        }).returning();
+        teamMemberUser = newUser;
+      }
+
+      // Check if already a team member
+      const existing = await storage.getTeamMemberByUserAndUniversity(teamMemberUser.id, university.id);
+      if (existing) {
+        return res.status(400).json({ message: "User is already a team member" });
+      }
+
+      const teamMember = await storage.createTeamMember({
+        universityId: university.id,
+        userId: teamMemberUser.id,
+        role,
+        invitedBy: userId,
+        isActive: true,
+      });
+
+      res.json(teamMember);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      res.status(500).json({ message: error.message || "Failed to add team member" });
+    }
+  });
+
+  app.patch("/api/university/team/:id/role", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const university = await storage.getUniversityByUserId(userId);
+
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+
+      // Check if current user is super admin
+      if (university.userId !== userId) {
+        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
+        if (!currentMember || currentMember.role !== 'super_admin') {
+          return res.status(403).json({ message: "Only super admins can update roles" });
+        }
+      }
+
+      const { role } = req.body;
+
+      if (!role || !['super_admin', 'admin', 'course_manager', 'application_manager'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const teamMember = await storage.updateTeamMemberRole(req.params.id, role);
+      res.json(teamMember);
+    } catch (error) {
+      console.error("Error updating team member role:", error);
+      res.status(500).json({ message: "Failed to update team member role" });
+    }
+  });
+
+  app.delete("/api/university/team/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const university = await storage.getUniversityByUserId(userId);
+
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+
+      // Check if current user is super admin
+      if (university.userId !== userId) {
+        const currentMember = await storage.getTeamMemberByUserAndUniversity(userId, university.id);
+        if (!currentMember || currentMember.role !== 'super_admin') {
+          return res.status(403).json({ message: "Only super admins can remove team members" });
+        }
+      }
+
+      await storage.deleteTeamMember(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ message: "Failed to remove team member" });
     }
   });
 
