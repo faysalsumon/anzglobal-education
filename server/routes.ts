@@ -21,6 +21,7 @@ import {
   generateStudentBio,
   generateCareerGoals,
 } from "./ai";
+import { calculateProfileCompletion } from "./profileCompletion";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
 type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
@@ -324,6 +325,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating student profile:", error);
       res.status(400).json({ message: error.message || "Failed to update profile" });
+    }
+  });
+
+  // GET /api/student/profile/completion - Check profile completion status
+  app.get("/api/student/profile/completion", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      let educations: any[] = [];
+      let languageScores: any[] = [];
+      
+      if (profile) {
+        educations = await storage.getEducationsByStudentProfileId(profile.id);
+        languageScores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+      }
+      
+      const completionResult = calculateProfileCompletion(profile, educations, languageScores);
+      res.json(completionResult);
+    } catch (error) {
+      console.error("Error checking profile completion:", error);
+      res.status(500).json({ message: "Failed to check profile completion" });
     }
   });
 
