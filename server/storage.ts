@@ -76,6 +76,9 @@ export interface IStorage {
   updateAdminTeamMemberRole(id: string, role: string): Promise<AdminTeamMember>;
   deleteAdminTeamMember(id: string): Promise<void>;
   
+  // Platform statistics
+  getPlatformStats(): Promise<{ institutionCount: number; courseCount: number }>;
+  
   // Student education operations
   getEducationsByStudentProfileId(studentProfileId: string): Promise<StudentEducation[]>;
   getEducationById(id: string): Promise<StudentEducation | undefined>;
@@ -346,6 +349,17 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAdminTeamMember(id: string): Promise<void> {
     await db.delete(adminTeamMembers).where(eq(adminTeamMembers.id, id));
+  }
+  
+  // Platform statistics
+  async getPlatformStats(): Promise<{ institutionCount: number; courseCount: number }> {
+    const allUniversities = await db.select().from(universities);
+    const allCourses = await db.select().from(courses).where(eq(courses.isActive, true));
+    
+    return {
+      institutionCount: allUniversities.length,
+      courseCount: allCourses.length,
+    };
   }
   
   // Student education operations

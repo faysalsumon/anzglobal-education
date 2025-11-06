@@ -736,6 +736,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public platform statistics endpoint
+  app.get("/api/platform/stats", async (req, res) => {
+    try {
+      const stats = await storage.getPlatformStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching platform stats:", error);
+      res.status(500).json({ message: "Failed to fetch platform statistics" });
+    }
+  });
+
   // AI generation routes
   app.post("/api/ai/generate-university-description", isAuthenticated, async (req, res) => {
     try {
