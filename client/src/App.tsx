@@ -20,6 +20,7 @@ import CourseDetail from "@/pages/course-detail";
 import StudentProfilePage from "@/pages/student-profile";
 import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
+import StudentReferrals from "@/pages/student-referrals";
 import UserTypeSelection from "@/pages/user-type-selection";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/student/courses/:id" component={CourseDetail} />
           <Route path="/student/profile" component={StudentProfilePage} />
           <Route path="/student/applications" component={StudentApplications} />
+          <Route path="/student/referrals" component={StudentReferrals} />
           <Route path="/student/ai-assistant" component={StudentAIAssistant} />
         </>
       )}
