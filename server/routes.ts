@@ -295,9 +295,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: "Profile already exists. Use PUT to update." });
       }
 
+      // Generate unique referral code
+      const referralCode = await storage.generateReferralCode();
+
       // Update user type to student
       await storage.upsertUser({ id: userId, userType: "student" });
-      const profile = await storage.createStudentProfile(data);
+      const profile = await storage.createStudentProfile({ ...data, referralCode });
+
+      // If a referral code was provided, create a referral record
+      if (data.referredByCode) {
+        const referrer = await storage.validateReferralCode(data.referredByCode);
+        if (referrer) {
+          await storage.createReferral({
+            referrerId: referrer.id,
+            referredId: profile.id,
+            referralCode: data.referredByCode,
+            status: 'pending',
+          });
+        }
+      }
 
       res.json(profile);
     } catch (error: any) {
@@ -537,6 +553,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
+    }
+  });
+
+  // Referral routes
+  app.get("/api/student/referral/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const stats = await storage.getReferralStats(profile.id);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+      res.status(500).json({ message: "Failed to fetch referral stats" });
+    }
+  });
+
+  app.get("/api/student/referral/list", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const referrals = await storage.getReferralsByReferrerId(profile.id);
+      res.json(referrals);
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+      res.status(500).json({ message: "Failed to fetch referrals" });
+    }
+  });
+
+  app.get("/api/student/referral/code", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      res.json({ 
+        referralCode: profile.referralCode,
+        referralLink: `${req.protocol}://${req.get('host')}/signup?ref=${profile.referralCode}`
+      });
+    } catch (error) {
+      console.error("Error fetching referral code:", error);
+      res.status(500).json({ message: "Failed to fetch referral code" });
+    }
+  });
+
+  app.post("/api/student/referral/validate", async (req: any, res) => {
+    try {
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      const referrer = await storage.validateReferralCode(code);
+
+      if (!referrer) {
+        return res.status(404).json({ message: "Invalid referral code" });
+      }
+
+      res.json({ valid: true, referrerName: `${referrer.firstName || ''} ${referrer.lastName || ''}`.trim() });
+    } catch (error) {
+      console.error("Error validating referral code:", error);
+      res.status(500).json({ message: "Failed to validate referral code" });
     }
   });
 
