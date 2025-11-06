@@ -8,9 +8,11 @@ import {
   insertCourseSchema,
   insertStudentProfileSchema,
   insertApplicationSchema,
+  insertAdminTeamMemberSchema,
   users,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import {
   generateUniversityDescription,
   generateCourseDescription,
@@ -19,6 +21,16 @@ import {
 } from "./ai";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
+type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
+
+const addAdminTeamMemberSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
+});
+
+const updateAdminTeamMemberRoleSchema = z.object({
+  role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
+});
 
 async function checkUniversityAccess(
   userId: string,
@@ -47,6 +59,28 @@ async function checkUniversityAccess(
   return { university: universityData, role: teamMember.role as UniversityRole };
 }
 
+async function checkAdminAccess(
+  userId: string,
+  requiredRoles?: AdminRole[]
+): Promise<{ role: AdminRole } | null> {
+  const user = await storage.getUser(userId);
+  
+  if (!user || user.userType !== 'admin') {
+    return null;
+  }
+  
+  const adminMember = await storage.getAdminTeamMemberByUserId(userId);
+  if (!adminMember || !adminMember.isActive) {
+    return null;
+  }
+  
+  if (requiredRoles && !requiredRoles.includes(adminMember.role as AdminRole)) {
+    return null;
+  }
+  
+  return { role: adminMember.role as AdminRole };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -68,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { userType } = req.body;
 
-      if (!["university", "student"].includes(userType)) {
+      if (!["university", "student", "admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
       }
 
@@ -522,6 +556,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating content:", error);
       res.status(500).json({ message: error.message || "Failed to generate content" });
+    }
+  });
+
+  // Admin routes
+  
+  // Admin team management routes
+  app.get("/api/admin/team", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const teamMembers = await storage.getAllAdminTeamMembers();
+      
+      const teamMembersWithUsers = await Promise.all(
+        teamMembers.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            ...member,
+            user: {
+              id: user?.id,
+              email: user?.email,
+              firstName: user?.firstName,
+              lastName: user?.lastName,
+            },
+          };
+        })
+      );
+
+      res.json(teamMembersWithUsers);
+    } catch (error) {
+      console.error("Error fetching admin team members:", error);
+      res.status(500).json({ message: "Failed to fetch admin team members" });
+    }
+  });
+
+  app.post("/api/admin/team", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const validatedData = addAdminTeamMemberSchema.parse(req.body);
+      const { email, role } = validatedData;
+
+      const existingUser = await db.select().from(users).where(eq(users.email, email));
+      let targetUserId: string;
+
+      if (existingUser.length > 0) {
+        targetUserId = existingUser[0].id;
+        
+        await storage.upsertUser({
+          id: targetUserId,
+          userType: "admin",
+        });
+      } else {
+        const newUser = await storage.upsertUser({
+          email,
+          userType: "admin",
+        });
+        targetUserId = newUser.id;
+      }
+
+      const existingMember = await storage.getAdminTeamMemberByUserId(targetUserId);
+      if (existingMember) {
+        return res.status(400).json({ message: "User is already an admin team member" });
+      }
+
+      const teamMember = await storage.createAdminTeamMember({
+        userId: targetUserId,
+        role,
+        invitedBy: userId,
+        isActive: true,
+      });
+
+      const user = await storage.getUser(targetUserId);
+      res.json({
+        ...teamMember,
+        user: {
+          id: user?.id,
+          email: user?.email,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error adding admin team member:", error);
+      res.status(400).json({ message: error.message || "Failed to add admin team member" });
+    }
+  });
+
+  app.patch("/api/admin/team/:id/role", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const validatedData = updateAdminTeamMemberRoleSchema.parse(req.body);
+      const { role } = validatedData;
+
+      const allMembers = await storage.getAllAdminTeamMembers();
+      const targetMember = allMembers.find(m => m.id === req.params.id);
+      
+      if (!targetMember) {
+        return res.status(404).json({ message: "Admin team member not found" });
+      }
+
+      if (targetMember.role === 'super_admin' && role !== 'super_admin') {
+        const superAdminCount = allMembers.filter(m => m.role === 'super_admin' && m.isActive).length;
+        if (superAdminCount <= 1) {
+          return res.status(400).json({ message: "Cannot demote the last super admin" });
+        }
+      }
+
+      const updated = await storage.updateAdminTeamMemberRole(req.params.id, role);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating admin team member role:", error);
+      res.status(400).json({ message: error.message || "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/admin/team/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const allMembers = await storage.getAllAdminTeamMembers();
+      const targetMember = allMembers.find(m => m.id === req.params.id);
+      
+      if (!targetMember) {
+        return res.status(404).json({ message: "Admin team member not found" });
+      }
+
+      if (targetMember.userId === userId) {
+        return res.status(400).json({ message: "Cannot delete your own admin account" });
+      }
+
+      if (targetMember.role === 'super_admin') {
+        const superAdminCount = allMembers.filter(m => m.role === 'super_admin' && m.isActive).length;
+        if (superAdminCount <= 1) {
+          return res.status(400).json({ message: "Cannot delete the last super admin" });
+        }
+      }
+
+      await storage.deleteAdminTeamMember(req.params.id);
+      res.json({ message: "Admin team member removed successfully" });
+    } catch (error: any) {
+      console.error("Error deleting admin team member:", error);
+      res.status(400).json({ message: error.message || "Failed to remove admin team member" });
     }
   });
 

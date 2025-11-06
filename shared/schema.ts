@@ -32,7 +32,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student' or 'university'
+  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student', 'university', or 'admin'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -115,6 +115,17 @@ export const universityTeamMembers = pgTable("university_team_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Platform Admin Team Members table (ANZ Global Team)
+export const adminTeamMembers = pgTable("admin_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 30 }).notNull().default("support_staff"), // 'super_admin', 'support_manager', 'support_staff', 'operations_staff'
+  isActive: boolean("is_active").default(true),
+  invitedBy: varchar("invited_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   university: one(universities, {
@@ -124,6 +135,10 @@ export const usersRelations = relations(users, ({ one }) => ({
   studentProfile: one(studentProfiles, {
     fields: [users.id],
     references: [studentProfiles.userId],
+  }),
+  adminTeamMember: one(adminTeamMembers, {
+    fields: [users.id],
+    references: [adminTeamMembers.userId],
   }),
 }));
 
@@ -174,6 +189,13 @@ export const universityTeamMembersRelations = relations(universityTeamMembers, (
   }),
 }));
 
+export const adminTeamMembersRelations = relations(adminTeamMembers, ({ one }) => ({
+  user: one(users, {
+    fields: [adminTeamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -211,6 +233,12 @@ export const insertUniversityTeamMemberSchema = createInsertSchema(universityTea
   updatedAt: true,
 });
 
+export const insertAdminTeamMemberSchema = createInsertSchema(adminTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -235,3 +263,6 @@ export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 
 export type UniversityTeamMember = typeof universityTeamMembers.$inferSelect;
 export type InsertUniversityTeamMember = z.infer<typeof insertUniversityTeamMemberSchema>;
+
+export type AdminTeamMember = typeof adminTeamMembers.$inferSelect;
+export type InsertAdminTeamMember = z.infer<typeof insertAdminTeamMemberSchema>;

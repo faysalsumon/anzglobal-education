@@ -5,6 +5,7 @@ import {
   studentProfiles,
   applications,
   universityTeamMembers,
+  adminTeamMembers,
   type User,
   type UpsertUser,
   type University,
@@ -17,6 +18,8 @@ import {
   type InsertApplication,
   type UniversityTeamMember,
   type InsertUniversityTeamMember,
+  type AdminTeamMember,
+  type InsertAdminTeamMember,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or } from "drizzle-orm";
@@ -59,6 +62,13 @@ export interface IStorage {
   updateTeamMemberRole(id: string, role: string): Promise<UniversityTeamMember>;
   deactivateTeamMember(id: string): Promise<UniversityTeamMember>;
   deleteTeamMember(id: string): Promise<void>;
+  
+  // Admin team member operations
+  getAllAdminTeamMembers(): Promise<AdminTeamMember[]>;
+  getAdminTeamMemberByUserId(userId: string): Promise<AdminTeamMember | undefined>;
+  createAdminTeamMember(teamMember: InsertAdminTeamMember): Promise<AdminTeamMember>;
+  updateAdminTeamMemberRole(id: string, role: string): Promise<AdminTeamMember>;
+  deleteAdminTeamMember(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -280,6 +290,42 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTeamMember(id: string): Promise<void> {
     await db.delete(universityTeamMembers).where(eq(universityTeamMembers.id, id));
+  }
+  
+  // Admin team member operations
+  async getAllAdminTeamMembers(): Promise<AdminTeamMember[]> {
+    return await db
+      .select()
+      .from(adminTeamMembers);
+  }
+
+  async getAdminTeamMemberByUserId(userId: string): Promise<AdminTeamMember | undefined> {
+    const [member] = await db
+      .select()
+      .from(adminTeamMembers)
+      .where(eq(adminTeamMembers.userId, userId));
+    return member;
+  }
+
+  async createAdminTeamMember(teamMemberData: InsertAdminTeamMember): Promise<AdminTeamMember> {
+    const [member] = await db
+      .insert(adminTeamMembers)
+      .values(teamMemberData)
+      .returning();
+    return member;
+  }
+
+  async updateAdminTeamMemberRole(id: string, role: string): Promise<AdminTeamMember> {
+    const [member] = await db
+      .update(adminTeamMembers)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(adminTeamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deleteAdminTeamMember(id: string): Promise<void> {
+    await db.delete(adminTeamMembers).where(eq(adminTeamMembers.id, id));
   }
 }
 
