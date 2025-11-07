@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -415,9 +416,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Super Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage all platform users and institutions</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <Link href="/" data-testid="link-home">
+            <div className="flex items-center gap-2 cursor-pointer hover-elevate rounded-md p-2 -ml-2">
+              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">A</span>
+              </div>
+              <span className="text-xl font-bold">ANZ Global Education</span>
+            </div>
+          </Link>
+          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Super Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage all platform users and institutions</p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
