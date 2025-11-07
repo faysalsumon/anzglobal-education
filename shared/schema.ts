@@ -50,7 +50,7 @@ export const users = pgTable("users", {
 // Universities table
 export const universities = pgTable("universities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   logo: text("logo"),

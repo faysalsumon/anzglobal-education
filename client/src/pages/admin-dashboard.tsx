@@ -72,7 +72,7 @@ interface Course {
   duration: string | null;
   tuitionFee: number | null;
   level: string | null;
-  discipline: string | null;
+  subject: string;
   isActive: boolean;
   institutionName?: string;
   createdAt: string | null;
@@ -107,7 +107,7 @@ const courseSchema = z.object({
   duration: z.string().optional(),
   tuitionFee: z.coerce.number().positive().optional().or(z.literal("")),
   level: z.string().optional(),
-  discipline: z.string().optional(),
+  subject: z.string().min(1, "Subject is required"),
 });
 
 export default function AdminDashboard() {
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
       duration: "",
       tuitionFee: "" as any,
       level: "",
-      discipline: "",
+      subject: "",
     },
   });
 
@@ -1540,12 +1540,12 @@ export default function AdminDashboard() {
                 />
                 <FormField
                   control={courseForm.control}
-                  name="discipline"
+                  name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Discipline</FormLabel>
+                      <FormLabel>Subject</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Computer Science" />
+                        <Input {...field} placeholder="Computer Science" data-testid="input-course-subject" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
