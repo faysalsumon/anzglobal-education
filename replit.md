@@ -6,6 +6,51 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
 
 ## Recent Changes (November 07, 2025)
 
+### Comprehensive Institution Management System
+- **Extended University Schema** with 4 new fields:
+  - `smallDescription`: AI-generated concise description (max 100 words) for listings
+  - `fullDescription`: AI-generated comprehensive institutional overview (4-5 paragraphs)
+  - `institutionGallery`: Array of up to 3 AI-generated campus images (600x400px, 3:2 ratio)
+  - `topCourses`: Array of featured course names
+- **Provider Type Dropdown**: Standardized institution types (Private Institutions, TAFE, Private University, Public University)
+- **Logo Upload System**:
+  - Automatic image resizing to 160x160px using Sharp
+  - Circular border styling with #F0F0F0 1px border
+  - File upload validation (5MB limit, images only)
+  - Preview functionality in profile form
+- **AI-Powered Content Generation**:
+  - Small description generator: Creates concise 100-word institution overview
+  - Full description generator: Creates comprehensive 4-5 paragraph institutional description
+  - Gallery generator: Creates 3 professional campus images using DALL-E 3 (1024x1024, resized to 600x400)
+  - All AI functions use GPT-5 model via Replit's AI Integrations
+- **Enhanced University Profile Form** (`/university/profile`):
+  - Completely redesigned step-by-step form with all new fields
+  - Logo upload with circular preview
+  - AI generation buttons for small description, full description, and gallery
+  - Top courses field for featured programs
+  - Provider type dropdown with specific options
+  - Form hydration fix: Properly loads existing institution data without data loss
+- **Enhanced Public Institution Detail Page** (`/institutions/:id`):
+  - Campus Gallery section displaying AI-generated images
+  - Overview section with small description
+  - About section with full description or legacy description
+  - Featured Courses list
+  - Maintained existing functionality (top disciplines, contact info, etc.)
+- **Backend API Routes**:
+  - `/api/university/generate-small-description`: AI-powered small description generation
+  - `/api/university/generate-full-description`: AI-powered full description generation
+  - `/api/university/generate-gallery`: AI-powered gallery image generation with automatic resizing
+  - `/api/university/upload-logo`: Logo upload with automatic 160x160px resizing
+- **Image Processing**:
+  - Multer for file uploads with memory storage
+  - Sharp for image resizing and optimization
+  - File size limits and MIME type validation
+  - Public directory storage for uploaded/generated images
+- **Object Storage Integration**:
+  - Replit Object Storage configured for institution images
+  - Public directory for logos and gallery images
+  - Environment variables: DEFAULT_OBJECT_STORAGE_BUCKET_ID, PUBLIC_OBJECT_SEARCH_PATHS
+
 ### Public Course Detail Page
 - Created comprehensive public course detail page at `/courses/:id`
 - Extended course schema with detailed fields:

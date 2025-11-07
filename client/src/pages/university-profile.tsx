@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon } from "lucide-react";
 import { insertUniversitySchema, type InsertUniversity, type University } from "@shared/schema";
 import { z } from "zod";
 
@@ -19,9 +20,19 @@ const formSchema = insertUniversitySchema.extend({
   country: z.string().min(1, "Country is required"),
 });
 
+const PROVIDER_TYPES = [
+  "Private Institutions",
+  "TAFE",
+  "Private University",
+  "Public University",
+];
+
 export default function UniversityProfile() {
   const { toast } = useToast();
-  const [aiLoading, setAiLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: university } = useQuery<University>({
     queryKey: ["/api/university/profile"],
@@ -31,21 +42,59 @@ export default function UniversityProfile() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       userId: "",
-      name: university?.name || "",
-      description: university?.description || "",
-      logo: university?.logo || "",
-      website: university?.website || "",
-      location: university?.location || "",
-      country: university?.country || "",
-      establishedYear: university?.establishedYear || undefined,
-      contactEmail: university?.contactEmail || "",
-      contactPhone: university?.contactPhone || "",
-      numberOfCampuses: university?.numberOfCampuses || undefined,
-      providerType: university?.providerType || "",
-      scholarshipPercentage: university?.scholarshipPercentage || undefined,
-      topDisciplines: university?.topDisciplines || [],
+      name: "",
+      description: "",
+      logo: "",
+      website: "",
+      location: "",
+      country: "",
+      establishedYear: undefined,
+      contactEmail: "",
+      contactPhone: "",
+      numberOfCampuses: undefined,
+      providerType: "",
+      scholarshipPercentage: undefined,
+      topDisciplines: [],
+      smallDescription: "",
+      fullDescription: "",
+      institutionGallery: [],
+      topCourses: [],
     },
   });
+
+  // Hydrate form when university data loads
+  useEffect(() => {
+    if (university) {
+      form.reset({
+        userId: university.userId,
+        name: university.name || "",
+        description: university.description || "",
+        logo: university.logo ?? "",
+        website: university.website ?? "",
+        location: university.location || "",
+        country: university.country || "",
+        establishedYear: university.establishedYear || undefined,
+        contactEmail: university.contactEmail ?? "",
+        contactPhone: university.contactPhone ?? "",
+        numberOfCampuses: university.numberOfCampuses || undefined,
+        providerType: university.providerType || "",
+        scholarshipPercentage: university.scholarshipPercentage || undefined,
+        topDisciplines: university.topDisciplines || [],
+        smallDescription: university.smallDescription ?? "",
+        fullDescription: university.fullDescription ?? "",
+        institutionGallery: university.institutionGallery || [],
+        topCourses: university.topCourses || [],
+      });
+      
+      // Set preview images
+      if (university.logo) {
+        setLogoPreview(university.logo);
+      }
+      if (university.institutionGallery && university.institutionGallery.length > 0) {
+        setGalleryPreviews(university.institutionGallery);
+      }
+    }
+  }, [university, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
@@ -79,12 +128,12 @@ export default function UniversityProfile() {
       return;
     }
 
-    setAiLoading(true);
+    setAiLoading("description");
     try {
       const response = await apiRequest("POST", "/api/ai/generate-university-description", {
         name,
         location,
-      });
+      }) as { description: string };
       form.setValue("description", response.description);
       toast({
         title: "Description generated",
@@ -97,7 +146,156 @@ export default function UniversityProfile() {
         variant: "destructive",
       });
     } finally {
-      setAiLoading(false);
+      setAiLoading(null);
+    }
+  };
+
+  const generateSmallDescription = async () => {
+    const name = form.getValues("name");
+    const location = form.getValues("location");
+    const providerType = form.getValues("providerType");
+    
+    if (!name || !location) {
+      toast({
+        title: "Missing information",
+        description: "Please enter university name and location first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading("smallDescription");
+    try {
+      const response = await apiRequest("POST", "/api/university/generate-small-description", {
+        name,
+        location,
+        providerType,
+      }) as { description: string };
+      form.setValue("smallDescription", response.description);
+      toast({
+        title: "Small description generated",
+        description: "AI has created a concise description for your institution.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const generateFullDescription = async () => {
+    const name = form.getValues("name");
+    const location = form.getValues("location");
+    const providerType = form.getValues("providerType");
+    const topDisciplines = form.getValues("topDisciplines");
+    
+    if (!name || !location) {
+      toast({
+        title: "Missing information",
+        description: "Please enter university name and location first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading("fullDescription");
+    try {
+      const response = await apiRequest("POST", "/api/university/generate-full-description", {
+        name,
+        location,
+        providerType,
+        topDisciplines,
+      }) as { description: string };
+      form.setValue("fullDescription", response.description);
+      toast({
+        title: "Full description generated",
+        description: "AI has created a comprehensive description for your institution.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const generateGallery = async () => {
+    const name = form.getValues("name");
+    const location = form.getValues("location");
+    const providerType = form.getValues("providerType");
+    
+    if (!name || !location) {
+      toast({
+        title: "Missing information",
+        description: "Please enter university name and location first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading("gallery");
+    try {
+      const response = await apiRequest("POST", "/api/university/generate-gallery", {
+        name,
+        location,
+        providerType,
+      }) as { galleryImages: string[] };
+      form.setValue("institutionGallery", response.galleryImages);
+      setGalleryPreviews(response.galleryImages);
+      toast({
+        title: "Gallery generated",
+        description: `AI has created ${response.galleryImages.length} images for your institution gallery.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    try {
+      const response = await fetch("/api/university/upload-logo", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload logo");
+      }
+
+      const data = await response.json();
+      form.setValue("logo", data.logoPath);
+      setLogoPreview(data.logoPath);
+      
+      toast({
+        title: "Logo uploaded",
+        description: "Your institution logo has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -110,6 +308,51 @@ export default function UniversityProfile() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
+          {/* Logo Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Institution Logo</CardTitle>
+              <CardDescription>Upload your institution's logo (will be resized to 160x160px)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                {(logoPreview || university?.logo) && (
+                  <div className="w-40 h-40 rounded-full border border-[#F0F0F0] bg-white flex items-center justify-center overflow-hidden">
+                    <img
+                      src={logoPreview || university?.logo}
+                      alt="Institution logo"
+                      className="w-full h-full object-cover"
+                      data-testid="img-logo-preview"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    data-testid="input-logo-file"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="button-upload-logo"
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Logo
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Recommended: Square image, min 160x160px. Will be displayed as circular.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -199,6 +442,7 @@ export default function UniversityProfile() {
             </CardContent>
           </Card>
 
+          {/* Institution Details */}
           <Card>
             <CardHeader>
               <CardTitle>Institution Details</CardTitle>
@@ -212,9 +456,20 @@ export default function UniversityProfile() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provider Type</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Institution, University, College, etc." data-testid="input-provider-type" />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-provider-type">
+                            <SelectValue placeholder="Select provider type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PROVIDER_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -291,13 +546,126 @@ export default function UniversityProfile() {
             </CardContent>
           </Card>
 
+          {/* Small Description (AI-powered) */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-accent" />
-                    Description
+                    Short Description
+                  </CardTitle>
+                  <CardDescription>Concise overview (max 100 words) for listings</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateSmallDescription}
+                  disabled={aiLoading === "smallDescription"}
+                  data-testid="button-generate-small-description"
+                >
+                  {aiLoading === "smallDescription" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate with AI
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="smallDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="A brief, impactful description of your institution..."
+                        className="min-h-[100px]"
+                        data-testid="textarea-small-description"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This will appear in search results and institution cards (max 100 words recommended)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Full Description (AI-powered) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                    Full Description
+                  </CardTitle>
+                  <CardDescription>Comprehensive institutional overview</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateFullDescription}
+                  disabled={aiLoading === "fullDescription"}
+                  data-testid="button-generate-full-description"
+                >
+                  {aiLoading === "fullDescription" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate with AI
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="fullDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Provide a detailed description covering history, programs, facilities, student life, and unique features..."
+                        className="min-h-[200px]"
+                        data-testid="textarea-full-description"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      This will appear on your institution's detail page (4-5 paragraphs recommended)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Legacy Description */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-accent" />
+                    General Description
                   </CardTitle>
                   <CardDescription>Tell students about your university</CardDescription>
                 </div>
@@ -305,10 +673,10 @@ export default function UniversityProfile() {
                   type="button"
                   variant="outline"
                   onClick={generateDescription}
-                  disabled={aiLoading}
+                  disabled={aiLoading === "description"}
                   data-testid="button-generate-description"
                 >
-                  {aiLoading ? (
+                  {aiLoading === "description" ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Generating...
@@ -343,6 +711,94 @@ export default function UniversityProfile() {
             </CardContent>
           </Card>
 
+          {/* Institution Gallery (AI-powered) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-accent" />
+                    Institution Gallery
+                  </CardTitle>
+                  <CardDescription>AI-generated campus images (3 images, 600x400px each)</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateGallery}
+                  disabled={aiLoading === "gallery"}
+                  data-testid="button-generate-gallery"
+                >
+                  {aiLoading === "gallery" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate Gallery with AI
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(galleryPreviews.length > 0 || (university?.institutionGallery && university.institutionGallery.length > 0)) && (
+                <div className="grid gap-4 md:grid-cols-3 mb-4">
+                  {(galleryPreviews.length > 0 ? galleryPreviews : university?.institutionGallery || []).map((image, index) => (
+                    <div key={index} className="aspect-[3/2] rounded-md border overflow-hidden">
+                      <img
+                        src={image}
+                        alt={`Gallery image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        data-testid={`img-gallery-${index}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Click "Generate Gallery with AI" to create professional campus images. This may take a minute.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Top Courses */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Featured Courses</CardTitle>
+              <CardDescription>Highlight your top courses (comma-separated)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="topCourses"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Master of Business Administration, Bachelor of Computer Science, etc."
+                        value={field.value?.join(", ") || ""}
+                        onChange={(e) => {
+                          const courses = e.target.value
+                            .split(",")
+                            .map((c) => c.trim())
+                            .filter((c) => c.length > 0);
+                          field.onChange(courses.length > 0 ? courses : []);
+                        }}
+                        data-testid="input-top-courses"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
           <Card>
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>

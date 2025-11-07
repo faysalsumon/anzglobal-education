@@ -95,14 +95,52 @@ export default function PublicInstitutionDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Institution Gallery */}
+            {institution.institutionGallery && institution.institutionGallery.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campus Gallery</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {institution.institutionGallery.map((image, index) => (
+                      <div key={index} className="aspect-[3/2] rounded-md overflow-hidden border">
+                        <img
+                          src={image}
+                          alt={`${institution.name} campus ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          data-testid={`img-gallery-${index}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Overview (Small Description) */}
+            {institution.smallDescription && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed" data-testid="text-small-description">
+                    {institution.smallDescription}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* About (Full Description or Legacy Description) */}
             <Card>
               <CardHeader>
-                <CardTitle>About</CardTitle>
+                <CardTitle>About {institution.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed" data-testid="text-description">
-                  {institution.description}
-                </p>
+                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-full-description">
+                  {institution.fullDescription || institution.description}
+                </div>
               </CardContent>
             </Card>
 
@@ -129,13 +167,34 @@ export default function PublicInstitutionDetail() {
               </Card>
             )}
 
+            {/* Featured Courses */}
+            {institution.topCourses && institution.topCourses.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Featured Courses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {institution.topCourses.map((course, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                        <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
+                          {course}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
-                <CardTitle>View Courses</CardTitle>
+                <CardTitle>View All Courses</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
-                  Explore the courses offered by {institution.name}
+                  Explore all the courses offered by {institution.name}
                 </p>
                 <Button asChild className="w-full" data-testid="button-view-courses">
                   <Link href={`/courses?university=${institution.id}`}>
