@@ -1759,6 +1759,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle institution active status
+  app.patch("/api/super-admin/institutions/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+
+      const updatedInstitution = await storage.updateUniversity(institutionId, { isActive });
+      res.json(updatedInstitution);
+    } catch (error) {
+      console.error("Error updating institution status:", error);
+      res.status(500).json({ message: "Failed to update institution status" });
+    }
+  });
+
+  // Get all courses (for super admin)
+  app.get("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const [allCourses, allInstitutions] = await Promise.all([
+        db.select().from(courses),
+        storage.getAllUniversities()
+      ]);
+
+      // Add institution name to each course
+      const coursesWithInstitution = allCourses.map(course => {
+        const institution = allInstitutions.find(i => i.id === course.universityId);
+        return {
+          ...course,
+          institutionName: institution?.name || 'Unknown'
+        };
+      });
+
+      res.json(coursesWithInstitution);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  });
+
+  // Create new course
+  app.post("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const courseData = req.body;
+
+      if (!courseData.title || !courseData.universityId) {
+        return res.status(400).json({ message: "Title and university ID are required" });
+      }
+
+      // Verify institution exists
+      const institution = await storage.getUniversityById(courseData.universityId);
+      if (!institution) {
+        return res.status(400).json({ message: "Institution not found" });
+      }
+
+      const newCourse = await storage.createCourse(courseData);
+      res.status(201).json(newCourse);
+    } catch (error) {
+      console.error("Error creating course:", error);
+      res.status(500).json({ message: "Failed to create course" });
+    }
+  });
+
+  // Update course
+  app.patch("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const courseId = req.params.id;
+      const updateData = req.body;
+
+      // If universityId is being updated, verify the institution exists
+      if (updateData.universityId) {
+        const institution = await storage.getUniversityById(updateData.universityId);
+        if (!institution) {
+          return res.status(400).json({ message: "Institution not found" });
+        }
+      }
+
+      const updatedCourse = await storage.updateCourse(courseId, updateData);
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error("Error updating course:", error);
+      res.status(500).json({ message: "Failed to update course" });
+    }
+  });
+
+  // Delete course
+  app.delete("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const courseId = req.params.id;
+
+      // Check if course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      await storage.deleteCourse(courseId);
+      res.json({ message: "Course deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      res.status(500).json({ message: "Failed to delete course" });
+    }
+  });
+
+  // Toggle course active status
+  app.patch("/api/super-admin/courses/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const courseId = req.params.id;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+
+      const updatedCourse = await storage.updateCourse(courseId, { isActive });
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error("Error updating course status:", error);
+      res.status(500).json({ message: "Failed to update course status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
