@@ -52,9 +52,16 @@ export const universities = pgTable("universities", {
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
   numberOfCampuses: integer("number_of_campuses"),
-  providerType: text("provider_type"),
+  providerType: text("provider_type"), // Private Institutions, TAFE, Private University, Public University
   scholarshipPercentage: integer("scholarship_percentage"),
   topDisciplines: text("top_disciplines").array(),
+  
+  // New detailed fields
+  smallDescription: text("small_description"), // AI-powered, max 100 words
+  fullDescription: text("full_description"), // AI-powered
+  institutionGallery: text("institution_gallery").array(), // Up to 3 images, 600x400px
+  topCourses: text("top_courses").array(), // Array of course IDs or names
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
