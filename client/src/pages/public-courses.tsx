@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,30 @@ export default function PublicCourses() {
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
   });
+
+  // Extract unique values from actual course data
+  const availableFilters = useMemo(() => {
+    const subjects = new Set<string>();
+    const levels = new Set<string>();
+    const countries = new Set<string>();
+    const universities = new Map<string, string>();
+
+    courses.forEach((course) => {
+      if (course.subject) subjects.add(course.subject);
+      if (course.level) levels.add(course.level);
+      if (course.country) countries.add(course.country);
+      if (course.university && course.universityId) {
+        universities.set(course.universityId, course.university.name);
+      }
+    });
+
+    return {
+      subjects: Array.from(subjects).sort(),
+      levels: Array.from(levels).sort(),
+      countries: Array.from(countries).sort(),
+      universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }, [courses]);
 
   // Check for search query and highlight parameters in URL
   useEffect(() => {
@@ -174,11 +198,11 @@ export default function PublicCourses() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Subjects</SelectItem>
-                    <SelectItem value="Computer Science">Computer Science</SelectItem>
-                    <SelectItem value="Business">Business</SelectItem>
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Medicine">Medicine</SelectItem>
-                    <SelectItem value="Arts">Arts</SelectItem>
+                    {availableFilters.subjects.map((subj) => (
+                      <SelectItem key={subj} value={subj}>
+                        {subj}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -188,10 +212,11 @@ export default function PublicCourses() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="undergraduate">Undergraduate</SelectItem>
-                    <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                    <SelectItem value="certificate">Certificate</SelectItem>
-                    <SelectItem value="diploma">Diploma</SelectItem>
+                    {availableFilters.levels.map((lvl) => (
+                      <SelectItem key={lvl} value={lvl}>
+                        {lvl}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -201,11 +226,11 @@ export default function PublicCourses() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Countries</SelectItem>
-                    <SelectItem value="Australia">Australia</SelectItem>
-                    <SelectItem value="United Kingdom">United Kingdom</SelectItem>
-                    <SelectItem value="United States">United States</SelectItem>
-                    <SelectItem value="Canada">Canada</SelectItem>
-                    <SelectItem value="New Zealand">New Zealand</SelectItem>
+                    {availableFilters.countries.map((ctry) => (
+                      <SelectItem key={ctry} value={ctry}>
+                        {ctry}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
