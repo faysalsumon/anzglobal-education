@@ -176,7 +176,7 @@ export default function StudentCourses() {
                 </div>
                 <CardTitle className="text-xl line-clamp-2">{course.title}</CardTitle>
                 <CardDescription className="line-clamp-1">
-                  {course.university?.name || "University"}
+                  {course.university?.name || "Institution"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1">

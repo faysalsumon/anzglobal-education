@@ -110,7 +110,7 @@ export default function CourseDetail() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">{course.title}</h1>
-          <p className="text-muted-foreground mt-1">{course.university?.name || "University"}</p>
+          <p className="text-muted-foreground mt-1">{course.university?.name || "Institution"}</p>
         </div>
         <div className="flex gap-2">
           <Badge className="bg-primary/10 text-primary hover:bg-primary/20">{course.level}</Badge>

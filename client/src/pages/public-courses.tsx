@@ -281,7 +281,7 @@ export default function PublicCourses() {
                       )}
                       <CardTitle className="text-lg sm:text-xl line-clamp-2">{course.title}</CardTitle>
                       <CardDescription className="line-clamp-1 text-sm">
-                        {course.university?.name || "University"}
+                        {course.university?.name || "Institution"}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 pb-3 sm:pb-4">
