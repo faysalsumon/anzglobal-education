@@ -6,7 +6,7 @@ ANZ Global Education is an AI-powered educational platform that connects univers
 
 ## Recent Changes (November 7, 2025)
 
-### Real Institution Data - HILTON ACADEMY (Complete)
+### Real Institution Data - Multiple Institutions (Complete)
 - **Schema Extension**: Added `numberOfCampuses`, `providerType`, `scholarshipPercentage`, and `topDisciplines` fields to universities table
 - **HILTON ACADEMY Institution**: Added complete institution profile with real data from anzglobal.com.au
   - Provider Type: Institution
@@ -14,10 +14,18 @@ ANZ Global Education is an AI-powered educational platform that connects univers
   - Number of Campuses: 2
   - Current Scholarship: 20%
   - Top Disciplines: Hospitality Management, Commercial Cookery, Kitchen Management
-  - Complete description and branding
-- **Logo Integration**: Institution logo saved to attached_assets directory
+  - Institution ID: 18fac686-178c-4c00-9a17-62c58986ed9e
+- **ZOI Education Institution**: Added complete institution profile with real data from anzglobal.com.au
+  - Provider Type: Institution
+  - Location: Melbourne, Australia (with Sydney campus)
+  - Number of Campuses: 2
+  - Current Scholarship: 20%
+  - Top Disciplines: Early Childhood Education, Leadership and Management, Kitchen Management, Commercial Cookery
+  - Institution ID: 08ca204e-378f-4f86-ac53-1261c50cb1fd
+  - Full description covering all program areas with emphasis on practical, hands-on learning
+- **Logo Integration**: Both institution logos saved to attached_assets directory
 - **UI Enhancement**: University profile form updated with Institution Details section for new fields
-- **Ready for Courses**: Institution profile complete, ready to add courses in next step
+- **Ready for Courses**: Both institution profiles complete, ready to add courses
 
 ### Public Course Discovery - No Login Required (Complete)
 - **Unauthenticated Browse**: Users can explore all courses at `/courses` without logging in, matching the reference site workflow at anzglobal.com.au/courses
