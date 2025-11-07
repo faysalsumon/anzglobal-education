@@ -4,7 +4,15 @@
 
 ANZ Global Education is an AI-powered educational platform that connects universities with prospective students worldwide. The platform enables universities to showcase their courses and manage applications while providing students with intelligent course discovery tools and AI-assisted profile creation. Built with a modern web stack, it features dual user experiences optimized for both institutional and student needs.
 
-## Recent Changes (November 6, 2025)
+## Recent Changes (November 7, 2025)
+
+### Enhanced Course Search with Autocomplete (Complete)
+- **Fixed Text Visibility**: Search bar text now displays in dark gray (text-gray-900) on white background for clear visibility
+- **Google-Style Autocomplete**: Real-time course suggestions appear as you type, showing up to 5 matching courses
+- **Smart Filtering**: Suggestions match against course titles, subjects, and descriptions
+- **Improved UX**: Click outside to dismiss, Enter key to search, click suggestion to auto-fill
+- **Visual Design**: Clean dropdown with course icon, title, subject, and university name for each suggestion
+- **URL Integration**: Search terms passed via URL parameter to courses page after login
 
 ### Student Referral System (Complete)
 - **Database Schema**: Added `referralCode` field to `studentProfiles` table (varchar, unique, auto-generated 8-character codes) and created `referrals` table to track referral relationships with status tracking (pending/completed/cancelled) and bonus amounts

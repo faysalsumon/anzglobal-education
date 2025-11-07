@@ -1,26 +1,59 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import type { Course, University } from "@shared/schema";
 
 interface PlatformStats {
   institutionCount: number;
   courseCount: number;
 }
 
+type CourseWithUniversity = Course & { university?: University };
+
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
   });
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      window.location.href = `/api/login?type=student&redirect=/student/courses?search=${encodeURIComponent(searchQuery)}`;
+  const { data: courses = [] } = useQuery<CourseWithUniversity[]>({
+    queryKey: ["/api/courses"],
+  });
+
+  // Filter courses based on search query
+  const suggestions = searchQuery.trim().length > 0
+    ? courses
+        .filter((course) => 
+          course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 5)
+    : [];
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearch = (query?: string) => {
+    const searchTerm = query || searchQuery;
+    if (searchTerm.trim()) {
+      window.location.href = `/api/login?type=student&redirect=/student/courses?search=${encodeURIComponent(searchTerm)}`;
     } else {
       window.location.href = `/api/login?type=student`;
     }
@@ -29,7 +62,14 @@ export default function Landing() {
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch();
+      setShowSuggestions(false);
     }
+  };
+
+  const handleSuggestionClick = (courseTitle: string) => {
+    setSearchQuery(courseTitle);
+    setShowSuggestions(false);
+    handleSearch(courseTitle);
   };
 
   return (
@@ -74,24 +114,54 @@ export default function Landing() {
               Explore Australia's most comprehensive range of courses tailored for international students. 
               Our advanced AI-driven platform helps you find your perfect match and apply directly, saving you time and money.
             </p>
-            <div className="mx-auto max-w-2xl bg-white rounded-lg p-2 shadow-lg flex gap-2">
-              <Input 
-                placeholder="Search courses..." 
-                className="flex-1 border-0 focus-visible:ring-0"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                data-testid="input-course-search"
-              />
-              <Button 
-                variant="default" 
-                size="default" 
-                onClick={handleSearch}
-                data-testid="button-search-courses"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
+            <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
+              <div className="bg-white rounded-lg p-2 shadow-lg flex gap-2">
+                <Input 
+                  placeholder="Search courses..." 
+                  className="flex-1 border-0 focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)}
+                  onKeyPress={handleKeyPress}
+                  data-testid="input-course-search"
+                />
+                <Button 
+                  variant="default" 
+                  size="default" 
+                  onClick={() => handleSearch()}
+                  data-testid="button-search-courses"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+              
+              {/* Autocomplete Suggestions */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+                  {suggestions.map((course) => (
+                    <button
+                      key={course.id}
+                      onClick={() => handleSuggestionClick(course.title)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
+                      data-testid={`suggestion-${course.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Search className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{course.title}</p>
+                          <p className="text-sm text-gray-500 truncate">
+                            {course.subject} • {course.university?.name || 'University'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
