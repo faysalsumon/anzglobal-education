@@ -6,6 +6,43 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
 
 ## Recent Changes (November 07, 2025)
 
+### Super Admin Authentication and User Management System
+- **Email/Password Authentication**: Implemented secure authentication for admin users using bcrypt (10 rounds)
+  - POST `/api/auth/login` endpoint for email/password login
+  - Session management with secure user claims
+  - Password hashing with bcrypt for all admin accounts
+  - Active status validation (inactive users cannot log in)
+- **Super Admin Dashboard** (`/admin/dashboard`):
+  - Complete user management interface
+  - View all platform users with role indicators
+  - Change user type (university/student/admin) and roles
+  - Toggle user active/inactive status
+  - Protected route requiring userType='admin' AND role='super_admin'
+- **Backend API Routes**:
+  - GET `/api/super-admin/users` - Fetch all users with sanitized data
+  - PATCH `/api/super-admin/users/:id/role` - Update user type and role
+  - PATCH `/api/super-admin/users/:id/status` - Toggle user active status
+  - All routes validate super admin access (userType='admin' + role='super_admin')
+- **Security Enhancements**:
+  - Login responses sanitized to return only safe fields (id, email, firstName, lastName, userType, role, isActive, lastLogin)
+  - All super admin API routes strip sensitive data (password, verificationToken, resetToken)
+  - Super admin access control properly enforces dual requirements
+  - OIDC upsertUser fixed to handle email conflicts safely (updates only firstName, lastName, lastLogin)
+- **Database Schema**:
+  - Extended users table with: password (hashed), emailVerified, verificationToken, resetToken, resetTokenExpiry
+  - Admin roles: super_admin, support_manager, support_staff, operations_staff
+  - userType field distinguishes: university, student, admin
+- **Super Admin Seeding**:
+  - Seed script creates initial super admin: faysalbahar@anzglobal.com.au
+  - Proper schema: userType='admin', role='super_admin'
+  - Password securely hashed before storage
+- **Frontend**:
+  - Login page with email/password form using react-hook-form + Zod validation
+  - Redirect logic based on userType and role
+  - Admin dashboard with user management table, role selectors, and status toggles
+  - Loading states and toast notifications for all mutations
+  - Cache invalidation after all user updates
+
 ### Comprehensive Institution Management System
 - **Extended University Schema** with 4 new fields:
   - `smallDescription`: AI-generated concise description (max 100 words) for listings
