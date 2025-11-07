@@ -26,6 +26,8 @@ import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
 import PublicInstitutionDetail from "@/pages/public-institution-detail";
 import UserTypeSelection from "@/pages/user-type-selection";
+import Login from "@/pages/login";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -33,6 +35,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes accessible to everyone */}
+      <Route path="/login" component={Login} />
       <Route path="/courses/:id" component={PublicCourseDetail} />
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />
@@ -45,6 +48,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Home} />
+          <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/university/profile" component={UniversityProfile} />
           <Route path="/university/courses" component={UniversityCourses} />
           <Route path="/university/courses/new" component={CourseForm} />

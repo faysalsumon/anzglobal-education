@@ -29,6 +29,7 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
+import { hashPassword, verifyPassword, generateVerificationToken } from "./auth-utils";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
 type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
@@ -109,6 +110,72 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Email/Password Auth Routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Find user by email
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+      
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Verify password
+      const isValid = await verifyPassword(password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(403).json({ message: "Account is deactivated" });
+      }
+      
+      // Update last login
+      await db
+        .update(users)
+        .set({ lastLogin: new Date() })
+        .where(eq(users.id, user.id));
+      
+      // Create session manually
+      if (!req.session) {
+        req.session = {} as any;
+      }
+      req.session.user = {
+        claims: {
+          sub: user.id,
+          email: user.email,
+        },
+      };
+      
+      // Return user data (without password)
+      const { password: _, ...userData } = user;
+      res.json(userData);
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+  
+  app.post("/api/auth/logout", (req, res) => {
+    req.session?.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
 
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -1262,6 +1329,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting admin team member:", error);
       res.status(400).json({ message: error.message || "Failed to remove admin team member" });
+    }
+  });
+
+  // Super Admin User Management Routes
+  app.get("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      // Get all users with password removed
+      const allUsers = await db.select().from(users);
+      const sanitizedUsers = allUsers.map(({ password, ...user }) => user);
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/super-admin/users/:id/role", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { userType, role } = req.body;
+      const targetUserId = req.params.id;
+
+      if (!["student", "university", "admin", "super_admin"].includes(userType)) {
+        return res.status(400).json({ message: "Invalid user type" });
+      }
+
+      // Update user
+      const [updatedUser] = await db
+        .update(users)
+        .set({ userType, role: role || 'user', updatedAt: new Date() })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userData } = updatedUser;
+      res.json(userData);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.patch("/api/super-admin/users/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { isActive } = req.body;
+      const targetUserId = req.params.id;
+
+      if (targetUserId === userId) {
+        return res.status(400).json({ message: "Cannot deactivate your own account" });
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ isActive, updatedAt: new Date() })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userData } = updatedUser;
+      res.json(userData);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
     }
   });
 

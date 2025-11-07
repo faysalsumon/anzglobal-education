@@ -30,10 +30,19 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  password: varchar("password"), // For email/password auth (hashed)
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: varchar("verification_token"),
+  verificationTokenExpiry: timestamp("verification_token_expiry"),
+  resetPasswordToken: varchar("reset_password_token"),
+  resetPasswordExpiry: timestamp("reset_password_expiry"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student', 'university', or 'admin'
+  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student', 'university', 'admin', or 'super_admin'
+  role: varchar("role", { length: 50 }).default("user"), // For granular permissions
+  isActive: boolean("is_active").default(true),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
