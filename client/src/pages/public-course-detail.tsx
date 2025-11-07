@@ -279,77 +279,32 @@ export default function PublicCourseDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Quick Facts Card */}
+            {/* Action Buttons Card */}
             <Card className="lg:sticky lg:top-24 lg:z-50">
-              <CardHeader>
-                <CardTitle className="text-lg">Course Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {course.courseCode && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Code</p>
-                    <p className="text-sm text-muted-foreground">{course.courseCode}</p>
-                  </div>
-                )}
-                {course.duration && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Duration</p>
-                    <p className="text-sm text-muted-foreground">{course.duration}</p>
-                  </div>
-                )}
-                {course.fees && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Fees</p>
-                    <p className="text-sm text-muted-foreground">
-                      {course.currency} {Number(course.fees).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {course.location && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Location</p>
-                    <p className="text-sm text-muted-foreground">{course.location}, {course.country}</p>
-                  </div>
-                )}
-                {course.subject && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Discipline</p>
-                    <p className="text-sm text-muted-foreground">{course.subject}</p>
-                  </div>
-                )}
-                {course.startDate && (
-                  <div>
-                    <p className="text-sm font-medium mb-1">Intake</p>
-                    <p className="text-sm text-muted-foreground">{course.startDate}</p>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="space-y-3 pt-4 border-t">
-                  {course.curriculumUrl && (
-                    <Button 
-                      asChild 
-                      variant="outline" 
-                      className="w-full" 
-                      data-testid="button-download-curriculum"
-                    >
-                      <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Curriculum
-                      </a>
-                    </Button>
-                  )}
+              <CardContent className="pt-6 space-y-3">
+                {course.curriculumUrl && (
                   <Button 
                     asChild 
+                    variant="outline" 
                     className="w-full" 
-                    data-testid="button-login-apply"
+                    data-testid="button-download-curriculum"
                   >
-                    <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Login to Apply
+                    <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Curriculum
                     </a>
                   </Button>
-                </div>
+                )}
+                <Button 
+                  asChild 
+                  className="w-full" 
+                  data-testid="button-login-apply"
+                >
+                  <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login to Apply
+                  </a>
+                </Button>
               </CardContent>
             </Card>
 

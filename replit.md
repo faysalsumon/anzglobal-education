@@ -25,10 +25,9 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
     - FEES: Scrolls to Course Fees section
     - ELIGIBILITY: Scrolls to Course Eligibility section
   - Course description and complete details
-  - Sidebar with quick facts (duration, fees, location, intake, discipline)
+  - Sidebar with sticky action buttons (Download Curriculum, Login to Apply)
   - Course fees breakdown table (tuition, cost of living, application fees)
   - Eligibility and English requirements sections
-  - "Download Curriculum" and "Login to Apply" action buttons
   - Redesigned "Offered By" institution card with enhanced UI:
     - Distinctive header with primary-colored accent bar
     - Highlighted border (`border-2 border-primary/20`)
