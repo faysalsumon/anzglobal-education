@@ -7,6 +7,7 @@ import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileChec
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
+import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 
 interface PlatformStats {
   institutionCount: number;
@@ -20,6 +21,7 @@ export default function Landing() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
+  const [showInstitutionAuthModal, setShowInstitutionAuthModal] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = useQuery<PlatformStats>({
@@ -128,11 +130,14 @@ export default function Landing() {
               <GraduationCap className="h-4 w-4 mr-2" />
               Student
             </Button>
-            <Button variant="outline" asChild size="sm" data-testid="button-institution-login">
-              <a href="/api/login?type=university">
-                <Building2 className="h-4 w-4 mr-2" />
-                Institution
-              </a>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowInstitutionAuthModal(true)}
+              data-testid="button-institution-auth"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Institution
             </Button>
           </nav>
           <Button 
@@ -436,11 +441,15 @@ export default function Landing() {
                 <GraduationCap className="h-5 w-5 mr-2" />
                 I'm a Student
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 border-white text-white" asChild data-testid="button-university-cta">
-                <a href="/api/login?type=university">
-                  <Building2 className="h-5 w-5 mr-2" />
-                  I'm a University
-                </a>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="bg-white/10 hover:bg-white/20 border-white text-white" 
+                onClick={() => setShowInstitutionAuthModal(true)}
+                data-testid="button-university-cta"
+              >
+                <Building2 className="h-5 w-5 mr-2" />
+                I'm a University
               </Button>
             </div>
           </div>
@@ -484,14 +493,21 @@ export default function Landing() {
               <h3 className="mb-4 font-semibold text-foreground">For Institutions</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/api/login?type=university" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-institution-login">
-                    Institution Login
-                  </a>
+                  <button 
+                    onClick={() => setShowInstitutionAuthModal(true)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid="link-institution-portal"
+                  >
+                    Institution Portal
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <button 
+                    onClick={() => setShowInstitutionAuthModal(true)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     List Your Institution
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -531,6 +547,12 @@ export default function Landing() {
       <StudentAuthModal 
         open={showStudentAuthModal} 
         onOpenChange={setShowStudentAuthModal}
+      />
+
+      {/* Institution Auth Modal */}
+      <InstitutionAuthModal 
+        open={showInstitutionAuthModal} 
+        onOpenChange={setShowInstitutionAuthModal}
       />
     </div>
   );
