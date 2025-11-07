@@ -26,8 +26,15 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
   - Course fees breakdown table (tuition, cost of living, application fees)
   - Eligibility and English requirements sections
   - "Download Curriculum" and "Login to Apply" action buttons
-  - Related university information card with link to institution detail page
+  - Redesigned "Offered By" institution card with enhanced UI:
+    - Distinctive header with primary-colored accent bar
+    - Highlighted border (`border-2 border-primary/20`)
+    - Institution logo in bordered white box alongside name
+    - Detailed institution information (provider type, established year, campuses, scholarship)
+    - Primary-styled "View Full Institution Profile" button with Globe icon
+    - Clean key-value layout with proper spacing
 - Updated "View Course" button in public courses listing to link to public course detail page
+- Fixed sticky positioning on sidebar to only apply on large screens (prevented button overlap on mobile)
 
 ### Public Institutions Listing Page Updates
 - **Replaced "Visit Website" button** with two action buttons on each institution card:

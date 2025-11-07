@@ -342,32 +342,78 @@ export default function PublicCourseDetail() {
 
             {/* University Info Card */}
             {course.university && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">About Institution</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {course.university.logo && (
-                    <img
-                      src={`/${course.university.logo}`}
-                      alt={course.university.name}
-                      className="w-full h-auto object-contain max-h-24"
-                    />
-                  )}
-                  <h3 className="font-semibold">{course.university.name}</h3>
-                  {course.university.location && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      {course.university.location}, {course.university.country}
-                    </p>
-                  )}
-                  <div className="pt-2">
-                    <Button asChild variant="outline" className="w-full">
-                      <Link href={`/institutions/${course.university.id}`}>
-                        View Institution
-                      </Link>
-                    </Button>
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-1 w-8 bg-primary rounded-full"></div>
+                    <CardTitle className="text-sm uppercase tracking-wider text-primary">Offered By</CardTitle>
                   </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Institution Logo and Name */}
+                  <div className="flex items-center gap-3 pb-3 border-b">
+                    {course.university.logo && (
+                      <div className="flex-shrink-0 w-16 h-16 rounded-lg border bg-white p-2 flex items-center justify-center">
+                        <img
+                          src={`/${course.university.logo}`}
+                          alt={course.university.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base leading-tight" data-testid="text-institution-name">
+                        {course.university.name}
+                      </h3>
+                      {course.university.location && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{course.university.location}, {course.university.country}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Institution Details */}
+                  <div className="space-y-2">
+                    {course.university.providerType && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Type</span>
+                        <Badge variant="secondary" className="font-normal" data-testid="badge-institution-type">
+                          {course.university.providerType}
+                        </Badge>
+                      </div>
+                    )}
+                    {course.university.establishedYear && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Established</span>
+                        <span className="font-medium" data-testid="text-institution-established">{course.university.establishedYear}</span>
+                      </div>
+                    )}
+                    {course.university.numberOfCampuses && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Campuses</span>
+                        <span className="font-medium" data-testid="text-institution-campuses">{course.university.numberOfCampuses}</span>
+                      </div>
+                    )}
+                    {course.university.scholarshipPercentage && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Scholarship</span>
+                        <Badge variant="default" className="font-semibold" data-testid="badge-institution-scholarship">
+                          <Award className="h-3 w-3 mr-1" />
+                          {course.university.scholarshipPercentage}%
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* View Institution Button */}
+                  <Button asChild className="w-full" data-testid="button-view-institution">
+                    <Link href={`/institutions/${course.university.id}`}>
+                      <Globe className="h-4 w-4 mr-2" />
+                      View Full Institution Profile
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}
