@@ -82,11 +82,11 @@ export function StudentDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Applications</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-total-applications">{stats.totalApplications}</div>
@@ -95,9 +95,9 @@ export function StudentDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="stat-pending-applications">{stats.pendingApplications}</div>
@@ -106,9 +106,9 @@ export function StudentDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-secondary" data-testid="stat-accepted-applications">{stats.acceptedApplications}</div>
@@ -117,9 +117,9 @@ export function StudentDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profile</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{profile ? "Complete" : "Setup"}</div>
@@ -142,14 +142,14 @@ export function StudentDashboard() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Referral Code and Link */}
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Your Referral Code</label>
                 <div className="flex gap-2">
                   <Input 
                     value={referralData.referralCode || ''} 
                     readOnly 
-                    className="font-mono text-lg"
+                    className="font-mono text-base sm:text-lg"
                     data-testid="input-referral-code"
                   />
                   <Button 
@@ -157,6 +157,7 @@ export function StudentDashboard() {
                     size="icon" 
                     onClick={handleCopyCode}
                     data-testid="button-copy-code"
+                    className="flex-shrink-0"
                   >
                     {copiedCode ? <Check className="h-4 w-4 text-secondary" /> : <Copy className="h-4 w-4" />}
                   </Button>
@@ -168,7 +169,7 @@ export function StudentDashboard() {
                   <Input 
                     value={referralData.referralLink || ''} 
                     readOnly 
-                    className="text-sm"
+                    className="text-xs sm:text-sm"
                     data-testid="input-referral-link"
                   />
                   <Button 
@@ -176,6 +177,7 @@ export function StudentDashboard() {
                     size="icon" 
                     onClick={handleCopyLink}
                     data-testid="button-copy-link"
+                    className="flex-shrink-0"
                   >
                     {copiedLink ? <Check className="h-4 w-4 text-secondary" /> : <Copy className="h-4 w-4" />}
                   </Button>
@@ -185,7 +187,7 @@ export function StudentDashboard() {
 
             {/* Referral Stats */}
             {referralStats && (
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-lg border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="h-4 w-4 text-primary" />
@@ -244,22 +246,22 @@ export function StudentDashboard() {
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Get started with common tasks</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {!profile && (
-            <Button asChild data-testid="button-create-profile">
+            <Button asChild data-testid="button-create-profile" className="w-full">
               <Link href="/student/profile">
                 <User className="mr-2 h-4 w-4" />
                 Create Profile
               </Link>
             </Button>
           )}
-          <Button asChild data-testid="button-browse-courses">
+          <Button asChild data-testid="button-browse-courses" className="w-full">
             <Link href="/student/courses">
               <Search className="mr-2 h-4 w-4" />
               Browse Courses
             </Link>
           </Button>
-          <Button variant="outline" asChild data-testid="button-view-applications">
+          <Button variant="outline" asChild data-testid="button-view-applications" className="w-full">
             <Link href="/student/applications">
               <FileText className="mr-2 h-4 w-4" />
               My Applications
@@ -284,14 +286,14 @@ export function StudentDashboard() {
           ) : (
             <div className="space-y-4">
               {applications.map((application) => (
-                <div key={application.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div>
-                    <p className="font-medium" data-testid={`application-${application.id}`}>Application</p>
+                <div key={application.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-3 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate" data-testid={`application-${application.id}`}>Application</p>
                     <p className="text-sm text-muted-foreground">
                       Submitted {new Date(application.createdAt!).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <Badge 
                       variant={
                         application.status === "accepted" ? "default" :
@@ -299,6 +301,7 @@ export function StudentDashboard() {
                         "secondary"
                       }
                       data-testid={`status-${application.id}`}
+                      className="capitalize"
                     >
                       {application.status}
                     </Badge>
