@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,17 @@ export default function StudentCourses() {
   const [subject, setSubject] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
+
+  // Check for search query parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchParam = urlParams.get('search');
+    if (searchParam) {
+      setSearchTerm(searchParam);
+      // Clear the URL parameter to keep URL clean
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],

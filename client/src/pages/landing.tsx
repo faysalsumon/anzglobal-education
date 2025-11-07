@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +12,25 @@ interface PlatformStats {
 }
 
 export default function Landing() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
   });
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      window.location.href = `/api/login?type=student&redirect=/student/courses?search=${encodeURIComponent(searchQuery)}`;
+    } else {
+      window.location.href = `/api/login?type=student`;
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,9 +78,17 @@ export default function Landing() {
               <Input 
                 placeholder="Search courses..." 
                 className="flex-1 border-0 focus-visible:ring-0"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
                 data-testid="input-course-search"
               />
-              <Button variant="default" size="default" data-testid="button-search-courses">
+              <Button 
+                variant="default" 
+                size="default" 
+                onClick={handleSearch}
+                data-testid="button-search-courses"
+              >
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
