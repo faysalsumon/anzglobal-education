@@ -159,9 +159,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       };
       
-      // Return user data (without password)
-      const { password: _, ...userData } = user;
-      res.json(userData);
+      // Return only safe, non-sensitive user data
+      const safeUserData = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userType: user.userType,
+        role: user.role,
+        isActive: user.isActive,
+        lastLogin: new Date(),
+      };
+      
+      res.json(safeUserData);
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
@@ -1338,13 +1348,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== 'super_admin') {
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
-      // Get all users with password removed
+      // Get all users and sanitize sensitive fields
       const allUsers = await db.select().from(users);
-      const sanitizedUsers = allUsers.map(({ password, ...user }) => user);
+      const sanitizedUsers = allUsers.map(({ 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordTokenExpiry,
+        ...safeUser 
+      }) => safeUser);
       
       res.json(sanitizedUsers);
     } catch (error) {
@@ -1358,7 +1375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== 'super_admin') {
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
@@ -1380,7 +1397,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const { password, ...userData } = updatedUser;
+      const { 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordTokenExpiry,
+        ...userData 
+      } = updatedUser;
       res.json(userData);
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -1393,7 +1417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== 'super_admin') {
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
@@ -1414,7 +1438,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const { password, ...userData } = updatedUser;
+      const { 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordTokenExpiry,
+        ...userData 
+      } = updatedUser;
       res.json(userData);
     } catch (error) {
       console.error("Error updating user status:", error);

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 async function seedSuperAdmin() {
   const email = "faysalbahar@anzglobal.com.au";
-  const password = "SamSung0";
+  const password = "AdminPass123!";
   
   try {
     // Check if user already exists
@@ -32,7 +32,7 @@ async function seedSuperAdmin() {
         emailVerified: true, // Auto-verify super admin
         firstName: "Faysal",
         lastName: "Bahar",
-        userType: "super_admin",
+        userType: "admin",  // Use "admin" not "super_admin"
         role: "super_admin",
         isActive: true,
       })

@@ -39,13 +39,16 @@ export default function Login() {
         description: `Welcome back, ${response.firstName || response.email}!`,
       });
 
-      // Redirect based on user type
-      if (response.userType === "super_admin" || response.userType === "admin") {
+      // Redirect based on user type and role
+      // Super admins have userType="admin" with role="super_admin"
+      if (response.userType === "admin" && response.role === "super_admin") {
+        setLocation("/admin/dashboard");
+      } else if (response.userType === "admin") {
         setLocation("/admin/dashboard");
       } else if (response.userType === "university") {
-        setLocation("/university/dashboard");
+        setLocation("/university/profile");
       } else if (response.userType === "student") {
-        setLocation("/student/dashboard");
+        setLocation("/student/profile");
       } else {
         setLocation("/");
       }
