@@ -40,6 +40,10 @@ export default function UniversityProfile() {
       establishedYear: university?.establishedYear || undefined,
       contactEmail: university?.contactEmail || "",
       contactPhone: university?.contactPhone || "",
+      numberOfCampuses: university?.numberOfCampuses || undefined,
+      providerType: university?.providerType || "",
+      scholarshipPercentage: university?.scholarshipPercentage || undefined,
+      topDisciplines: university?.topDisciplines || [],
     },
   });
 
@@ -192,6 +196,98 @@ export default function UniversityProfile() {
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Institution Details</CardTitle>
+              <CardDescription>Additional information about your institution</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="providerType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provider Type</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Institution, University, College, etc." data-testid="input-provider-type" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="numberOfCampuses"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Campuses</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          placeholder="1"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-number-of-campuses"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="scholarshipPercentage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scholarship Percentage</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="20"
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        data-testid="input-scholarship-percentage"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="topDisciplines"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Top Disciplines (comma-separated)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Computer Science, Business, Engineering"
+                        value={field.value?.join(", ") || ""}
+                        onChange={(e) => {
+                          const disciplines = e.target.value
+                            .split(",")
+                            .map((d) => d.trim())
+                            .filter((d) => d.length > 0);
+                          field.onChange(disciplines.length > 0 ? disciplines : []);
+                        }}
+                        data-testid="input-top-disciplines"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 

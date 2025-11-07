@@ -6,6 +6,19 @@ ANZ Global Education is an AI-powered educational platform that connects univers
 
 ## Recent Changes (November 7, 2025)
 
+### Real Institution Data - HILTON ACADEMY (Complete)
+- **Schema Extension**: Added `numberOfCampuses`, `providerType`, `scholarshipPercentage`, and `topDisciplines` fields to universities table
+- **HILTON ACADEMY Institution**: Added complete institution profile with real data from anzglobal.com.au
+  - Provider Type: Institution
+  - Location: Melbourne, Australia
+  - Number of Campuses: 2
+  - Current Scholarship: 20%
+  - Top Disciplines: Hospitality Management, Commercial Cookery, Kitchen Management
+  - Complete description and branding
+- **Logo Integration**: Institution logo saved to attached_assets directory
+- **UI Enhancement**: University profile form updated with Institution Details section for new fields
+- **Ready for Courses**: Institution profile complete, ready to add courses in next step
+
 ### Public Course Discovery - No Login Required (Complete)
 - **Unauthenticated Browse**: Users can explore all courses at `/courses` without logging in, matching the reference site workflow at anzglobal.com.au/courses
 - **Search Integration**: Landing page autocomplete redirects to `/courses?search=...` instead of forcing login
