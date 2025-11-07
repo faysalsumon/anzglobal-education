@@ -283,8 +283,8 @@ export default function StudentProfilePage() {
     async (data) => {
       let photoPath = data.profileImageUrl;
       
-      // Upload photo if a new one was selected
-      if (photoFile) {
+      // Only upload photo if profile exists and a new photo was selected
+      if (photoFile && profile) {
         const uploadedPath = await uploadPhoto();
         if (uploadedPath) {
           photoPath = uploadedPath;
@@ -294,6 +294,27 @@ export default function StudentProfilePage() {
         }
       }
       
+      // If no profile exists yet and photo was selected, save data first then upload photo
+      if (photoFile && !profile) {
+        // Save profile data first
+        try {
+          await createOrUpdateMutation.mutateAsync(data);
+          // Profile created, now upload photo
+          const uploadedPath = await uploadPhoto();
+          if (uploadedPath) {
+            // Update profile with photo
+            await createOrUpdateMutation.mutateAsync({ profileImageUrl: uploadedPath });
+          }
+          setPhotoFile(null);
+          setPhotoPreview(null);
+          return;
+        } catch (error) {
+          // Error already handled by mutation
+          return;
+        }
+      }
+      
+      // Normal save (no photo or photo already uploaded)
       createOrUpdateMutation.mutate({
         ...data,
         profileImageUrl: photoPath,
