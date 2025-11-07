@@ -170,6 +170,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public institutions route
+  app.get("/api/institutions", async (req, res) => {
+    try {
+      const institutions = await storage.getAllUniversities();
+      res.json(institutions);
+    } catch (error) {
+      console.error("Error fetching institutions:", error);
+      res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
   // Course routes
   app.get("/api/courses", async (req, res) => {
     try {

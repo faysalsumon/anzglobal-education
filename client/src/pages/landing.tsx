@@ -17,6 +17,7 @@ type CourseWithUniversity = Course & { university?: University };
 export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = useQuery<PlatformStats>({
@@ -27,8 +28,12 @@ export default function Landing() {
     queryKey: ["/api/courses"],
   });
 
-  // Filter courses based on search query
-  const suggestions = searchQuery.trim().length > 0
+  const { data: institutions = [] } = useQuery<University[]>({
+    queryKey: ["/api/institutions"],
+  });
+
+  // Filter courses or institutions based on search query and type
+  const courseSuggestions = searchQuery.trim().length > 0 && searchType === "courses"
     ? courses
         .filter((course) => 
           course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,6 +42,18 @@ export default function Landing() {
         )
         .slice(0, 5)
     : [];
+
+  const institutionSuggestions = searchQuery.trim().length > 0 && searchType === "institutions"
+    ? institutions
+        .filter((institution) => 
+          institution.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          institution.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          institution.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 5)
+    : [];
+
+  const suggestions = searchType === "courses" ? courseSuggestions : institutionSuggestions;
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -50,17 +67,19 @@ export default function Landing() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSearch = (query?: string, courseId?: number) => {
+  const handleSearch = (query?: string, itemId?: string) => {
     const searchTerm = query || searchQuery;
-    if (courseId) {
+    const basePath = searchType === "courses" ? "/courses" : "/institutions";
+    
+    if (itemId && searchType === "courses") {
       // If a specific course is selected, highlight it
-      window.location.href = `/courses?search=${encodeURIComponent(searchTerm)}&highlight=${courseId}`;
+      window.location.href = `${basePath}?search=${encodeURIComponent(searchTerm)}&highlight=${itemId}`;
     } else if (searchTerm.trim()) {
       // Just search
-      window.location.href = `/courses?search=${encodeURIComponent(searchTerm)}`;
+      window.location.href = `${basePath}?search=${encodeURIComponent(searchTerm)}`;
     } else {
-      // No search term, just go to courses page
-      window.location.href = `/courses`;
+      // No search term, just go to the page
+      window.location.href = basePath;
     }
   };
 
@@ -71,10 +90,16 @@ export default function Landing() {
     }
   };
 
-  const handleSuggestionClick = (course: CourseWithUniversity) => {
+  const handleCourseSuggestionClick = (course: CourseWithUniversity) => {
     setSearchQuery(course.title);
     setShowSuggestions(false);
-    handleSearch(course.title, Number(course.id));
+    handleSearch(course.title, String(course.id));
+  };
+
+  const handleInstitutionSuggestionClick = (institution: University) => {
+    setSearchQuery(institution.name);
+    setShowSuggestions(false);
+    handleSearch(institution.name);
   };
 
   return (
@@ -120,9 +145,39 @@ export default function Landing() {
               Our advanced AI-driven platform helps you find your perfect match and apply directly, saving you time and money.
             </p>
             <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
+              {/* Search Type Toggle */}
+              <div className="flex gap-2 mb-4 justify-center">
+                <Button
+                  variant={searchType === "courses" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSearchType("courses");
+                    setSearchQuery("");
+                    setShowSuggestions(false);
+                  }}
+                  data-testid="button-search-type-courses"
+                >
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  Search Courses
+                </Button>
+                <Button
+                  variant={searchType === "institutions" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSearchType("institutions");
+                    setSearchQuery("");
+                    setShowSuggestions(false);
+                  }}
+                  data-testid="button-search-type-institutions"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Search Institutions
+                </Button>
+              </div>
+
               <div className="bg-white rounded-lg p-2 shadow-lg flex gap-2">
                 <Input 
-                  placeholder="Search courses..." 
+                  placeholder={searchType === "courses" ? "Search courses..." : "Search institutions..."} 
                   className="flex-1 border-0 focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
                   value={searchQuery}
                   onChange={(e) => {
@@ -131,13 +186,13 @@ export default function Landing() {
                   }}
                   onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)}
                   onKeyPress={handleKeyPress}
-                  data-testid="input-course-search"
+                  data-testid="input-search"
                 />
                 <Button 
                   variant="default" 
                   size="default" 
                   onClick={() => handleSearch()}
-                  data-testid="button-search-courses"
+                  data-testid="button-search"
                 >
                   <Search className="h-4 w-4 mr-2" />
                   Search
@@ -147,24 +202,45 @@ export default function Landing() {
               {/* Autocomplete Suggestions */}
               {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
-                  {suggestions.map((course) => (
-                    <button
-                      key={course.id}
-                      onClick={() => handleSuggestionClick(course)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
-                      data-testid={`suggestion-${course.id}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Search className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{course.title}</p>
-                          <p className="text-sm text-gray-500 truncate">
-                            {course.subject} • {course.university?.name || 'University'}
-                          </p>
+                  {searchType === "courses" ? (
+                    courseSuggestions.map((course) => (
+                      <button
+                        key={course.id}
+                        onClick={() => handleCourseSuggestionClick(course)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
+                        data-testid={`suggestion-course-${course.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Search className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{course.title}</p>
+                            <p className="text-sm text-gray-500 truncate">
+                              {course.subject} • {course.university?.name || 'University'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))
+                  ) : (
+                    institutionSuggestions.map((institution) => (
+                      <button
+                        key={institution.id}
+                        onClick={() => handleInstitutionSuggestionClick(institution)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
+                        data-testid={`suggestion-institution-${institution.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{institution.name}</p>
+                            <p className="text-sm text-gray-500 truncate">
+                              {institution.location}, {institution.country}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>

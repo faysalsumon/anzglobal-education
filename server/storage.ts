@@ -41,6 +41,7 @@ export interface IStorage {
   // University operations
   getUniversityById(id: string): Promise<University | undefined>;
   getUniversityByUserId(userId: string): Promise<University | undefined>;
+  getAllUniversities(): Promise<University[]>;
   createUniversity(university: InsertUniversity): Promise<University>;
   updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University>;
   
@@ -134,6 +135,10 @@ export class DatabaseStorage implements IStorage {
       .from(universities)
       .where(eq(universities.userId, userId));
     return university;
+  }
+
+  async getAllUniversities(): Promise<University[]> {
+    return await db.select().from(universities);
   }
 
   async createUniversity(universityData: InsertUniversity): Promise<University> {
