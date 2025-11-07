@@ -116,6 +116,16 @@ interface Application {
   };
 }
 
+// Helper function to format user type labels
+const formatUserType = (userType: string): string => {
+  const labels: Record<string, string> = {
+    admin: "Super Admin",
+    student: "Student",
+    university: "University"
+  };
+  return labels[userType] || userType;
+};
+
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
@@ -816,7 +826,7 @@ export default function AdminDashboard() {
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="student">Students</SelectItem>
                     <SelectItem value="university">Universities</SelectItem>
-                    <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="admin">Super Admins</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -858,7 +868,7 @@ export default function AdminDashboard() {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={user.userType === "admin" ? "default" : "secondary"}>
-                              {user.userType}
+                              {formatUserType(user.userType)}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1508,7 +1518,7 @@ export default function AdminDashboard() {
                       <SelectContent>
                         <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="university">University</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="admin">Super Admin</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
