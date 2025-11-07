@@ -344,13 +344,12 @@ export default function CourseDetail() {
                     {course.university.description}
                   </p>
                 )}
-                {course.university.website && (
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <a href={course.university.website} target="_blank" rel="noopener noreferrer">
-                      Visit Website
-                    </a>
-                  </Button>
-                )}
+                <Button variant="outline" size="sm" asChild className="w-full" data-testid="button-view-institution">
+                  <Link href={`/institutions/${course.university.id}`}>
+                    <Building2 className="mr-2 h-4 w-4" />
+                    View {getInstitutionLabel(course.university.providerType)}
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           )}
