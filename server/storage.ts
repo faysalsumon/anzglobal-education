@@ -127,10 +127,12 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
-        target: users.email,
+        target: users.id,
         set: {
           firstName: userData.firstName,
           lastName: userData.lastName,
+          userType: userData.userType,
+          role: userData.role,
           lastLogin: new Date(),
           updatedAt: new Date(),
         },
