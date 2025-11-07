@@ -23,6 +23,7 @@ export default function PublicCourses() {
   const [subject, setSubject] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
+  const [universityFilter, setUniversityFilter] = useState<string>("");
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const highlightedRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +36,7 @@ export default function PublicCourses() {
     const urlParams = new URLSearchParams(window.location.search);
     const searchParam = urlParams.get('search');
     const highlightParam = urlParams.get('highlight');
+    const universityParam = urlParams.get('university');
     
     if (searchParam) {
       setSearchTerm(searchParam);
@@ -43,9 +45,13 @@ export default function PublicCourses() {
     if (highlightParam) {
       setHighlightedCourseId(parseInt(highlightParam));
     }
+
+    if (universityParam) {
+      setUniversityFilter(universityParam);
+    }
     
     // Clear URL parameters
-    if (searchParam || highlightParam) {
+    if (searchParam || highlightParam || universityParam) {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -68,6 +74,7 @@ export default function PublicCourses() {
     if (subject && course.subject !== subject) return false;
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
+    if (universityFilter && course.universityId !== universityFilter) return false;
     return true;
   });
 

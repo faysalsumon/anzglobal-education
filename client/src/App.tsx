@@ -23,6 +23,7 @@ import StudentAIAssistant from "@/pages/student-ai-assistant";
 import StudentReferrals from "@/pages/student-referrals";
 import PublicCourses from "@/pages/public-courses";
 import PublicInstitutions from "@/pages/public-institutions";
+import PublicInstitutionDetail from "@/pages/public-institution-detail";
 import UserTypeSelection from "@/pages/user-type-selection";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
     <Switch>
       {/* Public routes accessible to everyone */}
       <Route path="/courses" component={PublicCourses} />
+      <Route path="/institutions/:id" component={PublicInstitutionDetail} />
       <Route path="/institutions" component={PublicInstitutions} />
       
       {isLoading || !isAuthenticated ? (

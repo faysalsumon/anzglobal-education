@@ -278,16 +278,28 @@ export default function PublicInstitutions() {
                         </p>
                       )}
 
-                      <Button
-                        variant="default"
-                        className="w-full"
-                        asChild
-                        data-testid={`button-read-more-${institution.id}`}
-                      >
-                        <a href={institution.website} target="_blank" rel="noopener noreferrer">
-                          Visit Website
-                        </a>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          className="flex-1"
+                          asChild
+                          data-testid={`button-view-institution-${institution.id}`}
+                        >
+                          <Link href={`/institutions/${institution.id}`}>
+                            View Institution
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          asChild
+                          data-testid={`button-view-courses-${institution.id}`}
+                        >
+                          <Link href={`/courses?university=${institution.id}`}>
+                            View Courses
+                          </Link>
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
