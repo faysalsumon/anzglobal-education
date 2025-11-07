@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users } from "@shared/schema";
+import { users, adminTeamMembers } from "@shared/schema";
 import { hashPassword } from "./auth-utils";
 import { eq } from "drizzle-orm";
 
@@ -16,7 +16,28 @@ async function seedSuperAdmin() {
       .limit(1);
     
     if (existingUser.length > 0) {
-      console.log("Super admin already exists!");
+      console.log("Super admin user already exists!");
+      
+      // Ensure admin team member record exists
+      const userId = existingUser[0].id;
+      const existingMember = await db
+        .select()
+        .from(adminTeamMembers)
+        .where(eq(adminTeamMembers.userId, userId))
+        .limit(1);
+      
+      if (existingMember.length === 0) {
+        await db.insert(adminTeamMembers).values({
+          userId,
+          role: "super_admin",
+          isActive: true,
+          invitedBy: userId,
+        });
+        console.log("✅ Admin team member record created for existing super admin!");
+      } else {
+        console.log("Admin team member record already exists!");
+      }
+      
       return;
     }
     
@@ -37,6 +58,14 @@ async function seedSuperAdmin() {
         isActive: true,
       })
       .returning();
+    
+    // Create admin team member record
+    await db.insert(adminTeamMembers).values({
+      userId: newUser.id,
+      role: "super_admin",
+      isActive: true,
+      invitedBy: newUser.id,
+    });
     
     console.log("✅ Super admin created successfully!");
     console.log("Email:", email);
