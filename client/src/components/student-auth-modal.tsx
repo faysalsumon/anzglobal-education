@@ -44,9 +44,19 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-2">
                   Access your dashboard, track applications, and manage your profile
                 </p>
+                <a 
+                  href="https://replit.com/forgot" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid="link-forgot-password"
+                >
+                  Forgot your password?
+                </a>
               </CardContent>
             </a>
           </Card>
