@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Mail, Lock } from "lucide-react";
 
 const loginSchema = z.object({
@@ -34,10 +34,16 @@ export default function Login() {
     try {
       const response = await apiRequest("POST", "/api/auth/login", data) as any;
       
+      // Invalidate auth cache so useAuth hook refetches and knows user is authenticated
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${response.firstName || response.email}!`,
       });
+
+      // Small delay to ensure cache invalidation completes
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Redirect based on user type and role
       // Super admins have userType="admin" with role="super_admin"
