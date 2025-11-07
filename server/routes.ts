@@ -19,7 +19,7 @@ import {
   studentProfiles,
   favorites,
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import {
   generateUniversityDescription,
@@ -1074,10 +1074,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select()
           .from(favorites)
           .where(
-            eq(favorites.studentProfileId, profile.id)
-          )
-          .where(eq(favorites.itemType, item.itemType))
-          .where(eq(favorites.itemId, item.itemId));
+            and(
+              eq(favorites.studentProfileId, profile.id),
+              eq(favorites.itemType, item.itemType),
+              eq(favorites.itemId, item.itemId)
+            )
+          );
 
         statusMap[`${item.itemType}-${item.itemId}`] = !!favorite;
       }

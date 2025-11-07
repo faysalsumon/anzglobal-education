@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Home } from "lucide-react";
+import { Search, MapPin, Home, Heart } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,7 +19,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Favorite } from "@shared/schema";
 
 type University = {
   id: string;
@@ -45,6 +56,9 @@ export default function PublicInstitutions() {
   const [locationFilter, setLocationFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [scholarshipFilter, setScholarshipFilter] = useState("all");
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { user, isAuthenticated, isStudent } = useAuth();
+  const { toast } = useToast();
 
   // Read search query from URL params
   useEffect(() => {
@@ -58,6 +72,85 @@ export default function PublicInstitutions() {
   const { data: institutions = [], isLoading } = useQuery<University[]>({
     queryKey: ["/api/institutions"],
   });
+
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ["/api/student/favorites"],
+    enabled: isAuthenticated && isStudent,
+  });
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: async (data: { itemType: string; itemId: string }) => {
+      return await apiRequest("POST", "/api/student/favorites", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Success",
+        description: "Added to favorites",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("already favorited")) {
+        toast({
+          title: "Already favorited",
+          description: "This institution is already in your favorites",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add to favorites",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (favoriteId: string) => {
+      return await apiRequest("DELETE", `/api/student/favorites/${favoriteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Success",
+        description: "Removed from favorites",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFavoriteToggle = (institutionId: string) => {
+    if (!isAuthenticated || !isStudent) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const existingFavorite = favorites.find(
+      (f) => f.itemType === "university" && f.itemId === institutionId
+    );
+
+    if (existingFavorite) {
+      removeFavoriteMutation.mutate(existingFavorite.id);
+    } else {
+      addFavoriteMutation.mutate({
+        itemType: "university",
+        itemId: institutionId,
+      });
+    }
+  };
+
+  const isFavorited = (institutionId: string) => {
+    return favorites.some(
+      (f) => f.itemType === "university" && f.itemId === institutionId
+    );
+  };
 
   // Get unique locations for filter
   const locations = Array.from(new Set(institutions.map((i) => i.location))).filter((loc): loc is string => Boolean(loc));
@@ -241,10 +334,28 @@ export default function PublicInstitutions() {
                 {filteredInstitutions.map((institution) => (
                   <Card
                     key={institution.id}
-                    className="hover-elevate active-elevate-2"
+                    className="hover-elevate active-elevate-2 relative"
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-6">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute top-4 right-4 h-8 w-8"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleFavoriteToggle(institution.id);
+                        }}
+                        data-testid={`button-favorite-${institution.id}`}
+                      >
+                        <Heart
+                          className={`h-5 w-5 ${
+                            isFavorited(institution.id)
+                              ? "fill-red-500 text-red-500"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                      </Button>
                       <div className="flex items-start gap-4 mb-4">
                         {institution.logo && (
                           <img
@@ -333,6 +444,33 @@ export default function PublicInstitutions() {
           </div>
         </div>
       </div>
+
+      {/* Login Modal */}
+      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+        <DialogContent data-testid="dialog-login-required">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in as a student to save favorites. Please log in to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginModal(false)}
+              data-testid="button-cancel-login"
+            >
+              Cancel
+            </Button>
+            <Button
+              asChild
+              data-testid="button-go-to-login"
+            >
+              <Link href="/">Go to Login</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
