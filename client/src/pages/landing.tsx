@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University } from "@shared/schema";
+import { StudentAuthModal } from "@/components/student-auth-modal";
 
 interface PlatformStats {
   institutionCount: number;
@@ -18,6 +19,7 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
+  const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = useQuery<PlatformStats>({
@@ -117,18 +119,30 @@ export default function Landing() {
             <a href="#" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Find Courses
             </a>
-            <Button variant="outline" asChild size="sm" data-testid="button-student-registration">
-              <a href="/api/login?type=student">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Student Registration
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => setShowStudentAuthModal(true)}
+              data-testid="button-student-auth"
+            >
+              <GraduationCap className="h-4 w-4 mr-2" />
+              Student
+            </Button>
+            <Button variant="outline" asChild size="sm" data-testid="button-institution-login">
+              <a href="/api/login?type=university">
+                <Building2 className="h-4 w-4 mr-2" />
+                Institution
               </a>
             </Button>
-            <Button asChild size="sm" data-testid="button-student-login-header">
-              <a href="/api/login?type=student">Student Login</a>
-            </Button>
           </nav>
-          <Button className="md:hidden" asChild size="sm">
-            <a href="/api/login">Login</a>
+          <Button 
+            className="md:hidden" 
+            size="sm"
+            onClick={() => setShowStudentAuthModal(true)}
+            data-testid="button-student-auth-mobile"
+          >
+            <GraduationCap className="h-4 w-4 mr-2" />
+            Student
           </Button>
         </div>
       </header>
@@ -413,11 +427,14 @@ export default function Landing() {
               Join thousands of students finding their perfect course or universities showcasing their programs
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild data-testid="button-student-cta">
-                <a href="/api/login?type=student">
-                  <GraduationCap className="h-5 w-5 mr-2" />
-                  I'm a Student
-                </a>
+              <Button 
+                size="lg" 
+                variant="secondary" 
+                onClick={() => setShowStudentAuthModal(true)}
+                data-testid="button-student-cta"
+              >
+                <GraduationCap className="h-5 w-5 mr-2" />
+                I'm a Student
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 border-white text-white" asChild data-testid="button-university-cta">
                 <a href="/api/login?type=university">
@@ -444,18 +461,21 @@ export default function Landing() {
               <h3 className="mb-4 font-semibold text-foreground">For Students</h3>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <a href="/api/login?type=student" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Student Login
-                  </a>
+                  <button 
+                    onClick={() => setShowStudentAuthModal(true)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Student Portal
+                  </button>
                 </li>
                 <li>
-                  <a href="/api/login?type=student" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Student Registration
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <a href="/courses" className="text-muted-foreground hover:text-foreground transition-colors">
                     Browse Courses
+                  </a>
+                </li>
+                <li>
+                  <a href="/institutions" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Browse Institutions
                   </a>
                 </li>
               </ul>
@@ -506,6 +526,12 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Student Auth Modal */}
+      <StudentAuthModal 
+        open={showStudentAuthModal} 
+        onOpenChange={setShowStudentAuthModal}
+      />
     </div>
   );
 }
