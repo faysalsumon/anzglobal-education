@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart } from "lucide-react";
 import { Link } from "wouter";
-import type { Course, University } from "@shared/schema";
+import type { Course, University, Favorite } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -34,12 +43,93 @@ export default function PublicCourses() {
   const [country, setCountry] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const highlightedRef = useRef<HTMLDivElement>(null);
 
   const { isAuthenticated, isStudent } = useAuth();
+  const { toast } = useToast();
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
   });
+
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ["/api/student/favorites"],
+    enabled: isAuthenticated && isStudent,
+  });
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: async (data: { itemType: string; itemId: string }) => {
+      return await apiRequest("POST", "/api/student/favorites", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Success",
+        description: "Added to favorites",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("already favorited")) {
+        toast({
+          title: "Already favorited",
+          description: "This course is already in your favorites",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add to favorites",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (favoriteId: string) => {
+      return await apiRequest("DELETE", `/api/student/favorites/${favoriteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Success",
+        description: "Removed from favorites",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFavoriteToggle = (courseId: string) => {
+    if (!isAuthenticated || !isStudent) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const existingFavorite = favorites.find(
+      (f) => f.itemType === "course" && f.itemId === courseId
+    );
+
+    if (existingFavorite) {
+      removeFavoriteMutation.mutate(existingFavorite.id);
+    } else {
+      addFavoriteMutation.mutate({
+        itemType: "course",
+        itemId: courseId,
+      });
+    }
+  };
+
+  const isFavorited = (courseId: string) => {
+    return favorites.some(
+      (f) => f.itemType === "course" && f.itemId === courseId
+    );
+  };
 
   // Extract unique values from actual course data
   const availableFilters = useMemo(() => {
@@ -290,11 +380,29 @@ export default function PublicCourses() {
                   <Card 
                     key={course.id} 
                     ref={isHighlighted ? highlightedRef : null}
-                    className={`hover-elevate flex flex-col h-full transition-all duration-300 ${
+                    className={`hover-elevate flex flex-col h-full transition-all duration-300 relative ${
                       isHighlighted ? 'ring-2 ring-primary shadow-lg scale-105' : ''
                     }`}
                     data-testid={`course-card-${course.id}`}
                   >
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-8 w-8 z-10"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleFavoriteToggle(course.id);
+                      }}
+                      data-testid={`button-favorite-course-${course.id}`}
+                    >
+                      <Heart
+                        className={`h-5 w-5 ${
+                          isFavorited(course.id)
+                            ? "fill-red-500 text-red-500"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    </Button>
                     <CardHeader className="pb-3 sm:pb-4">
                       <div className="flex flex-wrap items-start gap-2 mb-2">
                         <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
@@ -377,6 +485,33 @@ export default function PublicCourses() {
           </p>
         </div>
       </footer>
+
+      {/* Login Modal */}
+      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+        <DialogContent data-testid="dialog-login-required">
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in as a student to save favorites. Please log in to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginModal(false)}
+              data-testid="button-cancel-login"
+            >
+              Cancel
+            </Button>
+            <Button
+              asChild
+              data-testid="button-go-to-login"
+            >
+              <Link href="/">Go to Login</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
