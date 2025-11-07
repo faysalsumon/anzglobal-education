@@ -35,6 +35,14 @@ export default function CourseDetail() {
   const { user, isStudent } = useAuth();
   const [showApplicationForm, setShowApplicationForm] = useState(false);
 
+  // Helper function to determine institution terminology
+  const getInstitutionLabel = (providerType?: string | null) => {
+    if (!providerType) return "Institution";
+    const type = providerType.toLowerCase();
+    if (type.includes("university")) return "University";
+    return "Institution";
+  };
+
   const { data: course, isLoading, isError, error } = useQuery<CourseWithUniversity>({
     queryKey: [`/api/courses/${courseId}`],
     enabled: !!courseId,
@@ -319,7 +327,7 @@ export default function CourseDetail() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  About the University
+                  About the {getInstitutionLabel(course.university.providerType)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
