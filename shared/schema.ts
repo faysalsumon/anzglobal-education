@@ -71,6 +71,7 @@ export const universities = pgTable("universities", {
   institutionGallery: text("institution_gallery").array(), // Up to 3 images, 600x400px
   topCourses: text("top_courses").array(), // Array of course IDs or names
   
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

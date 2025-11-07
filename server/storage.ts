@@ -36,6 +36,8 @@ import { eq, and, like, or, desc } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  updateUser(id: string, data: Partial<User>): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
 
   // University operations
@@ -44,6 +46,7 @@ export interface IStorage {
   getAllUniversities(): Promise<University[]>;
   createUniversity(university: InsertUniversity): Promise<University>;
   updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University>;
+  deleteUniversity(id: string): Promise<void>;
   
   // Course operations
   getCourseById(id: string): Promise<Course | undefined>;
@@ -51,6 +54,7 @@ export interface IStorage {
   getAllCourses(): Promise<Course[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
+  deleteCourse(id: string): Promise<void>;
   
   // Student profile operations
   getStudentProfileByUserId(userId: string): Promise<StudentProfile | undefined>;
@@ -102,6 +106,19 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUser(id: string, data: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
@@ -160,6 +177,10 @@ export class DatabaseStorage implements IStorage {
     return university;
   }
 
+  async deleteUniversity(id: string): Promise<void> {
+    await db.delete(universities).where(eq(universities.id, id));
+  }
+
   // Course operations
   async getCourseById(id: string): Promise<Course | undefined> {
     const [course] = await db.select().from(courses).where(eq(courses.id, id));
@@ -192,6 +213,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courses.id, id))
       .returning();
     return course;
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.delete(courses).where(eq(courses.id, id));
   }
 
   // Student profile operations
