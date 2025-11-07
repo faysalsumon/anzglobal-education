@@ -59,10 +59,10 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
-        <Link href="/" data-testid="link-logo">
-          <div className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1 -mx-2 -my-1">
+        <Link href="/">
+          <a className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1 -mx-2 -my-1" data-testid="link-logo">
             <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto" />
-          </div>
+          </a>
         </Link>
       </SidebarHeader>
       <SidebarContent>
