@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus } from "lucide-react";
+import { Link } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
