@@ -20,7 +20,10 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
   - `images`: Array of course images
 - Course detail page displays:
   - Hero section with course title, badges (scholarship, PR pathway), course code, and university logo
-  - Tab navigation for Info, Fees, and Eligibility sections
+  - Tab navigation with smooth scroll-to-section functionality:
+    - INFO: Scrolls to top (About Course section)
+    - FEES: Scrolls to Course Fees section
+    - ELIGIBILITY: Scrolls to Course Eligibility section
   - Course description and complete details
   - Sidebar with quick facts (duration, fees, location, intake, discipline)
   - Course fees breakdown table (tuition, cost of living, application fees)

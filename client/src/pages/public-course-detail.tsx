@@ -3,7 +3,6 @@ import { useRoute, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen
@@ -147,31 +146,45 @@ export default function PublicCourseDetail() {
       {/* Tabs Navigation */}
       <div className="border-b bg-card sticky top-16 z-40">
         <div className="container mx-auto px-4">
-          <Tabs defaultValue="info" className="w-full">
-            <TabsList className="w-full justify-start bg-transparent border-0 h-auto p-0">
-              <TabsTrigger 
-                value="info" 
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                data-testid="tab-info"
-              >
-                INFO
-              </TabsTrigger>
-              <TabsTrigger 
-                value="fees" 
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                data-testid="tab-fees"
-              >
-                FEES
-              </TabsTrigger>
-              <TabsTrigger 
-                value="eligibility" 
-                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-                data-testid="tab-eligibility"
-              >
-                ELIGIBILITY
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex gap-0">
+            <button
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-primary/50 transition-colors"
+              data-testid="tab-info"
+            >
+              INFO
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('fees');
+                if (element) {
+                  const offset = 140; // Account for sticky headers (64px header + 76px tabs)
+                  const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+                  window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
+                }
+              }}
+              className="px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-primary/50 transition-colors"
+              data-testid="tab-fees"
+            >
+              FEES
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('eligibility');
+                if (element) {
+                  const offset = 140; // Account for sticky headers
+                  const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+                  window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
+                }
+              }}
+              className="px-4 py-3 text-sm font-medium border-b-2 border-transparent hover:border-primary/50 transition-colors"
+              data-testid="tab-eligibility"
+            >
+              ELIGIBILITY
+            </button>
+          </div>
         </div>
       </div>
 
