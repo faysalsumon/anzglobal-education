@@ -23,6 +23,7 @@ import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, Arro
 import { Link } from "wouter";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { useAuth } from "@/hooks/useAuth";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -35,6 +36,7 @@ export default function PublicCourses() {
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const highlightedRef = useRef<HTMLDivElement>(null);
 
+  const { isAuthenticated, isStudent } = useAuth();
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
   });
@@ -317,12 +319,21 @@ export default function PublicCourses() {
                             <span className="truncate">View Course</span>
                           </Link>
                         </Button>
-                        <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                          <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
-                            <LogIn className="mr-2 h-4 w-4" />
-                            <span className="truncate">Login to Apply</span>
-                          </a>
-                        </Button>
+                        {isAuthenticated && isStudent ? (
+                          <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
+                            <Link href={`/student/courses/${course.id}`}>
+                              <GraduationCap className="mr-2 h-4 w-4" />
+                              <span className="truncate">Apply</span>
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
+                            <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                              <LogIn className="mr-2 h-4 w-4" />
+                              <span className="truncate">Login to Apply</span>
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </CardFooter>
                   </Card>
