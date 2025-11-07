@@ -70,7 +70,7 @@ interface Course {
   title: string;
   description: string | null;
   duration: string | null;
-  tuitionFee: number | null;
+  fees: number | null;
   level: string | null;
   subject: string;
   isActive: boolean;
@@ -105,7 +105,7 @@ const courseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   duration: z.string().optional(),
-  tuitionFee: z.coerce.number().positive().optional().or(z.literal("")),
+  fees: z.coerce.number().positive().optional().or(z.literal("")),
   level: z.string().optional(),
   subject: z.string().min(1, "Subject is required"),
 });
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
       title: "",
       description: "",
       duration: "",
-      tuitionFee: "" as any,
+      fees: "" as any,
       level: "",
       subject: "",
     },
@@ -616,9 +616,9 @@ export default function AdminDashboard() {
       title: course.title,
       description: course.description || "",
       duration: course.duration || "",
-      tuitionFee: course.tuitionFee as any,
+      fees: course.fees as any,
       level: course.level || "",
-      discipline: course.discipline || "",
+      subject: course.subject || "",
     });
     setCourseDialogOpen(true);
   };
@@ -1070,7 +1070,7 @@ export default function AdminDashboard() {
                       <TableHead>Institution</TableHead>
                       <TableHead>Level</TableHead>
                       <TableHead>Duration</TableHead>
-                      <TableHead>Tuition Fee</TableHead>
+                      <TableHead>Fees</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -1088,7 +1088,7 @@ export default function AdminDashboard() {
                           <TableCell>{course.level || "-"}</TableCell>
                           <TableCell>{course.duration || "-"}</TableCell>
                           <TableCell>
-                            {course.tuitionFee ? `$${course.tuitionFee.toLocaleString()}` : "-"}
+                            {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -1568,12 +1568,12 @@ export default function AdminDashboard() {
                 />
                 <FormField
                   control={courseForm.control}
-                  name="tuitionFee"
+                  name="fees"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tuition Fee ($)</FormLabel>
+                      <FormLabel>Fees ($)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="30000" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                        <Input {...field} type="number" placeholder="30000" data-testid="input-course-fees" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
