@@ -218,7 +218,7 @@ export default function PublicCourseDetail() {
                           <tr className="border-b">
                             <td className="p-3 font-medium">Application Fees</td>
                             <td className="p-3 text-right">
-                              {course.applicationFees > 0 
+                              {Number(course.applicationFees) > 0 
                                 ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
                                 : "N/A"}
                             </td>
@@ -267,7 +267,7 @@ export default function PublicCourseDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Facts Card */}
-            <Card className="sticky top-24">
+            <Card className="lg:sticky lg:top-24">
               <CardHeader>
                 <CardTitle className="text-lg">Course Details</CardTitle>
               </CardHeader>
