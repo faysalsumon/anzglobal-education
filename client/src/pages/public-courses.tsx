@@ -77,18 +77,16 @@ export default function PublicCourses() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <Link href="/">
-              <a className="flex items-center gap-3">
-                <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
-              </a>
+            <Link href="/" className="flex items-center gap-3">
+              <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
             </Link>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="outline" asChild size="sm" data-testid="button-back-home">
-              <Link href="/">
+              <a href="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Home
-              </Link>
+              </a>
             </Button>
             <Button asChild size="sm" data-testid="button-login-header">
               <a href="/api/login?type=student">

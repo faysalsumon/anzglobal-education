@@ -6,13 +6,21 @@ ANZ Global Education is an AI-powered educational platform that connects univers
 
 ## Recent Changes (November 7, 2025)
 
+### Public Course Discovery - No Login Required (Complete)
+- **Unauthenticated Browse**: Users can explore all courses at `/courses` without logging in, matching the reference site workflow at anzglobal.com.au/courses
+- **Search Integration**: Landing page autocomplete redirects to `/courses?search=...` instead of forcing login
+- **Course Highlighting**: Selected courses from autocomplete are highlighted with visual feedback (ring-2 border, shadow, scale-105 transform) and smooth scroll
+- **Smart Filters**: Public course page includes search, subject, level, and country filters working client-side
+- **Login CTAs**: "Login & Apply" buttons throughout the page redirect to student login with course ID preserved for seamless application after authentication
+- **Reference Match**: Implementation follows the user experience model of anzglobal.com.au/courses where browsing is public but applications require login
+
 ### Enhanced Course Search with Autocomplete (Complete)
 - **Fixed Text Visibility**: Search bar text now displays in dark gray (text-gray-900) on white background for clear visibility
 - **Google-Style Autocomplete**: Real-time course suggestions appear as you type, showing up to 5 matching courses
 - **Smart Filtering**: Suggestions match against course titles, subjects, and descriptions
 - **Improved UX**: Click outside to dismiss, Enter key to search, click suggestion to auto-fill
 - **Visual Design**: Clean dropdown with course icon, title, subject, and university name for each suggestion
-- **URL Integration**: Search terms passed via URL parameter to courses page after login
+- **Workflow Update**: Autocomplete now redirects to public `/courses` page with search term and optional course highlight
 
 ### Student Referral System (Complete)
 - **Database Schema**: Added `referralCode` field to `studentProfiles` table (varchar, unique, auto-generated 8-character codes) and created `referrals` table to track referral relationships with status tracking (pending/completed/cancelled) and bonus amounts
