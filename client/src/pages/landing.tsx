@@ -125,24 +125,24 @@ export default function Landing() {
             <Button 
               variant="ghost" 
               size="sm"
-              asChild
               className="text-sm font-medium"
+              asChild
             >
-              <a href="/institutions">
+              <Link href="/institutions">
                 <Building2 className="h-4 w-4 mr-2" />
                 Institutions
-              </a>
+              </Link>
             </Button>
             <Button 
               variant="ghost" 
               size="sm"
-              asChild
               className="text-sm font-medium"
+              asChild
             >
-              <a href="/courses">
+              <Link href="/courses">
                 <GraduationCap className="h-4 w-4 mr-2" />
                 Courses
-              </a>
+              </Link>
             </Button>
             <div className="h-6 w-px bg-border/60 mx-2" />
             <Button 
