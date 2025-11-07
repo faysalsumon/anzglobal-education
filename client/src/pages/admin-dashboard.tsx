@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, Toggle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,6 +60,21 @@ interface Institution {
   establishedYear: number | null;
   scholarshipPercentage: number | null;
   topDisciplines: string[] | null;
+  isActive: boolean;
+  createdAt: string | null;
+}
+
+interface Course {
+  id: string;
+  universityId: string;
+  title: string;
+  description: string | null;
+  duration: string | null;
+  tuitionFee: number | null;
+  level: string | null;
+  discipline: string | null;
+  isActive: boolean;
+  institutionName?: string;
   createdAt: string | null;
 }
 
@@ -85,6 +100,16 @@ const institutionSchema = z.object({
   scholarshipPercentage: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
 });
 
+const courseSchema = z.object({
+  universityId: z.string().min(1, "Institution is required"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  duration: z.string().optional(),
+  tuitionFee: z.coerce.number().positive().optional().or(z.literal("")),
+  level: z.string().optional(),
+  discipline: z.string().optional(),
+});
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("users");
@@ -102,6 +127,13 @@ export default function AdminDashboard() {
   const [institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [deletingInstitution, setDeletingInstitution] = useState<Institution | null>(null);
+
+  // Course state
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [courseStatusFilter, setCourseStatusFilter] = useState<string>("all");
+  const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
 
   // Forms
   const userForm = useForm<z.infer<typeof userSchema>>({
@@ -129,6 +161,19 @@ export default function AdminDashboard() {
     },
   });
 
+  const courseForm = useForm<z.infer<typeof courseSchema>>({
+    resolver: zodResolver(courseSchema),
+    defaultValues: {
+      universityId: "",
+      title: "",
+      description: "",
+      duration: "",
+      tuitionFee: "" as any,
+      level: "",
+      discipline: "",
+    },
+  });
+
   // Queries
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/super-admin/users"],
@@ -136,6 +181,10 @@ export default function AdminDashboard() {
 
   const { data: institutions, isLoading: institutionsLoading } = useQuery<Institution[]>({
     queryKey: ["/api/super-admin/institutions"],
+  });
+
+  const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
+    queryKey: ["/api/super-admin/courses"],
   });
 
   // User mutations
@@ -312,6 +361,113 @@ export default function AdminDashboard() {
     },
   });
 
+  const toggleInstitutionStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/status`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      toast({
+        title: "Status updated",
+        description: "Institution status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Course mutations
+  const createCourseMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof courseSchema>) => {
+      return await apiRequest("POST", "/api/super-admin/courses", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setCourseDialogOpen(false);
+      courseForm.reset();
+      toast({
+        title: "Course created",
+        description: "Course has been created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof courseSchema>> }) => {
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setCourseDialogOpen(false);
+      setEditingCourse(null);
+      courseForm.reset();
+      toast({
+        title: "Course updated",
+        description: "Course has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/super-admin/courses/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setDeletingCourse(null);
+      toast({
+        title: "Course deleted",
+        description: "Course has been deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleCourseStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}/status`, { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      toast({
+        title: "Status updated",
+        description: "Course status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter users
   const filteredUsers = users?.filter(user => {
     const matchesSearch = 
@@ -338,6 +494,21 @@ export default function AdminDashboard() {
     );
   });
 
+  // Filter courses
+  const filteredCourses = courses?.filter(course => {
+    const matchesSearch =
+      courseSearchQuery === "" ||
+      course.title.toLowerCase().includes(courseSearchQuery.toLowerCase()) ||
+      course.institutionName?.toLowerCase().includes(courseSearchQuery.toLowerCase());
+
+    const matchesStatus =
+      courseStatusFilter === "all" ||
+      (courseStatusFilter === "active" && course.isActive) ||
+      (courseStatusFilter === "inactive" && !course.isActive);
+
+    return matchesSearch && matchesStatus;
+  });
+
   // User stats
   const userStats = {
     total: users?.length || 0,
@@ -351,6 +522,15 @@ export default function AdminDashboard() {
   // Institution stats
   const institutionStats = {
     total: institutions?.length || 0,
+    active: institutions?.filter(i => i.isActive).length || 0,
+    inactive: institutions?.filter(i => !i.isActive).length || 0,
+  };
+
+  // Course stats
+  const courseStats = {
+    total: courses?.length || 0,
+    active: courses?.filter(c => c.isActive).length || 0,
+    inactive: courses?.filter(c => !c.isActive).length || 0,
   };
 
   // User handlers
@@ -422,6 +602,35 @@ export default function AdminDashboard() {
     }
   };
 
+  // Course handlers
+  const handleCreateCourse = () => {
+    setEditingCourse(null);
+    courseForm.reset();
+    setCourseDialogOpen(true);
+  };
+
+  const handleEditCourse = (course: Course) => {
+    setEditingCourse(course);
+    courseForm.reset({
+      universityId: course.universityId,
+      title: course.title,
+      description: course.description || "",
+      duration: course.duration || "",
+      tuitionFee: course.tuitionFee as any,
+      level: course.level || "",
+      discipline: course.discipline || "",
+    });
+    setCourseDialogOpen(true);
+  };
+
+  const handleSubmitCourse = (data: z.infer<typeof courseSchema>) => {
+    if (editingCourse) {
+      updateCourseMutation.mutate({ id: editingCourse.id, data });
+    } else {
+      createCourseMutation.mutate(data);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -443,7 +652,7 @@ export default function AdminDashboard() {
         
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Super Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage all platform users and institutions</p>
+          <p className="text-muted-foreground">Manage all platform users, institutions, and courses</p>
         </div>
       </div>
 
@@ -456,6 +665,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="institutions" data-testid="tab-institutions">
             <Building2 className="h-4 w-4 mr-2" />
             Institutions ({institutionStats.total})
+          </TabsTrigger>
+          <TabsTrigger value="courses" data-testid="tab-courses">
+            <BookOpen className="h-4 w-4 mr-2" />
+            Courses ({courseStats.total})
           </TabsTrigger>
         </TabsList>
 
@@ -697,13 +910,14 @@ export default function AdminDashboard() {
                       <TableHead>Provider Type</TableHead>
                       <TableHead>Campuses</TableHead>
                       <TableHead>Scholarship</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {institutionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
@@ -713,7 +927,30 @@ export default function AdminDashboard() {
                           <TableCell>{institution.providerType || "N/A"}</TableCell>
                           <TableCell>{institution.numberOfCampuses || "N/A"}</TableCell>
                           <TableCell>{institution.scholarshipPercentage ? `${institution.scholarshipPercentage}%` : "N/A"}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleInstitutionStatusMutation.mutate({
+                                id: institution.id,
+                                isActive: !institution.isActive,
+                              })}
+                              data-testid={`button-toggle-institution-${institution.id}`}
+                            >
+                              {institution.isActive ? (
+                                <Badge variant="default" className="cursor-pointer">
+                                  <ShieldCheck className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="cursor-pointer">
+                                  <ShieldOff className="h-3 w-3 mr-1" />
+                                  Inactive
+                                </Badge>
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="ghost"
@@ -737,7 +974,170 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">No institutions found</TableCell>
+                        <TableCell colSpan={7} className="text-center">No institutions found</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Courses Tab */}
+        <TabsContent value="courses" className="space-y-4">
+          {/* Stats */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{courseStats.total}</div>
+                <p className="text-xs text-muted-foreground">
+                  {courseStats.active} active, {courseStats.inactive} inactive
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{courseStats.active}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Inactive Courses</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{courseStats.inactive}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Course Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                  <CardTitle>Course Management</CardTitle>
+                  <CardDescription>View and manage all courses</CardDescription>
+                </div>
+                <Button onClick={handleCreateCourse} data-testid="button-create-course">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Course
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by course title or institution..."
+                    value={courseSearchQuery}
+                    onChange={(e) => setCourseSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-courses"
+                  />
+                </div>
+                <Select value={courseStatusFilter} onValueChange={setCourseStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-course-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Courses Table */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Institution</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Tuition Fee</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {coursesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                      </TableRow>
+                    ) : filteredCourses && filteredCourses.length > 0 ? (
+                      filteredCourses.map((course) => (
+                        <TableRow key={course.id} data-testid={`row-course-${course.id}`}>
+                          <TableCell className="font-medium">{course.title}</TableCell>
+                          <TableCell>{course.institutionName}</TableCell>
+                          <TableCell>{course.level || "-"}</TableCell>
+                          <TableCell>{course.duration || "-"}</TableCell>
+                          <TableCell>
+                            {course.tuitionFee ? `$${course.tuitionFee.toLocaleString()}` : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleCourseStatusMutation.mutate({
+                                id: course.id,
+                                isActive: !course.isActive,
+                              })}
+                              data-testid={`button-toggle-course-${course.id}`}
+                            >
+                              {course.isActive ? (
+                                <Badge variant="default" className="cursor-pointer">
+                                  <ShieldCheck className="h-3 w-3 mr-1" />
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="cursor-pointer">
+                                  <ShieldOff className="h-3 w-3 mr-1" />
+                                  Inactive
+                                </Badge>
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditCourse(course)}
+                                data-testid={`button-edit-course-${course.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingCourse(course)}
+                                data-testid={`button-delete-course-${course.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">No courses found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -1047,6 +1447,169 @@ export default function AdminDashboard() {
               data-testid="button-confirm-delete-institution"
             >
               Delete Institution
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Course Create/Edit Dialog */}
+      <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
+            <DialogDescription>
+              {editingCourse ? "Update course information" : "Create a new course"}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...courseForm}>
+            <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="space-y-4">
+              <FormField
+                control={courseForm.control}
+                name="universityId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Institution</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-course-institution">
+                          <SelectValue placeholder="Select institution" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {institutions?.map((institution) => (
+                          <SelectItem key={institution.id} value={institution.id}>
+                            {institution.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={courseForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Bachelor of Computer Science" data-testid="input-course-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={courseForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Course description..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={courseForm.control}
+                  name="level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Level</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Certificate">Certificate</SelectItem>
+                          <SelectItem value="Diploma">Diploma</SelectItem>
+                          <SelectItem value="Bachelor">Bachelor</SelectItem>
+                          <SelectItem value="Master">Master</SelectItem>
+                          <SelectItem value="Doctorate">Doctorate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={courseForm.control}
+                  name="discipline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discipline</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Computer Science" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={courseForm.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="3 years" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={courseForm.control}
+                  name="tuitionFee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tuition Fee ($)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" placeholder="30000" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setCourseDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createCourseMutation.isPending || updateCourseMutation.isPending} data-testid="button-submit-course">
+                  {editingCourse ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Course Confirmation */}
+      <AlertDialog open={!!deletingCourse} onOpenChange={() => setDeletingCourse(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the course <strong>{deletingCourse?.title}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingCourse && deleteCourseMutation.mutate(deletingCourse.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-course"
+            >
+              Delete Course
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
