@@ -32,6 +32,7 @@ import path from "path";
 import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
 import { hashPassword, verifyPassword, generateVerificationToken } from "./auth-utils";
+import express from "express";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
 type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
@@ -112,6 +113,10 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Serve uploaded files from the public directory
+  app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
+  app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
 
   // Email/Password Auth Routes
   app.post("/api/auth/login", async (req, res) => {
