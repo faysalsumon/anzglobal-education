@@ -149,6 +149,21 @@ export const applications = pgTable("applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Favorites table for students to save favorite institutions and courses
+export const favorites = pgTable("favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  itemType: varchar("item_type", { length: 20 }).notNull(), // 'university' or 'course'
+  itemId: varchar("item_id").notNull(), // ID of the university or course
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate favorites
+  uniqueFavorite: index("unique_favorite").on(table.studentProfileId, table.itemType, table.itemId),
+  // Index for fast lookups
+  studentItemTypeIdx: index("student_item_type_idx").on(table.studentProfileId, table.itemType),
+  itemTypeItemIdIdx: index("item_type_item_id_idx").on(table.itemType, table.itemId),
+}));
+
 // Referrals table for student affiliate/referral system
 export const referrals = pgTable("referrals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -292,6 +307,7 @@ export const studentProfilesRelations = relations(studentProfiles, ({ one, many 
   applications: many(applications),
   educations: many(studentEducations),
   languageScores: many(studentLanguageScores),
+  favorites: many(favorites),
 }));
 
 export const studentEducationsRelations = relations(studentEducations, ({ one }) => ({
@@ -323,6 +339,13 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
   }),
   student: one(studentProfiles, {
     fields: [applications.studentId],
+    references: [studentProfiles.id],
+  }),
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  studentProfile: one(studentProfiles, {
+    fields: [favorites.studentProfileId],
     references: [studentProfiles.id],
   }),
 }));
@@ -410,6 +433,11 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   updatedAt: true,
 });
 
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertStudentEducationSchema = createInsertSchema(studentEducations).omit({
   id: true,
   createdAt: true,
@@ -467,6 +495,9 @@ export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;
 
 export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
+
+export type Favorite = typeof favorites.$inferSelect;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
 export type StudentEducation = typeof studentEducations.$inferSelect;
 export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema>;
