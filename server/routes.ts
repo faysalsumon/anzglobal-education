@@ -11,11 +11,13 @@ import {
   insertAdminTeamMemberSchema,
   insertStudentEducationSchema,
   insertStudentLanguageScoreSchema,
+  insertFavoriteSchema,
   users,
   universities,
   courses,
   applications,
   studentProfiles,
+  favorites,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -971,6 +973,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error validating referral code:", error);
       res.status(500).json({ message: "Failed to validate referral code" });
+    }
+  });
+
+  // Favorites routes
+  app.get("/api/student/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.json([]);
+      }
+
+      const studentFavorites = await db
+        .select()
+        .from(favorites)
+        .where(eq(favorites.studentProfileId, profile.id));
+
+      res.json(studentFavorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.post("/api/student/favorites", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const validatedData = insertFavoriteSchema.parse({
+        ...req.body,
+        studentProfileId: profile.id,
+      });
+
+      const [newFavorite] = await db
+        .insert(favorites)
+        .values(validatedData)
+        .returning();
+
+      res.status(201).json(newFavorite);
+    } catch (error: any) {
+      console.error("Error creating favorite:", error);
+      if (error.code === '23505') {
+        return res.status(409).json({ message: "Item already favorited" });
+      }
+      res.status(400).json({ message: error.message || "Failed to create favorite" });
+    }
+  });
+
+  app.delete("/api/student/favorites/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const [favorite] = await db
+        .select()
+        .from(favorites)
+        .where(eq(favorites.id, req.params.id));
+
+      if (!favorite || favorite.studentProfileId !== profile.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await db.delete(favorites).where(eq(favorites.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting favorite:", error);
+      res.status(400).json({ message: error.message || "Failed to delete favorite" });
+    }
+  });
+
+  app.post("/api/student/favorites/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.json({});
+      }
+
+      const { items } = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: "Items must be an array" });
+      }
+
+      const statusMap: Record<string, boolean> = {};
+
+      for (const item of items) {
+        const [favorite] = await db
+          .select()
+          .from(favorites)
+          .where(
+            eq(favorites.studentProfileId, profile.id)
+          )
+          .where(eq(favorites.itemType, item.itemType))
+          .where(eq(favorites.itemId, item.itemId));
+
+        statusMap[`${item.itemType}-${item.itemId}`] = !!favorite;
+      }
+
+      res.json(statusMap);
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      res.status(500).json({ message: "Failed to check favorite status" });
     }
   });
 
