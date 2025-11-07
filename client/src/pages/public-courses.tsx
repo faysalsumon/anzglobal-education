@@ -11,7 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -115,6 +123,23 @@ export default function PublicCourses() {
 
       <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
         <div className="space-y-4 sm:space-y-6">
+          {/* Breadcrumb */}
+          <Breadcrumb data-testid="breadcrumb">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/" data-testid="breadcrumb-home">
+                    <Home className="h-4 w-4" />
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage data-testid="breadcrumb-current">Courses</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Browse All Courses</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>

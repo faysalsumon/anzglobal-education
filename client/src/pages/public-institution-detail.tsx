@@ -3,7 +3,15 @@ import { useRoute, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home } from "lucide-react";
 import type { University } from "@shared/schema";
 
 export default function PublicInstitutionDetail() {
@@ -44,12 +52,29 @@ export default function PublicInstitutionDetail() {
       {/* Header */}
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-6">
-          <Button variant="ghost" asChild className="mb-4" data-testid="button-back">
-            <Link href="/institutions">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Institutions
-            </Link>
-          </Button>
+          <Breadcrumb data-testid="breadcrumb" className="mb-4">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/" data-testid="breadcrumb-home">
+                    <Home className="h-4 w-4" />
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/institutions" data-testid="breadcrumb-institutions">
+                    Institutions
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage data-testid="breadcrumb-current">{institution.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
           <div className="flex flex-col md:flex-row items-start gap-6">
             {institution.logo && (

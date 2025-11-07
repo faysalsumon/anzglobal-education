@@ -3,9 +3,17 @@ import { useRoute, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
-  Download, LogIn, Award, Globe, BookOpen
+  Download, LogIn, Award, Globe, BookOpen, Home
 } from "lucide-react";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -65,6 +73,33 @@ export default function PublicCourseDetail() {
           </div>
         </div>
       </header>
+
+      {/* Breadcrumb */}
+      <div className="container mx-auto px-4 pt-4">
+        <Breadcrumb data-testid="breadcrumb">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/" data-testid="breadcrumb-home">
+                  <Home className="h-4 w-4" />
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/courses" data-testid="breadcrumb-courses">
+                  Courses
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage data-testid="breadcrumb-current">{course.title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">

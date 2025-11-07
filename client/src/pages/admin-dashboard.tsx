@@ -18,9 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2 } from "lucide-react";
+import { Users, Building2, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -416,16 +424,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <Link href="/" data-testid="link-home">
-            <div className="flex items-center gap-2 cursor-pointer hover-elevate rounded-md p-2 -ml-2">
-              <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">A</span>
-              </div>
-              <span className="text-xl font-bold">ANZ Global Education</span>
-            </div>
-          </Link>
+      <div className="space-y-4">
+        <Breadcrumb data-testid="breadcrumb">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/" data-testid="breadcrumb-home">
+                  <Home className="h-4 w-4" />
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        
+        <div>
           <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Super Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage all platform users and institutions</p>
         </div>
