@@ -45,19 +45,9 @@ export default function Login() {
       // Small delay to ensure cache invalidation completes
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Redirect based on user type and role
-      // Super admins have userType="admin" with role="super_admin"
-      if (response.userType === "admin" && response.role === "super_admin") {
-        setLocation("/admin/dashboard");
-      } else if (response.userType === "admin") {
-        setLocation("/admin/dashboard");
-      } else if (response.userType === "university") {
-        setLocation("/university/profile");
-      } else if (response.userType === "student") {
-        setLocation("/student/profile");
-      } else {
-        setLocation("/");
-      }
+      // Always redirect to home page after login
+      // User can navigate to their dashboard from there
+      setLocation("/");
     } catch (error: any) {
       toast({
         title: "Login failed",

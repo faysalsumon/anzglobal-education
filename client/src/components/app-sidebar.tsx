@@ -20,6 +20,7 @@ import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isUniversity, isStudent } = useAuth();
+  const isAdmin = user?.userType === "admin";
 
   const universityItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -38,7 +39,13 @@ export function AppSidebar() {
     { title: "AI Assistant", url: "/student/ai-assistant", icon: Sparkles },
   ];
 
-  const items = isUniversity ? universityItems : studentItems;
+  const adminItems = [
+    { title: "Admin Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+    { title: "Browse Courses", url: "/courses", icon: Search },
+    { title: "Browse Institutions", url: "/institutions", icon: Building2 },
+  ];
+
+  const items = isAdmin ? adminItems : (isUniversity ? universityItems : studentItems);
 
   return (
     <Sidebar>
@@ -50,7 +57,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
-            {isUniversity ? "University Portal" : "Student Portal"}
+            {isAdmin ? "Admin Portal" : (isUniversity ? "University Portal" : "Student Portal")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

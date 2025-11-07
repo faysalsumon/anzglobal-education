@@ -132,9 +132,20 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
+  // Check if user is authenticated via session
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  const user = req.user as any;
+  
+  // For email/password sessions (has claims but no expires_at)
+  if (user.claims && !user.expires_at) {
+    return next();
+  }
+  
+  // For OIDC sessions (has expires_at)
+  if (!user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
