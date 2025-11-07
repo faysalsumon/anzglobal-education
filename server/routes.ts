@@ -12,6 +12,7 @@ import {
   insertStudentEducationSchema,
   insertStudentLanguageScoreSchema,
   users,
+  universities,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -1364,7 +1365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationToken, 
         verificationTokenExpiry, 
         resetPasswordToken, 
-        resetPasswordTokenExpiry,
+        resetPasswordExpiry,
         ...safeUser 
       }) => safeUser);
       
@@ -1407,7 +1408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationToken, 
         verificationTokenExpiry, 
         resetPasswordToken, 
-        resetPasswordTokenExpiry,
+        resetPasswordExpiry,
         ...userData 
       } = updatedUser;
       res.json(userData);
@@ -1448,13 +1449,313 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationToken, 
         verificationTokenExpiry, 
         resetPasswordToken, 
-        resetPasswordTokenExpiry,
+        resetPasswordExpiry,
         ...userData 
       } = updatedUser;
       res.json(userData);
     } catch (error) {
       console.error("Error updating user status:", error);
       res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  // Create new user
+  app.post("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { email, password, firstName, lastName, userType, role } = req.body;
+
+      if (!email || !password || !firstName || !lastName || !userType) {
+        return res.status(400).json({ message: "Email, password, first name, last name, and user type are required" });
+      }
+
+      // Check if user with email already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          firstName,
+          lastName,
+          userType,
+          role: role || 'user',
+          isActive: true,
+          emailVerified: true, // Auto-verify for admin-created accounts
+        })
+        .returning();
+
+      const { 
+        password: _, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordExpiry,
+        ...userData 
+      } = newUser;
+
+      res.status(201).json(userData);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Update user details
+  app.patch("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      const { email, firstName, lastName, password } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+
+      if (email) {
+        // Check if new email is already taken by another user
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email.toLowerCase()))
+          .limit(1);
+
+        if (existingUser && existingUser.id !== targetUserId) {
+          return res.status(400).json({ message: "Email already in use" });
+        }
+
+        updateData.email = email.toLowerCase();
+      }
+
+      if (firstName) updateData.firstName = firstName;
+      if (lastName) updateData.lastName = lastName;
+      if (password) {
+        updateData.password = await hashPassword(password);
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { 
+        password: _, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordExpiry,
+        ...userData 
+      } = updatedUser;
+
+      res.json(userData);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+
+      if (targetUserId === userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      // Check if user exists
+      const [userToDelete] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, targetUserId))
+        .limit(1);
+
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Delete user (this will cascade delete related data based on schema constraints)
+      await db.delete(users).where(eq(users.id, targetUserId));
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Get all institutions (for super admin)
+  app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const allInstitutions = await storage.getAllUniversities();
+      res.json(allInstitutions);
+    } catch (error) {
+      console.error("Error fetching institutions:", error);
+      res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
+  // Create new institution
+  app.post("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const {
+        name,
+        description,
+        location,
+        email,
+        phone,
+        website,
+        userId: institutionUserId,
+        providerType,
+        numberOfCampuses,
+        establishedYear,
+        scholarshipPercentage,
+        topDisciplines,
+      } = req.body;
+
+      if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+      }
+
+      // If userId is provided, verify the user exists and is university type
+      if (institutionUserId) {
+        const institutionUser = await storage.getUser(institutionUserId);
+        if (!institutionUser) {
+          return res.status(400).json({ message: "Specified user does not exist" });
+        }
+        if (institutionUser.userType !== 'university') {
+          return res.status(400).json({ message: "User must be of type 'university'" });
+        }
+      }
+
+      const newInstitution = await storage.createUniversity({
+        name,
+        description: description || null,
+        location,
+        contactEmail: email || null,
+        contactPhone: phone || null,
+        website: website || null,
+        userId: institutionUserId || null,
+        providerType: providerType || null,
+        numberOfCampuses: numberOfCampuses || null,
+        establishedYear: establishedYear || null,
+        scholarshipPercentage: scholarshipPercentage || null,
+        topDisciplines: topDisciplines || null,
+      });
+
+      res.status(201).json(newInstitution);
+    } catch (error) {
+      console.error("Error creating institution:", error);
+      res.status(500).json({ message: "Failed to create institution" });
+    }
+  });
+
+  // Update institution
+  app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      const updateData = req.body;
+
+      // If userId is being updated, verify the user exists and is university type
+      if (updateData.userId) {
+        const institutionUser = await storage.getUser(updateData.userId);
+        if (!institutionUser) {
+          return res.status(400).json({ message: "Specified user does not exist" });
+        }
+        if (institutionUser.userType !== 'university') {
+          return res.status(400).json({ message: "User must be of type 'university'" });
+        }
+      }
+
+      const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
+      res.json(updatedInstitution);
+    } catch (error) {
+      console.error("Error updating institution:", error);
+      res.status(500).json({ message: "Failed to update institution" });
+    }
+  });
+
+  // Delete institution
+  app.delete("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const institutionId = req.params.id;
+
+      // Check if institution exists
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      // Delete institution (this will cascade delete related courses based on schema constraints)
+      await db.delete(universities).where(eq(universities.id, institutionId));
+
+      res.json({ message: "Institution deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting institution:", error);
+      res.status(500).json({ message: "Failed to delete institution" });
     }
   });
 
