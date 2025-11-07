@@ -51,6 +51,10 @@ export const universities = pgTable("universities", {
   establishedYear: integer("established_year"),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
+  numberOfCampuses: integer("number_of_campuses"),
+  providerType: text("provider_type"),
+  scholarshipPercentage: integer("scholarship_percentage"),
+  topDisciplines: text("top_disciplines").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
