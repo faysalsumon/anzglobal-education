@@ -361,11 +361,13 @@ export default function PublicCourseDetail() {
                       {course.university.location}, {course.university.country}
                     </p>
                   )}
-                  <Button asChild variant="outline" className="w-full mt-4">
-                    <Link href={`/institutions/${course.university.id}`}>
-                      View Institution
-                    </Link>
-                  </Button>
+                  <div className="pt-2">
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href={`/institutions/${course.university.id}`}>
+                        View Institution
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
