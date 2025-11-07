@@ -50,12 +50,17 @@ export default function Landing() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSearch = (query?: string) => {
+  const handleSearch = (query?: string, courseId?: number) => {
     const searchTerm = query || searchQuery;
-    if (searchTerm.trim()) {
-      window.location.href = `/api/login?type=student&redirect=/student/courses?search=${encodeURIComponent(searchTerm)}`;
+    if (courseId) {
+      // If a specific course is selected, highlight it
+      window.location.href = `/courses?search=${encodeURIComponent(searchTerm)}&highlight=${courseId}`;
+    } else if (searchTerm.trim()) {
+      // Just search
+      window.location.href = `/courses?search=${encodeURIComponent(searchTerm)}`;
     } else {
-      window.location.href = `/api/login?type=student`;
+      // No search term, just go to courses page
+      window.location.href = `/courses`;
     }
   };
 
@@ -66,10 +71,10 @@ export default function Landing() {
     }
   };
 
-  const handleSuggestionClick = (courseTitle: string) => {
-    setSearchQuery(courseTitle);
+  const handleSuggestionClick = (course: CourseWithUniversity) => {
+    setSearchQuery(course.title);
     setShowSuggestions(false);
-    handleSearch(courseTitle);
+    handleSearch(course.title, Number(course.id));
   };
 
   return (
@@ -145,7 +150,7 @@ export default function Landing() {
                   {suggestions.map((course) => (
                     <button
                       key={course.id}
-                      onClick={() => handleSuggestionClick(course.title)}
+                      onClick={() => handleSuggestionClick(course)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
                       data-testid={`suggestion-${course.id}`}
                     >

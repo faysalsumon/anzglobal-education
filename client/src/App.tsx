@@ -21,6 +21,7 @@ import StudentProfilePage from "@/pages/student-profile";
 import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
 import StudentReferrals from "@/pages/student-referrals";
+import PublicCourses from "@/pages/public-courses";
 import UserTypeSelection from "@/pages/user-type-selection";
 
 function Router() {
@@ -28,6 +29,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes accessible to everyone */}
+      <Route path="/courses" component={PublicCourses} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : !user?.userType ? (
