@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -285,12 +285,20 @@ export default function PublicCourses() {
                       </div>
                     </CardContent>
                     <CardFooter className="pt-0">
-                      <Button asChild className="w-full" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                        <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
-                          <GraduationCap className="mr-2 h-4 w-4" />
-                          <span className="truncate">Login & Apply</span>
-                        </a>
-                      </Button>
+                      <div className="flex gap-2 w-full">
+                        <Button asChild variant="outline" className="flex-1" size="sm" data-testid={`button-view-course-${course.id}`}>
+                          <Link href={`/student/courses/${course.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            <span className="truncate">View Course</span>
+                          </Link>
+                        </Button>
+                        <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
+                          <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                            <LogIn className="mr-2 h-4 w-4" />
+                            <span className="truncate">Login to Apply</span>
+                          </a>
+                        </Button>
+                      </div>
                     </CardFooter>
                   </Card>
                 );
