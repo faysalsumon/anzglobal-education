@@ -4,6 +4,31 @@
 
 ANZ Global Education is an AI-powered educational platform designed to connect universities with prospective students globally. It enables universities to showcase courses and manage applications, while providing students with intelligent course discovery tools and AI-assisted profile creation. The platform offers dual user experiences optimized for both institutional and student needs, aiming to streamline the international education application process.
 
+## Recent Changes (November 07, 2025)
+
+### Public Institutions Listing Page
+- Created public institutions listing page at `/institutions` with comprehensive filtering capabilities
+- Implemented dynamic filters based on actual data:
+  - Location filter (all available locations)
+  - Provider type filter (all available provider types)
+  - Scholarship percentage filter (dynamically generated from actual percentages)
+- Added URL search parameter support for seamless search redirection from home page
+- Institution cards display: logo, name, location, top disciplines, campus count, scholarship percentage
+- Search functionality searches across institution name, location, and description
+
+### Enhanced Landing Page Search
+- Added toggle between "Courses" and "Institutions" search types
+- Implemented autocomplete suggestions for both courses and institutions
+- Search redirects to appropriate page with search query in URL:
+  - Courses: `/courses?search=query`
+  - Institutions: `/institutions?search=query`
+- Search query is automatically populated from URL parameters on destination pages
+
+### API Enhancements
+- Added `/api/institutions` endpoint to fetch all universities with complete data
+- Added `getAllUniversities()` method to storage interface
+- All institution extended fields now accessible: providerType, numberOfCampuses, scholarshipPercentage, topDisciplines
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
