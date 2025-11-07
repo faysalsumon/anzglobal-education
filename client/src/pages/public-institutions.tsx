@@ -52,10 +52,10 @@ export default function PublicInstitutions() {
   });
 
   // Get unique locations for filter
-  const locations = Array.from(new Set(institutions.map((i) => i.location))).filter(Boolean);
+  const locations = Array.from(new Set(institutions.map((i) => i.location))).filter((loc): loc is string => Boolean(loc));
 
   // Get unique provider types for filter
-  const providerTypes = Array.from(new Set(institutions.map((i) => i.providerType))).filter(Boolean);
+  const providerTypes = Array.from(new Set(institutions.map((i) => i.providerType))).filter((type): type is string => Boolean(type));
 
   // Get unique scholarship percentages for filter
   const scholarshipPercentages = Array.from(
@@ -295,9 +295,9 @@ export default function PublicInstitutions() {
                           asChild
                           data-testid={`button-view-courses-${institution.id}`}
                         >
-                          <Link href={`/courses?university=${institution.id}`}>
+                          <a href={`/courses?university=${institution.id}`}>
                             View Courses
-                          </Link>
+                          </a>
                         </Button>
                       </div>
                     </CardContent>

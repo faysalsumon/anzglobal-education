@@ -6,15 +6,34 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
 
 ## Recent Changes (November 07, 2025)
 
-### Public Institutions Listing Page
-- Created public institutions listing page at `/institutions` with comprehensive filtering capabilities
+### Public Institutions Listing Page Updates
+- **Replaced "Visit Website" button** with two action buttons on each institution card:
+  - "View Institution" - navigates to institution detail page
+  - "View Courses" - navigates to courses filtered by that institution
+- Created comprehensive institutions listing page at `/institutions` with advanced filtering
 - Implemented dynamic filters based on actual data:
   - Location filter (all available locations)
   - Provider type filter (all available provider types)
   - Scholarship percentage filter (dynamically generated from actual percentages)
 - Added URL search parameter support for seamless search redirection from home page
 - Institution cards display: logo, name, location, top disciplines, campus count, scholarship percentage
-- Search functionality searches across institution name, location, and description
+
+### Institution Detail Page
+- Created new public institution detail page at `/institutions/:id`
+- Displays complete institution information including:
+  - Institution logo, name, location, and description
+  - Provider type and scholarship badges
+  - Top disciplines offered
+  - Institution details (established year, number of campuses)
+  - Contact information (email, phone, website)
+  - "View All Courses" button linking to filtered courses
+  - "Back to Institutions" navigation
+- Added `/api/institutions/:id` API endpoint for fetching single institution
+
+### Enhanced Courses Page
+- Added university filter support via URL parameter `?university={id}`
+- Courses automatically filtered when arriving from institution pages
+- University filter preserved in URL for visibility and sharing
 
 ### Enhanced Landing Page Search
 - Added toggle between "Courses" and "Institutions" search types
@@ -26,6 +45,7 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
 
 ### API Enhancements
 - Added `/api/institutions` endpoint to fetch all universities with complete data
+- Added `/api/institutions/:id` endpoint to fetch single institution by ID
 - Added `getAllUniversities()` method to storage interface
 - All institution extended fields now accessible: providerType, numberOfCampuses, scholarshipPercentage, topDisciplines
 

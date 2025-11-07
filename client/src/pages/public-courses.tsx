@@ -50,9 +50,12 @@ export default function PublicCourses() {
       setUniversityFilter(universityParam);
     }
     
-    // Clear URL parameters
-    if (searchParam || highlightParam || universityParam) {
-      window.history.replaceState({}, '', window.location.pathname);
+    // Only clear the highlight parameter after using it
+    if (highlightParam) {
+      const newParams = new URLSearchParams(window.location.search);
+      newParams.delete('highlight');
+      const newSearch = newParams.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
     }
   }, []);
 
