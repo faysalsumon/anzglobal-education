@@ -157,11 +157,14 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Australia's Leading Course Platform for International Students
+              Your Gateway to{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-cyan-200">
+                Australian Education
+              </span>
             </h1>
-            <p className="mb-8 text-lg opacity-90 sm:text-xl">
-              Explore Australia's most comprehensive range of courses tailored for international students. 
-              Our advanced AI-driven platform helps you find your perfect match and apply directly, saving you time and money.
+            <p className="mb-8 text-lg opacity-90 sm:text-xl max-w-2xl mx-auto">
+              Discover the perfect course and university match with AI-powered recommendations. 
+              Apply directly to top Australian institutions in minutes.
             </p>
             <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
               {/* Search Type Toggle */}
