@@ -267,7 +267,7 @@ export default function PublicCourseDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Facts Card */}
-            <Card className="lg:sticky lg:top-24">
+            <Card className="lg:sticky lg:top-24 lg:z-50">
               <CardHeader>
                 <CardTitle className="text-lg">Course Details</CardTitle>
               </CardHeader>
