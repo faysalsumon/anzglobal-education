@@ -20,7 +20,14 @@ import {
   generateCourseDescription,
   generateStudentBio,
   generateCareerGoals,
+  generateInstitutionSmallDescription,
+  generateInstitutionFullDescription,
+  generateInstitutionGalleryImages,
 } from "./ai";
+import multer from "multer";
+import sharp from "sharp";
+import path from "path";
+import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
@@ -83,6 +90,21 @@ async function checkAdminAccess(
   
   return { role: adminMember.role as AdminRole };
 }
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -167,6 +189,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error saving university:", error);
       res.status(400).json({ message: error.message || "Failed to save university" });
+    }
+  });
+
+  // AI Generation Routes
+  app.post("/api/university/generate-small-description", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { name, location, providerType } = req.body;
+      if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+      }
+
+      const description = await generateInstitutionSmallDescription(name, location, providerType);
+      res.json({ description });
+    } catch (error) {
+      console.error("Error generating small description:", error);
+      res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
+  app.post("/api/university/generate-full-description", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { name, location, providerType, topDisciplines } = req.body;
+      if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+      }
+
+      const description = await generateInstitutionFullDescription(
+        name, 
+        location, 
+        providerType, 
+        topDisciplines
+      );
+      res.json({ description });
+    } catch (error) {
+      console.error("Error generating full description:", error);
+      res.status(500).json({ message: "Failed to generate description" });
+    }
+  });
+
+  app.post("/api/university/generate-gallery", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { name, location, providerType } = req.body;
+      if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+      }
+
+      const imageUrls = await generateInstitutionGalleryImages(name, location, providerType);
+      
+      // Download and resize images, then upload to object storage
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        throw new Error("Object storage not configured");
+      }
+
+      const publicDir = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "public";
+      const galleryPaths: string[] = [];
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        try {
+          // Fetch the image
+          const response = await fetch(imageUrls[i]);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+
+          // Resize to 600x400
+          const resizedBuffer = await sharp(buffer)
+            .resize(600, 400, { fit: 'cover' })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+
+          // Upload to object storage
+          const filename = `gallery-${access.university.id}-${Date.now()}-${i}.jpg`;
+          const filepath = `${publicDir}/institutions/${filename}`;
+          
+          // Write to object storage (you'll need to implement this based on Replit's object storage API)
+          // For now, we'll save locally in public directory
+          const localPath = path.join(process.cwd(), 'public', 'institutions');
+          await fs.mkdir(localPath, { recursive: true });
+          await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+          
+          galleryPaths.push(`/institutions/${filename}`);
+        } catch (error) {
+          console.error(`Error processing gallery image ${i}:`, error);
+        }
+      }
+
+      res.json({ galleryImages: galleryPaths });
+    } catch (error) {
+      console.error("Error generating gallery:", error);
+      res.status(500).json({ message: "Failed to generate gallery" });
+    }
+  });
+
+  // Logo Upload Route
+  app.post("/api/university/upload-logo", isAuthenticated, upload.single('logo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Resize to 160x160 with circular processing
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(160, 160, { fit: 'cover' })
+        .png()
+        .toBuffer();
+
+      // Save to public directory
+      const filename = `college-logo-${access.university.id}-${Date.now()}.png`;
+      const localPath = path.join(process.cwd(), 'public', 'institutions');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const logoPath = `/institutions/${filename}`;
+
+      // Update university with new logo
+      await storage.updateUniversity(access.university.id, {
+        ...access.university,
+        logo: logoPath,
+      });
+
+      res.json({ logoPath });
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
     }
   });
 
