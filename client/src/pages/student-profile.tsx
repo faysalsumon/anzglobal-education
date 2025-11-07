@@ -78,6 +78,9 @@ export default function StudentProfilePage() {
   const [activeTab, setActiveTab] = useState("personal");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiField, setAiField] = useState<"bio" | "careerGoals" | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -173,6 +176,71 @@ export default function StudentProfilePage() {
     },
   });
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setPhotoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadPhoto = async () => {
+    if (!photoFile) return null;
+    
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', photoFile);
+      
+      const response = await fetch('/api/student/upload-profile-photo', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload photo');
+      }
+      
+      const data = await response.json();
+      return data.photoPath;
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload profile photo. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const generateContent = async (field: "bio" | "careerGoals") => {
     const educationLevel = bioForm.getValues("educationLevel");
     const fieldOfStudy = bioForm.getValues("fieldOfStudy");
@@ -212,8 +280,28 @@ export default function StudentProfilePage() {
   };
 
   const handlePersonalSubmit = personalForm.handleSubmit(
-    (data) => {
-      createOrUpdateMutation.mutate(data);
+    async (data) => {
+      let photoPath = data.profileImageUrl;
+      
+      // Upload photo if a new one was selected
+      if (photoFile) {
+        const uploadedPath = await uploadPhoto();
+        if (uploadedPath) {
+          photoPath = uploadedPath;
+        } else {
+          // Photo upload failed, don't proceed
+          return;
+        }
+      }
+      
+      createOrUpdateMutation.mutate({
+        ...data,
+        profileImageUrl: photoPath,
+      });
+      
+      // Clear photo selection after successful save
+      setPhotoFile(null);
+      setPhotoPreview(null);
     },
     (errors) => {
       console.error("Validation errors:", errors);
@@ -431,19 +519,39 @@ export default function StudentProfilePage() {
                     />
                   </div>
 
-                  <FormField
-                    control={personalForm.control}
-                    name="profileImageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Profile Photo URL (Optional)</FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value || ""} type="url" placeholder="https://example.com/photo.jpg" data-testid="input-profile-image-url" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-2">
+                    <FormLabel>Profile Photo (Optional)</FormLabel>
+                    <div className="flex items-start gap-4">
+                      {(photoPreview || profile?.profileImageUrl) && (
+                        <div className="relative h-24 w-24 rounded-full overflow-hidden border-2 border-border flex-shrink-0">
+                          <img
+                            src={photoPreview || profile?.profileImageUrl || ''}
+                            alt="Profile preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          disabled={uploadingPhoto || createOrUpdateMutation.isPending}
+                          data-testid="input-profile-photo"
+                          className="cursor-pointer"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Upload a photo (max 5MB). Recommended: square image, at least 200x200px
+                        </p>
+                        {uploadingPhoto && (
+                          <p className="text-xs text-primary flex items-center gap-2">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Uploading photo...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 

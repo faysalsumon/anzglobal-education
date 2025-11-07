@@ -13,6 +13,7 @@ import {
   insertStudentLanguageScoreSchema,
   users,
   universities,
+  courses,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -376,7 +377,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .toBuffer();
 
           // Upload to object storage
-          const filename = `gallery-${access.university.id}-${Date.now()}-${i}.jpg`;
+          const institutionId = ownerUniversity?.id || teamAccess?.university.id || userId;
+          const filename = `gallery-${institutionId}-${Date.now()}-${i}.jpg`;
           const filepath = `${publicDir}/institutions/${filename}`;
           
           // Write to object storage (you'll need to implement this based on Replit's object storage API)
@@ -617,7 +619,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PUT /api/student/profile - Update existing profile
-  // Accepts profileImageUrl field for profile photo (client must upload to object storage first using ObjectUploader)
   app.put("/api/student/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -635,6 +636,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating student profile:", error);
       res.status(400).json({ message: error.message || "Failed to update profile" });
+    }
+  });
+
+  // POST /api/student/upload-profile-photo - Upload profile photo
+  app.post("/api/student/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found. Create profile first." });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Resize to 200x200 with cover
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(200, 200, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      // Save to public directory
+      const filename = `student-profile-${profile.id}-${Date.now()}.jpg`;
+      const localPath = path.join(process.cwd(), 'public', 'students');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const photoPath = `/students/${filename}`;
+
+      // Update profile with new photo
+      await storage.updateStudentProfile(profile.id, {
+        ...profile,
+        profileImageUrl: photoPath,
+      });
+
+      res.json({ photoPath });
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      res.status(500).json({ message: "Failed to upload photo" });
     }
   });
 
