@@ -23,9 +23,17 @@ ANZ Global Education is an AI-powered educational platform that connects univers
   - Top Disciplines: Early Childhood Education, Leadership and Management, Kitchen Management, Commercial Cookery
   - Institution ID: 08ca204e-378f-4f86-ac53-1261c50cb1fd
   - Full description covering all program areas with emphasis on practical, hands-on learning
-- **Logo Integration**: Both institution logos saved to attached_assets directory
+- **Glen Institute**: Added complete institution profile with real data from anzglobal.com.au
+  - Provider Type: Institution
+  - Location: Melbourne, Australia
+  - Number of Campuses: 1
+  - Current Scholarship: 20%
+  - Top Disciplines: Management, Hospitality, IT, Automotive
+  - Institution ID: 83b69414-6c29-4740-89dc-771942c2e0a3
+  - Comprehensive description covering Leadership and Management, and Hospitality Management programs
+- **Logo Integration**: All institution logos saved to attached_assets directory
 - **UI Enhancement**: University profile form updated with Institution Details section for new fields
-- **Ready for Courses**: Both institution profiles complete, ready to add courses
+- **Ready for Courses**: Three institution profiles complete, ready to add courses
 
 ### Public Course Discovery - No Login Required (Complete)
 - **Unauthenticated Browse**: Users can explore all courses at `/courses` without logging in, matching the reference site workflow at anzglobal.com.au/courses
