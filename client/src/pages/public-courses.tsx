@@ -75,57 +75,62 @@ export default function PublicCourses() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3">
-              <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
+        <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Link href="/" className="flex items-center gap-2 md:gap-3">
+              <img src={logoUrl} alt="ANZ Global Education" className="h-8 sm:h-10 w-auto" />
             </Link>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" asChild size="sm" data-testid="button-back-home">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+            <Button variant="outline" asChild size="sm" data-testid="button-back-home" className="hidden sm:flex">
               <a href="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Home
               </a>
             </Button>
+            <Button variant="outline" asChild size="icon" data-testid="button-back-home-mobile" className="sm:hidden">
+              <a href="/">
+                <ArrowLeft className="h-4 w-4" />
+              </a>
+            </Button>
             <Button asChild size="sm" data-testid="button-login-header">
-              <a href="/api/login?type=student">
-                <LogIn className="h-4 w-4 mr-2" />
-                Login to Apply
+              <a href="/api/login?type=student" className="flex items-center">
+                <LogIn className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Login to Apply</span>
               </a>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
+      <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Browse All Courses</h1>
-            <p className="text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Browse All Courses</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
           </div>
 
           {/* Search and Filters */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-accent" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                 Find Your Perfect Course
               </CardTitle>
-              <CardDescription>Filter courses by your preferences</CardDescription>
+              <CardDescription className="text-sm">Filter courses by your preferences</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search courses by title, subject or description..."
+                  placeholder="Search courses..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                   data-testid="input-search-courses"
                 />
               </div>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
                   <SelectTrigger data-testid="select-subject">
                     <SelectValue placeholder="All Subjects" />
@@ -194,9 +199,9 @@ export default function PublicCourses() {
           </div>
 
           {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse">
+                <Card key={i} className="animate-pulse h-full">
                   <CardHeader>
                     <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
@@ -216,64 +221,64 @@ export default function PublicCourses() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredCourses.map((course) => {
                 const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
                 return (
                   <Card 
                     key={course.id} 
                     ref={isHighlighted ? highlightedRef : null}
-                    className={`hover-elevate flex flex-col transition-all duration-300 ${
+                    className={`hover-elevate flex flex-col h-full transition-all duration-300 ${
                       isHighlighted ? 'ring-2 ring-primary shadow-lg scale-105' : ''
                     }`}
                     data-testid={`course-card-${course.id}`}
                   >
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20">{course.level}</Badge>
-                        <Badge variant="outline">{course.subject}</Badge>
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <div className="flex flex-wrap items-start gap-2 mb-2">
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
+                        <Badge variant="outline" className="text-xs">{course.subject}</Badge>
                       </div>
                       {isHighlighted && (
-                        <Badge className="mb-2 bg-accent text-accent-foreground">
+                        <Badge className="mb-2 bg-accent text-accent-foreground text-xs w-fit">
                           <Sparkles className="h-3 w-3 mr-1" />
                           Your Search Result
                         </Badge>
                       )}
-                      <CardTitle className="text-xl line-clamp-2">{course.title}</CardTitle>
-                      <CardDescription className="line-clamp-1">
+                      <CardTitle className="text-lg sm:text-xl line-clamp-2">{course.title}</CardTitle>
+                      <CardDescription className="line-clamp-1 text-sm">
                         {course.university?.name || "University"}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1">
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                    <CardContent className="flex-1 pb-3 sm:pb-4">
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
                         {course.description || "No description available"}
                       </p>
                       <div className="space-y-2 text-sm">
                         {course.location && (
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{course.location}</span>
+                            <MapPin className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{course.location}</span>
                           </div>
                         )}
                         {course.duration && (
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>{course.duration}</span>
+                            <Clock className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{course.duration}</span>
                           </div>
                         )}
                         {course.fees && (
                           <div className="flex items-center gap-2 font-semibold text-primary">
-                            <DollarSign className="h-4 w-4" />
-                            <span>{course.currency} {Number(course.fees).toLocaleString()}</span>
+                            <DollarSign className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{course.currency} {Number(course.fees).toLocaleString()}</span>
                           </div>
                         )}
                       </div>
                     </CardContent>
-                    <CardFooter className="flex gap-2">
-                      <Button asChild className="flex-1" data-testid={`button-apply-course-${course.id}`}>
+                    <CardFooter className="pt-0">
+                      <Button asChild className="w-full" size="sm" data-testid={`button-apply-course-${course.id}`}>
                         <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
                           <GraduationCap className="mr-2 h-4 w-4" />
-                          Login & Apply
+                          <span className="truncate">Login & Apply</span>
                         </a>
                       </Button>
                     </CardFooter>
