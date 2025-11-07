@@ -110,46 +110,81 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-xl shadow-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
+            <div className="hidden sm:block h-6 w-px bg-border/60" />
+            <span className="hidden sm:inline-block text-xs font-medium text-muted-foreground">
+              AI-Powered Platform
+            </span>
           </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Find Institutes
-            </a>
-            <a href="#" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Find Courses
-            </a>
+          
+          <nav className="hidden md:flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              asChild
+              className="text-sm font-medium"
+            >
+              <a href="/institutions">
+                <Building2 className="h-4 w-4 mr-2" />
+                Institutions
+              </a>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              asChild
+              className="text-sm font-medium"
+            >
+              <a href="/courses">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                Courses
+              </a>
+            </Button>
+            <div className="h-6 w-px bg-border/60 mx-2" />
             <Button 
               variant="default" 
               size="sm" 
               onClick={() => setShowStudentAuthModal(true)}
+              className="relative overflow-hidden group"
               data-testid="button-student-auth"
             >
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Student
+              <span className="relative z-10 flex items-center">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                Student
+              </span>
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setShowInstitutionAuthModal(true)}
+              className="border-border/60"
               data-testid="button-institution-auth"
             >
               <Building2 className="h-4 w-4 mr-2" />
               Institution
             </Button>
           </nav>
-          <Button 
-            className="md:hidden" 
-            size="sm"
-            onClick={() => setShowStudentAuthModal(true)}
-            data-testid="button-student-auth-mobile"
-          >
-            <GraduationCap className="h-4 w-4 mr-2" />
-            Student
-          </Button>
+          
+          <div className="md:hidden flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowStudentAuthModal(true)}
+              data-testid="button-student-auth-mobile"
+            >
+              <GraduationCap className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowInstitutionAuthModal(true)}
+            >
+              <Building2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
