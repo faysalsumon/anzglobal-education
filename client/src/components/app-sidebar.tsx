@@ -15,12 +15,21 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { type StudentProfile } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isUniversity, isStudent } = useAuth();
   const isAdmin = user?.userType === "admin";
+
+  // Fetch student profile for profile photo
+  const { data: studentProfile } = useQuery<StudentProfile>({
+    queryKey: ["/api/student/profile"],
+    enabled: isStudent,
+    retry: false,
+  });
 
   const universityItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -78,7 +87,10 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+            <AvatarImage 
+              src={isStudent ? (studentProfile?.profileImageUrl || undefined) : undefined} 
+              alt={user?.firstName || "User"} 
+            />
             <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 overflow-hidden">
