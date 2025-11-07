@@ -8,6 +8,7 @@ import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
+import { TypingText } from "@/components/typing-text";
 
 interface PlatformStats {
   institutionCount: number;
@@ -156,15 +157,23 @@ export default function Landing() {
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl text-center">
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Your Gateway to{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-cyan-200">
-                Australian Education
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl min-h-[120px] sm:min-h-[140px] md:min-h-[160px]">
+              Find Your{" "}
+              <TypingText 
+                words={["Dream Course", "Perfect University", "Future Career"]}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-200 to-pink-200"
+              />
+              <br />
+              with{" "}
+              <span className="relative inline-block">
+                <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-blue-200 font-extrabold">
+                  AI
+                </span>
+                <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
               </span>
             </h1>
             <p className="mb-8 text-lg opacity-90 sm:text-xl max-w-2xl mx-auto">
-              Discover the perfect course and university match with AI-powered recommendations. 
-              Apply directly to top Australian institutions in minutes.
+              Smart recommendations. Instant applications. Your Australian education journey starts here.
             </p>
             <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
               {/* Search Type Toggle */}
