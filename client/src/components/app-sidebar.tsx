@@ -24,6 +24,19 @@ export function AppSidebar() {
   const { user, isUniversity, isStudent } = useAuth();
   const isAdmin = user?.userType === "admin";
 
+  // Helper to get portal label based on user type and role
+  const getPortalLabel = () => {
+    if (isAdmin) {
+      if (user?.role === "super_admin") return "Super Admin Portal";
+      if (user?.role === "support_manager") return "Support Manager Portal";
+      if (user?.role === "support_staff") return "Support Staff Portal";
+      if (user?.role === "operations_staff") return "Operations Staff Portal";
+      return "Admin Portal";
+    }
+    if (isUniversity) return "University Portal";
+    return "Student Portal";
+  };
+
   // Fetch student profile for profile photo
   const { data: studentProfile } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -66,7 +79,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
-            {isAdmin ? "Admin Portal" : (isUniversity ? "University Portal" : "Student Portal")}
+            {getPortalLabel()}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
