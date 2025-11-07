@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Home } from "lucide-react";
-import { insertStudentProfileSchema, insertStudentEducationSchema, type StudentProfile, type StudentEducation } from "@shared/schema";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Home, Heart, MapPin, Eye } from "lucide-react";
+import { insertStudentProfileSchema, insertStudentEducationSchema, type StudentProfile, type StudentEducation, type Favorite, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
@@ -96,6 +96,30 @@ export default function StudentProfilePage() {
 
   const { data: languageScores = [] } = useQuery<any[]>({
     queryKey: ["/api/student/language-scores"],
+  });
+
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ["/api/student/favorites"],
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (favoriteId: string) => {
+      return await apiRequest("DELETE", `/api/student/favorites/${favoriteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Success",
+        description: "Removed from favorites",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites",
+        variant: "destructive",
+      });
+    },
   });
 
   const personalForm = useForm<z.infer<typeof personalDetailsSchema>>({
@@ -422,7 +446,7 @@ export default function StudentProfilePage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-profile-sections">
+        <TabsList className="grid w-full grid-cols-5" data-testid="tabs-profile-sections">
           <TabsTrigger value="personal" data-testid="tab-personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
@@ -438,6 +462,10 @@ export default function StudentProfilePage() {
           <TabsTrigger value="bio" data-testid="tab-bio" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             <span className="hidden sm:inline">Bio</span>
+          </TabsTrigger>
+          <TabsTrigger value="favorites" data-testid="tab-favorites" className="flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            <span className="hidden sm:inline">Favorites</span>
           </TabsTrigger>
         </TabsList>
 
@@ -813,6 +841,136 @@ export default function StudentProfilePage() {
               </div>
             </form>
           </Form>
+        </TabsContent>
+
+        <TabsContent value="favorites">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Favorites</CardTitle>
+                <CardDescription>Institutions and courses you've saved</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {favorites.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                    <p className="text-lg font-medium mb-2">No favorites yet</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Start exploring institutions and courses to add them to your favorites
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <Button asChild variant="outline">
+                        <Link href="/institutions">Browse Institutions</Link>
+                      </Button>
+                      <Button asChild>
+                        <Link href="/courses">Browse Courses</Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {favorites.some((f) => f.itemType === "university") && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <GraduationCap className="h-5 w-5" />
+                          Favorite Institutions ({favorites.filter((f) => f.itemType === "university").length})
+                        </h3>
+                        <div className="grid gap-4">
+                          {favorites
+                            .filter((f) => f.itemType === "university")
+                            .map((favorite) => (
+                              <Card key={favorite.id} className="hover-elevate">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <p className="font-semibold mb-1" data-testid={`favorite-institution-${favorite.itemId}`}>
+                                        Institution ID: {favorite.itemId}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Saved on {new Date(favorite.createdAt!).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        asChild
+                                        variant="outline"
+                                        size="sm"
+                                      >
+                                        <Link href={`/institutions/${favorite.itemId}`}>
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          View
+                                        </Link>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeFavoriteMutation.mutate(favorite.id)}
+                                        data-testid={`button-remove-favorite-${favorite.id}`}
+                                      >
+                                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {favorites.some((f) => f.itemType === "course") && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <GraduationCap className="h-5 w-5" />
+                          Favorite Courses ({favorites.filter((f) => f.itemType === "course").length})
+                        </h3>
+                        <div className="grid gap-4">
+                          {favorites
+                            .filter((f) => f.itemType === "course")
+                            .map((favorite) => (
+                              <Card key={favorite.id} className="hover-elevate">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <p className="font-semibold mb-1" data-testid={`favorite-course-${favorite.itemId}`}>
+                                        Course ID: {favorite.itemId}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Saved on {new Date(favorite.createdAt!).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        asChild
+                                        variant="outline"
+                                        size="sm"
+                                      >
+                                        <Link href={`/courses/${favorite.itemId}`}>
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          View
+                                        </Link>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeFavoriteMutation.mutate(favorite.id)}
+                                        data-testid={`button-remove-favorite-${favorite.id}`}
+                                      >
+                                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
