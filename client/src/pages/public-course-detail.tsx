@@ -108,7 +108,7 @@ export default function PublicCourseDetail() {
             {course.university?.logo && (
               <div className="bg-white p-4 rounded-lg">
                 <img
-                  src={`/${course.university.logo}`}
+                  src={course.university.logo}
                   alt={course.university.name}
                   className="w-20 h-20 object-contain"
                   data-testid="img-university-logo"
@@ -358,7 +358,7 @@ export default function PublicCourseDetail() {
                     {course.university.logo && (
                       <div className="flex-shrink-0 w-16 h-16 rounded-lg border bg-white p-2 flex items-center justify-center">
                         <img
-                          src={`/${course.university.logo}`}
+                          src={course.university.logo}
                           alt={course.university.name}
                           className="w-full h-full object-contain"
                         />

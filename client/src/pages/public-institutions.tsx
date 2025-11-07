@@ -248,7 +248,7 @@ export default function PublicInstitutions() {
                       <div className="flex items-start gap-4 mb-4">
                         {institution.logo && (
                           <img
-                            src={`/${institution.logo}`}
+                            src={institution.logo}
                             alt={institution.name}
                             className="w-16 h-16 object-contain rounded"
                             data-testid={`img-logo-${institution.id}`}

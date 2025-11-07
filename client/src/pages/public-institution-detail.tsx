@@ -79,7 +79,7 @@ export default function PublicInstitutionDetail() {
           <div className="flex flex-col md:flex-row items-start gap-6">
             {institution.logo && (
               <img
-                src={`/${institution.logo}`}
+                src={institution.logo}
                 alt={institution.name}
                 className="w-32 h-32 object-contain rounded"
                 data-testid="img-logo"
