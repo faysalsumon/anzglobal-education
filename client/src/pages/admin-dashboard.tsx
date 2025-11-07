@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, Toggle } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, Toggle, GraduationCap, FileText } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -76,6 +76,44 @@ interface Course {
   isActive: boolean;
   institutionName?: string;
   createdAt: string | null;
+}
+
+interface StudentLead {
+  userId: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  nationality: string | null;
+  country: string | null;
+  educationLevel: string | null;
+  fieldOfStudy: string | null;
+  createdAt: string | null;
+  profileComplete: boolean;
+}
+
+interface Application {
+  id: string;
+  status: string;
+  createdAt: string | null;
+  personalStatement: string | null;
+  additionalInfo: string | null;
+  student: {
+    id: string;
+    name: string;
+    email: string | null;
+    nationality: string | null;
+  };
+  course: {
+    id: string;
+    title: string;
+    level: string | null;
+    subject: string | null;
+  };
+  university: {
+    id: string;
+    name: string;
+  };
 }
 
 const userSchema = z.object({
@@ -135,6 +173,13 @@ export default function AdminDashboard() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
 
+  // Student leads state
+  const [studentLeadSearchQuery, setStudentLeadSearchQuery] = useState("");
+
+  // Applications state
+  const [applicationSearchQuery, setApplicationSearchQuery] = useState("");
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
+
   // Forms
   const userForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
@@ -185,6 +230,14 @@ export default function AdminDashboard() {
 
   const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/super-admin/courses"],
+  });
+
+  const { data: studentLeads, isLoading: studentLeadsLoading } = useQuery<StudentLead[]>({
+    queryKey: ["/api/super-admin/student-leads"],
+  });
+
+  const { data: applications, isLoading: applicationsLoading } = useQuery<Application[]>({
+    queryKey: ["/api/super-admin/applications"],
   });
 
   // User mutations
@@ -670,6 +723,14 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 mr-2" />
             Courses ({courseStats.total})
           </TabsTrigger>
+          <TabsTrigger value="student-leads" data-testid="tab-student-leads">
+            <GraduationCap className="h-4 w-4 mr-2" />
+            Student Leads ({studentLeads?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="applications" data-testid="tab-applications">
+            <FileText className="h-4 w-4 mr-2" />
+            Applications ({applications?.length || 0})
+          </TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -1139,6 +1200,225 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableCell colSpan={7} className="text-center">No courses found</TableCell>
                       </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Student Leads Tab */}
+        <TabsContent value="student-leads" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                  <CardTitle>Student Leads</CardTitle>
+                  <CardDescription>View all registered students on the platform</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, nationality..."
+                  value={studentLeadSearchQuery}
+                  onChange={(e) => setStudentLeadSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search-student-leads"
+                />
+              </div>
+
+              {/* Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Nationality</TableHead>
+                      <TableHead>Education Level</TableHead>
+                      <TableHead>Field of Study</TableHead>
+                      <TableHead>Profile Status</TableHead>
+                      <TableHead>Registered</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentLeadsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          Loading student leads...
+                        </TableCell>
+                      </TableRow>
+                    ) : !studentLeads || studentLeads.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No student leads found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      studentLeads
+                        .filter((lead) => {
+                          const searchLower = studentLeadSearchQuery.toLowerCase();
+                          return (
+                            !searchLower ||
+                            lead.email?.toLowerCase().includes(searchLower) ||
+                            lead.firstName?.toLowerCase().includes(searchLower) ||
+                            lead.lastName?.toLowerCase().includes(searchLower) ||
+                            lead.nationality?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((lead) => (
+                          <TableRow key={lead.userId} data-testid={`row-student-lead-${lead.userId}`}>
+                            <TableCell className="font-medium">
+                              {lead.firstName && lead.lastName
+                                ? `${lead.firstName} ${lead.lastName}`
+                                : 'Not set'}
+                            </TableCell>
+                            <TableCell>{lead.email || 'N/A'}</TableCell>
+                            <TableCell>{lead.phone || 'N/A'}</TableCell>
+                            <TableCell>{lead.nationality || 'N/A'}</TableCell>
+                            <TableCell>{lead.educationLevel || 'N/A'}</TableCell>
+                            <TableCell>{lead.fieldOfStudy || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant={lead.profileComplete ? "default" : "secondary"}>
+                                {lead.profileComplete ? 'Complete' : 'Incomplete'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {lead.createdAt
+                                ? new Date(lead.createdAt).toLocaleDateString()
+                                : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Applications Tab */}
+        <TabsContent value="applications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                  <CardTitle>Applications</CardTitle>
+                  <CardDescription>View all course applications from students</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by student name, course, university..."
+                    value={applicationSearchQuery}
+                    onChange={(e) => setApplicationSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-applications"
+                  />
+                </div>
+                <Select value={applicationStatusFilter} onValueChange={setApplicationStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-application-status">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="reviewing">Reviewing</SelectItem>
+                    <SelectItem value="accepted">Accepted</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>University</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Applied Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {applicationsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8">
+                          Loading applications...
+                        </TableCell>
+                      </TableRow>
+                    ) : !applications || applications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No applications found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      applications
+                        .filter((app) => {
+                          const searchLower = applicationSearchQuery.toLowerCase();
+                          const matchesSearch =
+                            !searchLower ||
+                            app.student.name.toLowerCase().includes(searchLower) ||
+                            app.course.title.toLowerCase().includes(searchLower) ||
+                            app.university.name.toLowerCase().includes(searchLower);
+                          
+                          const matchesStatus =
+                            applicationStatusFilter === 'all' ||
+                            app.status === applicationStatusFilter;
+                          
+                          return matchesSearch && matchesStatus;
+                        })
+                        .map((app) => (
+                          <TableRow key={app.id} data-testid={`row-application-${app.id}`}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{app.student.name}</span>
+                                <span className="text-sm text-muted-foreground">{app.student.email}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{app.course.title}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {app.course.level} • {app.course.subject}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{app.university.name}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  app.status === 'accepted' ? 'default' :
+                                  app.status === 'rejected' ? 'destructive' :
+                                  app.status === 'reviewing' ? 'secondary' :
+                                  'outline'
+                                }
+                              >
+                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {app.createdAt
+                                ? new Date(app.createdAt).toLocaleDateString()
+                                : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))
                     )}
                   </TableBody>
                 </Table>

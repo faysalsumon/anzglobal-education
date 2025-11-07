@@ -14,6 +14,8 @@ import {
   users,
   universities,
   courses,
+  applications,
+  studentProfiles,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -1969,6 +1971,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating course status:", error);
       res.status(500).json({ message: "Failed to update course status" });
+    }
+  });
+
+  // Get all student leads (student profiles)
+  app.get("/api/super-admin/student-leads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allUsers = await storage.getAllUsers();
+      const students = allUsers.filter(u => u.userType === 'student');
+
+      const studentLeads = await Promise.all(
+        students.map(async (student) => {
+          const profile = await storage.getStudentProfileByUserId(student.id);
+          return {
+            userId: student.id,
+            email: student.email,
+            firstName: profile?.firstName || student.firstName,
+            lastName: profile?.lastName || student.lastName,
+            phone: profile?.phone,
+            nationality: profile?.nationality,
+            country: profile?.country,
+            educationLevel: profile?.educationLevel,
+            fieldOfStudy: profile?.fieldOfStudy,
+            createdAt: student.createdAt,
+            profileComplete: !!profile,
+          };
+        })
+      );
+
+      res.json(studentLeads);
+    } catch (error) {
+      console.error("Error fetching student leads:", error);
+      res.status(500).json({ message: "Failed to fetch student leads" });
+    }
+  });
+
+  // Get all applications
+  app.get("/api/super-admin/applications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allApplications = await db.select().from(applications);
+
+      const enrichedApplications = await Promise.all(
+        allApplications.map(async (app) => {
+          const [studentProfile, course] = await Promise.all([
+            db.select().from(studentProfiles).where(eq(studentProfiles.id, app.studentId)).then(r => r[0]),
+            storage.getCourseById(app.courseId),
+          ]);
+
+          let university = null;
+          if (course) {
+            university = await storage.getUniversityById(course.universityId);
+          }
+
+          const studentUser = studentProfile?.userId 
+            ? await storage.getUser(studentProfile.userId) 
+            : null;
+
+          return {
+            id: app.id,
+            status: app.status,
+            createdAt: app.createdAt,
+            personalStatement: app.personalStatement,
+            additionalInfo: app.additionalInfo,
+            student: {
+              id: studentProfile?.id,
+              name: `${studentProfile?.firstName || ''} ${studentProfile?.lastName || ''}`.trim() || 'Unknown',
+              email: studentUser?.email,
+              nationality: studentProfile?.nationality,
+            },
+            course: {
+              id: course?.id,
+              title: course?.title || 'Unknown Course',
+              level: course?.level,
+              subject: course?.subject,
+            },
+            university: {
+              id: university?.id,
+              name: university?.name || 'Unknown University',
+            },
+          };
+        })
+      );
+
+      res.json(enrichedApplications);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      res.status(500).json({ message: "Failed to fetch applications" });
     }
   });
 
