@@ -77,6 +77,18 @@ export const courses = pgTable("courses", {
   applicationDeadline: text("application_deadline"),
   prerequisites: text("prerequisites"),
   thumbnailUrl: text("thumbnail_url"),
+  
+  // Additional course details
+  courseCode: text("course_code"),
+  prPathway: boolean("pr_pathway").default(false),
+  scholarshipPercentage: integer("scholarship_percentage"),
+  eligibilityRequirements: text("eligibility_requirements"),
+  englishRequirements: text("english_requirements"),
+  curriculumUrl: text("curriculum_url"),
+  costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
+  applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
+  images: text("images").array(),
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

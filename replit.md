@@ -6,6 +6,29 @@ ANZ Global Education is an AI-powered educational platform designed to connect u
 
 ## Recent Changes (November 07, 2025)
 
+### Public Course Detail Page
+- Created comprehensive public course detail page at `/courses/:id`
+- Extended course schema with detailed fields:
+  - `courseCode`: Course registration code
+  - `prPathway`: Boolean flag for PR pathway courses
+  - `scholarshipPercentage`: Institution scholarship percentage
+  - `eligibilityRequirements`: Course eligibility criteria
+  - `englishRequirements`: IELTS/PTE requirements
+  - `curriculumUrl`: Link to download course curriculum
+  - `costOfLiving`: Estimated annual cost of living
+  - `applicationFees`: Application fees amount
+  - `images`: Array of course images
+- Course detail page displays:
+  - Hero section with course title, badges (scholarship, PR pathway), course code, and university logo
+  - Tab navigation for Info, Fees, and Eligibility sections
+  - Course description and complete details
+  - Sidebar with quick facts (duration, fees, location, intake, discipline)
+  - Course fees breakdown table (tuition, cost of living, application fees)
+  - Eligibility and English requirements sections
+  - "Download Curriculum" and "Login to Apply" action buttons
+  - Related university information card with link to institution detail page
+- Updated "View Course" button in public courses listing to link to public course detail page
+
 ### Public Institutions Listing Page Updates
 - **Replaced "Visit Website" button** with two action buttons on each institution card:
   - "View Institution" - navigates to institution detail page

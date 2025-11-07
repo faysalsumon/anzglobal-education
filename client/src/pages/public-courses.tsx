@@ -287,7 +287,7 @@ export default function PublicCourses() {
                     <CardFooter className="pt-0">
                       <div className="flex gap-2 w-full">
                         <Button asChild variant="outline" className="flex-1" size="sm" data-testid={`button-view-course-${course.id}`}>
-                          <Link href={`/student/courses/${course.id}`}>
+                          <Link href={`/courses/${course.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
                             <span className="truncate">View Course</span>
                           </Link>

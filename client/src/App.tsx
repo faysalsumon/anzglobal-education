@@ -22,6 +22,7 @@ import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
 import StudentReferrals from "@/pages/student-referrals";
 import PublicCourses from "@/pages/public-courses";
+import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
 import PublicInstitutionDetail from "@/pages/public-institution-detail";
 import UserTypeSelection from "@/pages/user-type-selection";
@@ -32,6 +33,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes accessible to everyone */}
+      <Route path="/courses/:id" component={PublicCourseDetail} />
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />
       <Route path="/institutions" component={PublicInstitutions} />
