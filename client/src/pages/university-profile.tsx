@@ -166,17 +166,21 @@ export default function UniversityProfile() {
 
     setAiLoading("smallDescription");
     try {
+      console.log("Generating small description with:", { name, location, providerType });
       const response = await apiRequest("POST", "/api/university/generate-small-description", {
         name,
         location,
         providerType,
       }) as { description: string };
+      console.log("Received response:", response);
+      console.log("Setting form value to:", response.description);
       form.setValue("smallDescription", response.description);
       toast({
         title: "Small description generated",
         description: "AI has created a concise description for your institution.",
       });
     } catch (error: any) {
+      console.error("Error generating small description:", error);
       toast({
         title: "Error",
         description: error.message,

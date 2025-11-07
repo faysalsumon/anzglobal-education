@@ -196,10 +196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/generate-small-description", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
       
-      if (!access) {
-        return res.status(403).json({ message: "Unauthorized" });
+      // Allow authenticated users to generate content (they may not have a university record yet)
+      const ownerUniversity = await storage.getUniversityByUserId(userId);
+      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!ownerUniversity && !teamAccess) {
+        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
+        // We'll allow it as long as they're authenticated
       }
 
       const { name, location, providerType } = req.body;
@@ -218,10 +222,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/generate-full-description", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
       
-      if (!access) {
-        return res.status(403).json({ message: "Unauthorized" });
+      // Allow authenticated users to generate content (they may not have a university record yet)
+      const ownerUniversity = await storage.getUniversityByUserId(userId);
+      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!ownerUniversity && !teamAccess) {
+        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
+        // We'll allow it as long as they're authenticated
       }
 
       const { name, location, providerType, topDisciplines } = req.body;
@@ -245,10 +253,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/generate-gallery", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
       
-      if (!access) {
-        return res.status(403).json({ message: "Unauthorized" });
+      // Allow authenticated users to generate content (they may not have a university record yet)
+      const ownerUniversity = await storage.getUniversityByUserId(userId);
+      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      
+      if (!ownerUniversity && !teamAccess) {
+        // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
+        // We'll allow it as long as they're authenticated
       }
 
       const { name, location, providerType } = req.body;
