@@ -144,15 +144,23 @@ export default function StudentCourses() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-6 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="animate-pulse h-full">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex gap-2 mb-2">
+                  <div className="h-5 bg-muted rounded w-16"></div>
+                  <div className="h-5 bg-muted rounded w-20"></div>
+                </div>
+                <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-16 bg-muted rounded mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                  <div className="h-4 bg-muted rounded w-2/3"></div>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -166,49 +174,49 @@ export default function StudentCourses() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredCourses.map((course) => (
-            <Card key={course.id} className="hover-elevate flex flex-col" data-testid={`course-card-${course.id}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <Badge className="bg-primary/10 text-primary hover:bg-primary/20">{course.level}</Badge>
-                  <Badge variant="outline">{course.subject}</Badge>
+            <Card key={course.id} className="hover-elevate flex flex-col h-full" data-testid={`course-card-${course.id}`}>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-wrap items-start gap-2 mb-2">
+                  <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
+                  <Badge variant="outline" className="text-xs">{course.subject}</Badge>
                 </div>
-                <CardTitle className="text-xl line-clamp-2">{course.title}</CardTitle>
-                <CardDescription className="line-clamp-1">
+                <CardTitle className="text-lg sm:text-xl line-clamp-2">{course.title}</CardTitle>
+                <CardDescription className="line-clamp-1 text-sm">
                   {course.university?.name || "Institution"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+              <CardContent className="flex-1 pb-3 sm:pb-4">
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
                   {course.description || "No description available"}
                 </p>
                 <div className="space-y-2 text-sm">
                   {course.location && (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{course.location}</span>
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{course.location}</span>
                     </div>
                   )}
                   {course.duration && (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>{course.duration}</span>
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{course.duration}</span>
                     </div>
                   )}
                   {course.fees && (
                     <div className="flex items-center gap-2 font-semibold text-primary">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{course.currency} {Number(course.fees).toLocaleString()}</span>
+                      <DollarSign className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{course.currency} {Number(course.fees).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full" data-testid={`button-view-course-${course.id}`}>
+              <CardFooter className="pt-0">
+                <Button asChild className="w-full" size="sm" data-testid={`button-view-course-${course.id}`}>
                   <Link href={`/student/courses/${course.id}`}>
                     <GraduationCap className="mr-2 h-4 w-4" />
-                    View Details & Apply
+                    <span className="truncate">View Details & Apply</span>
                   </Link>
                 </Button>
               </CardFooter>
