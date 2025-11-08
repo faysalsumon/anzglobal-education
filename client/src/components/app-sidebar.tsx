@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +24,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, isUniversity, isStudent } = useAuth();
   const isAdmin = user?.userType === "admin";
+  const hasFullAdminAccess = isAdmin && (user?.role === "super_admin" || user?.role === "support_manager");
 
   // Helper to get portal label based on user type and role
   const getPortalLabel = () => {
@@ -34,7 +35,7 @@ export function AppSidebar() {
       if (user?.role === "operations_staff") return "Operations Staff Portal";
       return "Admin Portal";
     }
-    if (isUniversity) return "University Portal";
+    if (isUniversity) return "Institution Portal";
     return "Student Portal";
   };
 
@@ -73,11 +74,19 @@ export function AppSidebar() {
     { title: "AI Assistant", url: "/student/ai-assistant", icon: Sparkles },
   ];
 
-  const adminItems = [
+  const baseAdminItems = [
     { title: "Admin Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
     { title: "Browse Courses", url: "/courses", icon: Search },
     { title: "Browse Institutions", url: "/institutions", icon: Building2 },
   ];
+
+  // Add institution management for full admins only
+  const adminItems = hasFullAdminAccess 
+    ? [
+        ...baseAdminItems,
+        { title: "Manage Institutions", url: "/admin/dashboard#institutions", icon: PlusCircle },
+      ]
+    : baseAdminItems;
 
   const items = isAdmin ? adminItems : (isUniversity ? universityItems : studentItems);
 

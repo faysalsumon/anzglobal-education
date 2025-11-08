@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,6 +166,14 @@ export default function AdminDashboard() {
   // Consultants default to applications tab, others default to users
   const defaultTab = isConsultant ? "applications" : "users";
   const [activeTab, setActiveTab] = useState(defaultTab);
+  
+  // Handle hash-based navigation
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['users', 'institutions', 'courses', 'leads', 'applications'].includes(hash)) {
+      setActiveTab(hash);
+    }
+  }, []);
   
   // User state
   const [userSearchQuery, setUserSearchQuery] = useState("");
