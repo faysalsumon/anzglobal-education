@@ -27,8 +27,8 @@ export function getSession() {
     tableName: "sessions",
   });
   
-  const isProduction = process.env.NODE_ENV === "production";
-  
+  // Always use secure cookies since Replit dev environment uses HTTPS
+  // sameSite must be "none" for OAuth cross-site redirects to work
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -36,8 +36,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isProduction, // Only require HTTPS in production
-      sameSite: isProduction ? "none" : "lax", // Lax for development, None for production
+      secure: true, // Required for sameSite="none" and OAuth to work
+      sameSite: "none", // Allow cookies in OAuth cross-site redirects
       maxAge: sessionTtl,
     },
   });
