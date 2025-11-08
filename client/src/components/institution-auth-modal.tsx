@@ -34,7 +34,7 @@ export function InstitutionAuthModal({ open, onOpenChange }: InstitutionAuthModa
             variant="default"
             data-testid="button-institution-auth"
           >
-            <a href="/api/login?type=university">
+            <a href="/api/login?type=university" target="_top">
               <span>Continue with Replit</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
