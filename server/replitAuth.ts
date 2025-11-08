@@ -80,15 +80,6 @@ export async function setupAuth(app: Express) {
 
   const registeredStrategies = new Set<string>();
 
-  const getCallbackURL = (domain: string) => {
-    // In development, use REPLIT_DEV_DOMAIN if available
-    if (process.env.NODE_ENV === "development" && process.env.REPLIT_DEV_DOMAIN) {
-      return `https://${process.env.REPLIT_DEV_DOMAIN}/api/callback`;
-    }
-    // In production or when REPLIT_DEV_DOMAIN isn't set, use the request domain
-    return `https://${domain}/api/callback`;
-  };
-
   const ensureStrategy = (domain: string) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
@@ -97,7 +88,7 @@ export async function setupAuth(app: Express) {
           name: strategyName,
           config,
           scope: "openid email profile offline_access",
-          callbackURL: getCallbackURL(domain),
+          callbackURL: `https://${domain}/api/callback`,
         },
         verify,
       );
