@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import UniversityProfile from "@/pages/university-profile";
+import UniversityInstitutions from "@/pages/university-institutions";
 import UniversityCourses from "@/pages/university-courses";
 import CourseForm from "@/pages/course-form";
 import UniversityApplications from "@/pages/university-applications";
@@ -54,6 +55,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/university/profile" component={UniversityProfile} />
+          <Route path="/university/institutions" component={UniversityInstitutions} />
           <Route path="/university/courses" component={UniversityCourses} />
           <Route path="/university/courses/new" component={CourseForm} />
           <Route path="/university/courses/:id/edit" component={CourseForm} />

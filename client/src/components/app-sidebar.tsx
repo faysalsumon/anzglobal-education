@@ -57,7 +57,7 @@ export function AppSidebar() {
 
   const universityItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    { title: "My Institution", url: "/university/profile", icon: Building2 },
+    { title: "My Institutions", url: "/university/institutions", icon: Building2 },
     { title: "Courses", url: "/university/courses", icon: BookOpen },
     { title: "Applications", url: "/university/applications", icon: FileText },
     { title: "Team Management", url: "/university/team", icon: Users },

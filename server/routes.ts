@@ -465,6 +465,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Institution management endpoints for institution admins
+  app.get("/api/university/my-institutions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get all institutions created by this user
+      const userInstitutions = await db
+        .select()
+        .from(universities)
+        .where(eq(universities.userId, userId))
+        .orderBy(desc(universities.createdAt));
+      
+      res.json(userInstitutions);
+    } catch (error) {
+      console.error("Error fetching user institutions:", error);
+      res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
+  app.post("/api/university/institutions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Remove approval-related fields that only admins can modify
+      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
+      
+      // Create institution with pending status
+      const data = insertUniversitySchema.parse({ 
+        ...safeData, 
+        userId,
+        approvalStatus: 'pending',
+        submittedForApprovalAt: new Date()
+      });
+      
+      const institution = await storage.createUniversity(data);
+      
+      // Create notifications for all active platform admins
+      const admins = await db
+        .select()
+        .from(users)
+        .where(and(
+          eq(users.userType, 'admin'),
+          eq(users.isActive, true)
+        ));
+      
+      for (const admin of admins) {
+        await createNotification({
+          userId: admin.id,
+          type: 'institution_approval_request',
+          title: 'New Institution Pending Approval',
+          message: `${institution.name} has been submitted for approval`,
+          link: `/admin/dashboard#institutions`,
+          metadata: {
+            institutionId: institution.id,
+            institutionName: institution.name,
+            submittedBy: userId
+          }
+        });
+      }
+
+      res.json(institution);
+    } catch (error: any) {
+      console.error("Error creating institution:", error);
+      res.status(400).json({ message: error.message || "Failed to create institution" });
+    }
+  });
+
+  app.patch("/api/university/institutions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const institutionId = req.params.id;
+      
+      // Check ownership
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution || institution.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to edit this institution" });
+      }
+      
+      // Remove approval-related fields that only admins can modify
+      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
+      
+      const data = insertUniversitySchema.parse(safeData);
+      const updated = await storage.updateUniversity(institutionId, data);
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating institution:", error);
+      res.status(400).json({ message: error.message || "Failed to update institution" });
+    }
+  });
+
+  app.delete("/api/university/institutions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const institutionId = req.params.id;
+      
+      // Check ownership
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution || institution.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to delete this institution" });
+      }
+      
+      // Delete institution (cascades to courses)
+      await db.delete(universities).where(eq(universities.id, institutionId));
+      
+      res.json({ message: "Institution deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting institution:", error);
+      res.status(500).json({ message: "Failed to delete institution" });
+    }
+  });
+
   // AI Generation Routes
   app.post("/api/university/generate-small-description", isAuthenticated, async (req: any, res) => {
     try {
