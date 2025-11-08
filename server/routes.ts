@@ -12,12 +12,14 @@ import {
   insertStudentEducationSchema,
   insertStudentLanguageScoreSchema,
   insertFavoriteSchema,
+  insertCourseComparisonSchema,
   users,
   universities,
   courses,
   applications,
   studentProfiles,
   favorites,
+  courseComparisons,
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
@@ -1093,6 +1095,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking favorite status:", error);
       res.status(500).json({ message: "Failed to check favorite status" });
+    }
+  });
+
+  // Course Comparison routes
+  app.get("/api/student/comparisons", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.json([]);
+      }
+
+      const comparisons = await db
+        .select()
+        .from(courseComparisons)
+        .where(eq(courseComparisons.studentProfileId, profile.id));
+
+      res.json(comparisons);
+    } catch (error) {
+      console.error("Error fetching comparisons:", error);
+      res.status(500).json({ message: "Failed to fetch comparisons" });
+    }
+  });
+
+  app.post("/api/student/comparisons", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      let profile = await storage.getStudentProfileByUserId(userId);
+
+      // Auto-create minimal student profile if it doesn't exist
+      if (!profile) {
+        const [newProfile] = await db
+          .insert(studentProfiles)
+          .values({ userId })
+          .returning();
+        profile = newProfile;
+      }
+
+      const validatedData = insertCourseComparisonSchema.parse({
+        ...req.body,
+        studentProfileId: profile.id,
+      });
+
+      const [newComparison] = await db
+        .insert(courseComparisons)
+        .values(validatedData)
+        .returning();
+
+      res.status(201).json(newComparison);
+    } catch (error: any) {
+      console.error("Error creating comparison:", error);
+      if (error.code === '23505') {
+        return res.status(409).json({ message: "Course already in comparison" });
+      }
+      res.status(400).json({ message: error.message || "Failed to add to comparison" });
+    }
+  });
+
+  app.delete("/api/student/comparisons/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const [comparison] = await db
+        .select()
+        .from(courseComparisons)
+        .where(eq(courseComparisons.id, req.params.id));
+
+      if (!comparison || comparison.studentProfileId !== profile.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await db.delete(courseComparisons).where(eq(courseComparisons.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting comparison:", error);
+      res.status(400).json({ message: error.message || "Failed to delete comparison" });
+    }
+  });
+
+  app.delete("/api/student/comparisons", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      await db.delete(courseComparisons).where(eq(courseComparisons.studentProfileId, profile.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error clearing comparisons:", error);
+      res.status(400).json({ message: error.message || "Failed to clear comparisons" });
+    }
+  });
+
+  app.post("/api/student/comparisons/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.json({});
+      }
+
+      const { courseIds } = req.body;
+      if (!Array.isArray(courseIds)) {
+        return res.status(400).json({ message: "courseIds must be an array" });
+      }
+
+      const statusMap: Record<string, boolean> = {};
+
+      for (const courseId of courseIds) {
+        const [comparison] = await db
+          .select()
+          .from(courseComparisons)
+          .where(
+            and(
+              eq(courseComparisons.studentProfileId, profile.id),
+              eq(courseComparisons.courseId, courseId)
+            )
+          );
+
+        statusMap[courseId] = !!comparison;
+      }
+
+      res.json(statusMap);
+    } catch (error) {
+      console.error("Error checking comparison status:", error);
+      res.status(500).json({ message: "Failed to check comparison status" });
     }
   });
 

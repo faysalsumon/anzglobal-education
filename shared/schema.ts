@@ -310,6 +310,7 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
     references: [universities.id],
   }),
   applications: many(applications),
+  courseComparisons: many(courseComparisons),
 }));
 
 export const studentProfilesRelations = relations(studentProfiles, ({ one, many }) => ({
@@ -321,6 +322,7 @@ export const studentProfilesRelations = relations(studentProfiles, ({ one, many 
   educations: many(studentEducations),
   languageScores: many(studentLanguageScores),
   favorites: many(favorites),
+  courseComparisons: many(courseComparisons),
 }));
 
 export const studentEducationsRelations = relations(studentEducations, ({ one }) => ({
@@ -360,6 +362,17 @@ export const favoritesRelations = relations(favorites, ({ one }) => ({
   studentProfile: one(studentProfiles, {
     fields: [favorites.studentProfileId],
     references: [studentProfiles.id],
+  }),
+}));
+
+export const courseComparisonsRelations = relations(courseComparisons, ({ one }) => ({
+  studentProfile: one(studentProfiles, {
+    fields: [courseComparisons.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+  course: one(courses, {
+    fields: [courseComparisons.courseId],
+    references: [courses.id],
   }),
 }));
 
@@ -451,6 +464,11 @@ export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   createdAt: true,
 });
 
+export const insertCourseComparisonSchema = createInsertSchema(courseComparisons).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertStudentEducationSchema = createInsertSchema(studentEducations).omit({
   id: true,
   createdAt: true,
@@ -511,6 +529,9 @@ export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+
+export type CourseComparison = typeof courseComparisons.$inferSelect;
+export type InsertCourseComparison = z.infer<typeof insertCourseComparisonSchema>;
 
 export type StudentEducation = typeof studentEducations.$inferSelect;
 export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema>;
