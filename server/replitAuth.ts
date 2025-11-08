@@ -101,14 +101,20 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    const hostname = req.hostname;
+    const callbackURL = `https://${hostname}/api/callback`;
+    console.log(`[AUTH DEBUG] Login request from hostname: ${hostname}`);
+    console.log(`[AUTH DEBUG] Callback URL will be: ${callbackURL}`);
+    ensureStrategy(hostname);
+    passport.authenticate(`replitauth:${hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log(`[AUTH DEBUG] Callback hit! Hostname: ${req.hostname}`);
+    console.log(`[AUTH DEBUG] Query params:`, req.query);
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
