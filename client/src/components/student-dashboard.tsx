@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift } from "lucide-react";
+import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, GitCompareArrows } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -265,6 +265,18 @@ export function StudentDashboard() {
             <Link href="/student/applications">
               <FileText className="mr-2 h-4 w-4" />
               My Applications
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="button-view-favorites" className="w-full">
+            <Link href="/student/profile?tab=favorites">
+              <Heart className="mr-2 h-4 w-4" />
+              My Favorites
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="button-compare-courses" className="w-full">
+            <Link href="/courses">
+              <GitCompareArrows className="mr-2 h-4 w-4" />
+              Compare Courses
             </Link>
           </Button>
         </CardContent>
