@@ -530,9 +530,6 @@ export default function PublicCourses() {
                       <div className="flex flex-wrap items-start gap-2 mb-2">
                         <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
                         <Badge variant="outline" className="text-xs">{course.subject}</Badge>
-                        {course.courseCode && (
-                          <Badge variant="secondary" className="text-xs font-mono">{course.courseCode}</Badge>
-                        )}
                       </div>
                       {isHighlighted && (
                         <Badge className="mb-2 bg-accent text-accent-foreground text-xs w-fit">
@@ -546,14 +543,14 @@ export default function PublicCourses() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 pb-3 sm:pb-4">
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3 sm:mb-4">
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
                         {course.description || "No description available"}
                       </p>
                       <div className="space-y-2 text-sm">
                         {course.location && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{course.location}, {course.country}</span>
+                            <span className="truncate">{course.location}</span>
                           </div>
                         )}
                         {course.duration && (
@@ -565,13 +562,7 @@ export default function PublicCourses() {
                         {course.fees && (
                           <div className="flex items-center gap-2 font-semibold text-primary">
                             <DollarSign className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{course.currency} {Number(course.fees).toLocaleString()}/year</span>
-                          </div>
-                        )}
-                        {course.scholarshipPercentage && course.scholarshipPercentage > 0 && (
-                          <div className="flex items-center gap-2 text-secondary font-medium">
-                            <Sparkles className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">Up to {course.scholarshipPercentage}% Scholarship</span>
+                            <span className="truncate">{course.currency} {Number(course.fees).toLocaleString()}</span>
                           </div>
                         )}
                       </div>

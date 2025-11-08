@@ -15,7 +15,7 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home
 } from "lucide-react";
-import type { Course, University, Review } from "@shared/schema";
+import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 type CourseWithUniversity = Course & { university?: University };
@@ -166,10 +166,10 @@ export default function PublicCourseDetail() {
                     <span>Discipline: {course.subject}</span>
                   </div>
                 )}
-                {course.intakeMonths && course.intakeMonths.length > 0 && (
+                {course.startDate && (
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>Intakes: {course.intakeMonths.slice(0, 3).join(', ')}{course.intakeMonths.length > 3 ? '...' : ''}</span>
+                    <span>Intake: {course.startDate}</span>
                   </div>
                 )}
               </div>
@@ -307,53 +307,6 @@ export default function PublicCourseDetail() {
                   <p className="text-muted-foreground whitespace-pre-line" data-testid="text-english-requirements">
                     {course.englishRequirements}
                   </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Intake Months */}
-            {course.intakeMonths && course.intakeMonths.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Intakes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {course.intakeMonths.map((month, index) => (
-                      <Badge key={index} variant="outline" className="px-4 py-2 text-sm" data-testid={`badge-intake-${index}`}>
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {month}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Reviews and Testimonials */}
-            {course.reviews && Array.isArray(course.reviews) && course.reviews.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Student Reviews</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {course.reviews.map((review: Review, index: number) => (
-                    <div key={index} className="border-b last:border-0 pb-4 last:pb-0" data-testid={`review-${index}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Award 
-                              key={i} 
-                              className={`h-4 w-4 ${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="font-semibold text-sm">{review.studentName}</span>
-                        {review.date && <span className="text-xs text-muted-foreground">{review.date}</span>}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{review.comment}</p>
-                    </div>
-                  ))}
                 </CardContent>
               </Card>
             )}

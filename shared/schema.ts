@@ -77,14 +77,6 @@ export const universities = pgTable("universities", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Review interface
-export interface Review {
-  rating: number;
-  comment: string;
-  studentName: string;
-  date: string;
-}
-
 // Courses table
 export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -114,10 +106,6 @@ export const courses = pgTable("courses", {
   costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
   images: text("images").array(),
-  
-  // Intake and reviews
-  intakeMonths: text("intake_months").array(), // e.g., ["January", "March", "July", "September"]
-  reviews: jsonb("reviews").$type<Review[]>(), // Array of {rating, comment, studentName, date}
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
