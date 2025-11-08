@@ -78,45 +78,43 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  const registeredStrategies = new Set<string>();
-
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify,
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
+  // Get the correct domain for callbacks
+  const getDomain = () => {
+    // Use REPLIT_DEV_DOMAIN in development, or construct from request in production
+    return process.env.REPLIT_DEV_DOMAIN || 'localhost';
   };
+
+  const domain = getDomain();
+  const callbackURL = `https://${domain}/api/callback`;
+  
+  console.log(`[AUTH INIT] Using callback URL: ${callbackURL}`);
+
+  // Single strategy with correct callback URL
+  const strategy = new Strategy(
+    {
+      name: 'replitauth',
+      config,
+      scope: "openid email profile offline_access",
+      callbackURL,
+    },
+    verify,
+  );
+  passport.use(strategy);
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    const hostname = req.hostname;
-    const callbackURL = `https://${hostname}/api/callback`;
-    console.log(`[AUTH DEBUG] Login request from hostname: ${hostname}`);
-    console.log(`[AUTH DEBUG] Callback URL will be: ${callbackURL}`);
-    ensureStrategy(hostname);
-    passport.authenticate(`replitauth:${hostname}`, {
+    console.log(`[AUTH DEBUG] Login request - using callback: ${callbackURL}`);
+    passport.authenticate('replitauth', {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    console.log(`[AUTH DEBUG] Callback hit! Hostname: ${req.hostname}`);
-    console.log(`[AUTH DEBUG] Query params:`, req.query);
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    console.log(`[AUTH DEBUG] Callback hit! Query params:`, req.query);
+    passport.authenticate('replitauth', {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
