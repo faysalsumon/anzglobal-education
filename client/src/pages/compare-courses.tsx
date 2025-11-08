@@ -12,20 +12,18 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Home, ArrowLeft, X, Heart, CheckCircle2, XCircle, DollarSign, Clock, MapPin, BookOpen, Award, Globe } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { Course, University } from "@shared/schema";
+import type { Course } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
-type CourseWithUniversity = Course & { university?: University };
-
 export default function CompareCourses() {
   const [location] = useLocation();
-  const { toast } = useToast();
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
-  const courseIds = urlParams.get('courses')?.split(',') || [];
+  const { toast} = useToast();
+  const urlParams = new URLSearchParams(window.location.search);
+  const courseIds = urlParams.get('courses')?.split(',').map(id => id.trim()).filter(Boolean) || [];
 
-  const { data: allCourses = [], isLoading } = useQuery<CourseWithUniversity[]>({
+  const { data: allCourses = [], isLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses"],
   });
 
@@ -174,7 +172,6 @@ export default function CompareCourses() {
                     <Badge variant="outline">{course.subject}</Badge>
                   </div>
                   <CardTitle className="text-xl pr-8">{course.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{course.university?.name}</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Description */}
