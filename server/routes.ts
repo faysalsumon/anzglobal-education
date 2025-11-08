@@ -40,6 +40,11 @@ import path from "path";
 import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
 import { hashPassword, verifyPassword, generateVerificationToken } from "./auth-utils";
+import {
+  notifyNewApplication,
+  notifyApplicationStatusChange,
+  notifyTeamMemberAdded,
+} from "./notifications";
 import express from "express";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
@@ -1445,6 +1450,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true,
       });
 
+      // Send notification to new team member
+      try {
+        await notifyTeamMemberAdded({
+          userId: teamMemberUser.id,
+          universityName: access.university.name,
+          role,
+        });
+      } catch (notificationError) {
+        console.error("Error sending notification:", notificationError);
+        // Don't fail the team member creation if notification fails
+      }
+
       res.json(teamMember);
     } catch (error: any) {
       console.error("Error adding team member:", error);
@@ -1519,6 +1536,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const application = await storage.createApplication(data);
+      
+      // Send notification to university
+      try {
+        const course = await storage.getCourseById(application.courseId);
+        if (course) {
+          const university = await storage.getUniversityById(course.universityId);
+          if (university) {
+            await notifyNewApplication({
+              universityUserId: university.userId,
+              studentName: `${profile.firstName} ${profile.lastName}`,
+              courseName: course.name,
+              applicationId: application.id,
+            });
+          }
+        }
+      } catch (notificationError) {
+        console.error("Error sending notification:", notificationError);
+        // Don't fail the application creation if notification fails
+      }
+      
       res.json(application);
     } catch (error: any) {
       console.error("Error creating application:", error);
@@ -1553,6 +1590,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.updateApplicationStatus(req.params.id, status);
+      
+      // Send notification to student
+      try {
+        const studentProfile = await storage.getStudentProfileById(application.studentId);
+        const university = await storage.getUniversityById(course.universityId);
+        if (studentProfile && university) {
+          await notifyApplicationStatusChange({
+            studentUserId: studentProfile.userId,
+            courseName: course.name,
+            institutionName: university.name,
+            status,
+            applicationId: application.id,
+          });
+        }
+      } catch (notificationError) {
+        console.error("Error sending notification:", notificationError);
+        // Don't fail the status update if notification fails
+      }
+      
       res.json(updated);
     } catch (error) {
       console.error("Error updating application:", error);
