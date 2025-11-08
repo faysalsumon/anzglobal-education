@@ -72,6 +72,13 @@ export const universities = pgTable("universities", {
   institutionGallery: text("institution_gallery").array(), // Up to 3 images, 600x400px
   topCourses: text("top_courses").array(), // Array of course IDs or names
   
+  // Approval workflow
+  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("approved"), // 'pending', 'approved', 'rejected'
+  rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
+  submittedForApprovalAt: timestamp("submitted_for_approval_at"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

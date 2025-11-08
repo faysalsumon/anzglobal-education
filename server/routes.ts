@@ -52,6 +52,7 @@ import {
   notifyNewApplication,
   notifyApplicationStatusChange,
   notifyTeamMemberAdded,
+  createNotification,
 } from "./notifications";
 import express from "express";
 
@@ -407,20 +408,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
       
       let university;
+      let isNewInstitution = false;
+      
+      // Remove approval-related fields that only admins can modify
+      const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
       
       if (ownerUniversity) {
-        // User owns a university - they can update it
-        const data = insertUniversitySchema.parse({ ...req.body, userId: ownerUniversity.userId });
+        // User owns a university - they can update it (but not approval fields)
+        const data = insertUniversitySchema.parse({ ...safeData, userId: ownerUniversity.userId });
         university = await storage.updateUniversity(ownerUniversity.id, data);
       } else if (teamAccess) {
-        // User is a team member with admin/super_admin role - they can update
-        const data = insertUniversitySchema.parse({ ...req.body, userId: teamAccess.university.userId });
+        // User is a team member with admin/super_admin role - they can update (but not approval fields)
+        const data = insertUniversitySchema.parse({ ...safeData, userId: teamAccess.university.userId });
         university = await storage.updateUniversity(teamAccess.university.id, data);
       } else {
-        // User doesn't own a university and isn't a team member - allow creation
-        const data = insertUniversitySchema.parse({ ...req.body, userId });
+        // User doesn't own a university and isn't a team member - allow creation with pending status
+        const data = insertUniversitySchema.parse({ 
+          ...safeData, 
+          userId,
+          approvalStatus: 'pending',
+          submittedForApprovalAt: new Date()
+        });
         await storage.upsertUser({ id: userId, userType: "university" });
         university = await storage.createUniversity(data);
+        isNewInstitution = true;
+        
+        // Create notifications for all active platform admins
+        const admins = await db
+          .select()
+          .from(users)
+          .where(and(
+            eq(users.userType, 'admin'),
+            eq(users.isActive, true)
+          ));
+        
+        for (const admin of admins) {
+          await createNotification({
+            userId: admin.id,
+            type: 'institution_approval_request',
+            title: 'New Institution Pending Approval',
+            message: `${university.name} has been submitted for approval`,
+            link: `/admin/dashboard#institutions`,
+            metadata: {
+              institutionId: university.id,
+              institutionName: university.name,
+              submittedBy: userId
+            }
+          });
+        }
       }
 
       res.json(university);
@@ -595,10 +630,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public institutions route
+  // Public institutions route - only show approved and active institutions
   app.get("/api/institutions", async (req, res) => {
     try {
-      const institutions = await storage.getAllUniversities();
+      const allInstitutions = await storage.getAllUniversities();
+      // Filter to only show approved and active institutions
+      const institutions = allInstitutions.filter(i => 
+        i.approvalStatus === 'approved' && i.isActive
+      );
       res.json(institutions);
     } catch (error) {
       console.error("Error fetching institutions:", error);
@@ -606,11 +645,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single institution by ID
+  // Get single institution by ID - only show if approved and active
   app.get("/api/institutions/:id", async (req, res) => {
     try {
       const institution = await storage.getUniversityById(req.params.id);
       if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      // Only return if approved and active
+      if (institution.approvalStatus !== 'approved' || !institution.isActive) {
         return res.status(404).json({ message: "Institution not found" });
       }
       res.json(institution);
@@ -2312,6 +2355,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating institution status:", error);
       res.status(500).json({ message: "Failed to update institution status" });
+    }
+  });
+
+  // Approve institution
+  app.patch("/api/super-admin/institutions/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      
+      // Get the institution to notify the owner
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      // Update approval status
+      const updatedInstitution = await storage.updateUniversity(institutionId, { 
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: userId
+      });
+
+      // Notify the institution owner
+      if (institution.userId) {
+        await createNotification({
+          userId: institution.userId,
+          type: 'institution_approved',
+          title: 'Institution Approved',
+          message: `Your institution "${institution.name}" has been approved and is now publicly visible`,
+          link: `/university/profile`,
+          metadata: {
+            institutionId: institution.id,
+            institutionName: institution.name,
+            approvedBy: userId
+          }
+        });
+      }
+
+      res.json(updatedInstitution);
+    } catch (error) {
+      console.error("Error approving institution:", error);
+      res.status(500).json({ message: "Failed to approve institution" });
+    }
+  });
+
+  // Reject institution
+  app.patch("/api/super-admin/institutions/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      const { rejectionReason } = req.body;
+      
+      // Get the institution to notify the owner
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      // Update approval status
+      const updatedInstitution = await storage.updateUniversity(institutionId, { 
+        approvalStatus: 'rejected',
+        rejectionReason: rejectionReason || null
+      });
+
+      // Notify the institution owner
+      if (institution.userId) {
+        await createNotification({
+          userId: institution.userId,
+          type: 'institution_rejected',
+          title: 'Institution Requires Changes',
+          message: `Your institution "${institution.name}" requires updates. ${rejectionReason || 'Please review and resubmit.'}`,
+          link: `/university/profile`,
+          metadata: {
+            institutionId: institution.id,
+            institutionName: institution.name,
+            rejectionReason: rejectionReason || null
+          }
+        });
+      }
+
+      res.json(updatedInstitution);
+    } catch (error) {
+      console.error("Error rejecting institution:", error);
+      res.status(500).json({ message: "Failed to reject institution" });
     }
   });
 
