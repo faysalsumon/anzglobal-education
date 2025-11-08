@@ -172,9 +172,7 @@ export const courseComparisons = pgTable("course_comparisons", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   // Unique constraint to prevent duplicate comparisons
-  uniqueComparison: index("unique_comparison").on(table.studentProfileId, table.courseId),
-  // Index for fast lookups
-  studentComparisonIdx: index("student_comparison_idx").on(table.studentProfileId),
+  uniqueStudentCourse: uniqueIndex("course_comparisons_student_course_unique").on(table.studentProfileId, table.courseId),
 }));
 
 // Referrals table for student affiliate/referral system
