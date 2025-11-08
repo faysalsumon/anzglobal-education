@@ -338,8 +338,21 @@ export const documents = pgTable("documents", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Notifications table for all user types
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(), // 'application_submitted', 'application_status_changed', 'new_course', 'document_uploaded', 'team_invite', etc.
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"), // URL to navigate to when clicked
+  metadata: jsonb("metadata"), // Additional data (e.g., applicationId, courseId, etc.)
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   university: one(universities, {
     fields: [users.id],
     references: [universities.userId],
@@ -352,6 +365,7 @@ export const usersRelations = relations(users, ({ one }) => ({
     fields: [users.id],
     references: [adminTeamMembers.userId],
   }),
+  notifications: many(notifications),
 }));
 
 export const universitiesRelations = relations(universities, ({ one, many }) => ({
@@ -487,6 +501,13 @@ export const documentsRelations = relations(documents, ({ one }) => ({
   }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -605,6 +626,11 @@ export const insertCourseRecommendationSchema = createInsertSchema(courseRecomme
   }).optional(),
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -653,3 +679,6 @@ export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
