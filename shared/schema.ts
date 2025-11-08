@@ -87,6 +87,7 @@ export const courses = pgTable("courses", {
   level: text("level").notNull(), // 'undergraduate', 'postgraduate', 'certificate', 'diploma'
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
+  durationWeeks: integer("duration_weeks"), // For precise duration tracking
   fees: decimal("fees", { precision: 10, scale: 2 }),
   currency: varchar("currency", { length: 3 }).default("AUD"),
   location: text("location"),
@@ -107,10 +108,40 @@ export const courses = pgTable("courses", {
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
   images: text("images").array(),
   
+  // Rich structured data for AI-powered recommendations
+  intakes: text("intakes").array(), // ["January", "February", "April", "May", etc.]
+  studyAreas: text("study_areas").array(), // Curriculum topics and learning areas
+  careerOutcomes: text("career_outcomes").array(), // Potential career paths
+  pathways: text("pathways").array(), // Progression routes (e.g., "University degrees", "RMIT University")
+  
+  // Detailed entry requirements for AI matching
+  minimumAge: integer("minimum_age"), // Minimum age requirement
+  academicRequirements: text("academic_requirements"), // Detailed academic entry criteria
+  englishRequirementsStructured: jsonb("english_requirements_structured"), // Structured: { IELTS: {overall, min_each_band}, TOEFL: {overall}, PTE: {overall}, etc. }
+  
+  // Delivery and work-related fields for comprehensive recommendations
+  deliveryMode: text("delivery_mode"), // 'online', 'on-campus', 'hybrid'
+  campusLocations: text("campus_locations").array(), // Multiple campus options
+  workRights: boolean("work_rights"), // Whether course provides work rights/visa eligibility
+  internshipAvailable: boolean("internship_available"), // Whether internships are part of the program
+  internshipDetails: text("internship_details"), // Details about internship opportunities
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // GIN indexes for array and JSONB fields for fast filtering
+  intakesIdx: index("courses_intakes_gin_idx").using("gin", table.intakes),
+  studyAreasIdx: index("courses_study_areas_gin_idx").using("gin", table.studyAreas),
+  careerOutcomesIdx: index("courses_career_outcomes_gin_idx").using("gin", table.careerOutcomes),
+  pathwaysIdx: index("courses_pathways_gin_idx").using("gin", table.pathways),
+  englishReqsIdx: index("courses_english_reqs_gin_idx").using("gin", table.englishRequirementsStructured),
+  // Btree index for duration filtering
+  durationWeeksIdx: index("courses_duration_weeks_idx").on(table.durationWeeks),
+  // Composite indexes for common query patterns
+  universityActiveIdx: index("courses_university_active_idx").on(table.universityId, table.isActive),
+  subjectLevelIdx: index("courses_subject_level_idx").on(table.subject, table.level),
+}));
 
 // Student profiles table
 export const studentProfiles = pgTable("student_profiles", {
@@ -174,6 +205,35 @@ export const courseComparisons = pgTable("course_comparisons", {
 }, (table) => ({
   // Unique constraint to prevent duplicate comparisons
   uniqueStudentCourse: uniqueIndex("course_comparisons_student_course_unique").on(table.studentProfileId, table.courseId),
+}));
+
+// Course recommendations table for caching AI-powered course recommendations
+export const courseRecommendations = pgTable("course_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  
+  // AI-generated recommendation metrics
+  matchScore: decimal("match_score", { precision: 5, scale: 2 }).notNull(), // 0-100 compatibility score
+  rationale: text("rationale"), // AI explanation of why this course matches
+  matchFactors: jsonb("match_factors"), // Structured breakdown: {eligibility_match, career_alignment, etc.}
+  
+  // Eligibility checks
+  meetsAgeRequirement: boolean("meets_age_requirement"),
+  meetsAcademicRequirement: boolean("meets_academic_requirement"),
+  meetsEnglishRequirement: boolean("meets_english_requirement"),
+  eligibilityNotes: text("eligibility_notes"), // Specific gaps or requirements needed
+  
+  // Cache management
+  isActive: boolean("is_active").default(true),
+  refreshedAt: timestamp("refreshed_at").defaultNow(), // When recommendation was last calculated
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint per student-course pair
+  uniqueStudentCourseRec: uniqueIndex("course_recommendations_student_course_unique").on(table.studentProfileId, table.courseId),
+  // Indexes for fast filtering and sorting
+  studentScoreIdx: index("course_recommendations_student_score_idx").on(table.studentProfileId, table.matchScore),
+  refreshedAtIdx: index("course_recommendations_refreshed_at_idx").on(table.refreshedAt),
 }));
 
 // Referrals table for student affiliate/referral system
@@ -444,6 +504,33 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // Validate array fields - ensure they're arrays and contain valid data
+  intakes: z.array(z.string()).optional().default([]),
+  studyAreas: z.array(z.string()).optional().default([]),
+  careerOutcomes: z.array(z.string()).optional().default([]),
+  pathways: z.array(z.string()).optional().default([]),
+  campusLocations: z.array(z.string()).optional().default([]),
+  
+  // Validate English requirements structure
+  englishRequirementsStructured: z.object({
+    IELTS: z.object({
+      overall: z.number().min(0).max(9).optional(),
+      min_each_band: z.number().min(0).max(9).optional(),
+    }).optional(),
+    TOEFL: z.object({
+      overall: z.number().min(0).max(120).optional(),
+    }).optional(),
+    PTE: z.object({
+      overall: z.number().min(0).max(90).optional(),
+    }).optional(),
+    Duolingo: z.object({
+      overall: z.number().min(0).max(160).optional(),
+    }).optional(),
+  }).optional(),
+  
+  // Validate delivery mode
+  deliveryMode: z.enum(['online', 'on-campus', 'hybrid']).optional(),
 });
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
@@ -504,6 +591,20 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({
   updatedAt: true,
 });
 
+export const insertCourseRecommendationSchema = createInsertSchema(courseRecommendations).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  matchScore: z.number().min(0).max(100),
+  matchFactors: z.object({
+    eligibility_match: z.number().min(0).max(100).optional(),
+    career_alignment: z.number().min(0).max(100).optional(),
+    academic_fit: z.number().min(0).max(100).optional(),
+    location_preference: z.number().min(0).max(100).optional(),
+    financial_viability: z.number().min(0).max(100).optional(),
+  }).optional(),
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -531,6 +632,9 @@ export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
 export type CourseComparison = typeof courseComparisons.$inferSelect;
 export type InsertCourseComparison = z.infer<typeof insertCourseComparisonSchema>;
+
+export type CourseRecommendation = typeof courseRecommendations.$inferSelect;
+export type InsertCourseRecommendation = z.infer<typeof insertCourseRecommendationSchema>;
 
 export type StudentEducation = typeof studentEducations.$inferSelect;
 export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema>;
