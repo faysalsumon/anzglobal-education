@@ -10,7 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Home, ArrowLeft, X, Heart, CheckCircle2, XCircle, DollarSign, Clock, MapPin, BookOpen, Award, Globe, Calendar } from "lucide-react";
+import { Home, ArrowLeft, X, Heart, CheckCircle2, XCircle, DollarSign, Clock, MapPin, BookOpen, Award, Globe } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { Course } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -170,9 +170,6 @@ export default function CompareCourses() {
                   <div className="flex flex-wrap gap-2 mb-2">
                     <Badge className="bg-primary/10 text-primary">{course.level}</Badge>
                     <Badge variant="outline">{course.subject}</Badge>
-                    {course.courseCode && (
-                      <Badge variant="secondary" className="font-mono text-xs">{course.courseCode}</Badge>
-                    )}
                   </div>
                   <CardTitle className="text-xl pr-8">{course.title}</CardTitle>
                 </CardHeader>
@@ -269,51 +266,6 @@ export default function CompareCourses() {
                     <div>
                       <h3 className="font-semibold text-sm mb-2">Eligibility</h3>
                       <p className="text-sm text-muted-foreground">{course.eligibilityRequirements}</p>
-                    </div>
-                  )}
-
-                  {/* Intake Months */}
-                  {course.intakeMonths && course.intakeMonths.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Available Intakes
-                      </h3>
-                      <div className="flex flex-wrap gap-1.5">
-                        {course.intakeMonths.map((month, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {month}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Cost of Living */}
-                  {course.costOfLiving && (
-                    <div>
-                      <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Cost of Living
-                      </h3>
-                      <p className="text-sm">
-                        {course.currency} {Number(course.costOfLiving).toLocaleString()}/year
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Application Fees */}
-                  {course.applicationFees !== null && course.applicationFees !== undefined && (
-                    <div>
-                      <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Application Fees
-                      </h3>
-                      <p className="text-sm">
-                        {Number(course.applicationFees) > 0 
-                          ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
-                          : "Free"}
-                      </p>
                     </div>
                   )}
 

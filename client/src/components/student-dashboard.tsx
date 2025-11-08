@@ -2,13 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, GitCompareArrows, Sparkles, GraduationCap, BookOpen, Target, ArrowRight, Lightbulb, MapPin, DollarSign, Calendar } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, GitCompareArrows, Sparkles, GraduationCap, BookOpen, Target, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { StudentProfile, Application, Course } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import type { StudentProfile, Application } from "@shared/schema";
 
 interface ReferralStats {
   totalReferrals: number;
@@ -20,18 +19,6 @@ interface ReferralStats {
 interface ReferralCodeData {
   referralCode: string;
   referralLink: string;
-}
-
-interface CourseMatch {
-  course: Course;
-  matchScore: number;
-  matchReasons: string[];
-  aiInsight?: string;
-}
-
-interface RecommendationResult {
-  courses: CourseMatch[];
-  summary: string;
 }
 
 export function StudentDashboard() {
@@ -56,30 +43,6 @@ export function StudentDashboard() {
     queryKey: ["/api/student/referral/code"],
     enabled: !!profile,
   });
-
-  const recommendationMutation = useMutation<RecommendationResult, Error, void>({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/student/recommendations", { limit: 5 });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Recommendations Generated!",
-        description: "Your personalized course recommendations are ready.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Unable to Generate Recommendations",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleGetRecommendations = () => {
-    recommendationMutation.mutate();
-  };
 
   const stats = {
     totalApplications: applications.length,
@@ -328,140 +291,6 @@ export function StudentDashboard() {
           </Card>
         </CardContent>
       </Card>
-
-      {/* AI-Powered Course Recommendations */}
-      {profile && (
-        <Card className="border-2 bg-gradient-to-br from-primary/5 via-primary/5 to-transparent">
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="p-2 bg-primary rounded-lg">
-                  <Lightbulb className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">AI-Powered Recommendations</CardTitle>
-                  <CardDescription>
-                    Discover courses perfectly matched to your profile and preferences
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                onClick={handleGetRecommendations}
-                disabled={recommendationMutation.isPending}
-                className="flex items-center gap-2"
-                data-testid="button-get-recommendations"
-              >
-                {recommendationMutation.isPending ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Get Recommendations
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {recommendationMutation.data ? (
-              <div className="space-y-6">
-                {recommendationMutation.data.summary && (
-                  <div className="p-4 bg-primary/10 rounded-lg border-2 border-primary/20">
-                    <p className="text-sm text-foreground" data-testid="text-recommendation-summary">
-                      {recommendationMutation.data.summary}
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid gap-4">
-                  {recommendationMutation.data.courses.map((match: CourseMatch, idx: number) => (
-                    <Card key={match.course.id} className="hover-elevate active-elevate-2" data-testid={`card-recommendation-${idx}`}>
-                      <CardHeader>
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <CardTitle className="text-lg" data-testid={`text-course-title-${idx}`}>
-                                {match.course.title}
-                              </CardTitle>
-                              <Badge variant="secondary" data-testid={`badge-match-score-${idx}`}>
-                                {Math.round(match.matchScore)}% Match
-                              </Badge>
-                            </div>
-                            <CardDescription className="flex flex-wrap items-center gap-4">
-                              {match.course.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {match.course.location}
-                                </span>
-                              )}
-                              {match.course.fees && (
-                                <span className="flex items-center gap-1">
-                                  <DollarSign className="h-3 w-3" />
-                                  {match.course.currency} {parseFloat(match.course.fees.toString()).toLocaleString()}
-                                </span>
-                              )}
-                              {match.course.intakeMonths && match.course.intakeMonths.length > 0 && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {match.course.intakeMonths[0]}
-                                </span>
-                              )}
-                            </CardDescription>
-                          </div>
-                          <Link href={`/courses/${match.course.id}`}>
-                            <Button variant="outline" size="sm" data-testid={`button-view-course-${idx}`}>
-                              View Details
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        {match.aiInsight && (
-                          <div className="p-3 bg-accent/10 rounded-md border border-accent/20">
-                            <p className="text-sm text-foreground flex items-start gap-2" data-testid={`text-ai-insight-${idx}`}>
-                              <Sparkles className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
-                              <span>{match.aiInsight}</span>
-                            </p>
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {match.matchReasons.map((reason, reasonIdx) => (
-                            <Badge key={reasonIdx} variant="outline" className="text-xs" data-testid={`badge-reason-${idx}-${reasonIdx}`}>
-                              {reason}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {recommendationMutation.data.courses.length === 0 && (
-                  <div className="text-center py-8">
-                    <Target className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">
-                      No courses match your current criteria. Try updating your preferences in your profile.
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-4">
-                  Get personalized course recommendations based on your profile, budget, and preferences
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Make sure to update your profile with budget range and subject preferences for best results
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Referral Program with Modern Design */}
       {profile && referralData && (
