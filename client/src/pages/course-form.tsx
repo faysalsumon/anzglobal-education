@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, ArrowLeft } from "lucide-react";
+import { Sparkles, Loader2, ArrowLeft, Plus, X } from "lucide-react";
 import { Link } from "wouter";
 import { insertCourseSchema, type InsertCourse, type Course } from "@shared/schema";
 import { z } from "zod";
@@ -30,6 +31,13 @@ export default function CourseForm() {
   const courseId = params?.id;
   const isEditing = !!courseId;
   const [aiLoading, setAiLoading] = useState(false);
+  
+  // Array field states
+  const [intakeInput, setIntakeInput] = useState("");
+  const [studyAreaInput, setStudyAreaInput] = useState("");
+  const [careerOutcomeInput, setCareerOutcomeInput] = useState("");
+  const [pathwayInput, setPathwayInput] = useState("");
+  const [campusLocationInput, setCampusLocationInput] = useState("");
 
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
@@ -46,6 +54,7 @@ export default function CourseForm() {
       level: "",
       duration: "",
       durationMonths: undefined,
+      durationWeeks: undefined,
       fees: undefined,
       currency: "AUD",
       location: "",
@@ -55,6 +64,23 @@ export default function CourseForm() {
       prerequisites: "",
       thumbnailUrl: "",
       isActive: true,
+      intakes: [],
+      studyAreas: [],
+      careerOutcomes: [],
+      pathways: [],
+      minimumAge: undefined,
+      academicRequirements: "",
+      englishRequirementsStructured: {
+        ielts: {},
+        toefl: {},
+        pte: {},
+        duolingo: {},
+      },
+      deliveryMode: undefined,
+      campusLocations: [],
+      workRights: false,
+      internshipAvailable: false,
+      internshipDetails: "",
     },
   });
 
@@ -63,26 +89,56 @@ export default function CourseForm() {
       form.reset({
         universityId: course.universityId,
         title: course.title,
-        description: course.description || "",
+        description: course.description ?? "",
         subject: course.subject,
         level: course.level,
-        duration: course.duration || "",
-        durationMonths: course.durationMonths || undefined,
-        fees: course.fees || undefined,
-        currency: course.currency || "AUD",
-        location: course.location || "",
-        country: course.country || "",
-        startDate: course.startDate || "",
-        applicationDeadline: course.applicationDeadline || "",
-        prerequisites: course.prerequisites || "",
-        thumbnailUrl: course.thumbnailUrl || "",
-        isActive: course.isActive,
+        duration: course.duration ?? "",
+        durationMonths: course.durationMonths ?? undefined,
+        durationWeeks: course.durationWeeks ?? undefined,
+        fees: course.fees ?? undefined,
+        currency: course.currency ?? "AUD",
+        location: course.location ?? "",
+        country: course.country ?? "",
+        startDate: course.startDate ?? "",
+        applicationDeadline: course.applicationDeadline ?? "",
+        prerequisites: course.prerequisites ?? "",
+        thumbnailUrl: course.thumbnailUrl ?? "",
+        isActive: course.isActive ?? true,
+        intakes: course.intakes ?? [],
+        studyAreas: course.studyAreas ?? [],
+        careerOutcomes: course.careerOutcomes ?? [],
+        pathways: course.pathways ?? [],
+        minimumAge: course.minimumAge ?? undefined,
+        academicRequirements: course.academicRequirements ?? "",
+        englishRequirementsStructured: course.englishRequirementsStructured ?? {
+          ielts: {},
+          toefl: {},
+          pte: {},
+          duolingo: {},
+        },
+        deliveryMode: (course.deliveryMode as "online" | "on-campus" | "hybrid" | undefined) ?? undefined,
+        campusLocations: course.campusLocations ?? [],
+        workRights: course.workRights ?? false,
+        internshipAvailable: course.internshipAvailable ?? false,
+        internshipDetails: course.internshipDetails ?? "",
       });
     }
   }, [course, isEditing, form]);
 
+  // Clear internship details when internshipAvailable is unchecked
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "internshipAvailable" && !value.internshipAvailable) {
+        form.setValue("internshipDetails", "");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
+      console.log("Form data before submission:", data);
+      console.log("Fees type:", typeof data.fees, "Value:", data.fees);
       const url = isEditing ? `/api/courses/${courseId}` : "/api/courses";
       return await apiRequest(isEditing ? "PUT" : "POST", url, data);
     },
@@ -124,7 +180,7 @@ export default function CourseForm() {
         title,
         subject,
         level,
-      });
+      }) as unknown as { description: string };
       form.setValue("description", response.description);
       toast({
         title: "Description generated",
@@ -139,6 +195,20 @@ export default function CourseForm() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const addArrayItem = (fieldName: "intakes" | "studyAreas" | "careerOutcomes" | "pathways" | "campusLocations", value: string, setter: (val: string) => void) => {
+    if (!value.trim()) return;
+    const currentValues = form.getValues(fieldName) || [];
+    if (!currentValues.includes(value.trim())) {
+      form.setValue(fieldName, [...currentValues, value.trim()]);
+    }
+    setter("");
+  };
+
+  const removeArrayItem = (fieldName: "intakes" | "studyAreas" | "careerOutcomes" | "pathways" | "campusLocations", index: number) => {
+    const currentValues = form.getValues(fieldName) || [];
+    form.setValue(fieldName, currentValues.filter((_, i) => i !== index));
   };
 
   return (
@@ -161,6 +231,7 @@ export default function CourseForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
+          {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -237,6 +308,7 @@ export default function CourseForm() {
             </CardContent>
           </Card>
 
+          {/* Course Description */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -277,6 +349,7 @@ export default function CourseForm() {
                     <FormControl>
                       <Textarea
                         {...field}
+                        value={field.value ?? ""}
                         placeholder="Describe the course content, learning outcomes, and what makes it unique..."
                         className="min-h-[200px]"
                         data-testid="textarea-description"
@@ -289,6 +362,62 @@ export default function CourseForm() {
             </CardContent>
           </Card>
 
+          {/* Study Areas */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Study Areas & Topics</CardTitle>
+              <CardDescription>Key subjects and topics covered in this course</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="studyAreas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Add Study Areas</FormLabel>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={studyAreaInput}
+                        onChange={(e) => setStudyAreaInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addArrayItem("studyAreas", studyAreaInput, setStudyAreaInput);
+                          }
+                        }}
+                        placeholder="e.g., Machine Learning, Web Development"
+                        data-testid="input-study-area"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addArrayItem("studyAreas", studyAreaInput, setStudyAreaInput)}
+                        data-testid="button-add-study-area"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(field.value || []).map((area, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-study-area-${idx}`}>
+                          {area}
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem("studyAreas", idx)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Location & Duration */}
           <Card>
             <CardHeader>
               <CardTitle>Location & Duration</CardTitle>
@@ -302,7 +431,7 @@ export default function CourseForm() {
                     <FormItem>
                       <FormLabel>Location</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Sydney, NSW" data-testid="input-location" />
+                        <Input {...field} value={field.value ?? ""} placeholder="Sydney, NSW" data-testid="input-location" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -316,7 +445,7 @@ export default function CourseForm() {
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Australia" data-testid="input-country" />
+                        <Input {...field} value={field.value ?? ""} placeholder="Australia" data-testid="input-country" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -324,15 +453,105 @@ export default function CourseForm() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="campusLocations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Campus Locations</FormLabel>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={campusLocationInput}
+                        onChange={(e) => setCampusLocationInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addArrayItem("campusLocations", campusLocationInput, setCampusLocationInput);
+                          }
+                        }}
+                        placeholder="e.g., Main Campus - Sydney, City Campus"
+                        data-testid="input-campus-location"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addArrayItem("campusLocations", campusLocationInput, setCampusLocationInput)}
+                        data-testid="button-add-campus"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(field.value || []).map((campus, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-campus-${idx}`}>
+                          {campus}
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem("campusLocations", idx)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="deliveryMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delivery Mode</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-delivery-mode">
+                          <SelectValue placeholder="Select delivery mode" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="on-campus">On Campus</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-4 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="duration"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration</FormLabel>
+                      <FormLabel>Duration (Text)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="3 years" data-testid="input-duration" />
+                        <Input {...field} value={field.value ?? ""} placeholder="3 years" data-testid="input-duration" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="durationWeeks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (Weeks)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          placeholder="156"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-duration-weeks"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -360,9 +579,56 @@ export default function CourseForm() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="intakes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Available Intakes</FormLabel>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={intakeInput}
+                        onChange={(e) => setIntakeInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addArrayItem("intakes", intakeInput, setIntakeInput);
+                          }
+                        }}
+                        placeholder="e.g., February, July, October"
+                        data-testid="input-intake"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addArrayItem("intakes", intakeInput, setIntakeInput)}
+                        data-testid="button-add-intake"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(field.value || []).map((intake, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-intake-${idx}`}>
+                          {intake}
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem("intakes", idx)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
+          {/* Fees & Dates */}
           <Card>
             <CardHeader>
               <CardTitle>Fees & Dates</CardTitle>
@@ -377,12 +643,16 @@ export default function CourseForm() {
                       <FormLabel>Fees</FormLabel>
                       <FormControl>
                         <Input
-                          {...field}
                           type="number"
                           step="0.01"
                           placeholder="25000.00"
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value || undefined);
+                          }}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                           data-testid="input-fees"
                         />
                       </FormControl>
@@ -397,7 +667,7 @@ export default function CourseForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? "AUD"}>
                         <FormControl>
                           <SelectTrigger data-testid="select-currency">
                             <SelectValue />
@@ -426,7 +696,7 @@ export default function CourseForm() {
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="February 2026" data-testid="input-start-date" />
+                        <Input {...field} value={field.value ?? ""} placeholder="February 2026" data-testid="input-start-date" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -440,7 +710,7 @@ export default function CourseForm() {
                     <FormItem>
                       <FormLabel>Application Deadline</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="December 2025" data-testid="input-deadline" />
+                        <Input {...field} value={field.value ?? ""} placeholder="December 2025" data-testid="input-deadline" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -450,11 +720,34 @@ export default function CourseForm() {
             </CardContent>
           </Card>
 
+          {/* Requirements */}
           <Card>
             <CardHeader>
-              <CardTitle>Additional Information</CardTitle>
+              <CardTitle>Entry Requirements</CardTitle>
+              <CardDescription>Academic and English language requirements</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="minimumAge"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Minimum Age</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="18"
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        data-testid="input-minimum-age"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="prerequisites"
@@ -464,6 +757,7 @@ export default function CourseForm() {
                     <FormControl>
                       <Textarea
                         {...field}
+                        value={field.value ?? ""}
                         placeholder="List any entry requirements or prerequisites..."
                         className="min-h-[100px]"
                         data-testid="textarea-prerequisites"
@@ -476,21 +770,649 @@ export default function CourseForm() {
 
               <FormField
                 control={form.control}
+                name="academicRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Academic Requirements</FormLabel>
+                    <FormDescription>
+                      Detailed academic entry requirements (GPA, qualifications, etc.)
+                    </FormDescription>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="e.g., Minimum GPA of 3.0, High School Diploma or equivalent..."
+                        className="min-h-[100px]"
+                        data-testid="textarea-academic-requirements"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-3">
+                <FormLabel>English Language Requirements (Structured)</FormLabel>
+                <FormDescription>
+                  Enter minimum scores for accepted English tests
+                </FormDescription>
+                
+                <div className="border rounded-md p-4 space-y-3">
+                  <p className="text-sm font-medium">IELTS Scores</p>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Overall</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="6.5"
+                              value={(field.value as any)?.ielts?.overall || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  ielts: { ...(field.value as any)?.ielts, overall: val }
+                                });
+                              }}
+                              data-testid="input-ielts-overall"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Listening</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="6.0"
+                              value={(field.value as any)?.ielts?.listening || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  ielts: { ...(field.value as any)?.ielts, listening: val }
+                                });
+                              }}
+                              data-testid="input-ielts-listening"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Reading</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="6.0"
+                              value={(field.value as any)?.ielts?.reading || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  ielts: { ...(field.value as any)?.ielts, reading: val }
+                                });
+                              }}
+                              data-testid="input-ielts-reading"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Writing</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="6.0"
+                              value={(field.value as any)?.ielts?.writing || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  ielts: { ...(field.value as any)?.ielts, writing: val }
+                                });
+                              }}
+                              data-testid="input-ielts-writing"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Speaking</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.5"
+                              placeholder="6.0"
+                              value={(field.value as any)?.ielts?.speaking || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  ielts: { ...(field.value as any)?.ielts, speaking: val }
+                                });
+                              }}
+                              data-testid="input-ielts-speaking"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="border rounded-md p-4 space-y-3">
+                  <p className="text-sm font-medium">TOEFL Scores</p>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Overall</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="79"
+                              value={(field.value as any)?.toefl?.overall || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  toefl: { ...(field.value as any)?.toefl, overall: val }
+                                });
+                              }}
+                              data-testid="input-toefl-overall"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Listening</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="20"
+                              value={(field.value as any)?.toefl?.listening || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  toefl: { ...(field.value as any)?.toefl, listening: val }
+                                });
+                              }}
+                              data-testid="input-toefl-listening"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Reading</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="20"
+                              value={(field.value as any)?.toefl?.reading || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  toefl: { ...(field.value as any)?.toefl, reading: val }
+                                });
+                              }}
+                              data-testid="input-toefl-reading"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Writing</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="20"
+                              value={(field.value as any)?.toefl?.writing || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  toefl: { ...(field.value as any)?.toefl, writing: val }
+                                });
+                              }}
+                              data-testid="input-toefl-writing"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Speaking</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="20"
+                              value={(field.value as any)?.toefl?.speaking || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  toefl: { ...(field.value as any)?.toefl, speaking: val }
+                                });
+                              }}
+                              data-testid="input-toefl-speaking"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="border rounded-md p-4 space-y-3">
+                  <p className="text-sm font-medium">PTE Academic Scores</p>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Overall</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="58"
+                              value={(field.value as any)?.pte?.overall || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  pte: { ...(field.value as any)?.pte, overall: val }
+                                });
+                              }}
+                              data-testid="input-pte-overall"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Listening</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="50"
+                              value={(field.value as any)?.pte?.listening || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  pte: { ...(field.value as any)?.pte, listening: val }
+                                });
+                              }}
+                              data-testid="input-pte-listening"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Reading</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="50"
+                              value={(field.value as any)?.pte?.reading || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  pte: { ...(field.value as any)?.pte, reading: val }
+                                });
+                              }}
+                              data-testid="input-pte-reading"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Writing</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="50"
+                              value={(field.value as any)?.pte?.writing || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  pte: { ...(field.value as any)?.pte, writing: val }
+                                });
+                              }}
+                              data-testid="input-pte-writing"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="englishRequirementsStructured"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Speaking</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="50"
+                              value={(field.value as any)?.pte?.speaking || ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                                field.onChange({
+                                  ...(field.value as any || {}),
+                                  pte: { ...(field.value as any)?.pte, speaking: val }
+                                });
+                              }}
+                              data-testid="input-pte-speaking"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="border rounded-md p-4">
+                  <p className="text-sm font-medium mb-3">Duolingo English Test</p>
+                  <FormField
+                    control={form.control}
+                    name="englishRequirementsStructured"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Overall Score</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="105"
+                            className="max-w-xs"
+                            value={(field.value as any)?.duolingo?.overall || ""}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseFloat(e.target.value) : undefined;
+                              field.onChange({
+                                ...(field.value as any || {}),
+                                duolingo: { overall: val }
+                              });
+                            }}
+                            data-testid="input-duolingo-overall"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Career Outcomes & Pathways */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Career Outcomes & Pathways</CardTitle>
+              <CardDescription>Potential careers and further education options</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="careerOutcomes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Career Outcomes</FormLabel>
+                    <FormDescription>Potential career paths after completing this course</FormDescription>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={careerOutcomeInput}
+                        onChange={(e) => setCareerOutcomeInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addArrayItem("careerOutcomes", careerOutcomeInput, setCareerOutcomeInput);
+                          }
+                        }}
+                        placeholder="e.g., Software Engineer, Data Scientist"
+                        data-testid="input-career-outcome"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addArrayItem("careerOutcomes", careerOutcomeInput, setCareerOutcomeInput)}
+                        data-testid="button-add-career-outcome"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(field.value || []).map((outcome, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-career-outcome-${idx}`}>
+                          {outcome}
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem("careerOutcomes", idx)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pathways"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pathway Options</FormLabel>
+                    <FormDescription>Further education pathways available</FormDescription>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        value={pathwayInput}
+                        onChange={(e) => setPathwayInput(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addArrayItem("pathways", pathwayInput, setPathwayInput);
+                          }
+                        }}
+                        placeholder="e.g., Master of Data Science, PhD in Computer Science"
+                        data-testid="input-pathway"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addArrayItem("pathways", pathwayInput, setPathwayInput)}
+                        data-testid="button-add-pathway"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(field.value || []).map((pathway, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-pathway-${idx}`}>
+                          {pathway}
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem("pathways", idx)}
+                            className="hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Work Rights & Internships */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Rights & Internships</CardTitle>
+              <CardDescription>Employment and practical experience opportunities</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="workRights"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-work-rights"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Work Rights Available</FormLabel>
+                      <FormDescription>
+                        Students have the right to work while studying this course
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="internshipAvailable"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-internship-available"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Internship Available</FormLabel>
+                      <FormDescription>
+                        This course includes internship or work placement opportunities
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("internshipAvailable") && (
+                <FormField
+                  control={form.control}
+                  name="internshipDetails"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Internship Details</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          value={field.value ?? ""}
+                          placeholder="Describe the internship program, duration, placement opportunities..."
+                          className="min-h-[100px]"
+                          data-testid="textarea-internship-details"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Course Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
                 name="isActive"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl>
                       <Checkbox
-                        checked={field.value}
+                        checked={field.value ?? true}
                         onCheckedChange={field.onChange}
                         data-testid="checkbox-active"
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>Active Course</FormLabel>
-                      <p className="text-sm text-muted-foreground">
+                      <FormDescription>
                         Active courses are visible to students and accept applications
-                      </p>
+                      </FormDescription>
                     </div>
                   </FormItem>
                 )}

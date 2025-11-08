@@ -40,13 +40,19 @@ The description should be 2-3 paragraphs and include:
 
 Write in an engaging, informative tone that attracts prospective students.`;
 
+  console.log("Generating course description with prompt:", prompt);
+
   const response = await openai.chat.completions.create({
     model: "gpt-5",
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 500,
   });
 
-  return response.choices[0]?.message?.content || "";
+  console.log("OpenAI response:", JSON.stringify(response, null, 2));
+  const content = response.choices[0]?.message?.content || "";
+  console.log("Extracted content:", content);
+
+  return content;
 }
 
 export async function generateStudentBio(
