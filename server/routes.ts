@@ -2802,22 +2802,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   wss.on('connection', async (ws: WebSocket, request) => {
     let userId: string | null = null;
     
+    console.log('[WS] New WebSocket connection attempt');
+    console.log('[WS] Headers:', request.headers.cookie ? 'Has cookie' : 'No cookie');
+    
     try {
       // Parse cookies from upgrade request
       const cookies = request.headers.cookie ? parseCookie(request.headers.cookie) : {};
       const sessionCookieName = 'connect.sid';
       const signedSessionId = cookies[sessionCookieName];
       
+      console.log('[WS] Session cookie:', signedSessionId ? 'Found' : 'Missing');
+      
       if (!signedSessionId) {
+        console.log('[WS] Rejecting: No session cookie');
         ws.close(1008, 'Unauthorized: No session cookie');
         return;
       }
       
       // Unsign the session cookie (Express uses cookie-signature)
+      // Express prefixes signed cookies with 's:', so we need to strip it before unsigning
       const sessionSecret = process.env.SESSION_SECRET!;
-      const sessionId = unsignCookie(signedSessionId, sessionSecret);
+      const cookieValue = signedSessionId.startsWith('s:') 
+        ? signedSessionId.slice(2) 
+        : signedSessionId;
+      const sessionId = unsignCookie(cookieValue, sessionSecret);
+      
+      console.log('[WS] Session ID after unsigning:', sessionId ? 'Valid' : 'Invalid');
       
       if (!sessionId || sessionId === false) {
+        console.log('[WS] Rejecting: Invalid session signature');
         ws.close(1008, 'Unauthorized: Invalid session');
         return;
       }
@@ -2829,14 +2842,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(sessions.sid, sessionId as string))
         .limit(1);
       
+      console.log('[WS] Session query result:', sessionResult.length > 0 ? 'Found' : 'Not found');
+      
       if (sessionResult.length === 0 || !sessionResult[0].sess) {
+        console.log('[WS] Rejecting: Session not found in database');
         ws.close(1008, 'Unauthorized: Session not found');
         return;
       }
       
       const sessionData: any = sessionResult[0].sess;
       
+      console.log('[WS] Session data structure:', {
+        hasPassport: !!sessionData.passport,
+        hasUser: !!sessionData.passport?.user,
+      });
+      
       if (!sessionData.passport || !sessionData.passport.user) {
+        console.log('[WS] Rejecting: Invalid or expired session - no passport data');
         ws.close(1008, 'Unauthorized: Invalid or expired session');
         return;
       }
@@ -2845,18 +2867,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionUser = sessionData.passport.user;
       userId = sessionUser.claims?.sub || sessionUser.id;
       
+      console.log('[WS] Extracted user ID:', userId || 'None');
+      
       if (!userId) {
+        console.log('[WS] Rejecting: No user ID in session');
         ws.close(1008, 'Unauthorized: No user in session');
         return;
       }
       
       // Successfully authenticated - register client
       clients.set(userId, ws);
-      console.log(`WebSocket client authenticated: ${userId}`);
+      console.log(`[WS] ✅ Client authenticated successfully: ${userId}`);
       ws.send(JSON.stringify({ type: 'auth_success', userId }));
       
     } catch (error) {
-      console.error('WebSocket auth error:', error);
+      console.error('[WS] ❌ Authentication error:', error);
       ws.close(1011, 'Authentication failed');
       return;
     }
