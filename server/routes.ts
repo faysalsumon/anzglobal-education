@@ -31,7 +31,7 @@ import {
   messages,
   sessions,
 } from "@shared/schema";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, not } from "drizzle-orm";
 import { z } from "zod";
 import {
   generateUniversityDescription,

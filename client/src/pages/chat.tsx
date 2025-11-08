@@ -62,6 +62,7 @@ export default function ChatPage() {
       apiRequest("PATCH", `/api/conversations/${conversationId}/mark-read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations/unread-count"] });
     },
   });
 
@@ -71,6 +72,7 @@ export default function ChatPage() {
       if (lastMessage.type === "new_message" || lastMessage.type === "message_sent") {
         // Invalidate queries to refetch latest data
         queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations/unread-count"] });
         if (selectedConversation === lastMessage.conversationId) {
           queryClient.invalidateQueries({
             queryKey: ["/api/conversations", selectedConversation, "messages"],
