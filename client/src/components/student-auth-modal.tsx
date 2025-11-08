@@ -15,11 +15,8 @@ interface StudentAuthModalProps {
 
 export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) {
   const handleLogin = () => {
-    if (window.top) {
-      window.top.location.href = "/api/login?type=student";
-    } else {
-      window.location.href = "/api/login?type=student";
-    }
+    const loginUrl = `${window.location.origin}/api/login?type=student`;
+    window.open(loginUrl, '_blank');
   };
 
   return (

@@ -15,11 +15,8 @@ interface InstitutionAuthModalProps {
 
 export function InstitutionAuthModal({ open, onOpenChange }: InstitutionAuthModalProps) {
   const handleLogin = () => {
-    if (window.top) {
-      window.top.location.href = "/api/login?type=university";
-    } else {
-      window.location.href = "/api/login?type=university";
-    }
+    const loginUrl = `${window.location.origin}/api/login?type=university`;
+    window.open(loginUrl, '_blank');
   };
 
   return (
