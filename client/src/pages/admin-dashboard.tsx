@@ -161,7 +161,7 @@ const courseSchema = z.object({
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { adminRole, isConsultant, isSuperAdmin } = useAuth();
+  const { adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess } = useAuth();
   
   // Consultants default to applications tab, others default to users
   const defaultTab = isConsultant ? "applications" : "users";
@@ -234,15 +234,19 @@ export default function AdminDashboard() {
     },
   });
 
-  // Queries
+  // Queries - Conditionally loaded based on role
+  // Users and Institutions: Only for super_admin and support_manager (full admin access)
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/super-admin/users"],
+    enabled: hasFullAdminAccess, // Only full admins can access users
   });
 
   const { data: institutions, isLoading: institutionsLoading } = useQuery<Institution[]>({
     queryKey: ["/api/super-admin/institutions"],
+    enabled: hasFullAdminAccess, // Only full admins can access institutions
   });
 
+  // Courses, Student Leads, Applications: All admin roles
   const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/super-admin/courses"],
   });
@@ -720,7 +724,11 @@ export default function AdminDashboard() {
         
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
-            {isConsultant ? "Consultant Dashboard" : isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
+            {isConsultant 
+              ? "Consultant Dashboard" 
+              : isSuperAdmin 
+                ? "Super Admin Dashboard" 
+                : "Admin Dashboard"}
           </h1>
           <p className="text-muted-foreground">
             {isConsultant 
@@ -732,8 +740,8 @@ export default function AdminDashboard() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          {/* Users and Institutions tabs - Only for super admins and support managers */}
-          {!isConsultant && (
+          {/* Users and Institutions tabs - Only for full admins (super_admin & support_manager) */}
+          {hasFullAdminAccess && (
             <>
               <TabsTrigger value="users" data-testid="tab-users">
                 <Users className="h-4 w-4 mr-2" />
@@ -1121,8 +1129,8 @@ export default function AdminDashboard() {
                     {isConsultant ? "View all courses" : "View and manage all courses"}
                   </CardDescription>
                 </div>
-                {/* Only super admins and support managers can create courses */}
-                {!isConsultant && (
+                {/* Only full admins (super_admin & support_manager) can create courses */}
+                {hasFullAdminAccess && (
                   <Button onClick={handleCreateCourse} data-testid="button-create-course">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Course
@@ -1185,8 +1193,8 @@ export default function AdminDashboard() {
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
                           <TableCell>
-                            {/* Consultants can't change status */}
-                            {!isConsultant ? (
+                            {/* Only full admins can change status */}
+                            {hasFullAdminAccess ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1215,8 +1223,8 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {/* Only super admins and support managers can edit/delete */}
-                            {!isConsultant && (
+                            {/* Only full admins can edit/delete */}
+                            {hasFullAdminAccess && (
                               <div className="flex justify-end gap-2">
                                 <Button
                                   variant="ghost"

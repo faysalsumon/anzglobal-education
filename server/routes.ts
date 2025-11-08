@@ -1671,10 +1671,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      // Only super_admin and support_manager can view users
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       // Get all users and sanitize sensitive fields
@@ -1698,10 +1699,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id/role", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      // Only super_admin and support_manager can modify users
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const { userType, role } = req.body;
@@ -1740,10 +1742,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const { isActive } = req.body;
@@ -1782,10 +1784,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const { email, password, firstName, lastName, userType, role } = req.body;
@@ -1843,10 +1845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const targetUserId = req.params.id;
@@ -1905,10 +1907,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const targetUserId = req.params.id;
@@ -1942,10 +1944,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const allInstitutions = await storage.getAllUniversities();
@@ -1960,10 +1962,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const {
@@ -2022,10 +2024,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const institutionId = req.params.id;
@@ -2054,10 +2056,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const institutionId = req.params.id;
@@ -2082,10 +2084,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const institutionId = req.params.id;
@@ -2107,10 +2109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const [allCourses, allInstitutions] = await Promise.all([
@@ -2138,10 +2140,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const courseData = req.body;
@@ -2168,10 +2170,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const courseId = req.params.id;
@@ -2197,10 +2199,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const courseId = req.params.id;
@@ -2223,10 +2225,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
       
-      if (!user || !(user.userType === 'admin' && user.role === 'super_admin')) {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const courseId = req.params.id;
@@ -2248,7 +2250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/student-leads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -2287,7 +2289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId);
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });

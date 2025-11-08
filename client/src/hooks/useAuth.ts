@@ -11,6 +11,16 @@ export function useAuth() {
     retry: false,
   });
 
+  const adminRole = user?.adminRole || null;
+  
+  // Permission flags
+  const isSuperAdmin = adminRole === "super_admin";
+  const isSupportManager = adminRole === "support_manager";
+  const isConsultant = adminRole === "support_staff";
+  
+  // Full admin access for super_admin and support_manager
+  const hasFullAdminAccess = isSuperAdmin || isSupportManager;
+
   return {
     user,
     isLoading,
@@ -18,8 +28,10 @@ export function useAuth() {
     isUniversity: user?.userType === "university",
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin",
-    adminRole: user?.adminRole || null,
-    isSuperAdmin: user?.adminRole === "super_admin",
-    isConsultant: user?.adminRole === "support_staff",
+    adminRole,
+    isSuperAdmin,
+    isSupportManager,
+    isConsultant,
+    hasFullAdminAccess,
   };
 }
