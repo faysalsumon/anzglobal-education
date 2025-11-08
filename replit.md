@@ -24,7 +24,21 @@ PostgreSQL, accessed via Neon's serverless driver, is the primary database. Driz
 
 ### Authentication & Authorization
 
-Replit's OIDC service is the authentication provider. Express-session manages sessions with PostgreSQL storage and secure, HTTP-only cookies. Role-based access control is implemented using a `userType` field (`university`, `student`, `admin`) and `role` field (e.g., `super_admin`) to protect routes and dictate access to dashboards and features. Server-side middleware enforces authenticated sessions and manages OAuth tokens. Admin authentication includes email/password login with bcrypt hashing for secure access.
+Replit's OIDC service is the authentication provider. Express-session manages sessions with PostgreSQL storage and secure, HTTP-only cookies. Role-based access control is implemented using a `userType` field (`university`, `student`, `admin`) with granular admin roles stored in the `admin_team_members` table. 
+
+**Admin Role Hierarchy:**
+- **super_admin**: Full platform access, can manage all resources and team members
+- **support_manager**: Full administrative access (same as super_admin), can manage users, institutions, courses, applications, and student leads
+- **support_staff** (consultant): Limited read-only access to courses, student leads, and applications; cannot access users or institutions; cannot create/edit/delete any resources
+
+**Security Implementation:**
+- Backend: `checkAdminAccess()` function enforces role-based permissions on all super-admin routes with explicit role allowlists
+- Frontend: `hasFullAdminAccess` flag conditionally renders tabs, action buttons, and enables/disables queries based on role
+- Mutating operations (POST/PATCH/DELETE): Restricted to super_admin and support_manager only
+- Read operations: Users/Institutions restricted to full admins; Courses/Leads/Applications accessible to all admin roles
+- Query gating: Frontend prevents unauthorized API calls by conditionally enabling queries based on role
+
+Server-side middleware enforces authenticated sessions and manages OAuth tokens. Admin authentication includes both OIDC (Replit Auth) and email/password login with bcrypt hashing for secure access.
 
 ### UI/UX and Features
 
