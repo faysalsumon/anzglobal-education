@@ -27,6 +27,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -160,7 +161,11 @@ const courseSchema = z.object({
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("users");
+  const { adminRole, isConsultant, isSuperAdmin } = useAuth();
+  
+  // Consultants default to applications tab, others default to users
+  const defaultTab = isConsultant ? "applications" : "users";
+  const [activeTab, setActiveTab] = useState(defaultTab);
   
   // User state
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -714,25 +719,38 @@ export default function AdminDashboard() {
         </Breadcrumb>
         
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Super Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage all platform users, institutions, and courses</p>
+          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
+            {isConsultant ? "Consultant Dashboard" : isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
+          </h1>
+          <p className="text-muted-foreground">
+            {isConsultant 
+              ? "Manage student applications and leads" 
+              : "Manage all platform users, institutions, and courses"}
+          </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users" data-testid="tab-users">
-            <Users className="h-4 w-4 mr-2" />
-            Users ({userStats.total})
-          </TabsTrigger>
-          <TabsTrigger value="institutions" data-testid="tab-institutions">
-            <Building2 className="h-4 w-4 mr-2" />
-            Institutions ({institutionStats.total})
-          </TabsTrigger>
+          {/* Users and Institutions tabs - Only for super admins and support managers */}
+          {!isConsultant && (
+            <>
+              <TabsTrigger value="users" data-testid="tab-users">
+                <Users className="h-4 w-4 mr-2" />
+                Users ({userStats.total})
+              </TabsTrigger>
+              <TabsTrigger value="institutions" data-testid="tab-institutions">
+                <Building2 className="h-4 w-4 mr-2" />
+                Institutions ({institutionStats.total})
+              </TabsTrigger>
+            </>
+          )}
+          {/* Courses - Available to all admins (view-only for consultants) */}
           <TabsTrigger value="courses" data-testid="tab-courses">
             <BookOpen className="h-4 w-4 mr-2" />
             Courses ({courseStats.total})
           </TabsTrigger>
+          {/* Applications and Student Leads - Available to all admins */}
           <TabsTrigger value="student-leads" data-testid="tab-student-leads">
             <GraduationCap className="h-4 w-4 mr-2" />
             Student Leads ({studentLeads?.length || 0})
@@ -1099,12 +1117,17 @@ export default function AdminDashboard() {
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
                   <CardTitle>Course Management</CardTitle>
-                  <CardDescription>View and manage all courses</CardDescription>
+                  <CardDescription>
+                    {isConsultant ? "View all courses" : "View and manage all courses"}
+                  </CardDescription>
                 </div>
-                <Button onClick={handleCreateCourse} data-testid="button-create-course">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Course
-                </Button>
+                {/* Only super admins and support managers can create courses */}
+                {!isConsultant && (
+                  <Button onClick={handleCreateCourse} data-testid="button-create-course">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Course
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1162,47 +1185,57 @@ export default function AdminDashboard() {
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleCourseStatusMutation.mutate({
-                                id: course.id,
-                                isActive: !course.isActive,
-                              })}
-                              data-testid={`button-toggle-course-${course.id}`}
-                            >
-                              {course.isActive ? (
-                                <Badge variant="default" className="cursor-pointer">
-                                  <ShieldCheck className="h-3 w-3 mr-1" />
-                                  Active
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="cursor-pointer">
-                                  <ShieldOff className="h-3 w-3 mr-1" />
-                                  Inactive
-                                </Badge>
-                              )}
-                            </Button>
+                            {/* Consultants can't change status */}
+                            {!isConsultant ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleCourseStatusMutation.mutate({
+                                  id: course.id,
+                                  isActive: !course.isActive,
+                                })}
+                                data-testid={`button-toggle-course-${course.id}`}
+                              >
+                                {course.isActive ? (
+                                  <Badge variant="default" className="cursor-pointer">
+                                    <ShieldCheck className="h-3 w-3 mr-1" />
+                                    Active
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="cursor-pointer">
+                                    <ShieldOff className="h-3 w-3 mr-1" />
+                                    Inactive
+                                  </Badge>
+                                )}
+                              </Button>
+                            ) : (
+                              <Badge variant={course.isActive ? "default" : "secondary"}>
+                                {course.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditCourse(course)}
-                                data-testid={`button-edit-course-${course.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeletingCourse(course)}
-                                data-testid={`button-delete-course-${course.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                            {/* Only super admins and support managers can edit/delete */}
+                            {!isConsultant && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditCourse(course)}
+                                  data-testid={`button-edit-course-${course.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeletingCourse(course)}
+                                  data-testid={`button-delete-course-${course.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
