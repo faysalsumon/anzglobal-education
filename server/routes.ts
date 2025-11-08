@@ -1234,6 +1234,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI-Powered Course Recommendations
+  app.post("/api/student/recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found. Please complete your profile first." });
+      }
+
+      // Check if profile has sufficient matching criteria
+      if (!profile.budgetMin && !profile.budgetMax && 
+          (!profile.preferredSubjects || profile.preferredSubjects.length === 0)) {
+        return res.status(400).json({ 
+          message: "Please update your profile with budget and subject preferences to get personalized recommendations." 
+        });
+      }
+
+      // Get all active courses
+      const allCourses = await db
+        .select()
+        .from(courses)
+        .where(eq(courses.isActive, true));
+
+      // Import recommendation service
+      const { recommendationService } = await import("./recommendations");
+      
+      // Generate recommendations
+      const limit = req.body.limit || 10;
+      const recommendations = await recommendationService.generateRecommendations(
+        allCourses,
+        profile,
+        limit
+      );
+
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      res.status(500).json({ 
+        message: "Failed to generate recommendations. Please try again later." 
+      });
+    }
+  });
+
   app.get("/api/university/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

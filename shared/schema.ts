@@ -143,6 +143,17 @@ export const studentProfiles = pgTable("student_profiles", {
   careerGoals: text("career_goals"),
   previousEducation: text("previous_education"),
   
+  // Matching criteria for AI-powered recommendations
+  budgetMin: decimal("budget_min", { precision: 10, scale: 2 }),
+  budgetMax: decimal("budget_max", { precision: 10, scale: 2 }),
+  preferredSubjects: text("preferred_subjects").array(),
+  preferredCountries: text("preferred_countries").array(),
+  preferredIntakeMonths: text("preferred_intake_months").array(),
+  desiredScholarship: boolean("desired_scholarship").default(false),
+  englishScore: text("english_score"), // e.g., "IELTS 7.0", "TOEFL 95"
+  workExperienceYears: integer("work_experience_years"),
+  studyModePreference: text("study_mode_preference"), // e.g., "Full-time", "Part-time", "Online"
+  
   referralCode: varchar("referral_code", { length: 10 }).unique(),
   referredByCode: varchar("referred_by_code", { length: 10 }),
   
