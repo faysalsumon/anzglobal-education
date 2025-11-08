@@ -14,6 +14,14 @@ interface StudentAuthModalProps {
 }
 
 export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) {
+  const handleLogin = () => {
+    if (window.top) {
+      window.top.location.href = "/api/login?type=student";
+    } else {
+      window.location.href = "/api/login?type=student";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px] gap-6" data-testid="dialog-student-auth">
@@ -29,15 +37,13 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
 
         <div className="space-y-3">
           <Button 
-            asChild
+            onClick={handleLogin}
             className="w-full h-11 justify-between group"
             variant="default"
             data-testid="button-student-auth"
           >
-            <a href="/api/login?type=student" target="_top">
-              <span>Continue with Replit</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </a>
+            <span>Continue with Replit</span>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
 
           <div className="text-center">
