@@ -164,6 +164,19 @@ export const favorites = pgTable("favorites", {
   itemTypeItemIdIdx: index("item_type_item_id_idx").on(table.itemType, table.itemId),
 }));
 
+// Course comparisons table for students to compare courses side-by-side
+export const courseComparisons = pgTable("course_comparisons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate comparisons
+  uniqueComparison: index("unique_comparison").on(table.studentProfileId, table.courseId),
+  // Index for fast lookups
+  studentComparisonIdx: index("student_comparison_idx").on(table.studentProfileId),
+}));
+
 // Referrals table for student affiliate/referral system
 export const referrals = pgTable("referrals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
