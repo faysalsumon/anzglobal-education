@@ -1001,10 +1001,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/student/favorites", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const profile = await storage.getStudentProfileByUserId(userId);
+      let profile = await storage.getStudentProfileByUserId(userId);
 
+      // Auto-create minimal student profile if it doesn't exist
       if (!profile) {
-        return res.status(404).json({ message: "Student profile not found" });
+        const [newProfile] = await db
+          .insert(studentProfiles)
+          .values({ userId })
+          .returning();
+        profile = newProfile;
       }
 
       const validatedData = insertFavoriteSchema.parse({

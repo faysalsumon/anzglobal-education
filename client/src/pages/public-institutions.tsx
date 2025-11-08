@@ -341,7 +341,11 @@ export default function PublicInstitutions() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="absolute top-4 right-4 h-8 w-8"
+                        className={`absolute top-4 right-4 h-10 w-10 rounded-full transition-all ${
+                          isFavorited(institution.id)
+                            ? "bg-primary hover:bg-primary/90 shadow-md"
+                            : "bg-background/80 hover:bg-background shadow-sm"
+                        }`}
                         onClick={(e) => {
                           e.preventDefault();
                           handleFavoriteToggle(institution.id);
@@ -349,9 +353,9 @@ export default function PublicInstitutions() {
                         data-testid={`button-favorite-${institution.id}`}
                       >
                         <Heart
-                          className={`h-5 w-5 ${
+                          className={`h-5 w-5 transition-all ${
                             isFavorited(institution.id)
-                              ? "fill-red-500 text-red-500"
+                              ? "fill-white text-white"
                               : "text-muted-foreground"
                           }`}
                         />

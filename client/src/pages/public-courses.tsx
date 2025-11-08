@@ -388,7 +388,11 @@ export default function PublicCourses() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute top-2 right-2 h-8 w-8 z-10"
+                      className={`absolute top-2 right-2 h-10 w-10 rounded-full transition-all z-10 ${
+                        isFavorited(course.id)
+                          ? "bg-primary hover:bg-primary/90 shadow-md"
+                          : "bg-background/80 hover:bg-background shadow-sm"
+                      }`}
                       onClick={(e) => {
                         e.preventDefault();
                         handleFavoriteToggle(course.id);
@@ -396,9 +400,9 @@ export default function PublicCourses() {
                       data-testid={`button-favorite-course-${course.id}`}
                     >
                       <Heart
-                        className={`h-5 w-5 ${
+                        className={`h-5 w-5 transition-all ${
                           isFavorited(course.id)
-                            ? "fill-red-500 text-red-500"
+                            ? "fill-white text-white"
                             : "text-muted-foreground"
                         }`}
                       />
