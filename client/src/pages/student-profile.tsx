@@ -75,7 +75,9 @@ interface ProfileCompletionResult {
 
 export default function StudentProfilePage() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("personal");
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('tab') || "personal";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiField, setAiField] = useState<"bio" | "careerGoals" | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
