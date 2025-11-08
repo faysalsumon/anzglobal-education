@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+import { parse as parseCookie } from "cookie";
+import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -14,6 +17,8 @@ import {
   insertFavoriteSchema,
   insertCourseComparisonSchema,
   insertNotificationSchema,
+  insertConversationSchema,
+  insertMessageSchema,
   users,
   universities,
   courses,
@@ -22,8 +27,11 @@ import {
   favorites,
   courseComparisons,
   notifications,
+  conversations,
+  messages,
+  sessions,
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, desc } from "drizzle-orm";
 import { z } from "zod";
 import {
   generateUniversityDescription,
@@ -2522,6 +2530,456 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== CHAT ROUTES =====
+  
+  // Get all conversations for current user
+  app.get("/api/conversations", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      
+      // Find all conversations where user is participant1 or participant2
+      const userConversations = await db
+        .select()
+        .from(conversations)
+        .where(
+          or(
+            eq(conversations.participant1Id, userId),
+            eq(conversations.participant2Id, userId)
+          )
+        )
+        .orderBy(desc(conversations.lastMessageAt));
+      
+      // Get participant details and unread count for each conversation
+      const enrichedConversations = await Promise.all(
+        userConversations.map(async (conv) => {
+          // Get the other participant's ID
+          const otherParticipantId = conv.participant1Id === userId 
+            ? conv.participant2Id 
+            : conv.participant1Id;
+          
+          // Get other participant details
+          const otherUser = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, otherParticipantId))
+            .limit(1);
+          
+          // Count unread messages in this conversation
+          const unreadMessages = await db
+            .select()
+            .from(messages)
+            .where(
+              and(
+                eq(messages.conversationId, conv.id),
+                eq(messages.isRead, false),
+                eq(messages.senderId, otherParticipantId) // Only count messages sent by other user
+              )
+            );
+          
+          // Get last message in conversation
+          const lastMessage = await db
+            .select()
+            .from(messages)
+            .where(eq(messages.conversationId, conv.id))
+            .orderBy(desc(messages.createdAt))
+            .limit(1);
+          
+          return {
+            ...conv,
+            otherParticipant: otherUser[0] || null,
+            unreadCount: unreadMessages.length,
+            lastMessage: lastMessage[0] || null,
+          };
+        })
+      );
+      
+      res.json(enrichedConversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+  
+  // Get or create conversation with another user
+  app.post("/api/conversations", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const { otherUserId } = req.body;
+      
+      if (!otherUserId) {
+        return res.status(400).json({ message: "otherUserId is required" });
+      }
+      
+      if (otherUserId === userId) {
+        return res.status(400).json({ message: "Cannot create conversation with yourself" });
+      }
+      
+      // Check if conversation already exists (in either direction)
+      const existingConversation = await db
+        .select()
+        .from(conversations)
+        .where(
+          or(
+            and(
+              eq(conversations.participant1Id, userId),
+              eq(conversations.participant2Id, otherUserId)
+            ),
+            and(
+              eq(conversations.participant1Id, otherUserId),
+              eq(conversations.participant2Id, userId)
+            )
+          )
+        )
+        .limit(1);
+      
+      if (existingConversation.length > 0) {
+        return res.json(existingConversation[0]);
+      }
+      
+      // Create new conversation
+      const newConversation = await db
+        .insert(conversations)
+        .values({
+          participant1Id: userId,
+          participant2Id: otherUserId,
+        })
+        .returning();
+      
+      res.json(newConversation[0]);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+  
+  // Get messages for a conversation
+  app.get("/api/conversations/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const conversationId = req.params.id;
+      
+      // Verify user is participant in this conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+      
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (
+        conversation[0].participant1Id !== userId &&
+        conversation[0].participant2Id !== userId
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get all messages for this conversation
+      const conversationMessages = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.conversationId, conversationId))
+        .orderBy(messages.createdAt);
+      
+      res.json(conversationMessages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+  
+  // Mark message as read
+  app.patch("/api/messages/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const messageId = req.params.id;
+      
+      // Get message and verify it exists
+      const message = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.id, messageId))
+        .limit(1);
+      
+      if (message.length === 0) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      // Verify user is the recipient (not the sender)
+      if (message[0].senderId === userId) {
+        return res.status(400).json({ message: "Cannot mark own message as read" });
+      }
+      
+      // Get conversation and verify user is participant
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, message[0].conversationId))
+        .limit(1);
+      
+      if (
+        conversation.length === 0 ||
+        (conversation[0].participant1Id !== userId &&
+          conversation[0].participant2Id !== userId)
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Mark as read
+      const updatedMessage = await db
+        .update(messages)
+        .set({ isRead: true })
+        .where(eq(messages.id, messageId))
+        .returning();
+      
+      res.json(updatedMessage[0]);
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+  
+  // Mark all messages in a conversation as read
+  app.patch("/api/conversations/:id/mark-read", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const conversationId = req.params.id;
+      
+      // Verify user is participant in this conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+      
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (
+        conversation[0].participant1Id !== userId &&
+        conversation[0].participant2Id !== userId
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Mark all unread messages from the other participant as read
+      const otherParticipantId = conversation[0].participant1Id === userId
+        ? conversation[0].participant2Id
+        : conversation[0].participant1Id;
+      
+      await db
+        .update(messages)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(messages.conversationId, conversationId),
+            eq(messages.senderId, otherParticipantId),
+            eq(messages.isRead, false)
+          )
+        );
+      
+      res.json({ message: "All messages marked as read" });
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+      res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // WebSocket server for real-time chat with session-based authentication
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const clients = new Map<string, WebSocket>(); // userId -> WebSocket
+  
+  wss.on('connection', async (ws: WebSocket, request) => {
+    let userId: string | null = null;
+    
+    try {
+      // Parse cookies from upgrade request
+      const cookies = request.headers.cookie ? parseCookie(request.headers.cookie) : {};
+      const sessionCookieName = 'connect.sid';
+      const signedSessionId = cookies[sessionCookieName];
+      
+      if (!signedSessionId) {
+        ws.close(1008, 'Unauthorized: No session cookie');
+        return;
+      }
+      
+      // Unsign the session cookie (Express uses cookie-signature)
+      const sessionSecret = process.env.SESSION_SECRET!;
+      const sessionId = unsignCookie(signedSessionId, sessionSecret);
+      
+      if (!sessionId || sessionId === false) {
+        ws.close(1008, 'Unauthorized: Invalid session');
+        return;
+      }
+      
+      // Query session store to get session data
+      const sessionResult = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.sid, sessionId as string))
+        .limit(1);
+      
+      if (sessionResult.length === 0 || !sessionResult[0].sess) {
+        ws.close(1008, 'Unauthorized: Session not found');
+        return;
+      }
+      
+      const sessionData: any = sessionResult[0].sess;
+      
+      if (!sessionData.passport || !sessionData.passport.user) {
+        ws.close(1008, 'Unauthorized: Invalid or expired session');
+        return;
+      }
+      
+      // Get user from session (passport serializes the whole user object)
+      const sessionUser = sessionData.passport.user;
+      userId = sessionUser.claims?.sub || sessionUser.id;
+      
+      if (!userId) {
+        ws.close(1008, 'Unauthorized: No user in session');
+        return;
+      }
+      
+      // Successfully authenticated - register client
+      clients.set(userId, ws);
+      console.log(`WebSocket client authenticated: ${userId}`);
+      ws.send(JSON.stringify({ type: 'auth_success', userId }));
+      
+    } catch (error) {
+      console.error('WebSocket auth error:', error);
+      ws.close(1011, 'Authentication failed');
+      return;
+    }
+    
+    ws.on('message', async (data: Buffer) => {
+      if (!userId) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
+        return;
+      }
+      
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Handle sending messages
+        if (message.type === 'send_message') {
+          const { conversationId, content, recipientId } = message;
+          
+          if (!conversationId || !content || !recipientId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Missing required fields' }));
+            return;
+          }
+          
+          // Verify user is participant in this conversation
+          const conversation = await db
+            .select()
+            .from(conversations)
+            .where(eq(conversations.id, conversationId))
+            .limit(1);
+          
+          if (
+            conversation.length === 0 ||
+            (conversation[0].participant1Id !== userId &&
+              conversation[0].participant2Id !== userId)
+          ) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Access denied to conversation' }));
+            return;
+          }
+          
+          // Save message to database
+          const newMessage = await db.insert(messages).values({
+            conversationId,
+            senderId: userId,
+            content,
+            isRead: false,
+          }).returning();
+          
+          // Update conversation's lastMessageAt
+          await db.update(conversations)
+            .set({ lastMessageAt: new Date() })
+            .where(eq(conversations.id, conversationId));
+          
+          // Send message to recipient if they're online
+          const recipientSocket = clients.get(recipientId);
+          if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
+            recipientSocket.send(JSON.stringify({
+              type: 'new_message',
+              message: newMessage[0],
+              conversationId,
+            }));
+          }
+          
+          // Send confirmation to sender
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'message_sent',
+              message: newMessage[0],
+              conversationId,
+            }));
+          }
+        }
+        
+        // Handle typing indicator
+        if (message.type === 'typing') {
+          const { conversationId, recipientId, isTyping } = message;
+          
+          // Verify user is participant in this conversation
+          const conversation = await db
+            .select()
+            .from(conversations)
+            .where(eq(conversations.id, conversationId))
+            .limit(1);
+          
+          if (
+            conversation.length === 0 ||
+            (conversation[0].participant1Id !== userId &&
+              conversation[0].participant2Id !== userId)
+          ) {
+            return; // Silently ignore invalid typing indicators
+          }
+          
+          const recipientSocket = clients.get(recipientId);
+          if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
+            recipientSocket.send(JSON.stringify({
+              type: 'user_typing',
+              conversationId,
+              userId,
+              isTyping,
+            }));
+          }
+        }
+        
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+        ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
+      }
+    });
+    
+    ws.on('close', () => {
+      if (userId) {
+        clients.delete(userId);
+        console.log(`WebSocket client disconnected: ${userId}`);
+      }
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      if (userId) {
+        clients.delete(userId);
+      }
+    });
+  });
+  
+  console.log('WebSocket server initialized on path /ws with session-based authentication');
+  
   return httpServer;
 }

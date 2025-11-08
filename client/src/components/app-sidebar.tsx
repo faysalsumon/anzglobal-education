@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +50,7 @@ export function AppSidebar() {
     { title: "Courses", url: "/university/courses", icon: BookOpen },
     { title: "Applications", url: "/university/applications", icon: FileText },
     { title: "Team Management", url: "/university/team", icon: Users },
+    { title: "Messages", url: "/chat", icon: MessageSquare },
     { title: "AI Assistant", url: "/university/ai-assistant", icon: Sparkles },
   ];
 
@@ -58,6 +59,7 @@ export function AppSidebar() {
     { title: "Browse Courses", url: "/student/courses", icon: Search },
     { title: "My Applications", url: "/student/applications", icon: FileText },
     { title: "My Profile", url: "/student/profile", icon: User },
+    { title: "Messages", url: "/chat", icon: MessageSquare },
     { title: "AI Assistant", url: "/student/ai-assistant", icon: Sparkles },
   ];
 

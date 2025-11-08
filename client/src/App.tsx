@@ -30,6 +30,7 @@ import CompareCourses from "@/pages/compare-courses";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import ChatPage from "@/pages/chat";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -65,6 +66,7 @@ function Router() {
           <Route path="/student/applications" component={StudentApplications} />
           <Route path="/student/referrals" component={StudentReferrals} />
           <Route path="/student/ai-assistant" component={StudentAIAssistant} />
+          <Route path="/chat" component={ChatPage} />
         </>
       )}
       <Route component={NotFound} />
