@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Send, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -170,22 +171,22 @@ export default function ChatPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium truncate" data-testid={`conversation-name-${conversation.id}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`truncate ${conversation.unreadCount > 0 ? 'font-bold' : 'font-medium'}`} data-testid={`conversation-name-${conversation.id}`}>
                           {conversation.otherParticipant?.firstName}{" "}
                           {conversation.otherParticipant?.lastName}
                         </p>
                         {conversation.unreadCount > 0 && (
-                          <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                            {conversation.unreadCount}
-                          </span>
+                          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs shrink-0" data-testid={`badge-unread-${conversation.id}`}>
+                            {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {conversation.otherParticipant?.userType}
                       </p>
                       {conversation.lastMessage && (
-                        <p className="text-sm text-muted-foreground truncate mt-1">
+                        <p className={`text-sm truncate mt-1 ${conversation.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                           {conversation.lastMessage.content}
                         </p>
                       )}
