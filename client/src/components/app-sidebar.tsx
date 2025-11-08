@@ -14,6 +14,7 @@ import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Spar
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { type StudentProfile } from "@shared/schema";
@@ -43,6 +44,15 @@ export function AppSidebar() {
     enabled: isStudent,
     retry: false,
   });
+
+  // Fetch unread message count
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/conversations/unread-count"],
+    enabled: !!user && !isAdmin,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const unreadCount = unreadData?.count || 0;
 
   const universityItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -91,6 +101,11 @@ export function AppSidebar() {
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
+                      {item.title === "Messages" && unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1 text-xs" data-testid="badge-unread-messages">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -2558,6 +2558,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== CHAT ROUTES =====
   
+  // Get total unread message count for current user
+  app.get("/api/conversations/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      
+      // Count all unread messages where current user is the recipient
+      const unreadMessages = await db
+        .select()
+        .from(messages)
+        .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+        .where(
+          and(
+            eq(messages.isRead, false),
+            not(eq(messages.senderId, userId)), // Not sent by current user
+            or(
+              eq(conversations.participant1Id, userId),
+              eq(conversations.participant2Id, userId)
+            )
+          )
+        );
+      
+      res.json({ count: unreadMessages.length });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+  
   // Get all conversations for current user
   app.get("/api/conversations", isAuthenticated, async (req, res) => {
     try {
