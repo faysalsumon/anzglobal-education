@@ -25,6 +25,7 @@ import PublicCourses from "@/pages/public-courses";
 import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
 import PublicInstitutionDetail from "@/pages/public-institution-detail";
+import CompareCourses from "@/pages/compare-courses";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -36,6 +37,7 @@ function Router() {
     <Switch>
       {/* Public routes accessible to everyone */}
       <Route path="/login" component={Login} />
+      <Route path="/compare-courses" component={CompareCourses} />
       <Route path="/courses/:id" component={PublicCourseDetail} />
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />

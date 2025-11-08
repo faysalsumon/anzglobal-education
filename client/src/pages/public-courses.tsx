@@ -26,13 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart } from "lucide-react";
-import { Link } from "wouter";
-import type { Course, University, Favorite } from "@shared/schema";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import type { Course, University, Favorite, CourseComparison } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -129,6 +130,124 @@ export default function PublicCourses() {
     return favorites.some(
       (f) => f.itemType === "course" && f.itemId === courseId
     );
+  };
+
+  // Course comparison logic
+  const [, navigate] = useLocation();
+  const { data: comparisons = [] } = useQuery<CourseComparison[]>({
+    queryKey: ["/api/student/comparisons"],
+    enabled: isAuthenticated && isStudent,
+  });
+
+  const addComparisonMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      return await apiRequest("POST", "/api/student/comparisons", { courseId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
+      toast({
+        title: "Success",
+        description: "Course added to comparison",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("already in comparison")) {
+        toast({
+          title: "Already in comparison",
+          description: "This course is already in your comparison list",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add to comparison",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const removeComparisonMutation = useMutation({
+    mutationFn: async (comparisonId: string) => {
+      return await apiRequest("DELETE", `/api/student/comparisons/${comparisonId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
+      toast({
+        title: "Success",
+        description: "Course removed from comparison",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from comparison",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearAllComparisonsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("DELETE", "/api/student/comparisons");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
+      toast({
+        title: "Success",
+        description: "All comparisons cleared",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to clear comparisons",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleComparisonToggle = (courseId: string) => {
+    if (!isAuthenticated || !isStudent) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    const existingComparison = comparisons.find(
+      (c) => c.courseId === courseId
+    );
+
+    if (existingComparison) {
+      removeComparisonMutation.mutate(existingComparison.id);
+    } else {
+      // Limit to 4 courses for comparison
+      if (comparisons.length >= 4) {
+        toast({
+          title: "Comparison limit reached",
+          description: "You can compare up to 4 courses at a time",
+          variant: "destructive",
+        });
+        return;
+      }
+      addComparisonMutation.mutate(courseId);
+    }
+  };
+
+  const isInComparison = (courseId: string) => {
+    return comparisons.some((c) => c.courseId === courseId);
+  };
+
+  const handleCompare = () => {
+    if (comparisons.length < 2) {
+      toast({
+        title: "Select more courses",
+        description: "Please select at least 2 courses to compare",
+        variant: "destructive",
+      });
+      return;
+    }
+    const courseIds = comparisons.map(c => c.courseId).join(',');
+    navigate(`/compare-courses?courses=${courseIds}`);
   };
 
   // Extract unique values from actual course data
@@ -448,7 +567,7 @@ export default function PublicCourses() {
                         )}
                       </div>
                     </CardContent>
-                    <CardFooter className="pt-0">
+                    <CardFooter className="pt-0 flex-col gap-3">
                       <div className="flex gap-2 w-full">
                         <Button asChild variant="outline" className="flex-1" size="sm" data-testid={`button-view-course-${course.id}`}>
                           <Link href={`/courses/${course.id}`}>
@@ -471,6 +590,24 @@ export default function PublicCourses() {
                             </a>
                           </Button>
                         )}
+                      </div>
+                      <div 
+                        className="flex items-center gap-2 w-full pt-2 border-t hover-elevate rounded-md px-2 py-1.5 cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleComparisonToggle(course.id);
+                        }}
+                        data-testid={`checkbox-compare-${course.id}`}
+                      >
+                        <Checkbox 
+                          checked={isInComparison(course.id)}
+                          onCheckedChange={() => handleComparisonToggle(course.id)}
+                          className="cursor-pointer"
+                        />
+                        <label className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                          <GitCompare className="h-3.5 w-3.5" />
+                          Compare this course
+                        </label>
                       </div>
                     </CardFooter>
                   </Card>
@@ -516,6 +653,52 @@ export default function PublicCourses() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Sticky Comparison Bar */}
+      {comparisons.length > 0 && (
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground shadow-lg border-t z-50"
+          data-testid="comparison-bar"
+        >
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <GitCompare className="h-5 w-5" />
+                  <span className="font-semibold">
+                    {comparisons.length} {comparisons.length === 1 ? 'course' : 'courses'} selected
+                  </span>
+                </div>
+                <span className="text-sm opacity-90">
+                  {comparisons.length < 2 ? 'Select at least 2 courses to compare' : `Select up to ${4 - comparisons.length} more`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => clearAllComparisonsMutation.mutate()}
+                  className="bg-transparent text-primary-foreground hover:bg-primary-foreground/10 border-primary-foreground/30"
+                  data-testid="button-clear-comparisons"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Clear All
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCompare}
+                  disabled={comparisons.length < 2}
+                  data-testid="button-compare-courses"
+                >
+                  <GitCompare className="mr-2 h-4 w-4" />
+                  Compare Courses
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
