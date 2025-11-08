@@ -310,6 +310,53 @@ export default function PublicCourseDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Intake Months */}
+            {course.intakeMonths && course.intakeMonths.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Available Intakes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {course.intakeMonths.map((month, index) => (
+                      <Badge key={index} variant="outline" className="px-4 py-2 text-sm" data-testid={`badge-intake-${index}`}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {month}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Reviews and Testimonials */}
+            {course.reviews && Array.isArray(course.reviews) && (course.reviews as any[]).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Student Reviews</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(course.reviews as any[]).map((review: any, index: number) => (
+                    <div key={index} className="border-b last:border-0 pb-4 last:pb-0" data-testid={`review-${index}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Award 
+                              key={i} 
+                              className={`h-4 w-4 ${i < (review.rating || 0) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="font-semibold text-sm">{review.studentName || 'Anonymous'}</span>
+                        {review.date && <span className="text-xs text-muted-foreground">{review.date}</span>}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{review.comment}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}

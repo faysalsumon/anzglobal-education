@@ -107,6 +107,10 @@ export const courses = pgTable("courses", {
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
   images: text("images").array(),
   
+  // Intake and reviews
+  intakeMonths: text("intake_months").array(), // e.g., ["January", "March", "July", "September"]
+  reviews: jsonb("reviews"), // Array of {rating, comment, studentName, date}
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
