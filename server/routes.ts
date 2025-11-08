@@ -3024,6 +3024,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .set({ lastMessageAt: new Date() })
             .where(eq(conversations.id, conversationId));
           
+          // Create notification for recipient about new message
+          const senderUser = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+          
+          const senderName = senderUser[0]?.name || senderUser[0]?.email || 'Someone';
+          const messagePreview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+          
+          await db.insert(notifications).values({
+            userId: recipientId,
+            type: 'new_message',
+            title: `New message from ${senderName}`,
+            message: messagePreview,
+            link: `/chat?conversationId=${conversationId}`,
+            metadata: { conversationId, messageId: newMessage[0].id, senderId: userId },
+          });
+          
           // Send message to recipient if they're online
           const recipientSocket = clients.get(recipientId);
           if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
