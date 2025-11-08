@@ -9,6 +9,9 @@ export type NotificationType =
   | "profile_update"
   | "document_uploaded"
   | "message_received"
+  | "institution_approval_request"
+  | "institution_approved"
+  | "institution_rejected"
   | "general";
 
 interface CreateNotificationParams {

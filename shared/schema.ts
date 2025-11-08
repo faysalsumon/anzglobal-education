@@ -73,7 +73,7 @@ export const universities = pgTable("universities", {
   topCourses: text("top_courses").array(), // Array of course IDs or names
   
   // Approval workflow
-  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("approved"), // 'pending', 'approved', 'rejected'
+  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected'
   rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
   submittedForApprovalAt: timestamp("submitted_for_approval_at"),
   approvedAt: timestamp("approved_at"),

@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -188,6 +188,8 @@ export default function AdminDashboard() {
   const [institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [deletingInstitution, setDeletingInstitution] = useState<Institution | null>(null);
+  const [rejectingInstitution, setRejectingInstitution] = useState<Institution | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
@@ -537,6 +539,48 @@ export default function AdminDashboard() {
       toast({
         title: "Status updated",
         description: "Course status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approveInstitutionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      toast({
+        title: "Institution approved",
+        description: "The institution has been approved successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectInstitutionMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      setRejectingInstitution(null);
+      setRejectionReason("");
+      toast({
+        title: "Institution rejected",
+        description: "The institution has been rejected",
       });
     },
     onError: (error: any) => {
@@ -1013,16 +1057,15 @@ export default function AdminDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Provider Type</TableHead>
-                      <TableHead>Campuses</TableHead>
-                      <TableHead>Scholarship</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Approval Status</TableHead>
+                      <TableHead>Active Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {institutionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
@@ -1030,8 +1073,26 @@ export default function AdminDashboard() {
                           <TableCell className="font-medium">{institution.name}</TableCell>
                           <TableCell>{institution.location}</TableCell>
                           <TableCell>{institution.providerType || "N/A"}</TableCell>
-                          <TableCell>{institution.numberOfCampuses || "N/A"}</TableCell>
-                          <TableCell>{institution.scholarshipPercentage ? `${institution.scholarshipPercentage}%` : "N/A"}</TableCell>
+                          <TableCell>
+                            {institution.approvalStatus === "approved" && (
+                              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Approved
+                              </Badge>
+                            )}
+                            {institution.approvalStatus === "pending" && (
+                              <Badge variant="secondary">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending
+                              </Badge>
+                            )}
+                            {institution.approvalStatus === "rejected" && (
+                              <Badge variant="destructive">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Rejected
+                              </Badge>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -1057,29 +1118,57 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditInstitution(institution)}
-                                data-testid={`button-edit-institution-${institution.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeletingInstitution(institution)}
-                                data-testid={`button-delete-institution-${institution.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              {/* Approve/Reject buttons for pending institutions */}
+                              {hasFullAdminAccess && institution.approvalStatus === "pending" && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => approveInstitutionMutation.mutate(institution.id)}
+                                    disabled={approveInstitutionMutation.isPending}
+                                    data-testid={`button-approve-institution-${institution.id}`}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setRejectingInstitution(institution)}
+                                    data-testid={`button-reject-institution-${institution.id}`}
+                                  >
+                                    <XCircle className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                              {/* Edit button (only for full admins) */}
+                              {hasFullAdminAccess && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditInstitution(institution)}
+                                  data-testid={`button-edit-institution-${institution.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {/* Delete button (only for full admins) */}
+                              {hasFullAdminAccess && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeletingInstitution(institution)}
+                                  data-testid={`button-delete-institution-${institution.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">No institutions found</TableCell>
+                        <TableCell colSpan={6} className="text-center">No institutions found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -1953,6 +2042,64 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reject Institution Dialog */}
+      <Dialog open={!!rejectingInstitution} onOpenChange={(open) => {
+        if (!open) {
+          setRejectingInstitution(null);
+          setRejectionReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Institution</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting <strong>{rejectingInstitution?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Rejection Reason</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Please provide a clear reason for the rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+                data-testid="input-rejection-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setRejectingInstitution(null);
+                setRejectionReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (rejectingInstitution && rejectionReason.trim()) {
+                  rejectInstitutionMutation.mutate({
+                    id: rejectingInstitution.id,
+                    reason: rejectionReason.trim(),
+                  });
+                }
+              }}
+              disabled={!rejectionReason.trim() || rejectInstitutionMutation.isPending}
+              data-testid="button-confirm-reject-institution"
+            >
+              Reject Institution
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
