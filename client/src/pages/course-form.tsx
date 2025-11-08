@@ -54,6 +54,15 @@ export default function CourseForm() {
       applicationDeadline: "",
       prerequisites: "",
       thumbnailUrl: "",
+      courseCode: "",
+      prPathway: false,
+      scholarshipPercentage: undefined,
+      eligibilityRequirements: "",
+      englishRequirements: "",
+      curriculumUrl: "",
+      costOfLiving: undefined,
+      applicationFees: undefined,
+      intakeMonths: [],
       isActive: true,
     },
   });
@@ -76,6 +85,15 @@ export default function CourseForm() {
         applicationDeadline: course.applicationDeadline || "",
         prerequisites: course.prerequisites || "",
         thumbnailUrl: course.thumbnailUrl || "",
+        courseCode: course.courseCode || "",
+        prPathway: course.prPathway || false,
+        scholarshipPercentage: course.scholarshipPercentage || undefined,
+        eligibilityRequirements: course.eligibilityRequirements || "",
+        englishRequirements: course.englishRequirements || "",
+        curriculumUrl: course.curriculumUrl || "",
+        costOfLiving: course.costOfLiving || undefined,
+        applicationFees: course.applicationFees || undefined,
+        intakeMonths: course.intakeMonths || [],
         isActive: course.isActive,
       });
     }
@@ -447,6 +465,218 @@ export default function CourseForm() {
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Course Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="courseCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="CS101" data-testid="input-course-code" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="scholarshipPercentage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scholarship Percentage</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          placeholder="25"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-scholarship-percentage"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="prPathway"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-pr-pathway"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>PR Pathway Available</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          This course leads to permanent residency
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="curriculumUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Curriculum URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://..." data-testid="input-curriculum-url" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Costs</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="costOfLiving"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost of Living (Yearly)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.01"
+                          placeholder="20000"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          data-testid="input-cost-of-living"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="applicationFees"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Application Fees</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.01"
+                          placeholder="150"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          data-testid="input-application-fees"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Entry Requirements</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="eligibilityRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Eligibility Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="E.g., High school diploma with minimum GPA 3.0..."
+                        className="min-h-[100px]"
+                        data-testid="textarea-eligibility"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="englishRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>English Language Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="E.g., IELTS 6.5 overall, TOEFL iBT 79..."
+                        className="min-h-[100px]"
+                        data-testid="textarea-english-requirements"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Intake Schedule</CardTitle>
+              <CardDescription>Enter available intake months (e.g., January, March, July)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="intakeMonths"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Intake Months</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="January, March, July, September"
+                        value={field.value?.join(", ") || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value ? value.split(",").map(s => s.trim()).filter(Boolean) : []);
+                        }}
+                        data-testid="input-intake-months"
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">Separate multiple months with commas</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 

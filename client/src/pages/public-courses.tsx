@@ -42,6 +42,7 @@ export default function PublicCourses() {
   const [subject, setSubject] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
+  const [intakeMonth, setIntakeMonth] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -255,12 +256,16 @@ export default function PublicCourses() {
     const subjects = new Set<string>();
     const levels = new Set<string>();
     const countries = new Set<string>();
+    const intakeMonths = new Set<string>();
     const universities = new Map<string, string>();
 
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
+      if (course.intakeMonths && Array.isArray(course.intakeMonths)) {
+        course.intakeMonths.forEach(month => intakeMonths.add(month));
+      }
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
@@ -270,6 +275,7 @@ export default function PublicCourses() {
       subjects: Array.from(subjects).sort(),
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
+      intakeMonths: Array.from(intakeMonths).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
     };
   }, [courses]);
@@ -320,6 +326,7 @@ export default function PublicCourses() {
     if (subject && course.subject !== subject) return false;
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
+    if (intakeMonth && (!course.intakeMonths || !course.intakeMonths.includes(intakeMonth))) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
     return true;
   });
@@ -400,7 +407,7 @@ export default function PublicCourses() {
                   data-testid="input-search-courses"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
                   <SelectTrigger data-testid="select-subject">
                     <SelectValue placeholder="All Subjects" />
@@ -442,8 +449,22 @@ export default function PublicCourses() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                <Select value={intakeMonth || "all"} onValueChange={(val) => setIntakeMonth(val === "all" ? "" : val)}>
+                  <SelectTrigger data-testid="select-intake">
+                    <SelectValue placeholder="All Intakes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Intakes</SelectItem>
+                    {availableFilters.intakeMonths.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {(searchTerm || subject || level || country) && (
+              {(searchTerm || subject || level || country || intakeMonth) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -452,6 +473,7 @@ export default function PublicCourses() {
                     setSubject("");
                     setLevel("");
                     setCountry("");
+                    setIntakeMonth("");
                     setHighlightedCourseId(null);
                   }}
                   data-testid="button-clear-filters"
