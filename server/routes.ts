@@ -2616,6 +2616,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot create conversation with yourself" });
       }
       
+      // Get current user details to check userType
+      const currentUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      
+      if (!currentUser[0]) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // RESTRICTION: Students cannot initiate conversations
+      if (currentUser[0].userType === 'student') {
+        return res.status(403).json({ 
+          message: "Students cannot initiate conversations. Please wait for a university or platform administrator to contact you." 
+        });
+      }
+      
+      // Get other user details
+      const otherUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, otherUserId))
+        .limit(1);
+      
+      if (!otherUser[0]) {
+        return res.status(404).json({ message: "Recipient user not found" });
+      }
+      
+      // RESTRICTION: If university is messaging a student, verify student has submitted an application
+      if (currentUser[0].userType === 'university' && otherUser[0].userType === 'student') {
+        // Get student profile from user ID
+        const studentProfile = await db
+          .select()
+          .from(studentProfiles)
+          .where(eq(studentProfiles.userId, otherUserId))
+          .limit(1);
+        
+        if (!studentProfile[0]) {
+          return res.status(404).json({ message: "Student profile not found" });
+        }
+        
+        // Check if student has submitted any application to courses from this university
+        // Need to join applications -> courses to check course.universityId
+        const studentApplications = await db
+          .select()
+          .from(applications)
+          .innerJoin(courses, eq(applications.courseId, courses.id))
+          .where(
+            and(
+              eq(applications.studentId, studentProfile[0].id),
+              eq(courses.universityId, userId)
+            )
+          )
+          .limit(1);
+        
+        if (studentApplications.length === 0) {
+          return res.status(403).json({ 
+            message: "Can only message students who have submitted applications to your institution." 
+          });
+        }
+      }
+      
+      // Admins can message anyone (no restrictions)
+      
       // Check if conversation already exists (in either direction)
       const existingConversation = await db
         .select()
