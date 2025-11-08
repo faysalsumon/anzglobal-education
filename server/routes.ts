@@ -1387,7 +1387,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const applications = await storage.getApplicationsByUniversityId(access.university.id);
-      res.json(applications);
+      
+      // Enrich applications with student user details for messaging
+      const enrichedApplications = await Promise.all(
+        applications.map(async (app) => {
+          const studentProfile = await db
+            .select()
+            .from(studentProfiles)
+            .where(eq(studentProfiles.id, app.studentId))
+            .then(r => r[0]);
+          
+          const studentUser = studentProfile?.userId 
+            ? await storage.getUser(studentProfile.userId) 
+            : null;
+          
+          return {
+            ...app,
+            student: {
+              userId: studentUser?.id,
+              profileId: studentProfile?.id,
+              name: `${studentProfile?.firstName || ''} ${studentProfile?.lastName || ''}`.trim() || 'Unknown',
+              email: studentUser?.email,
+            },
+          };
+        })
+      );
+      
+      res.json(enrichedApplications);
     } catch (error) {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });

@@ -200,6 +200,11 @@ export default function ChatPage() {
               <p className="text-sm text-muted-foreground text-center" data-testid="text-no-conversations">
                 No conversations yet
               </p>
+              {user.userType === 'student' && (
+                <p className="text-xs text-muted-foreground text-center mt-2 max-w-xs">
+                  Universities and administrators will contact you here after you submit applications.
+                </p>
+              )}
             </div>
           )}
         </ScrollArea>

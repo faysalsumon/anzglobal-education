@@ -4,13 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Calendar, User, AlertCircle, RefreshCw } from "lucide-react";
+import { FileText, Calendar, User, AlertCircle, RefreshCw, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import type { Application } from "@shared/schema";
 
 export default function UniversityApplications() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: applications, isLoading, isError, error, refetch } = useQuery<Application[]>({
     queryKey: ["/api/university/applications"],
@@ -26,6 +28,22 @@ export default function UniversityApplications() {
         title: "Status updated",
         description: "Application status has been updated successfully.",
       });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const startConversationMutation = useMutation({
+    mutationFn: async (studentUserId: string) => {
+      return await apiRequest("POST", "/api/conversations", { otherUserId: studentUserId });
+    },
+    onSuccess: () => {
+      setLocation("/university/chat");
     },
     onError: (error: Error) => {
       toast({
@@ -88,13 +106,28 @@ export default function UniversityApplications() {
                   <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
                       <User className="h-5 w-5" />
-                      Application #{application.id.slice(0, 8)}
+                      {(application as any).student?.name || 'Unknown Student'}
                     </CardTitle>
                     <CardDescription>
-                      Course: {application.courseId.slice(0, 8)} | Student: {application.studentId.slice(0, 8)}
+                      {(application as any).student?.email || 'No email available'}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const studentUserId = (application as any).student?.userId;
+                        if (studentUserId) {
+                          startConversationMutation.mutate(studentUserId);
+                        }
+                      }}
+                      disabled={!((application as any).student?.userId) || startConversationMutation.isPending}
+                      data-testid={`button-message-${application.id}`}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
                     <div className="flex items-center gap-2">
                       <Select
                         value={application.status}
