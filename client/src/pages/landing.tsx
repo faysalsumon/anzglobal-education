@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Mail } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University } from "@shared/schema";
@@ -142,18 +142,6 @@ export default function Landing() {
               <Link href="/courses">
                 <GraduationCap className="h-4 w-4 mr-2" />
                 Courses
-              </Link>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-sm font-medium"
-              asChild
-              data-testid="button-contact"
-            >
-              <Link href="/contact">
-                <Mail className="h-4 w-4 mr-2" />
-                Contact Us
               </Link>
             </Button>
             <div className="h-6 w-px bg-border/60 mx-2" />
