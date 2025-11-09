@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { LeadFormDialog } from "@/components/lead-form-dialog";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -476,6 +477,32 @@ export default function PublicCourseDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Request Information Card */}
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+              <CardHeader className="border-b bg-gradient-to-r from-background/80 to-primary/10">
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-8 bg-gradient-to-r from-primary to-accent rounded-full"></div>
+                  <CardTitle className="text-sm uppercase tracking-wider text-primary">Interested?</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <h3 className="font-bold text-lg">Get More Information</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Request detailed course information and we'll get back to you shortly.
+                  </p>
+                </div>
+                {course.university && (
+                  <LeadFormDialog
+                    courseId={course.id}
+                    universityId={course.universityId}
+                    courseName={course.title}
+                    universityName={course.university.name}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
