@@ -464,7 +464,10 @@ export default function UniversityInstitutions() {
           className="max-w-3xl max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => {
             const target = e.target as HTMLElement;
-            if (target.closest('.pac-container')) {
+            if (target.closest('.pac-container') || 
+                target.classList.contains('pac-item') ||
+                target.classList.contains('pac-item-query') ||
+                target.closest('.pac-item')) {
               e.preventDefault();
             }
           }}
