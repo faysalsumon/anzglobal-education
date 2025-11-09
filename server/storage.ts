@@ -15,6 +15,7 @@ import {
   type InsertUniversity,
   type Course,
   type InsertCourse,
+  type CourseWithUniversity,
   type StudentProfile,
   type InsertStudentProfile,
   type Application,
@@ -55,9 +56,9 @@ export interface IStorage {
   deleteUniversity(id: string): Promise<void>;
   
   // Course operations
-  getCourseById(id: string): Promise<Course | undefined>;
+  getCourseById(id: string): Promise<CourseWithUniversity | undefined>;
   getCoursesByUniversityId(universityId: string): Promise<Course[]>;
-  getAllCourses(): Promise<Course[]>;
+  getAllCourses(): Promise<CourseWithUniversity[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
@@ -203,9 +204,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Course operations
-  async getCourseById(id: string): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
-    return course;
+  async getCourseById(id: string): Promise<CourseWithUniversity | undefined> {
+    const rows = await db
+      .select({
+        course: courses,
+        university: universities,
+      })
+      .from(courses)
+      .leftJoin(universities, eq(courses.universityId, universities.id))
+      .where(eq(courses.id, id));
+    
+    if (rows.length === 0) return undefined;
+    
+    const { course, university } = rows[0];
+    return { ...course, university };
   }
 
   async getCoursesByUniversityId(universityId: string): Promise<Course[]> {
@@ -215,8 +227,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(courses.universityId, universityId));
   }
 
-  async getAllCourses(): Promise<Course[]> {
-    return await db.select().from(courses);
+  async getAllCourses(): Promise<CourseWithUniversity[]> {
+    const rows = await db
+      .select({
+        course: courses,
+        university: universities,
+      })
+      .from(courses)
+      .leftJoin(universities, eq(courses.universityId, universities.id));
+    
+    return rows.map(({ course, university }) => ({ ...course, university }));
   }
 
   async createCourse(courseData: InsertCourse): Promise<Course> {

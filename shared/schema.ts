@@ -780,6 +780,7 @@ export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
 
 export type Course = typeof courses.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
+export type CourseWithUniversity = Course & { university?: University | null };
 
 export type StudentProfile = typeof studentProfiles.$inferSelect;
 export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;

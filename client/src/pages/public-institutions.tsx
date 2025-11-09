@@ -334,43 +334,21 @@ export default function PublicInstitutions() {
                 {filteredInstitutions.map((institution) => (
                   <Card
                     key={institution.id}
-                    className="hover-elevate active-elevate-2 relative"
+                    className="hover-elevate active-elevate-2"
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-6">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={`absolute top-4 right-4 h-10 w-10 rounded-full transition-all ${
-                          isFavorited(institution.id)
-                            ? "bg-primary hover:bg-primary/90 shadow-md"
-                            : "bg-background/80 hover:bg-background shadow-sm"
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleFavoriteToggle(institution.id);
-                        }}
-                        data-testid={`button-favorite-${institution.id}`}
-                      >
-                        <Heart
-                          className={`h-5 w-5 transition-all ${
-                            isFavorited(institution.id)
-                              ? "fill-white text-white"
-                              : "text-muted-foreground"
-                          }`}
-                        />
-                      </Button>
                       <div className="flex items-start gap-4 mb-4">
                         {institution.logo && (
                           <img
                             src={institution.logo}
                             alt={institution.name}
-                            className="w-16 h-16 object-contain rounded"
+                            className="w-16 h-16 object-contain rounded flex-shrink-0"
                             data-testid={`img-logo-${institution.id}`}
                           />
                         )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center flex-wrap gap-2 mb-1">
                             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
                               {institution.providerType || "Institution"}
                             </span>
@@ -385,11 +363,33 @@ export default function PublicInstitutions() {
                           </h3>
                           {institution.location && (
                             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                              <MapPin className="h-3 w-3" />
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
                               <span>{institution.location}, {institution.country}</span>
                             </div>
                           )}
                         </div>
+                        <Button
+                          variant="ghost"
+                          className={`!h-11 !w-11 !min-h-11 !min-w-11 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10 !p-0 rounded-full transition-all flex-shrink-0 ${
+                            isFavorited(institution.id)
+                              ? "bg-primary hover:bg-primary/90 shadow-md"
+                              : "bg-background/80 hover:bg-background shadow-sm"
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleFavoriteToggle(institution.id);
+                          }}
+                          aria-label={isFavorited(institution.id) ? "Remove from favorites" : "Add to favorites"}
+                          data-testid={`button-favorite-${institution.id}`}
+                        >
+                          <Heart
+                            className={`h-5 w-5 transition-all ${
+                              isFavorited(institution.id)
+                                ? "fill-white text-white"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </Button>
                       </div>
 
                       <p className="text-sm text-muted-foreground line-clamp-3 mb-4">

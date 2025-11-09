@@ -26,17 +26,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { Course, University, Favorite, CourseComparison } from "@shared/schema";
+import type { CourseWithUniversity, University, Favorite, CourseComparison } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
-
-type CourseWithUniversity = Course & { university?: University };
 
 export default function PublicCourses() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -501,37 +499,39 @@ export default function PublicCourses() {
                   <Card 
                     key={course.id} 
                     ref={isHighlighted ? highlightedRef : null}
-                    className={`hover-elevate flex flex-col h-full transition-all duration-300 relative ${
+                    className={`hover-elevate flex flex-col h-full transition-all duration-300 ${
                       isHighlighted ? 'ring-2 ring-primary shadow-lg scale-105' : ''
                     }`}
                     data-testid={`course-card-${course.id}`}
                   >
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className={`absolute top-2 right-2 sm:top-3 sm:right-3 h-11 w-11 sm:h-10 sm:w-10 rounded-full transition-all z-10 ${
-                        isFavorited(course.id)
-                          ? "bg-primary hover:bg-primary/90 shadow-md"
-                          : "bg-background/80 hover:bg-background shadow-sm"
-                      }`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleFavoriteToggle(course.id);
-                      }}
-                      data-testid={`button-favorite-course-${course.id}`}
-                    >
-                      <Heart
-                        className={`h-4 w-4 sm:h-5 sm:w-5 transition-all ${
-                          isFavorited(course.id)
-                            ? "fill-white text-white"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                    </Button>
-                    <CardHeader className="pb-3 sm:pb-4 pr-12 sm:pr-14">
-                      <div className="flex flex-wrap items-start gap-2 mb-2">
-                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
-                        <Badge variant="outline" className="text-xs">{course.subject}</Badge>
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-start gap-2 flex-1 min-w-0">
+                          <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
+                          <Badge variant="outline" className="text-xs">{course.subject}</Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className={`!h-11 !w-11 !min-h-11 !min-w-11 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10 !p-0 rounded-full transition-all flex-shrink-0 ${
+                            isFavorited(course.id)
+                              ? "bg-primary hover:bg-primary/90 shadow-md"
+                              : "bg-background/80 hover:bg-background shadow-sm"
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleFavoriteToggle(course.id);
+                          }}
+                          aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
+                          data-testid={`button-favorite-course-${course.id}`}
+                        >
+                          <Heart
+                            className={`h-5 w-5 transition-all ${
+                              isFavorited(course.id)
+                                ? "fill-white text-white"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </Button>
                       </div>
                       {isHighlighted && (
                         <Badge className="mb-2 bg-accent text-accent-foreground text-xs w-fit">
@@ -540,9 +540,20 @@ export default function PublicCourses() {
                         </Badge>
                       )}
                       <CardTitle className="text-lg sm:text-xl line-clamp-2">{course.title}</CardTitle>
-                      <CardDescription className="line-clamp-1 text-sm">
-                        {course.university?.name || "Institution"}
-                      </CardDescription>
+                      {course.universityId && course.university?.name ? (
+                        <Link 
+                          href={`/institutions/${course.universityId}`}
+                          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit group"
+                          data-testid={`link-institution-${course.id}`}
+                        >
+                          <Building2 className="h-3.5 w-3.5 flex-shrink-0 group-hover:text-primary" />
+                          <span className="truncate">{course.university.name}</span>
+                        </Link>
+                      ) : (
+                        <CardDescription className="line-clamp-1 text-sm">
+                          Institution
+                        </CardDescription>
+                      )}
                     </CardHeader>
                     <CardContent className="flex-1 pb-3 sm:pb-4">
                       <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
