@@ -6,8 +6,8 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
 
-// Use GPT-4 for all generations (Replit AI Integrations compatible model)
-const MODEL = "gpt-4";
+// Use GPT-3.5 Turbo for all generations (widely supported by Replit AI Integrations)
+const MODEL = "gpt-3.5-turbo";
 
 export async function generateUniversityDescription(name: string, location: string): Promise<string> {
   const prompt = `Generate a compelling and professional university description for ${name} located in ${location}. 
