@@ -387,6 +387,26 @@ export const messages = pgTable("messages", {
   index("created_at_idx").on(table.createdAt),
 ]);
 
+// Student leads table for information requests from course pages
+export const studentLeads = pgTable("student_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  visaStatus: text("visa_status").notNull(), // Current visa information/status
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("new"), // 'new', 'contacted', 'converted'
+  notes: text("notes"), // Admin/consultant notes
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("course_idx").on(table.courseId),
+  index("university_idx").on(table.universityId),
+  index("status_idx").on(table.status),
+  index("created_at_leads_idx").on(table.createdAt),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   university: one(universities, {
@@ -567,6 +587,17 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
+export const studentLeadsRelations = relations(studentLeads, ({ one }) => ({
+  course: one(courses, {
+    fields: [studentLeads.courseId],
+    references: [courses.id],
+  }),
+  university: one(universities, {
+    fields: [studentLeads.universityId],
+    references: [universities.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -701,6 +732,11 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
+export const insertStudentLeadSchema = createInsertSchema(studentLeads).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -758,3 +794,6 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export type StudentLead = typeof studentLeads.$inferSelect;
+export type InsertStudentLead = z.infer<typeof insertStudentLeadSchema>;
