@@ -56,6 +56,8 @@ The platform features modern AI-style branding with gradient backgrounds, subtle
 
 **CDN**: Google Fonts CDN for typography.
 
+**Google Maps API**: Google Places API for address autocomplete (VITE_GOOGLE_MAPS_API_KEY environment variable).
+
 **NPM Packages**:
 - **UI**: Radix UI, Shadcn/ui, Lucide React, class-variance-authority, Tailwind CSS
 - **Forms**: react-hook-form, @hookform/resolvers, zod
@@ -63,6 +65,7 @@ The platform features modern AI-style branding with gradient backgrounds, subtle
 - **Auth**: openid-client, passport, express-session, bcrypt
 - **Image Processing**: Multer, Sharp
 - **Real-time**: ws (WebSocket), cookie, cookie-signature (session validation)
+- **Google Maps**: @googlemaps/js-api-loader (functional API with setOptions/importLibrary)
 - **Build**: Vite, esbuild
 
 **Replit-Specific Integrations**:
