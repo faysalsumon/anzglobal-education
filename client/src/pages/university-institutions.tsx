@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Building2, Plus, Edit, Trash2, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, CheckCircle, XCircle, Clock, AlertCircle, Sparkles, TrendingUp, School, MapPin } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -178,9 +178,9 @@ export default function UniversityInstitutions() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge className="bg-green-600 text-white"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+        return <Badge className="bg-green-600 text-white border-0"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
       case "pending":
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
       case "rejected":
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
       default:
@@ -205,125 +205,207 @@ export default function UniversityInstitutions() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">My Institutions</h1>
-        <p className="text-muted-foreground">
-          Manage your educational institutions and track their approval status
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-8">
+      {/* Modern Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 p-8 border border-primary/10">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <Building2 className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
+                Institution Portal
+              </h1>
+              <p className="text-muted-foreground mt-1 text-lg">
+                Manage your educational institutions with AI-powered platform
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex items-center gap-6">
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-muted-foreground">AI-Enhanced Experience</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <TrendingUp className="h-4 w-4 text-secondary" />
+              <span className="text-muted-foreground">Real-time Analytics</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+      {/* Modern Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden border-primary/20 hover-elevate active-elevate-2 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+          <CardHeader className="relative pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Institutions</CardTitle>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <School className="h-4 w-4 text-primary" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all statuses</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
+
+        <Card className="relative overflow-hidden border-green-200 dark:border-green-900/30 hover-elevate active-elevate-2 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20" />
+          <CardHeader className="relative pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.approved}</div>
+            <p className="text-xs text-muted-foreground mt-1">Live on platform</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
+
+        <Card className="relative overflow-hidden border-yellow-200 dark:border-yellow-900/30 hover-elevate active-elevate-2 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/50 to-transparent dark:from-yellow-950/20" />
+          <CardHeader className="relative pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting approval</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
+
+        <Card className="relative overflow-hidden border-red-200 dark:border-red-900/30 hover-elevate active-elevate-2 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/20" />
+          <CardHeader className="relative pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+          <CardContent className="relative">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</div>
+            <p className="text-xs text-muted-foreground mt-1">Needs revision</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      {/* Main Content Card */}
+      <Card className="border-primary/10">
+        <CardHeader className="border-b bg-gradient-to-r from-background to-primary/5">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Institutions</CardTitle>
-              <CardDescription>Create and manage your institutions</CardDescription>
+              <CardTitle className="text-2xl">Your Institutions</CardTitle>
+              <CardDescription className="mt-1">Create and manage your educational institutions</CardDescription>
             </div>
-            <Button onClick={handleCreate} data-testid="button-create-institution">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleCreate} className="gap-2 shadow-lg shadow-primary/20" data-testid="button-create-institution">
+              <Plus className="h-4 w-4" />
               Add Institution
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {/* Filters */}
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1">
-              <Input
-                placeholder="Search institutions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-search-institutions"
-              />
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or location..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search-institutions"
+                />
+              </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="approved">✓ Approved</SelectItem>
+                <SelectItem value="pending">⏳ Pending</SelectItem>
+                <SelectItem value="rejected">✗ Rejected</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
+          <div className="rounded-xl border border-primary/10 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="font-semibold">Institution</TableHead>
+                  <TableHead className="font-semibold">Location</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Visibility</TableHead>
+                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <p className="text-muted-foreground">Loading institutions...</p>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                   filteredInstitutions.map((institution) => (
-                    <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`}>
+                    <TableRow key={institution.id} className="hover-elevate" data-testid={`row-institution-${institution.id}`}>
                       <TableCell className="font-medium">
-                        <div>
-                          <div>{institution.name}</div>
-                          {institution.approvalStatus === "rejected" && institution.rejectionReason && (
-                            <div className="flex items-start gap-1 mt-1 text-xs text-red-600">
-                              <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                              <span>{institution.rejectionReason}</span>
-                            </div>
-                          )}
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
+                            <Building2 className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">{institution.name}</div>
+                            {institution.providerType && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{institution.providerType}</div>
+                            )}
+                            {institution.approvalStatus === "rejected" && institution.rejectionReason && (
+                              <div className="flex items-start gap-1.5 mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md p-2">
+                                <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                <span>{institution.rejectionReason}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>{institution.location}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{institution.location}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{getStatusBadge(institution.approvalStatus)}</TableCell>
                       <TableCell>
                         {institution.isActive ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                            Active
+                          </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-700">Inactive</Badge>
+                          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400">
+                            Inactive
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -333,6 +415,7 @@ export default function UniversityInstitutions() {
                             size="sm"
                             onClick={() => handleEdit(institution)}
                             data-testid={`button-edit-${institution.id}`}
+                            className="hover-elevate"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -341,6 +424,7 @@ export default function UniversityInstitutions() {
                             size="sm"
                             onClick={() => setDeletingInstitution(institution)}
                             data-testid={`button-delete-${institution.id}`}
+                            className="hover-elevate text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -350,8 +434,20 @@ export default function UniversityInstitutions() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      {statusFilter !== "all" ? "No institutions found with this status" : "No institutions yet. Click 'Add Institution' to get started."}
+                    <TableCell colSpan={5} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="p-4 bg-muted rounded-full">
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {statusFilter !== "all" ? "No institutions found with this status" : "No institutions yet"}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {statusFilter === "all" && "Click 'Add Institution' to get started"}
+                          </p>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -363,171 +459,204 @@ export default function UniversityInstitutions() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingInstitution ? "Edit Institution" : "Add New Institution"}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              {editingInstitution ? (
+                <>
+                  <Edit className="h-5 w-5 text-primary" />
+                  Edit Institution
+                </>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 text-primary" />
+                  Add New Institution
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-base">
               {editingInstitution 
-                ? "Update your institution details"
-                : "Create a new institution. It will be submitted for approval before going live."}
+                ? "Update your institution details to keep your profile current"
+                : "Create a new institution. It will be reviewed by our team before going live on the platform."}
             </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Institution Name *</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-institution-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Institution Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., University of Sydney" data-testid="input-institution-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Location *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="City, Country" data-testid="input-location" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Location *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Sydney, Australia" data-testid="input-location" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} rows={3} data-testid="input-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} rows={3} placeholder="Brief description of your institution..." data-testid="input-description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="providerType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provider Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Public University">Public University</SelectItem>
-                          <SelectItem value="Private University">Private University</SelectItem>
-                          <SelectItem value="TAFE">TAFE</SelectItem>
-                          <SelectItem value="Private Institutions">Private Institutions</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <School className="h-4 w-4" />
+                    Institution Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="providerType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Provider Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Public University">Public University</SelectItem>
+                              <SelectItem value="Private University">Private University</SelectItem>
+                              <SelectItem value="TAFE">TAFE</SelectItem>
+                              <SelectItem value="Private Institutions">Private Institutions</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="establishedYear"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Established Year</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} data-testid="input-established-year" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="establishedYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Established Year</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} placeholder="e.g., 1850" data-testid="input-established-year" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="numberOfCampuses"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Campuses</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} data-testid="input-number-campuses" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="numberOfCampuses"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Campuses</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} placeholder="e.g., 5" data-testid="input-number-campuses" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="scholarshipPercentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Scholarship %</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} min="0" max="100" data-testid="input-scholarship" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="scholarshipPercentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship %</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} min="0" max="100" placeholder="e.g., 20" data-testid="input-scholarship" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="contactEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} data-testid="input-contact-email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h3 className="font-semibold text-sm mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" {...field} placeholder="info@university.edu" data-testid="input-contact-email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="contactPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-contact-phone" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Phone</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="+61 2 9999 9999" data-testid="input-contact-phone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Website</FormLabel>
-                      <FormControl>
-                        <Input type="url" {...field} placeholder="https://" data-testid="input-website" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input type="url" {...field} placeholder="https://www.university.edu" data-testid="input-website" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
@@ -535,8 +664,18 @@ export default function UniversityInstitutions() {
                   type="submit" 
                   disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending}
                   data-testid="button-save-institution"
+                  className="gap-2"
                 >
-                  {editingInstitution ? "Save Changes" : "Submit for Approval"}
+                  {createInstitutionMutation.isPending || updateInstitutionMutation.isPending ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      {editingInstitution ? "Save Changes" : "Submit for Approval"}
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -548,9 +687,13 @@ export default function UniversityInstitutions() {
       <AlertDialog open={!!deletingInstitution} onOpenChange={() => setDeletingInstitution(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Institution</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deletingInstitution?.name}"? This action cannot be undone and will also delete all associated courses.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Delete Institution
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{deletingInstitution?.name}"</span>? 
+              This action cannot be undone and will also delete all associated courses.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -559,7 +702,7 @@ export default function UniversityInstitutions() {
               onClick={() => deletingInstitution && deleteInstitutionMutation.mutate(deletingInstitution.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Delete Institution
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
