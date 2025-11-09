@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { Course, University, Favorite, CourseComparison } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -34,6 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LeadFormDialog } from "@/components/lead-form-dialog";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -45,6 +46,7 @@ export default function PublicCourses() {
   const [universityFilter, setUniversityFilter] = useState<string>("");
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithUniversity | null>(null);
   const highlightedRef = useRef<HTMLDivElement>(null);
 
   const { isAuthenticated, isStudent } = useAuth();
@@ -591,6 +593,19 @@ export default function PublicCourses() {
                           </Button>
                         )}
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSelectedCourseForLead(course);
+                        }}
+                        data-testid={`button-request-info-${course.id}`}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Request More Information
+                      </Button>
                       <div 
                         className="flex items-center gap-2 w-full pt-2 border-t hover-elevate rounded-md px-2 py-1.5 cursor-pointer"
                         onClick={(e) => {
@@ -653,6 +668,16 @@ export default function PublicCourses() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Lead Form Dialog */}
+      {selectedCourseForLead && (
+        <LeadFormDialog
+          course={selectedCourseForLead}
+          university={selectedCourseForLead.university}
+          open={!!selectedCourseForLead}
+          onOpenChange={(open) => !open && setSelectedCourseForLead(null)}
+        />
+      )}
 
       {/* Sticky Comparison Bar */}
       {comparisons.length > 0 && (
