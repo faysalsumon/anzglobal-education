@@ -32,6 +32,9 @@ import {
   studentLeads,
   type StudentLead,
   type InsertStudentLead,
+  contactSubmissions,
+  type ContactSubmission,
+  type InsertContactSubmission,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc } from "drizzle-orm";
@@ -109,6 +112,13 @@ export interface IStorage {
   getLeadById(id: string): Promise<StudentLead | undefined>;
   createLead(lead: InsertStudentLead): Promise<StudentLead>;
   updateLead(id: string, data: Partial<InsertStudentLead>): Promise<StudentLead>;
+  
+  // Contact submission operations
+  getAllContactSubmissions(filters?: { status?: string; category?: string; assignedTo?: string }): Promise<ContactSubmission[]>;
+  getContactSubmissionById(id: string): Promise<ContactSubmission | undefined>;
+  createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
+  updateContactSubmission(id: string, data: Partial<InsertContactSubmission>): Promise<ContactSubmission>;
+  deleteContactSubmission(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -634,6 +644,57 @@ export class DatabaseStorage implements IStorage {
       .where(eq(studentLeads.id, id))
       .returning();
     return lead;
+  }
+
+  // Contact submission operations
+  async getAllContactSubmissions(filters?: { status?: string; category?: string; assignedTo?: string }): Promise<ContactSubmission[]> {
+    let query = db.select().from(contactSubmissions);
+    
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(contactSubmissions.status, filters.status));
+    }
+    if (filters?.category) {
+      conditions.push(eq(contactSubmissions.category, filters.category));
+    }
+    if (filters?.assignedTo) {
+      conditions.push(eq(contactSubmissions.assignedTo, filters.assignedTo));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(contactSubmissions.createdAt));
+  }
+
+  async getContactSubmissionById(id: string): Promise<ContactSubmission | undefined> {
+    const [submission] = await db
+      .select()
+      .from(contactSubmissions)
+      .where(eq(contactSubmissions.id, id));
+    return submission;
+  }
+
+  async createContactSubmission(submissionData: InsertContactSubmission): Promise<ContactSubmission> {
+    const [submission] = await db
+      .insert(contactSubmissions)
+      .values(submissionData)
+      .returning();
+    return submission;
+  }
+
+  async updateContactSubmission(id: string, data: Partial<InsertContactSubmission>): Promise<ContactSubmission> {
+    const [submission] = await db
+      .update(contactSubmissions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(contactSubmissions.id, id))
+      .returning();
+    return submission;
+  }
+
+  async deleteContactSubmission(id: string): Promise<void> {
+    await db.delete(contactSubmissions).where(eq(contactSubmissions.id, id));
   }
 }
 

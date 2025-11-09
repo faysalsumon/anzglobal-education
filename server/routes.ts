@@ -20,6 +20,7 @@ import {
   insertConversationSchema,
   insertMessageSchema,
   insertStudentLeadSchema,
+  insertContactSubmissionSchema,
   users,
   universities,
   courses,
@@ -3019,6 +3020,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating inquiry lead:", error);
       res.status(500).json({ message: "Failed to update inquiry lead" });
+    }
+  });
+
+  // ============================================
+  // Contact Submission Routes
+  // ============================================
+  
+  // Public contact form submission endpoint (no auth required)
+  // TODO: Add rate limiting to prevent spam/abuse
+  app.post("/api/public/contact", async (req, res) => {
+    try {
+      // Normalize and sanitize input BEFORE validation
+      const normalizedInput = {
+        ...req.body,
+        name: req.body.name?.trim() || '',
+        email: req.body.email?.trim().toLowerCase() || '',
+        phone: req.body.phone?.trim() || '',
+        subject: req.body.subject?.trim() || '',
+        message: req.body.message?.trim() || '',
+        category: req.body.category?.trim() || 'general',
+      };
+      
+      // Validate normalized input
+      const contactData = insertContactSubmissionSchema.parse(normalizedInput);
+      
+      // Create the contact submission
+      const submission = await storage.createContactSubmission(contactData);
+      
+      // Create notifications for all admins and consultants
+      const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
+      const adminTeamMembers = await storage.getAllAdminTeamMembers();
+      
+      const notificationRecords = [];
+      
+      // Notify admin users
+      for (const admin of adminUsers) {
+        notificationRecords.push({
+          userId: admin.id,
+          type: 'contact_submission',
+          title: 'New Contact Form Submission',
+          message: `${contactData.name} submitted a ${contactData.category} inquiry`,
+          link: '/admin/contact',
+          metadata: { submissionId: submission.id, category: contactData.category },
+        });
+      }
+      
+      // Notify consultant team members
+      for (const member of adminTeamMembers) {
+        notificationRecords.push({
+          userId: member.userId,
+          type: 'contact_submission',
+          title: 'New Contact Form Submission',
+          message: `${contactData.name} submitted a ${contactData.category} inquiry`,
+          link: '/admin/contact',
+          metadata: { submissionId: submission.id, category: contactData.category },
+        });
+      }
+      
+      // Batch insert notifications
+      if (notificationRecords.length > 0) {
+        await db.insert(notifications).values(notificationRecords);
+      }
+      
+      res.status(201).json({ message: "Thank you for contacting us! We'll respond shortly." });
+    } catch (error: any) {
+      console.error("Error creating contact submission:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to submit contact form" });
+    }
+  });
+
+  // Get all contact submissions (admin only)
+  app.get("/api/admin/contact", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get filter parameters from query
+      const filters: any = {};
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.category) filters.category = req.query.category;
+      if (req.query.assignedTo) filters.assignedTo = req.query.assignedTo;
+
+      const submissions = await storage.getAllContactSubmissions(filters);
+
+      // Enrich submissions with assigned user information
+      const enrichedSubmissions = await Promise.all(
+        submissions.map(async (submission) => {
+          let assignedUser = null;
+          if (submission.assignedTo) {
+            assignedUser = await storage.getUser(submission.assignedTo);
+          }
+
+          return {
+            ...submission,
+            assignedUser: assignedUser ? {
+              id: assignedUser.id,
+              firstName: assignedUser.firstName,
+              lastName: assignedUser.lastName,
+              email: assignedUser.email,
+            } : null,
+          };
+        })
+      );
+
+      res.json(enrichedSubmissions);
+    } catch (error) {
+      console.error("Error fetching contact submissions:", error);
+      res.status(500).json({ message: "Failed to fetch contact submissions" });
+    }
+  });
+
+  // Update contact submission (admin only)
+  app.patch("/api/admin/contact/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins and support managers can update contact submissions" });
+      }
+
+      const submissionId = req.params.id;
+      const { status, priority, assignedTo, notes } = req.body;
+
+      const updateData: any = {};
+      if (status) updateData.status = status;
+      if (priority) updateData.priority = priority;
+      if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
+      if (notes !== undefined) updateData.notes = notes;
+
+      const updatedSubmission = await storage.updateContactSubmission(submissionId, updateData);
+
+      // Create notification if assigned to a user
+      if (assignedTo) {
+        await db.insert(notifications).values({
+          userId: assignedTo,
+          type: 'contact_assigned',
+          title: 'Contact Submission Assigned',
+          message: `You have been assigned a ${updatedSubmission.category} inquiry from ${updatedSubmission.name}`,
+          link: '/admin/contact',
+          metadata: { submissionId: updatedSubmission.id },
+        });
+      }
+
+      // Fetch assigned user data for response
+      let assignedUser = null;
+      if (updatedSubmission.assignedTo) {
+        assignedUser = await storage.getUser(updatedSubmission.assignedTo);
+      }
+
+      res.json({
+        ...updatedSubmission,
+        assignedUser: assignedUser ? {
+          id: assignedUser.id,
+          firstName: assignedUser.firstName,
+          lastName: assignedUser.lastName,
+          email: assignedUser.email,
+        } : null,
+      });
+    } catch (error) {
+      console.error("Error updating contact submission:", error);
+      res.status(500).json({ message: "Failed to update contact submission" });
+    }
+  });
+
+  // Delete contact submission (super admin only)
+  app.delete("/api/admin/contact/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins can delete contact submissions" });
+      }
+
+      const submissionId = req.params.id;
+      await storage.deleteContactSubmission(submissionId);
+
+      res.json({ message: "Contact submission deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting contact submission:", error);
+      res.status(500).json({ message: "Failed to delete contact submission" });
     }
   });
 

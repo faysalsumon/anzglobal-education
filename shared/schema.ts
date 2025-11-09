@@ -407,6 +407,28 @@ export const studentLeads = pgTable("student_leads", {
   index("created_at_leads_idx").on(table.createdAt),
 ]);
 
+// Contact submissions table for general contact form inquiries
+export const contactSubmissions = pgTable("contact_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"), // Optional
+  category: varchar("category", { length: 50 }).notNull().default("general"), // 'general', 'technical', 'partnership', 'support'
+  subject: varchar("subject", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("new"), // 'new', 'in_progress', 'resolved', 'closed'
+  priority: varchar("priority", { length: 20 }).default("medium"), // 'low', 'medium', 'high'
+  assignedTo: varchar("assigned_to").references(() => users.id), // Admin user
+  notes: text("notes"), // Internal admin notes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("status_contact_idx").on(table.status),
+  index("category_idx").on(table.category),
+  index("assigned_to_idx").on(table.assignedTo),
+  index("created_at_contact_idx").on(table.createdAt),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   university: one(universities, {
@@ -737,6 +759,12 @@ export const insertStudentLeadSchema = createInsertSchema(studentLeads).omit({
   createdAt: true,
 });
 
+export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -797,3 +825,6 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export type StudentLead = typeof studentLeads.$inferSelect;
 export type InsertStudentLead = z.infer<typeof insertStudentLeadSchema>;
+
+export type ContactSubmission = typeof contactSubmissions.$inferSelect;
+export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
