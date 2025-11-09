@@ -27,3 +27,20 @@ export function generateResetToken(): { token: string; expiry: Date } {
   expiry.setHours(expiry.getHours() + 1); // Token valid for 1 hour
   return { token, expiry };
 }
+
+export function getUserDisplayName(user: { firstName?: string | null; lastName?: string | null; email?: string | null }): string {
+  const firstName = user.firstName?.trim();
+  const lastName = user.lastName?.trim();
+  
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  } else if (firstName) {
+    return firstName;
+  } else if (lastName) {
+    return lastName;
+  } else if (user.email) {
+    return user.email;
+  }
+  
+  return 'Someone';
+}

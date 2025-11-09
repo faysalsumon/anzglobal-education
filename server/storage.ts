@@ -57,13 +57,14 @@ export interface IStorage {
   
   // Course operations
   getCourseById(id: string): Promise<CourseWithUniversity | undefined>;
-  getCoursesByUniversityId(universityId: string): Promise<Course[]>;
+  getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]>;
   getAllCourses(): Promise<CourseWithUniversity[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
   
   // Student profile operations
+  getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
   getStudentProfileByUserId(userId: string): Promise<StudentProfile | undefined>;
   createStudentProfile(profile: InsertStudentProfile): Promise<StudentProfile>;
   updateStudentProfile(id: string, data: Partial<InsertStudentProfile>): Promise<StudentProfile>;
@@ -220,11 +221,17 @@ export class DatabaseStorage implements IStorage {
     return { ...course, university };
   }
 
-  async getCoursesByUniversityId(universityId: string): Promise<Course[]> {
-    return await db
-      .select()
+  async getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]> {
+    const rows = await db
+      .select({
+        course: courses,
+        university: universities,
+      })
       .from(courses)
+      .leftJoin(universities, eq(courses.universityId, universities.id))
       .where(eq(courses.universityId, universityId));
+    
+    return rows.map(({ course, university }) => ({ ...course, university }));
   }
 
   async getAllCourses(): Promise<CourseWithUniversity[]> {
@@ -261,6 +268,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Student profile operations
+  async getStudentProfileById(id: string): Promise<StudentProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(studentProfiles)
+      .where(eq(studentProfiles.id, id));
+    return profile;
+  }
+
   async getStudentProfileByUserId(userId: string): Promise<StudentProfile | undefined> {
     const [profile] = await db
       .select()

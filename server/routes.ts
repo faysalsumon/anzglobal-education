@@ -49,7 +49,7 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
-import { hashPassword, verifyPassword, generateVerificationToken } from "./auth-utils";
+import { hashPassword, verifyPassword, generateVerificationToken, getUserDisplayName } from "./auth-utils";
 import {
   notifyNewApplication,
   notifyApplicationStatusChange,
@@ -1861,11 +1861,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const course = await storage.getCourseById(application.courseId);
         if (course) {
           const university = await storage.getUniversityById(course.universityId);
-          if (university) {
+          if (university && university.userId) {
             await notifyNewApplication({
               universityUserId: university.userId,
               studentName: `${profile.firstName} ${profile.lastName}`,
-              courseName: course.name,
+              courseName: course.title,
               applicationId: application.id,
             });
           }
@@ -1917,7 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (studentProfile && university) {
           await notifyApplicationStatusChange({
             studentUserId: studentProfile.userId,
-            courseName: course.name,
+            courseName: course.title,
             institutionName: university.name,
             status,
             applicationId: application.id,
@@ -3780,7 +3780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(users.id, userId))
             .limit(1);
           
-          const senderName = senderUser[0]?.name || senderUser[0]?.email || 'Someone';
+          const senderName = senderUser[0] ? getUserDisplayName(senderUser[0]) : 'Someone';
           const messagePreview = content.length > 50 ? content.substring(0, 50) + '...' : content;
           
           await db.insert(notifications).values({
