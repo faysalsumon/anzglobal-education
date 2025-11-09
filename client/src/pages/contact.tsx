@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
+import { Mail, Send, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -284,7 +284,7 @@ export default function Contact() {
               <CardHeader>
                 <CardTitle className="text-xl">Contact Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="flex items-start gap-3" data-testid="contact-email">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Mail className="w-5 h-5 text-primary" />
@@ -298,36 +298,6 @@ export default function Contact() {
                     >
                       info@anzglobal.edu
                     </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3" data-testid="contact-phone">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Phone className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Phone</p>
-                    <a
-                      href="tel:+611800123456"
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                      data-testid="link-phone"
-                    >
-                      +61 1800 123 456
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3" data-testid="contact-address">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <MapPin className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Address</p>
-                    <p className="text-sm text-muted-foreground">
-                      123 Education Street<br />
-                      Sydney, NSW 2000<br />
-                      Australia
-                    </p>
                   </div>
                 </div>
               </CardContent>
