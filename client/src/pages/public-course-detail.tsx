@@ -288,16 +288,6 @@ export default function PublicCourseDetail() {
                         <p className="text-xs text-muted-foreground mt-1">One-time</p>
                       </div>
                     )}
-                    <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-6" data-testid="card-anz-service">
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <span className="text-sm text-muted-foreground">ANZ Service</span>
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          <Sparkles className="h-4 w-4 text-primary" />
-                        </div>
-                      </div>
-                      <p className="text-3xl font-bold text-primary" data-testid="text-anz-service-fee">Free</p>
-                      <p className="text-xs text-muted-foreground mt-1">No charges from us</p>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
