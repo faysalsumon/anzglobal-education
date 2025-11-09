@@ -509,7 +509,7 @@ export default function PublicCourses() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className={`absolute top-2 right-2 h-10 w-10 rounded-full transition-all z-10 ${
+                      className={`absolute top-2 right-2 sm:top-3 sm:right-3 h-11 w-11 sm:h-10 sm:w-10 rounded-full transition-all z-10 ${
                         isFavorited(course.id)
                           ? "bg-primary hover:bg-primary/90 shadow-md"
                           : "bg-background/80 hover:bg-background shadow-sm"
@@ -521,14 +521,14 @@ export default function PublicCourses() {
                       data-testid={`button-favorite-course-${course.id}`}
                     >
                       <Heart
-                        className={`h-5 w-5 transition-all ${
+                        className={`h-4 w-4 sm:h-5 sm:w-5 transition-all ${
                           isFavorited(course.id)
                             ? "fill-white text-white"
                             : "text-muted-foreground"
                         }`}
                       />
                     </Button>
-                    <CardHeader className="pb-3 sm:pb-4">
+                    <CardHeader className="pb-3 sm:pb-4 pr-12 sm:pr-14">
                       <div className="flex flex-wrap items-start gap-2 mb-2">
                         <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
                         <Badge variant="outline" className="text-xs">{course.subject}</Badge>
