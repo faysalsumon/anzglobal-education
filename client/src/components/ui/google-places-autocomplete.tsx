@@ -1,7 +1,26 @@
+/// <reference types="@types/google.maps" />
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
+
+/**
+ * GooglePlacesAutocomplete Component
+ * 
+ * Provides location autocomplete using Google Maps Places API.
+ * Restricts suggestions to cities only for international education platform.
+ * 
+ * IMPORTANT: When used inside a Dialog or Modal:
+ * - Requires .pac-container CSS with high z-index (see index.css)
+ * - Dialog's onPointerDownOutside must prevent dismissal on .pac-container clicks
+ * - Google renders .pac-container outside React tree at document.body level
+ * 
+ * This component uses the legacy google.maps.places.Autocomplete API.
+ * Google recommends PlaceAutocompleteElement for new projects, but
+ * Autocomplete is not scheduled for deprecation and continues to receive
+ * bug fixes for major regressions.
+ */
 
 interface GooglePlacesAutocompleteProps {
   value: string;
@@ -9,12 +28,6 @@ interface GooglePlacesAutocompleteProps {
   placeholder?: string;
   className?: string;
   testId?: string;
-}
-
-declare global {
-  interface Window {
-    google?: typeof google;
-  }
 }
 
 export function GooglePlacesAutocomplete({
@@ -35,8 +48,12 @@ export function GooglePlacesAutocomplete({
     if (place?.formatted_address) {
       onChange(place.formatted_address);
     } else if (place?.address_components) {
-      const city = place.address_components.find((c) => c.types.includes("locality"))?.long_name;
-      const country = place.address_components.find((c) => c.types.includes("country"))?.long_name;
+      const city = place.address_components.find((c: google.maps.GeocoderAddressComponent) => 
+        c.types.includes("locality")
+      )?.long_name;
+      const country = place.address_components.find((c: google.maps.GeocoderAddressComponent) => 
+        c.types.includes("country")
+      )?.long_name;
       
       if (city && country) {
         onChange(`${city}, ${country}`);

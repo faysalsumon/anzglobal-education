@@ -56,7 +56,7 @@ The platform features modern AI-style branding with gradient backgrounds, subtle
 
 **CDN**: Google Fonts CDN for typography.
 
-**Google Maps API**: Google Places API for address autocomplete (VITE_GOOGLE_MAPS_API_KEY environment variable).
+**Google Maps API**: Google Places API for address autocomplete (VITE_GOOGLE_MAPS_API_KEY environment variable). The GooglePlacesAutocomplete component uses the legacy `google.maps.places.Autocomplete` API with proper TypeScript types. When used inside dialogs, the autocomplete dropdown requires high z-index CSS (z-9999) to appear above dialog overlays, with `onPointerDownOutside` handlers preventing dialog dismissal during selection.
 
 **NPM Packages**:
 - **UI**: Radix UI, Shadcn/ui, Lucide React, class-variance-authority, Tailwind CSS

@@ -249,6 +249,17 @@
     pointer-events: none;
   }
 
+  /* Google Maps Autocomplete dropdown - must appear above dialog overlay (z-50) */
+  .pac-container {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+  }
+
+  .pac-item,
+  .pac-item-query {
+    pointer-events: auto !important;
+  }
+
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
    * buttons/badges can remove the automatic brightness adjustment on interactions
    * and program their own. */
