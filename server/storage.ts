@@ -29,6 +29,9 @@ import {
   type InsertStudentLanguageScore,
   type Referral,
   type InsertReferral,
+  studentLeads,
+  type StudentLead,
+  type InsertStudentLead,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc } from "drizzle-orm";
@@ -100,6 +103,12 @@ export interface IStorage {
   createLanguageScore(score: InsertStudentLanguageScore): Promise<StudentLanguageScore>;
   updateLanguageScore(id: string, data: Partial<InsertStudentLanguageScore>): Promise<StudentLanguageScore>;
   deleteLanguageScore(id: string): Promise<void>;
+  
+  // Student lead operations
+  getAllLeads(filters?: { status?: string; courseId?: string; universityId?: string }): Promise<StudentLead[]>;
+  getLeadById(id: string): Promise<StudentLead | undefined>;
+  createLead(lead: InsertStudentLead): Promise<StudentLead>;
+  updateLead(id: string, data: Partial<InsertStudentLead>): Promise<StudentLead>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -578,6 +587,53 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLanguageScore(id: string): Promise<void> {
     await db.delete(studentLanguageScores).where(eq(studentLanguageScores.id, id));
+  }
+  
+  // Student lead operations
+  async getAllLeads(filters?: { status?: string; courseId?: string; universityId?: string }): Promise<StudentLead[]> {
+    let query = db.select().from(studentLeads);
+    
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(studentLeads.status, filters.status));
+    }
+    if (filters?.courseId) {
+      conditions.push(eq(studentLeads.courseId, filters.courseId));
+    }
+    if (filters?.universityId) {
+      conditions.push(eq(studentLeads.universityId, filters.universityId));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(studentLeads.createdAt));
+  }
+
+  async getLeadById(id: string): Promise<StudentLead | undefined> {
+    const [lead] = await db
+      .select()
+      .from(studentLeads)
+      .where(eq(studentLeads.id, id));
+    return lead;
+  }
+
+  async createLead(leadData: InsertStudentLead): Promise<StudentLead> {
+    const [lead] = await db
+      .insert(studentLeads)
+      .values(leadData)
+      .returning();
+    return lead;
+  }
+
+  async updateLead(id: string, data: Partial<InsertStudentLead>): Promise<StudentLead> {
+    const [lead] = await db
+      .update(studentLeads)
+      .set(data)
+      .where(eq(studentLeads.id, id))
+      .returning();
+    return lead;
   }
 }
 

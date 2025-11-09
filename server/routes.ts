@@ -19,6 +19,7 @@ import {
   insertNotificationSchema,
   insertConversationSchema,
   insertMessageSchema,
+  insertStudentLeadSchema,
   users,
   universities,
   courses,
@@ -857,6 +858,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching course:", error);
       res.status(500).json({ message: "Failed to fetch course" });
+    }
+  });
+
+  // Public lead creation endpoint (no auth required)
+  app.post("/api/public/leads", async (req, res) => {
+    try {
+      // Validate input
+      const leadData = insertStudentLeadSchema.parse(req.body);
+      
+      // Validate that course exists and belongs to the specified university
+      const course = await storage.getCourseById(leadData.courseId);
+      if (!course) {
+        return res.status(400).json({ message: "Invalid course" });
+      }
+      
+      if (course.universityId !== leadData.universityId) {
+        return res.status(400).json({ message: "Course does not belong to specified university" });
+      }
+      
+      // Create the lead
+      const lead = await storage.createLead(leadData);
+      
+      // Create notifications for all admins and consultants
+      const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
+      const adminTeamMembers = await storage.getAllAdminTeamMembers();
+      
+      const notifications = [];
+      
+      // Notify admin users
+      for (const admin of adminUsers) {
+        notifications.push({
+          userId: admin.id,
+          type: 'new_lead',
+          title: 'New Student Inquiry',
+          message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
+          link: '/admin/leads',
+          metadata: { leadId: lead.id, courseId: course.id },
+        });
+      }
+      
+      // Notify consultant team members
+      for (const member of adminTeamMembers) {
+        notifications.push({
+          userId: member.userId,
+          type: 'new_lead',
+          title: 'New Student Inquiry',
+          message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
+          link: '/admin/leads',
+          metadata: { leadId: lead.id, courseId: course.id },
+        });
+      }
+      
+      // Batch insert notifications
+      if (notifications.length > 0) {
+        await db.insert(insertNotificationSchema as any).values(notifications);
+      }
+      
+      res.status(201).json({ message: "Thank you! We'll be in touch soon." });
+    } catch (error: any) {
+      console.error("Error creating lead:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Please check your information and try again" });
+      }
+      res.status(500).json({ message: "Unable to submit your request. Please try again later." });
     }
   });
 
@@ -2851,6 +2916,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching student leads:", error);
       res.status(500).json({ message: "Failed to fetch student leads" });
+    }
+  });
+
+  // Get all inquiry leads (information requests from course pages)
+  app.get("/api/admin/leads", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get filter parameters from query
+      const filters: any = {};
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.courseId) filters.courseId = req.query.courseId;
+      if (req.query.universityId) filters.universityId = req.query.universityId;
+
+      const leads = await storage.getAllLeads(filters);
+
+      // Enrich leads with course and university information
+      const enrichedLeads = await Promise.all(
+        leads.map(async (lead) => {
+          const [course, university] = await Promise.all([
+            storage.getCourseById(lead.courseId),
+            storage.getUniversityById(lead.universityId),
+          ]);
+
+          return {
+            ...lead,
+            course: course ? {
+              id: course.id,
+              title: course.title,
+              level: course.level,
+              subject: course.subject,
+            } : null,
+            university: university ? {
+              id: university.id,
+              name: university.name,
+            } : null,
+          };
+        })
+      );
+
+      res.json(enrichedLeads);
+    } catch (error) {
+      console.error("Error fetching inquiry leads:", error);
+      res.status(500).json({ message: "Failed to fetch inquiry leads" });
+    }
+  });
+
+  // Update inquiry lead status and notes
+  app.patch("/api/admin/leads/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Only super admins and support managers can update leads" });
+      }
+
+      const leadId = req.params.id;
+      const { status, notes } = req.body;
+
+      const updateData: any = {};
+      if (status) updateData.status = status;
+      if (notes !== undefined) updateData.notes = notes;
+
+      const updatedLead = await storage.updateLead(leadId, updateData);
+
+      // Fetch related data for response
+      const [course, university] = await Promise.all([
+        storage.getCourseById(updatedLead.courseId),
+        storage.getUniversityById(updatedLead.universityId),
+      ]);
+
+      res.json({
+        ...updatedLead,
+        course: course ? {
+          id: course.id,
+          title: course.title,
+          level: course.level,
+          subject: course.subject,
+        } : null,
+        university: university ? {
+          id: university.id,
+          name: university.name,
+        } : null,
+      });
+    } catch (error) {
+      console.error("Error updating inquiry lead:", error);
+      res.status(500).json({ message: "Failed to update inquiry lead" });
     }
   });
 
