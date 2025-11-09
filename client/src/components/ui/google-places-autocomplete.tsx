@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
 
@@ -19,7 +19,7 @@ export function GooglePlacesAutocomplete({
   testId = "input-location-autocomplete"
 }: GooglePlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,21 +31,24 @@ export function GooglePlacesAutocomplete({
       return;
     }
 
-    const loader = new Loader({
-      apiKey,
-      version: "weekly",
+    setIsLoading(true);
+
+    // Set API options
+    setOptions({
+      key: apiKey,
+      v: "weekly",
       libraries: ["places"]
     });
 
-    setIsLoading(true);
-
-    loader
-      .load()
+    // Load the places library
+    importLibrary("places")
       .then(() => {
-        if (!inputRef.current) return;
+        if (!inputRef.current || typeof (window as any).google === 'undefined') return;
+
+        const googleMaps = (window as any).google.maps;
 
         // Initialize autocomplete with type restrictions
-        autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+        autocompleteRef.current = new googleMaps.places.Autocomplete(inputRef.current, {
           types: ["(cities)"],
           fields: ["formatted_address", "address_components", "geometry"]
         });
@@ -58,8 +61,8 @@ export function GooglePlacesAutocomplete({
             onChange(place.formatted_address);
           } else if (place?.address_components) {
             // Fallback: construct address from components
-            const city = place.address_components.find(c => c.types.includes("locality"))?.long_name;
-            const country = place.address_components.find(c => c.types.includes("country"))?.long_name;
+            const city = place.address_components.find((c: any) => c.types.includes("locality"))?.long_name;
+            const country = place.address_components.find((c: any) => c.types.includes("country"))?.long_name;
             
             if (city && country) {
               onChange(`${city}, ${country}`);
@@ -70,15 +73,15 @@ export function GooglePlacesAutocomplete({
         setIsLoading(false);
         setError(null);
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.error("Error loading Google Maps API:", err);
         setError("Failed to load location autocomplete");
         setIsLoading(false);
       });
 
     return () => {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      if (autocompleteRef.current && typeof (window as any).google !== 'undefined') {
+        (window as any).google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
   }, [onChange]);

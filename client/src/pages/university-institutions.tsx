@@ -17,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GooglePlacesAutocomplete } from "@/components/ui/google-places-autocomplete";
 
 interface Institution {
   id: string;
@@ -511,7 +512,12 @@ export default function UniversityInstitutions() {
                         <FormItem className="col-span-2">
                           <FormLabel>Location *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Sydney, Australia" data-testid="input-location" />
+                            <GooglePlacesAutocomplete
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Start typing a city name..."
+                              testId="input-location"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
