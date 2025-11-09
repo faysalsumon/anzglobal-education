@@ -93,6 +93,30 @@ interface StudentLead {
   profileComplete: boolean;
 }
 
+interface InquiryLead {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  visaStatus: string;
+  courseId: string;
+  universityId: string;
+  status: string;
+  notes: string | null;
+  createdAt: string | null;
+  course: {
+    id: string;
+    title: string;
+    level: string | null;
+    subject: string | null;
+  } | null;
+  university: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface Application {
   id: string;
   status: string;
@@ -170,7 +194,7 @@ export default function AdminDashboard() {
   // Handle hash-based navigation
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['users', 'institutions', 'courses', 'leads', 'applications'].includes(hash)) {
+    if (hash && ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications'].includes(hash)) {
       setActiveTab(hash);
     }
   }, []);
@@ -267,6 +291,10 @@ export default function AdminDashboard() {
 
   const { data: applications, isLoading: applicationsLoading } = useQuery<Application[]>({
     queryKey: ["/api/super-admin/applications"],
+  });
+
+  const { data: inquiryLeads, isLoading: inquiryLeadsLoading } = useQuery<InquiryLead[]>({
+    queryKey: ["/api/admin/leads"],
   });
 
   // User mutations
@@ -810,10 +838,14 @@ export default function AdminDashboard() {
             <BookOpen className="h-4 w-4 mr-2" />
             Courses ({courseStats.total})
           </TabsTrigger>
-          {/* Applications and Student Leads - Available to all admins */}
+          {/* Applications, Inquiry Leads, and Student Leads - Available to all admins */}
           <TabsTrigger value="student-leads" data-testid="tab-student-leads">
             <GraduationCap className="h-4 w-4 mr-2" />
             Student Leads ({studentLeads?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="inquiry-leads" data-testid="tab-inquiry-leads">
+            <FileText className="h-4 w-4 mr-2" />
+            Inquiry Leads ({inquiryLeads?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="applications" data-testid="tab-applications">
             <FileText className="h-4 w-4 mr-2" />
@@ -1444,6 +1476,94 @@ export default function AdminDashboard() {
                             </TableCell>
                           </TableRow>
                         ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Inquiry Leads Tab */}
+        <TabsContent value="inquiry-leads" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div>
+                  <CardTitle>Inquiry Leads</CardTitle>
+                  <CardDescription>Manage course information requests from prospective students</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Visa Status</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>University</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Submitted</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inquiryLeadsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          Loading inquiry leads...
+                        </TableCell>
+                      </TableRow>
+                    ) : !inquiryLeads || inquiryLeads.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          No inquiry leads found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      inquiryLeads.map((lead) => (
+                        <TableRow key={lead.id} data-testid={`row-inquiry-lead-${lead.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
+                            {lead.firstName} {lead.lastName}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1 text-sm">
+                              <span data-testid={`text-lead-email-${lead.id}`}>{lead.email}</span>
+                              <span className="text-muted-foreground" data-testid={`text-lead-phone-${lead.id}`}>{lead.phone}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell data-testid={`text-lead-visa-${lead.id}`}>
+                            <Badge variant="outline">
+                              {lead.visaStatus.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-lead-course-${lead.id}`}>
+                            {lead.course?.title || 'N/A'}
+                          </TableCell>
+                          <TableCell data-testid={`text-lead-university-${lead.id}`}>
+                            {lead.university?.name || 'N/A'}
+                          </TableCell>
+                          <TableCell data-testid={`status-lead-${lead.id}`}>
+                            <Badge
+                              variant={
+                                lead.status === 'new' ? 'default' :
+                                lead.status === 'contacted' ? 'secondary' :
+                                lead.status === 'converted' ? 'default' :
+                                'secondary'
+                              }
+                            >
+                              {lead.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`text-lead-date-${lead.id}`}>
+                            {lead.createdAt
+                              ? new Date(lead.createdAt).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
