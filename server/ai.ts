@@ -1,14 +1,26 @@
 import OpenAI from "openai";
 
 // Using standard OpenAI API with user's API key
-const openai = new OpenAI({
+// Will be configured in later stages of platform development
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
-});
+}) : null;
 
 // Use GPT-4o for high-quality AI generations
 const MODEL = "gpt-4o";
 
+function checkAIConfigured() {
+  if (!openai || !process.env.OPENAI_API_KEY) {
+    const error: any = new Error("AI features are not yet configured. OpenAI API key will be added in a later stage of platform development.");
+    error.code = 'ai_not_configured';
+    error.status = 503;
+    throw error;
+  }
+}
+
 export async function generateUniversityDescription(name: string, location: string): Promise<string> {
+  checkAIConfigured();
+  
   const prompt = `Generate a compelling and professional university description for ${name} located in ${location}. 
 The description should be 2-3 paragraphs and highlight:
 - The university's academic excellence and research contributions
@@ -18,7 +30,7 @@ The description should be 2-3 paragraphs and highlight:
 
 Write in a professional, welcoming tone suitable for prospective students.`;
 
-  const response = await openai.chat.completions.create({
+  const response = await openai!.chat.completions.create({
     model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 500,
@@ -32,6 +44,8 @@ export async function generateCourseDescription(
   subject: string,
   level: string
 ): Promise<string> {
+  checkAIConfigured();
+  
   const prompt = `Generate a detailed course description for "${title}", a ${level} level course in ${subject}.
 The description should be 2-3 paragraphs and include:
 - Course overview and learning objectives
@@ -60,6 +74,8 @@ export async function generateStudentBio(
   educationLevel?: string,
   fieldOfStudy?: string
 ): Promise<string> {
+  checkAIConfigured();
+  
   const context = [educationLevel, fieldOfStudy].filter(Boolean).join(", ");
   const prompt = `Generate a compelling personal bio for a student${context ? ` studying ${context}` : ""}. 
 The bio should be 1-2 paragraphs and include:
@@ -82,6 +98,8 @@ export async function generateCareerGoals(
   educationLevel?: string,
   fieldOfStudy?: string
 ): Promise<string> {
+  checkAIConfigured();
+  
   const context = [educationLevel, fieldOfStudy].filter(Boolean).join(", ");
   const prompt = `Generate career goals for a student${context ? ` studying ${context}` : ""}. 
 The goals should be 1-2 paragraphs and include:
@@ -105,6 +123,8 @@ export async function generateInstitutionSmallDescription(
   location: string,
   providerType?: string
 ): Promise<string> {
+  checkAIConfigured();
+  
   const typeContext = providerType ? ` a ${providerType}` : " an educational institution";
   const prompt = `Generate a compelling short description (maximum 100 words) for ${name},${typeContext} located in ${location}.
 
@@ -131,6 +151,8 @@ export async function generateInstitutionFullDescription(
   providerType?: string,
   topDisciplines?: string[]
 ): Promise<string> {
+  checkAIConfigured();
+  
   const typeContext = providerType ? ` a ${providerType}` : " an educational institution";
   const disciplinesContext = topDisciplines && topDisciplines.length > 0 
     ? ` The institution specializes in ${topDisciplines.join(", ")}.` 
@@ -162,6 +184,8 @@ export async function generateInstitutionGalleryImages(
   location: string,
   providerType?: string
 ): Promise<string[]> {
+  checkAIConfigured();
+  
   const typeContext = providerType ? ` ${providerType}` : " educational institution";
   
   const prompts = [
@@ -174,7 +198,7 @@ export async function generateInstitutionGalleryImages(
 
   for (const prompt of prompts) {
     try {
-      const response = await openai.images.generate({
+      const response = await openai!.images.generate({
         model: "dall-e-3",
         prompt,
         n: 1,

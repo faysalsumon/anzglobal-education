@@ -601,7 +601,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating small description:", error);
       
-      // Handle OpenAI-specific errors with user-friendly messages
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
       if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
         return res.status(429).json({ 
           message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
@@ -646,7 +652,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating full description:", error);
       
-      // Handle OpenAI-specific errors with user-friendly messages
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
       if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
         return res.status(429).json({ 
           message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
@@ -1872,7 +1884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating description:", error);
       
-      // Handle OpenAI-specific errors with user-friendly messages
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
       if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
         return res.status(429).json({ 
           message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
@@ -1902,7 +1920,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating description:", error);
       
-      // Handle OpenAI-specific errors with user-friendly messages
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
       if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
         return res.status(429).json({ 
           message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
