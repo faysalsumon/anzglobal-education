@@ -47,6 +47,9 @@ interface LeadFormDialogProps {
   universityId: string;
   courseName: string;
   universityName: string;
+  trigger?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function LeadFormDialog({
@@ -54,9 +57,15 @@ export function LeadFormDialog({
   universityId,
   courseName,
   universityName,
+  trigger = true,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: LeadFormDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
+  
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   const form = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
@@ -101,12 +110,14 @@ export function LeadFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="w-full" data-testid="button-request-info">
-          <Info className="h-5 w-5 mr-2" />
-          Request More Information
-        </Button>
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          <Button size="lg" className="w-full" data-testid="button-request-info">
+            <Info className="h-5 w-5 mr-2" />
+            Request More Information
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-lead-form">
         <DialogHeader>
           <DialogTitle data-testid="text-dialog-title">Request Course Information</DialogTitle>

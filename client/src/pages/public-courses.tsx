@@ -670,12 +670,19 @@ export default function PublicCourses() {
       </Dialog>
 
       {/* Lead Form Dialog */}
-      {selectedCourseForLead && (
+      {selectedCourseForLead && selectedCourseForLead.universityId && (
         <LeadFormDialog
-          course={selectedCourseForLead}
-          university={selectedCourseForLead.university}
-          open={!!selectedCourseForLead}
-          onOpenChange={(open) => !open && setSelectedCourseForLead(null)}
+          courseId={selectedCourseForLead.id}
+          universityId={selectedCourseForLead.universityId}
+          courseName={selectedCourseForLead.title}
+          universityName={selectedCourseForLead.university?.name || "Institution"}
+          trigger={false}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedCourseForLead(null);
+            }
+          }}
         />
       )}
 
