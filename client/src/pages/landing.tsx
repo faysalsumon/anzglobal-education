@@ -123,29 +123,6 @@ export default function Landing() {
           
           <nav className="hidden md:flex items-center gap-2">
             <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-sm font-medium"
-              asChild
-            >
-              <Link href="/institutions">
-                <Building2 className="h-4 w-4 mr-2" />
-                Institutions
-              </Link>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-sm font-medium"
-              asChild
-            >
-              <Link href="/courses">
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Courses
-              </Link>
-            </Button>
-            <div className="h-6 w-px bg-border/60 mx-2" />
-            <Button 
               variant="default" 
               size="sm" 
               onClick={() => setShowStudentAuthModal(true)}
@@ -157,33 +134,16 @@ export default function Landing() {
                 Student
               </span>
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowInstitutionAuthModal(true)}
-              className="border-border/60"
-              data-testid="button-institution-auth"
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Institution
-            </Button>
           </nav>
           
           <div className="md:hidden flex items-center gap-2">
             <Button 
-              variant="ghost" 
+              variant="default" 
               size="sm"
               onClick={() => setShowStudentAuthModal(true)}
               data-testid="button-student-auth-mobile"
             >
               <GraduationCap className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowInstitutionAuthModal(true)}
-            >
-              <Building2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
