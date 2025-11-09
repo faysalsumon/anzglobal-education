@@ -862,10 +862,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public lead creation endpoint (no auth required)
+  // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/leads", async (req, res) => {
     try {
-      // Validate input
-      const leadData = insertStudentLeadSchema.parse(req.body);
+      // Normalize and sanitize input BEFORE validation
+      const normalizedInput = {
+        ...req.body,
+        email: req.body.email?.trim().toLowerCase() || '',
+        phone: req.body.phone?.trim() || '',
+        firstName: req.body.firstName?.trim() || '',
+        lastName: req.body.lastName?.trim() || '',
+      };
+      
+      // Validate normalized input
+      const leadData = insertStudentLeadSchema.parse(normalizedInput);
       
       // Validate that course exists and belongs to the specified university
       const course = await storage.getCourseById(leadData.courseId);
@@ -884,11 +894,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
       const adminTeamMembers = await storage.getAllAdminTeamMembers();
       
-      const notifications = [];
+      const notificationRecords = [];
       
       // Notify admin users
       for (const admin of adminUsers) {
-        notifications.push({
+        notificationRecords.push({
           userId: admin.id,
           type: 'new_lead',
           title: 'New Student Inquiry',
@@ -900,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Notify consultant team members
       for (const member of adminTeamMembers) {
-        notifications.push({
+        notificationRecords.push({
           userId: member.userId,
           type: 'new_lead',
           title: 'New Student Inquiry',
@@ -911,8 +921,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Batch insert notifications
-      if (notifications.length > 0) {
-        await db.insert(insertNotificationSchema as any).values(notifications);
+      if (notificationRecords.length > 0) {
+        await db.insert(notifications).values(notificationRecords);
       }
       
       res.status(201).json({ message: "Thank you! We'll be in touch soon." });
