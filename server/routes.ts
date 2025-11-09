@@ -598,9 +598,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const description = await generateInstitutionSmallDescription(name, location, providerType);
       res.json({ description });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating small description:", error);
-      res.status(500).json({ message: "Failed to generate description" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate description. Please try again." });
     }
   });
 
@@ -629,9 +643,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         topDisciplines
       );
       res.json({ description });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating full description:", error);
-      res.status(500).json({ message: "Failed to generate description" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate description. Please try again." });
     }
   });
 
@@ -695,9 +723,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ galleryImages: galleryPaths });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating gallery:", error);
-      res.status(500).json({ message: "Failed to generate gallery" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate gallery. Please try again." });
     }
   });
 
@@ -1829,7 +1871,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ description });
     } catch (error: any) {
       console.error("Error generating description:", error);
-      res.status(500).json({ message: error.message || "Failed to generate description" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate description. Please try again." });
     }
   });
 
@@ -1845,7 +1901,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ description });
     } catch (error: any) {
       console.error("Error generating description:", error);
-      res.status(500).json({ message: error.message || "Failed to generate description" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate description. Please try again." });
     }
   });
 
@@ -1865,7 +1935,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ content });
     } catch (error: any) {
       console.error("Error generating content:", error);
-      res.status(500).json({ message: error.message || "Failed to generate content" });
+      
+      // Handle OpenAI-specific errors with user-friendly messages
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate content. Please try again." });
     }
   });
 
