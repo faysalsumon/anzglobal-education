@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
@@ -11,6 +11,12 @@ interface GooglePlacesAutocompleteProps {
   testId?: string;
 }
 
+declare global {
+  interface Window {
+    google?: typeof google;
+  }
+}
+
 export function GooglePlacesAutocomplete({
   value,
   onChange,
@@ -19,9 +25,24 @@ export function GooglePlacesAutocomplete({
   testId = "input-location-autocomplete"
 }: GooglePlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handlePlaceChanged = useCallback(() => {
+    const place = autocompleteRef.current?.getPlace();
+    
+    if (place?.formatted_address) {
+      onChange(place.formatted_address);
+    } else if (place?.address_components) {
+      const city = place.address_components.find((c) => c.types.includes("locality"))?.long_name;
+      const country = place.address_components.find((c) => c.types.includes("country"))?.long_name;
+      
+      if (city && country) {
+        onChange(`${city}, ${country}`);
+      }
+    }
+  }, [onChange]);
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -33,42 +54,22 @@ export function GooglePlacesAutocomplete({
 
     setIsLoading(true);
 
-    // Set API options
     setOptions({
       key: apiKey,
       v: "weekly",
       libraries: ["places"]
     });
 
-    // Load the places library
     importLibrary("places")
       .then(() => {
-        if (!inputRef.current || typeof (window as any).google === 'undefined') return;
+        if (!inputRef.current || !window.google) return;
 
-        const googleMaps = (window as any).google.maps;
-
-        // Initialize autocomplete with type restrictions
-        autocompleteRef.current = new googleMaps.places.Autocomplete(inputRef.current, {
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
           types: ["(cities)"],
           fields: ["formatted_address", "address_components", "geometry"]
         });
 
-        // Listen for place selection
-        autocompleteRef.current.addListener("place_changed", () => {
-          const place = autocompleteRef.current?.getPlace();
-          
-          if (place?.formatted_address) {
-            onChange(place.formatted_address);
-          } else if (place?.address_components) {
-            // Fallback: construct address from components
-            const city = place.address_components.find((c: any) => c.types.includes("locality"))?.long_name;
-            const country = place.address_components.find((c: any) => c.types.includes("country"))?.long_name;
-            
-            if (city && country) {
-              onChange(`${city}, ${country}`);
-            }
-          }
-        });
+        autocompleteRef.current.addListener("place_changed", handlePlaceChanged);
 
         setIsLoading(false);
         setError(null);
@@ -80,13 +81,12 @@ export function GooglePlacesAutocomplete({
       });
 
     return () => {
-      if (autocompleteRef.current && typeof (window as any).google !== 'undefined') {
-        (window as any).google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      if (autocompleteRef.current && window.google) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [onChange]);
+  }, [handlePlaceChanged]);
 
-  // Handle manual input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
