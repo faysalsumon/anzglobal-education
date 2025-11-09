@@ -1,11 +1,14 @@
 import OpenAI from "openai";
 
 // This is using Replit's AI Integrations service (blueprint: javascript_openai_ai_integrations)
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// Using GPT-4 Turbo as the model
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
+
+// Use GPT-4 Turbo for all generations
+const MODEL = "gpt-4-turbo-preview";
 
 export async function generateUniversityDescription(name: string, location: string): Promise<string> {
   const prompt = `Generate a compelling and professional university description for ${name} located in ${location}. 
@@ -18,7 +21,7 @@ The description should be 2-3 paragraphs and highlight:
 Write in a professional, welcoming tone suitable for prospective students.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 500,
   });
@@ -43,7 +46,7 @@ Write in an engaging, informative tone that attracts prospective students.`;
   console.log("Generating course description with prompt:", prompt);
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 500,
   });
@@ -69,7 +72,7 @@ The bio should be 1-2 paragraphs and include:
 Write in first person, professional yet personable tone.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 300,
   });
@@ -91,7 +94,7 @@ The goals should be 1-2 paragraphs and include:
 Write in first person, ambitious yet realistic tone.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 300,
   });
@@ -116,7 +119,7 @@ The description should:
 Write in a professional, engaging tone.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 150,
   });
@@ -148,7 +151,7 @@ The description should be 4-5 paragraphs and include:
 Write in a professional, inspiring tone suitable for prospective students and their families.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: MODEL,
     messages: [{ role: "user", content: prompt }],
     max_completion_tokens: 800,
   });
