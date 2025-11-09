@@ -1,13 +1,12 @@
 import OpenAI from "openai";
 
-// This is using Replit's AI Integrations service (blueprint: javascript_openai_ai_integrations)
+// Using standard OpenAI API with user's API key
 const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-// Use GPT-3.5 Turbo for all generations (widely supported by Replit AI Integrations)
-const MODEL = "gpt-3.5-turbo";
+// Use GPT-4o for high-quality AI generations
+const MODEL = "gpt-4o";
 
 export async function generateUniversityDescription(name: string, location: string): Promise<string> {
   const prompt = `Generate a compelling and professional university description for ${name} located in ${location}. 
