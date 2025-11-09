@@ -153,7 +153,7 @@ export default function Landing() {
             >
               <Link href="/contact">
                 <Mail className="h-4 w-4 mr-2" />
-                Contact
+                Contact Us
               </Link>
             </Button>
             <div className="h-6 w-px bg-border/60 mx-2" />

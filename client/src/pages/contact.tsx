@@ -86,7 +86,7 @@ export default function Contact() {
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/80 to-secondary mb-6">
-              Get in Touch
+              Contact Us
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Have questions about our platform? We're here to help you connect with the best educational opportunities worldwide.
