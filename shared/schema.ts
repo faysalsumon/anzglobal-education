@@ -335,6 +335,7 @@ export const documents = pgTable("documents", {
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }), // Optional link to application
   universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }), // Optional link to university
   studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "cascade" }), // Link to student profile
+  folderId: varchar("folder_id").references(() => documentFolders.id, { onDelete: "set null" }), // Optional folder organization
   
   status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewed', 'approved', 'rejected'
   reviewNotes: text("review_notes"),
@@ -350,6 +351,42 @@ export const documents = pgTable("documents", {
   index("documents_application_idx").on(table.applicationId),
   index("documents_student_profile_idx").on(table.studentProfileId),
   index("documents_status_idx").on(table.status),
+]);
+
+// Document folders for organizing documents
+export const documentFolders = pgTable("document_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  parentFolderId: varchar("parent_folder_id"), // Self-reference for nested folders
+  ownerId: varchar("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ownerType: varchar("owner_type", { length: 20 }).notNull(), // 'student', 'university', 'admin'
+  studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "cascade" }),
+  universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }),
+  color: varchar("color", { length: 7 }), // Hex color for folder
+  icon: varchar("icon", { length: 50 }), // Icon name
+  isDefault: boolean("is_default").default(false), // System default folders
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("doc_folders_owner_idx").on(table.ownerId),
+  index("doc_folders_parent_idx").on(table.parentFolderId),
+  index("doc_folders_student_profile_idx").on(table.studentProfileId),
+]);
+
+// Document comments for collaboration
+export const documentComments = pgTable("document_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(false), // Internal university notes vs. visible to student
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("doc_comments_document_idx").on(table.documentId),
+  index("doc_comments_user_idx").on(table.userId),
 ]);
 
 // Document requests table for universities to request specific documents from students
