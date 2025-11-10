@@ -632,7 +632,7 @@ export const adminTeamMembersRelations = relations(adminTeamMembers, ({ one }) =
   }),
 }));
 
-export const documentsRelations = relations(documents, ({ one }) => ({
+export const documentsRelations = relations(documents, ({ one, many }) => ({
   sender: one(users, {
     fields: [documents.senderId],
     references: [users.id],
@@ -656,6 +656,38 @@ export const documentsRelations = relations(documents, ({ one }) => ({
   studentProfile: one(studentProfiles, {
     fields: [documents.studentProfileId],
     references: [studentProfiles.id],
+  }),
+  folder: one(documentFolders, {
+    fields: [documents.folderId],
+    references: [documentFolders.id],
+  }),
+  comments: many(documentComments),
+}));
+
+export const documentFoldersRelations = relations(documentFolders, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [documentFolders.ownerId],
+    references: [users.id],
+  }),
+  studentProfile: one(studentProfiles, {
+    fields: [documentFolders.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+  university: one(universities, {
+    fields: [documentFolders.universityId],
+    references: [universities.id],
+  }),
+  documents: many(documents),
+}));
+
+export const documentCommentsRelations = relations(documentComments, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentComments.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentComments.userId],
+    references: [users.id],
   }),
 }));
 
@@ -825,6 +857,18 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   updatedAt: true,
 });
 
+export const insertDocumentFolderSchema = createInsertSchema(documentFolders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentCommentSchema = createInsertSchema(documentComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertDocumentRequestSchema = createInsertSchema(documentRequests).omit({
   id: true,
   createdAt: true,
@@ -924,6 +968,12 @@ export type InsertAdminTeamMember = z.infer<typeof insertAdminTeamMemberSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type DocumentFolder = typeof documentFolders.$inferSelect;
+export type InsertDocumentFolder = z.infer<typeof insertDocumentFolderSchema>;
+
+export type DocumentComment = typeof documentComments.$inferSelect;
+export type InsertDocumentComment = z.infer<typeof insertDocumentCommentSchema>;
 
 export type DocumentRequest = typeof documentRequests.$inferSelect;
 export type InsertDocumentRequest = z.infer<typeof insertDocumentRequestSchema>;

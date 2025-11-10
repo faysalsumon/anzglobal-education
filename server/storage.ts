@@ -39,12 +39,18 @@ import {
   documents,
   type Document,
   type InsertDocument,
+  documentFolders,
+  type DocumentFolder,
+  type InsertDocumentFolder,
+  documentComments,
+  type DocumentComment,
+  type InsertDocumentComment,
   documentRequests,
   type DocumentRequest,
   type InsertDocumentRequest,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -128,15 +134,31 @@ export interface IStorage {
   updateContactSubmission(id: string, data: Partial<InsertContactSubmission>): Promise<ContactSubmission>;
   deleteContactSubmission(id: string): Promise<void>;
   
+  // Document folder operations
+  getFolderById(id: string): Promise<DocumentFolder | undefined>;
+  getFoldersByOwnerId(ownerId: string): Promise<DocumentFolder[]>;
+  getDefaultFolders(ownerId: string): Promise<DocumentFolder[]>;
+  createFolder(folder: InsertDocumentFolder): Promise<DocumentFolder>;
+  updateFolder(id: string, data: Partial<InsertDocumentFolder>): Promise<DocumentFolder>;
+  deleteFolder(id: string): Promise<void>;
+  
   // Document operations
   getDocumentById(id: string): Promise<Document | undefined>;
-  getDocumentsByStudentId(studentId: string): Promise<Document[]>;
+  getDocumentsByStudentProfileId(studentProfileId: string): Promise<Document[]>;
+  getDocumentsByFolderId(folderId: string): Promise<Document[]>;
   getDocumentsByApplicationId(applicationId: string): Promise<Document[]>;
   getAllDocuments(filters?: { status?: string; type?: string; senderId?: string; recipientId?: string }): Promise<Document[]>;
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: string, data: Partial<InsertDocument>): Promise<Document>;
   updateDocumentStatus(id: string, status: string, reviewNotes?: string, reviewedBy?: string): Promise<Document>;
   deleteDocument(id: string): Promise<void>;
+  
+  // Document comment operations
+  getCommentById(id: string): Promise<DocumentComment | undefined>;
+  getCommentsByDocumentId(documentId: string): Promise<DocumentComment[]>;
+  createComment(comment: InsertDocumentComment): Promise<DocumentComment>;
+  updateComment(id: string, data: Partial<InsertDocumentComment>): Promise<DocumentComment>;
+  deleteComment(id: string): Promise<void>;
   
   // Document request operations
   getDocumentRequestById(id: string): Promise<DocumentRequest | undefined>;
@@ -755,6 +777,258 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContactSubmission(id: string): Promise<void> {
     await db.delete(contactSubmissions).where(eq(contactSubmissions.id, id));
+  }
+  
+  // Document folder operations
+  async getFolderById(id: string): Promise<DocumentFolder | undefined> {
+    const [folder] = await db
+      .select()
+      .from(documentFolders)
+      .where(eq(documentFolders.id, id));
+    return folder;
+  }
+
+  async getFoldersByOwnerId(ownerId: string): Promise<DocumentFolder[]> {
+    return await db
+      .select()
+      .from(documentFolders)
+      .where(eq(documentFolders.ownerId, ownerId))
+      .orderBy(desc(documentFolders.isDefault), documentFolders.sortOrder);
+  }
+
+  async getDefaultFolders(ownerId: string): Promise<DocumentFolder[]> {
+    return await db
+      .select()
+      .from(documentFolders)
+      .where(
+        and(
+          eq(documentFolders.ownerId, ownerId),
+          eq(documentFolders.isDefault, true)
+        )
+      );
+  }
+
+  async createFolder(folderData: InsertDocumentFolder): Promise<DocumentFolder> {
+    const [folder] = await db
+      .insert(documentFolders)
+      .values(folderData)
+      .returning();
+    return folder;
+  }
+
+  async updateFolder(id: string, data: Partial<InsertDocumentFolder>): Promise<DocumentFolder> {
+    const [folder] = await db
+      .update(documentFolders)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(documentFolders.id, id))
+      .returning();
+    return folder;
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    await db.delete(documentFolders).where(eq(documentFolders.id, id));
+  }
+  
+  // Document operations
+  async getDocumentById(id: string): Promise<Document | undefined> {
+    const [document] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
+    return document;
+  }
+
+  async getDocumentsByStudentProfileId(studentProfileId: string): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.studentProfileId, studentProfileId))
+      .orderBy(desc(documents.createdAt));
+  }
+
+  async getDocumentsByFolderId(folderId: string | null): Promise<Document[]> {
+    if (folderId === null) {
+      return await db
+        .select()
+        .from(documents)
+        .where(isNull(documents.folderId))
+        .orderBy(desc(documents.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.folderId, folderId))
+      .orderBy(desc(documents.createdAt));
+  }
+
+  async getDocumentsByApplicationId(applicationId: string): Promise<Document[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(eq(documents.applicationId, applicationId));
+  }
+
+  async getAllDocuments(filters?: { status?: string; type?: string; senderId?: string; recipientId?: string }): Promise<Document[]> {
+    let query = db.select().from(documents);
+    
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(documents.status, filters.status));
+    }
+    if (filters?.type) {
+      conditions.push(eq(documents.type, filters.type));
+    }
+    if (filters?.senderId) {
+      conditions.push(eq(documents.senderId, filters.senderId));
+    }
+    if (filters?.recipientId) {
+      conditions.push(eq(documents.recipientId, filters.recipientId));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(desc(documents.createdAt));
+  }
+
+  async createDocument(documentData: InsertDocument): Promise<Document> {
+    const [document] = await db
+      .insert(documents)
+      .values(documentData)
+      .returning();
+    return document;
+  }
+
+  async updateDocument(id: string, data: Partial<InsertDocument>): Promise<Document> {
+    const [document] = await db
+      .update(documents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    return document;
+  }
+
+  async updateDocumentStatus(id: string, status: string, reviewNotes?: string, reviewedBy?: string): Promise<Document> {
+    const updateData: any = {
+      status,
+      reviewedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    if (reviewNotes !== undefined) {
+      updateData.reviewNotes = reviewNotes;
+    }
+    if (reviewedBy !== undefined) {
+      updateData.reviewedBy = reviewedBy;
+    }
+    
+    const [document] = await db
+      .update(documents)
+      .set(updateData)
+      .where(eq(documents.id, id))
+      .returning();
+    return document;
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await db
+      .update(documents)
+      .set({ isActive: false })
+      .where(eq(documents.id, id));
+  }
+  
+  // Document comment operations
+  async getCommentById(id: string): Promise<DocumentComment | undefined> {
+    const [comment] = await db
+      .select()
+      .from(documentComments)
+      .where(eq(documentComments.id, id));
+    return comment;
+  }
+
+  async getCommentsByDocumentId(documentId: string): Promise<DocumentComment[]> {
+    return await db
+      .select()
+      .from(documentComments)
+      .where(eq(documentComments.documentId, documentId))
+      .orderBy(desc(documentComments.createdAt));
+  }
+
+  async createComment(commentData: InsertDocumentComment): Promise<DocumentComment> {
+    const [comment] = await db
+      .insert(documentComments)
+      .values(commentData)
+      .returning();
+    return comment;
+  }
+
+  async updateComment(id: string, data: Partial<InsertDocumentComment>): Promise<DocumentComment> {
+    const [comment] = await db
+      .update(documentComments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(documentComments.id, id))
+      .returning();
+    return comment;
+  }
+
+  async deleteComment(id: string): Promise<void> {
+    await db.delete(documentComments).where(eq(documentComments.id, id));
+  }
+  
+  // Document request operations
+  async getDocumentRequestById(id: string): Promise<DocumentRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(documentRequests)
+      .where(eq(documentRequests.id, id));
+    return request;
+  }
+
+  async getDocumentRequestsByStudentId(studentId: string): Promise<DocumentRequest[]> {
+    return await db
+      .select()
+      .from(documentRequests)
+      .where(eq(documentRequests.studentId, studentId))
+      .orderBy(desc(documentRequests.createdAt));
+  }
+
+  async getDocumentRequestsByUniversityId(universityId: string): Promise<DocumentRequest[]> {
+    return await db
+      .select()
+      .from(documentRequests)
+      .where(eq(documentRequests.universityId, universityId))
+      .orderBy(desc(documentRequests.createdAt));
+  }
+
+  async getDocumentRequestsByApplicationId(applicationId: string): Promise<DocumentRequest[]> {
+    return await db
+      .select()
+      .from(documentRequests)
+      .where(eq(documentRequests.applicationId, applicationId))
+      .orderBy(desc(documentRequests.createdAt));
+  }
+
+  async createDocumentRequest(requestData: InsertDocumentRequest): Promise<DocumentRequest> {
+    const [request] = await db
+      .insert(documentRequests)
+      .values(requestData)
+      .returning();
+    return request;
+  }
+
+  async updateDocumentRequest(id: string, data: Partial<InsertDocumentRequest>): Promise<DocumentRequest> {
+    const [request] = await db
+      .update(documentRequests)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(documentRequests.id, id))
+      .returning();
+    return request;
+  }
+
+  async deleteDocumentRequest(id: string): Promise<void> {
+    await db.delete(documentRequests).where(eq(documentRequests.id, id));
   }
 }
 
