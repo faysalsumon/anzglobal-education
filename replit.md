@@ -31,10 +31,14 @@ Replit's OIDC service is the authentication provider. Express-session manages se
 The platform features modern AI-style branding with gradient backgrounds and contemporary visual effects. It offers dual user experiences:
 - **Institution Portal**: Comprehensive dashboard for course, application, and team management, including AI-powered content generation.
 - **Student Experience**: Intelligent course discovery with advanced filtering, AI-assisted profile creation, streamlined application process, favorites functionality, and side-by-side course comparison tools (up to 4 courses).
+
+**Landing Page**: Clean, clutter-free header with only Student authentication button. Search functionality in hero section allows course and institution discovery. Footer contains navigation links including Browse Courses, Browse Institutions, and Contact Us.
+
 Key features include:
+- **Student Authentication Modal**: Modern tabbed interface with Login and Sign Up options. Both tabs feature social login buttons (Google, Facebook, Apple) and email/password forms. Sign Up includes First Name, Last Name, Email, Password, and Confirm Password fields. UI-only implementation ready for backend authentication integration.
 - **Public Course Detail Page**: Modernized with AI aesthetics, detailed information, and sticky CTA elements.
 - **Lead Generation**: "Request More Information" forms on course listings and detail pages for unauthenticated users, triggering admin/consultant notifications.
-- **Contact Us Page**: Public-facing contact form at `/contact` with gradient hero, glassmorphism design, and responsive layout. Features category-based inquiry submission (General Inquiry, Technical Support, Course Information, Partnership Opportunities, Other), React Hook Form + Zod validation, accessible success messaging with aria-live regions, contact information sidebar (email, phone, address), and office hours display. Integrated into landing page header navigation and footer. Backend provides public submission endpoint and admin management endpoints restricted to super_admin, support_manager, and support_staff roles.
+- **Contact Us Page**: Public-facing contact form at `/contact` with gradient hero, glassmorphism design, and responsive layout. Features category-based inquiry submission (General Inquiry, Technical Support, Course Information, Partnership Opportunities, Other), React Hook Form + Zod validation, accessible success messaging with aria-live regions, contact information sidebar (email, phone, address), and office hours display. Accessible via footer menu. Backend provides public submission endpoint and admin management endpoints restricted to super_admin, support_manager, and support_staff roles.
 - **Super Admin Dashboard**: Full CRUD operations for users, institutions, and courses.
 - **Public Listings**: Detailed institution and course listings with dynamic filtering and search.
 - **Notifications**: Facebook-style system with real-time updates for all user types, unread badges, and polling.
