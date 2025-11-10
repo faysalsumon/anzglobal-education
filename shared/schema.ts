@@ -318,7 +318,7 @@ export const adminTeamMembers = pgTable("admin_team_members", {
 // Documents table for student-university document exchange
 export const documents = pgTable("documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: varchar("type", { length: 50 }).notNull(), // 'transcript', 'ielts', 'pte', 'offer_letter', 'coe', 'visa_document', 'other'
+  type: varchar("type", { length: 50 }).notNull(), // 'passport', 'transcript', 'degree_certificate', 'ielts', 'toefl', 'pte', 'cv', 'recommendation_letter', 'bank_statement', 'visa_document', 'offer_letter', 'coe', 'other'
   title: text("title").notNull(),
   description: text("description"),
   filePath: text("file_path").notNull(), // Object storage path
@@ -334,6 +334,7 @@ export const documents = pgTable("documents", {
   
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }), // Optional link to application
   universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }), // Optional link to university
+  studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "cascade" }), // Link to student profile
   
   status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewed', 'approved', 'rejected'
   reviewNotes: text("review_notes"),
@@ -343,7 +344,45 @@ export const documents = pgTable("documents", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("documents_sender_idx").on(table.senderId),
+  index("documents_recipient_idx").on(table.recipientId),
+  index("documents_application_idx").on(table.applicationId),
+  index("documents_student_profile_idx").on(table.studentProfileId),
+  index("documents_status_idx").on(table.status),
+]);
+
+// Document requests table for universities to request specific documents from students
+export const documentRequests = pgTable("document_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id, { onDelete: "cascade" }), // University user
+  universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }), // University making the request
+  studentId: varchar("student_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Student user
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }), // Optional link to application
+  
+  documentType: varchar("document_type", { length: 50 }).notNull(), // Type of document being requested
+  title: text("title").notNull(), // Request title
+  description: text("description"), // Why document is needed
+  priority: varchar("priority", { length: 20 }).default("medium"), // 'low', 'medium', 'high', 'urgent'
+  dueDate: timestamp("due_date"), // Optional deadline
+  
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'uploaded', 'completed', 'cancelled'
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "set null" }), // Linked document when uploaded
+  
+  requestNotes: text("request_notes"), // Notes from requester
+  responseNotes: text("response_notes"), // Notes from student
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("doc_requests_student_idx").on(table.studentId),
+  index("doc_requests_student_profile_idx").on(table.studentProfileId),
+  index("doc_requests_requested_by_idx").on(table.requestedBy),
+  index("doc_requests_university_idx").on(table.universityId),
+  index("doc_requests_application_idx").on(table.applicationId),
+  index("doc_requests_status_idx").on(table.status),
+]);
 
 // Notifications table for all user types
 export const notifications = pgTable("notifications", {
@@ -577,6 +616,37 @@ export const documentsRelations = relations(documents, ({ one }) => ({
     fields: [documents.universityId],
     references: [universities.id],
   }),
+  studentProfile: one(studentProfiles, {
+    fields: [documents.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+}));
+
+export const documentRequestsRelations = relations(documentRequests, ({ one }) => ({
+  requester: one(users, {
+    fields: [documentRequests.requestedBy],
+    references: [users.id],
+  }),
+  university: one(universities, {
+    fields: [documentRequests.universityId],
+    references: [universities.id],
+  }),
+  student: one(users, {
+    fields: [documentRequests.studentId],
+    references: [users.id],
+  }),
+  studentProfile: one(studentProfiles, {
+    fields: [documentRequests.studentProfileId],
+    references: [studentProfiles.id],
+  }),
+  application: one(applications, {
+    fields: [documentRequests.applicationId],
+    references: [applications.id],
+  }),
+  document: one(documents, {
+    fields: [documentRequests.documentId],
+    references: [documents.id],
+  }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
@@ -718,6 +788,12 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   updatedAt: true,
 });
 
+export const insertDocumentRequestSchema = createInsertSchema(documentRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertReferralSchema = createInsertSchema(referrals).omit({
   id: true,
   createdAt: true,
@@ -811,6 +887,9 @@ export type InsertAdminTeamMember = z.infer<typeof insertAdminTeamMemberSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+export type DocumentRequest = typeof documentRequests.$inferSelect;
+export type InsertDocumentRequest = z.infer<typeof insertDocumentRequestSchema>;
 
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;

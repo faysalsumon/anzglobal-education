@@ -36,6 +36,12 @@ import {
   contactSubmissions,
   type ContactSubmission,
   type InsertContactSubmission,
+  documents,
+  type Document,
+  type InsertDocument,
+  documentRequests,
+  type DocumentRequest,
+  type InsertDocumentRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc } from "drizzle-orm";
@@ -121,6 +127,25 @@ export interface IStorage {
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
   updateContactSubmission(id: string, data: Partial<InsertContactSubmission>): Promise<ContactSubmission>;
   deleteContactSubmission(id: string): Promise<void>;
+  
+  // Document operations
+  getDocumentById(id: string): Promise<Document | undefined>;
+  getDocumentsByStudentId(studentId: string): Promise<Document[]>;
+  getDocumentsByApplicationId(applicationId: string): Promise<Document[]>;
+  getAllDocuments(filters?: { status?: string; type?: string; senderId?: string; recipientId?: string }): Promise<Document[]>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: string, data: Partial<InsertDocument>): Promise<Document>;
+  updateDocumentStatus(id: string, status: string, reviewNotes?: string, reviewedBy?: string): Promise<Document>;
+  deleteDocument(id: string): Promise<void>;
+  
+  // Document request operations
+  getDocumentRequestById(id: string): Promise<DocumentRequest | undefined>;
+  getDocumentRequestsByStudentId(studentId: string): Promise<DocumentRequest[]>;
+  getDocumentRequestsByUniversityId(universityId: string): Promise<DocumentRequest[]>;
+  getDocumentRequestsByApplicationId(applicationId: string): Promise<DocumentRequest[]>;
+  createDocumentRequest(request: InsertDocumentRequest): Promise<DocumentRequest>;
+  updateDocumentRequest(id: string, data: Partial<InsertDocumentRequest>): Promise<DocumentRequest>;
+  deleteDocumentRequest(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
