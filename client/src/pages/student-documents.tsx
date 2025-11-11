@@ -493,6 +493,7 @@ export default function StudentDocuments() {
             </DialogDescription>
           </DialogHeader>
           <UploadDocumentForm
+            key={`upload-${selectedFolderId}-${uploadDialogOpen}`}
             folderId={selectedFolderId}
             folders={folders}
             onSuccess={() => {
@@ -587,6 +588,12 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
 
     const formData = new FormData(e.currentTarget);
     formData.append("file", selectedFile);
+    
+    // Normalize empty folderId to null (for "All Documents" case)
+    const folderId = formData.get("folderId");
+    if (folderId === "") {
+      formData.delete("folderId");
+    }
 
     uploadMutation.mutate(formData);
   };
@@ -657,7 +664,7 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
         </div>
         <div className="space-y-2">
           <Label htmlFor="folderId">Folder</Label>
-          <Select name="folderId" defaultValue={initialFolderId || folders[0]?.id}>
+          <Select name="folderId" defaultValue={initialFolderId || ""}>
             <SelectTrigger data-testid="select-upload-folder">
               <SelectValue placeholder="Select folder" />
             </SelectTrigger>
