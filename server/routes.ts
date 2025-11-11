@@ -1879,13 +1879,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Upload to object storage
-      const PUBLIC_DIR = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0] || 'public';
-      const fileName = `${Date.now()}-${req.file.originalname}`;
-      const filePath = `${PUBLIC_DIR}/documents/${profile.id}/${fileName}`;
+      // Upload to object storage or local directory
+      // Use object storage if available, otherwise fall back to local uploads directory
+      let uploadsBase = process.env.PRIVATE_OBJECT_DIR;
       
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      // Check if object storage directory exists, otherwise use local directory
+      try {
+        if (uploadsBase) {
+          await fs.access(uploadsBase);
+        }
+      } catch {
+        uploadsBase = null;
+      }
+      
+      // Fall back to local uploads directory if object storage not available
+      if (!uploadsBase) {
+        uploadsBase = path.join(process.cwd(), 'uploads');
+      }
+      
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const uploadsDir = path.join(uploadsBase, 'documents', profile.id);
+      const filePath = path.join(uploadsDir, fileName);
+      
+      console.log('[UPLOAD] Uploading to:', filePath);
+      console.log('[UPLOAD] Creating directory:', uploadsDir);
+      
+      // Ensure directory exists
+      await fs.mkdir(uploadsDir, { recursive: true });
       await fs.writeFile(filePath, req.file.buffer);
+      
+      console.log('[UPLOAD] File uploaded successfully');
 
       const document = await storage.createDocument({
         type: type || 'other',

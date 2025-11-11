@@ -43,6 +43,14 @@ Key features include:
 - **Public Listings**: Detailed institution and course listings with dynamic filtering and search.
 - **Notifications**: Facebook-style system with real-time updates for all user types, unread badges, and polling.
 - **Real-time Chat**: WhatsApp-style interface for direct messaging between users (universities, students, admins) with conversation lists, message threads, typing indicators, and read statuses. Integrated into sidebars with unread message counters. Chat initiation is restricted to prevent spam.
+- **Student Document Management**: Comprehensive document organization system with default folders (Academic, Financial, Personal) automatically created on student signup. Features include:
+  - **Folder Organization**: Color-coded folders with document counts, default and custom folder support
+  - **Document Upload**: Multi-format file upload (PDF, DOC, DOCX, images) with 10MB limit, stored in object storage or local uploads directory with automatic fallback
+  - **Document Types**: Categorized uploads (Academic Transcript, Passport, Financial Statement, etc.) with optional descriptions
+  - **Grid/List Views**: Switchable document display modes for optimal viewing
+  - **Persistence**: All folders and documents persist across sessions with no duplicates on re-login
+  - **Access Control**: Folder and document ownership validated via userId (FK to users table)
+
 UI components ensure a smooth experience with responsive data tables, form validation, and toast notifications.
 
 ## External Dependencies
