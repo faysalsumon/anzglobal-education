@@ -1662,6 +1662,295 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // DOCUMENT MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Document Folders - Student Routes
+  app.get("/api/student/documents/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const folders = await storage.getFoldersByOwnerId(profile.id);
+      res.json(folders);
+    } catch (error) {
+      console.error("Error fetching folders:", error);
+      res.status(500).json({ message: "Failed to fetch folders" });
+    }
+  });
+
+  app.post("/api/student/documents/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const { name, color } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Folder name is required" });
+      }
+
+      const folder = await storage.createFolder({
+        ownerId: profile.id,
+        name,
+        color: color || "#6366f1",
+        isDefault: false,
+      });
+
+      res.json(folder);
+    } catch (error) {
+      console.error("Error creating folder:", error);
+      res.status(500).json({ message: "Failed to create folder" });
+    }
+  });
+
+  app.patch("/api/student/documents/folders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const folder = await storage.getFolderById(req.params.id);
+      if (!folder || folder.ownerId !== profile.id) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      if (folder.isDefault) {
+        return res.status(400).json({ message: "Cannot modify default folders" });
+      }
+
+      const updated = await storage.updateFolder(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating folder:", error);
+      res.status(500).json({ message: "Failed to update folder" });
+    }
+  });
+
+  app.delete("/api/student/documents/folders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const folder = await storage.getFolderById(req.params.id);
+      if (!folder || folder.ownerId !== profile.id) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      if (folder.isDefault) {
+        return res.status(400).json({ message: "Cannot delete default folders" });
+      }
+
+      await storage.deleteFolder(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      res.status(500).json({ message: "Failed to delete folder" });
+    }
+  });
+
+  // Documents - Student Routes
+  app.get("/api/student/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const documents = await storage.getDocumentsByStudentProfileId(profile.id);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post("/api/student/documents/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file provided" });
+      }
+
+      const { folderId, type, description } = req.body;
+
+      // Verify folder ownership if provided
+      if (folderId) {
+        const folder = await storage.getFolderById(folderId);
+        if (!folder || folder.ownerId !== profile.id) {
+          return res.status(404).json({ message: "Folder not found" });
+        }
+      }
+
+      // Upload to object storage
+      const PUBLIC_DIR = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0] || 'public';
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const filePath = `${PUBLIC_DIR}/documents/${profile.id}/${fileName}`;
+      
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, req.file.buffer);
+
+      const document = await storage.createDocument({
+        studentProfileId: profile.id,
+        folderId: folderId || null,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        filePath,
+        type: type || 'other',
+        status: 'pending',
+        description: description || null,
+        uploadedBy: userId,
+      });
+
+      res.json(document);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      res.status(500).json({ message: "Failed to upload document" });
+    }
+  });
+
+  app.patch("/api/student/documents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const document = await storage.getDocumentById(req.params.id);
+      if (!document || document.studentProfileId !== profile.id) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      const updated = await storage.updateDocument(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res.status(500).json({ message: "Failed to update document" });
+    }
+  });
+
+  app.delete("/api/student/documents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const document = await storage.getDocumentById(req.params.id);
+      if (!document || document.studentProfileId !== profile.id) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      await storage.deleteDocument(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Document Comments
+  app.get("/api/documents/:documentId/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const document = await storage.getDocumentById(req.params.documentId);
+
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Verify access (student owner or university with application)
+      const profile = await storage.getStudentProfileByUserId(userId);
+      const isOwner = profile && document.studentProfileId === profile.id;
+
+      if (!isOwner) {
+        const access = await checkUniversityAccess(userId);
+        if (!access) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      const comments = await storage.getCommentsByDocumentId(req.params.documentId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/documents/:documentId/comments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const document = await storage.getDocumentById(req.params.documentId);
+
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      const comment = await storage.createComment({
+        documentId: req.params.documentId,
+        userId,
+        content,
+      });
+
+      res.json(comment);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // Document Requests
+  app.get("/api/student/document-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const requests = await storage.getDocumentRequestsByStudentId(profile.id);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching document requests:", error);
+      res.status(500).json({ message: "Failed to fetch document requests" });
+    }
+  });
+
   app.get("/api/university/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
