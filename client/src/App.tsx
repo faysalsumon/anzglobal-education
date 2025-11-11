@@ -23,6 +23,7 @@ import StudentProfilePage from "@/pages/student-profile";
 import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
 import StudentReferrals from "@/pages/student-referrals";
+import StudentDocuments from "@/pages/student-documents";
 import PublicCourses from "@/pages/public-courses";
 import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
@@ -68,6 +69,7 @@ function Router() {
           <Route path="/student/courses/:id" component={CourseDetail} />
           <Route path="/student/profile" component={StudentProfilePage} />
           <Route path="/student/applications" component={StudentApplications} />
+          <Route path="/student/documents" component={StudentDocuments} />
           <Route path="/student/referrals" component={StudentReferrals} />
           <Route path="/student/ai-assistant" component={StudentAIAssistant} />
           <Route path="/chat" component={ChatPage} />

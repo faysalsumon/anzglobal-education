@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -69,6 +69,7 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Browse Courses", url: "/student/courses", icon: Search },
     { title: "My Applications", url: "/student/applications", icon: FileText },
+    { title: "My Documents", url: "/student/documents", icon: FolderOpen },
     { title: "My Profile", url: "/student/profile", icon: User },
     { title: "Messages", url: "/chat", icon: MessageSquare },
     { title: "AI Assistant", url: "/student/ai-assistant", icon: Sparkles },

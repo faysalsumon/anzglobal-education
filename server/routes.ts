@@ -120,16 +120,33 @@ async function checkAdminAccess(
 }
 
 // Configure multer for file uploads
+const allowedMimeTypes = [
+  // Images
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  // Documents
+  'application/pdf',
+  'application/msword', // .doc
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'application/vnd.ms-excel', // .xls
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'text/plain',
+  'text/csv',
+];
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit for documents
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error(`File type not allowed. Supported types: PDF, DOC, DOCX, XLS, XLSX, images (JPG, PNG, GIF, WebP), TXT, CSV`));
     }
   },
 });
@@ -1700,6 +1717,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const folder = await storage.createFolder({
         ownerId: profile.id,
+        ownerType: 'student',
+        studentProfileId: profile.id,
         name,
         color: color || "#6366f1",
         isDefault: false,
@@ -1814,16 +1833,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await fs.writeFile(filePath, req.file.buffer);
 
       const document = await storage.createDocument({
+        type: type || 'other',
+        title: req.file.originalname,
+        filePath,
+        fileName: req.file.originalname,
+        senderId: userId,
+        senderType: 'student',
         studentProfileId: profile.id,
         folderId: folderId || null,
-        fileName: req.file.originalname,
         fileSize: req.file.size,
-        fileType: req.file.mimetype,
-        filePath,
-        type: type || 'other',
+        mimeType: req.file.mimetype,
         status: 'pending',
         description: description || null,
-        uploadedBy: userId,
       });
 
       res.json(document);
