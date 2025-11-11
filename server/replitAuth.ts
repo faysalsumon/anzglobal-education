@@ -113,9 +113,91 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    passport.authenticate(`replitauth:${req.hostname}`, async (err: any, user: any) => {
+      if (err || !user) {
+        return res.redirect("/api/login");
+      }
+
+      try {
+        const claims = user.claims;
+        const userId = claims.sub;
+        const sessionData = req.session as any;
+        const loginIntent = sessionData?.loginIntent;
+        const studentRedirect = sessionData?.studentLoginRedirect || '/student/dashboard';
+
+        // If this is a student login, provision student profile and folders
+        if (loginIntent === 'student') {
+          // Ensure user exists with userType 'student'
+          await storage.upsertUser({
+            id: userId,
+            email: claims.email,
+            firstName: claims.first_name,
+            lastName: claims.last_name,
+            profileImageUrl: claims.profile_image_url,
+            userType: 'student',
+          });
+
+          // Check if student profile exists
+          let studentProfile = await storage.getStudentProfileByUserId(userId);
+
+          // If no profile, create one with default folders
+          if (!studentProfile) {
+            studentProfile = await storage.createStudentProfile({
+              userId,
+              firstName: claims.first_name || null,
+              lastName: claims.last_name || null,
+              profileImageUrl: claims.profile_image_url || null,
+            });
+
+            // Create default document folders
+            const defaultFolders = [
+              { name: 'Academic', color: 'blue', sortOrder: 1 },
+              { name: 'Financial', color: 'green', sortOrder: 2 },
+              { name: 'Personal', color: 'purple', sortOrder: 3 },
+            ];
+
+            for (const folder of defaultFolders) {
+              await storage.createFolder({
+                name: folder.name,
+                ownerId: studentProfile.id,
+                ownerType: 'student',
+                color: folder.color,
+                isDefault: true,
+                sortOrder: folder.sortOrder,
+                studentProfileId: studentProfile.id,
+              });
+            }
+          }
+
+          // Clear the login intent flag
+          delete sessionData.loginIntent;
+          delete sessionData.studentLoginRedirect;
+
+          // Log in the user and redirect to student dashboard
+          req.logIn(user, (loginErr) => {
+            if (loginErr) {
+              console.error("Login error:", loginErr);
+              return res.redirect("/?error=login_failed");
+            }
+            res.redirect(studentRedirect);
+          });
+        } else {
+          // Default behavior for non-student logins (universities/admins)
+          req.logIn(user, (loginErr) => {
+            if (loginErr) {
+              console.error("Login error:", loginErr);
+              return res.redirect("/api/login");
+            }
+            // Honor returnTo if set, otherwise redirect to home
+            const returnTo = (sessionData?.returnTo as string) || "/";
+            delete sessionData?.returnTo;
+            res.redirect(returnTo);
+          });
+        }
+      } catch (error) {
+        console.error("Callback error:", error);
+        res.redirect("/?error=auth_failed");
+      }
     })(req, res, next);
   });
 

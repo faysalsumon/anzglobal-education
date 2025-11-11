@@ -21,18 +21,22 @@ interface StudentAuthModalProps {
 export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) {
   const [activeTab, setActiveTab] = useState("login");
 
+  const handleReplitLogin = () => {
+    window.location.href = "/api/student/login";
+  };
+
   const handleSocialLogin = (provider: string) => {
-    console.log(`Login with ${provider}`);
+    console.log(`${provider} login - coming soon!`);
   };
 
   const handleEmailLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Email login");
+    console.log("Email login - coming soon!");
   };
 
   const handleEmailSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Email signup");
+    console.log("Email signup - coming soon!");
   };
 
   return (
@@ -57,31 +61,43 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
           <TabsContent value="login" className="space-y-4 mt-6">
             <div className="space-y-3">
               <Button 
+                variant="default" 
+                className="w-full h-11 gap-3"
+                onClick={handleReplitLogin}
+                data-testid="button-login-replit"
+              >
+                <GraduationCap className="h-5 w-5" />
+                <span>Login with Replit</span>
+              </Button>
+              <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('google')}
                 data-testid="button-login-google"
+                disabled
               >
                 <FaGoogle className="h-5 w-5 text-red-500" />
-                <span>Continue with Google</span>
+                <span>Google (Coming Soon)</span>
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('facebook')}
                 data-testid="button-login-facebook"
+                disabled
               >
                 <FaFacebook className="h-5 w-5 text-blue-600" />
-                <span>Continue with Facebook</span>
+                <span>Facebook (Coming Soon)</span>
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('apple')}
                 data-testid="button-login-apple"
+                disabled
               >
                 <FaApple className="h-5 w-5" />
-                <span>Continue with Apple</span>
+                <span>Apple (Coming Soon)</span>
               </Button>
             </div>
 
@@ -131,31 +147,43 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
           <TabsContent value="signup" className="space-y-4 mt-6">
             <div className="space-y-3">
               <Button 
+                variant="default" 
+                className="w-full h-11 gap-3"
+                onClick={handleReplitLogin}
+                data-testid="button-signup-replit"
+              >
+                <GraduationCap className="h-5 w-5" />
+                <span>Sign up with Replit</span>
+              </Button>
+              <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('google')}
                 data-testid="button-signup-google"
+                disabled
               >
                 <FaGoogle className="h-5 w-5 text-red-500" />
-                <span>Sign up with Google</span>
+                <span>Google (Coming Soon)</span>
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('facebook')}
                 data-testid="button-signup-facebook"
+                disabled
               >
                 <FaFacebook className="h-5 w-5 text-blue-600" />
-                <span>Sign up with Facebook</span>
+                <span>Facebook (Coming Soon)</span>
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full h-11 gap-3"
                 onClick={() => handleSocialLogin('apple')}
                 data-testid="button-signup-apple"
+                disabled
               >
                 <FaApple className="h-5 w-5" />
-                <span>Sign up with Apple</span>
+                <span>Apple (Coming Soon)</span>
               </Button>
             </div>
 

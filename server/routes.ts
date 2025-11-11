@@ -6,6 +6,7 @@ import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import passport from "passport";
 import {
   insertUniversitySchema,
   insertCourseSchema,
@@ -158,6 +159,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files from the public directory
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
+
+  // Get current authenticated user
+  app.get("/api/auth/me", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get user from database
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get additional profile based on user type
+      let profile = null;
+      if (dbUser.userType === 'student') {
+        profile = await storage.getStudentProfileByUserId(userId);
+      } else if (dbUser.userType === 'university') {
+        profile = await storage.getUniversityByUserId(userId);
+      }
+
+      res.json({
+        user: {
+          id: dbUser.id,
+          email: dbUser.email,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          userType: dbUser.userType,
+          role: dbUser.role,
+          isActive: dbUser.isActive,
+          profileImageUrl: dbUser.profileImageUrl,
+        },
+        profile,
+      });
+    } catch (error) {
+      console.error("Get current user error:", error);
+      res.status(500).json({ message: "Failed to get user information" });
+    }
+  });
+
+  // Student OIDC login - sets session flag and redirects to main login
+  app.get("/api/student/login", (req, res, next) => {
+    // Set a flag in session to indicate this is a student login
+    if (req.session) {
+      (req.session as any).loginIntent = 'student';
+      (req.session as any).studentLoginRedirect = '/student/dashboard';
+    }
+    // Redirect to the main OIDC login
+    res.redirect('/api/login');
+  });
 
   // Email/Password Auth Routes
   app.post("/api/auth/login", async (req, res) => {
