@@ -123,10 +123,12 @@ export async function setupAuth(app: Express) {
         const userId = claims.sub;
         const sessionData = req.session as any;
         const loginIntent = sessionData?.loginIntent;
-        const studentRedirect = sessionData?.studentLoginRedirect || '/student/dashboard';
+        const studentRedirect = sessionData?.studentLoginRedirect || '/student/documents';
 
         // If this is a student login, provision student profile and folders
         if (loginIntent === 'student') {
+          console.log('[STUDENT CALLBACK] Processing student login for userId:', userId);
+          
           // Ensure user exists with userType 'student'
           await storage.upsertUser({
             id: userId,
@@ -139,15 +141,18 @@ export async function setupAuth(app: Express) {
 
           // Check if student profile exists
           let studentProfile = await storage.getStudentProfileByUserId(userId);
+          console.log('[STUDENT CALLBACK] Student profile exists:', !!studentProfile);
 
           // If no profile, create one with default folders
           if (!studentProfile) {
+            console.log('[STUDENT CALLBACK] Creating new student profile and default folders...');
             studentProfile = await storage.createStudentProfile({
               userId,
               firstName: claims.first_name || null,
               lastName: claims.last_name || null,
               profileImageUrl: claims.profile_image_url || null,
             });
+            console.log('[STUDENT CALLBACK] Student profile created:', studentProfile.id);
 
             // Create default document folders
             const defaultFolders = [
@@ -157,16 +162,20 @@ export async function setupAuth(app: Express) {
             ];
 
             for (const folder of defaultFolders) {
-              await storage.createFolder({
+              const createdFolder = await storage.createFolder({
                 name: folder.name,
-                ownerId: studentProfile.id,
+                ownerId: userId, // Must reference users table, not studentProfiles
                 ownerType: 'student',
                 color: folder.color,
                 isDefault: true,
                 sortOrder: folder.sortOrder,
                 studentProfileId: studentProfile.id,
               });
+              console.log('[STUDENT CALLBACK] Created folder:', folder.name, 'id:', createdFolder.id);
             }
+            console.log('[STUDENT CALLBACK] All default folders created successfully');
+          } else {
+            console.log('[STUDENT CALLBACK] Student profile already exists, skipping folder creation');
           }
 
           // Clear the login intent flag

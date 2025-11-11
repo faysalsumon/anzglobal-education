@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Set a flag in session to indicate this is a student login
     if (req.session) {
       (req.session as any).loginIntent = 'student';
-      (req.session as any).studentLoginRedirect = '/student/dashboard';
+      (req.session as any).studentLoginRedirect = '/student/documents';
     }
     // Redirect to the main OIDC login
     res.redirect('/api/login');
@@ -1748,7 +1748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Student profile not found" });
       }
 
-      const folders = await storage.getFoldersByOwnerId(profile.id);
+      const folders = await storage.getFoldersByOwnerId(userId); // Fixed: use userId, not profile.id
       res.json(folders);
     } catch (error) {
       console.error("Error fetching folders:", error);
@@ -1771,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const folder = await storage.createFolder({
-        ownerId: profile.id,
+        ownerId: userId, // Fixed: use userId, not profile.id
         ownerType: 'student',
         studentProfileId: profile.id,
         name,
@@ -1874,7 +1874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify folder ownership if provided
       if (folderId) {
         const folder = await storage.getFolderById(folderId);
-        if (!folder || folder.ownerId !== profile.id) {
+        if (!folder || folder.ownerId !== userId) { // Fixed: use userId, not profile.id
           return res.status(404).json({ message: "Folder not found" });
         }
       }

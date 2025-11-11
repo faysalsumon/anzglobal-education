@@ -657,12 +657,11 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
         </div>
         <div className="space-y-2">
           <Label htmlFor="folderId">Folder</Label>
-          <Select name="folderId" defaultValue={initialFolderId || ""}>
+          <Select name="folderId" defaultValue={initialFolderId || folders[0]?.id}>
             <SelectTrigger data-testid="select-upload-folder">
               <SelectValue placeholder="Select folder" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Folder</SelectItem>
               {folders.map((folder) => (
                 <SelectItem key={folder.id} value={folder.id}>
                   {folder.name}
