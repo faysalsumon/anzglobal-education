@@ -51,6 +51,8 @@ Key features include:
   - **Persistence**: All folders and documents persist across sessions with no duplicates on re-login
   - **Access Control**: Folder and document ownership validated via userId (FK to users table)
 - **CSV Bulk Import**: Enterprise-grade data migration system for institutions transitioning from existing platforms (e.g., WordPress). Super admin and support manager roles can upload, validate, and approve CSV imports with:
+  - **Two Entry Points**: Accessible as standalone page (`/admin/csv-import`) and integrated "Data Import" tab in Admin Dashboard (`/admin/dashboard#data-import`)
+  - **Reusable Component**: `AdminCsvImportPanel` component enables code reuse across both entry points with shared query keys for cache consistency
   - **Two-Phase Workflow**: Upload/parse CSV into staging table → preview with validation → approve to execute in transaction
   - **Template Download**: Pre-configured CSV templates with all required fields and example data for universities and courses
   - **Validation Engine**: Per-row validation with error tracking, duplicate detection, and foreign key validation (courses link to universities by name)
@@ -58,6 +60,7 @@ Key features include:
   - **Database Schema**: `import_batches` table tracks all imports with status (pending/approved/rejected), validation results, and metadata
   - **Transactional Import**: Approval executes full batch in database transaction with per-row error capture and rollback on failure
   - **Import History**: List view shows all past imports with status, counts, timestamps, and ability to download original files
+  - **Hash Navigation**: Admin Dashboard uses lazy-initialized hash navigation with access control guards, query parameter preservation, and no history pollution (uses replaceState)
 
 UI components ensure a smooth experience with responsive data tables, form validation, and toast notifications.
 
