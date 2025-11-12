@@ -33,6 +33,7 @@ import Contact from "@/pages/contact";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminCSVImport from "@/pages/admin-csv-import";
 import ChatPage from "@/pages/chat";
 
 function Router() {
@@ -57,6 +58,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
+          <Route path="/admin/csv-import" component={AdminCSVImport} />
           <Route path="/university/profile" component={UniversityProfile} />
           <Route path="/university/institutions" component={UniversityInstitutions} />
           <Route path="/university/courses" component={UniversityCourses} />
