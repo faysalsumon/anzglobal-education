@@ -58,6 +58,16 @@ import {
   createNotification,
 } from "./notifications";
 import express from "express";
+import {
+  parseCSV,
+  validateUniversityRow,
+  validateCourseRow,
+  transformUniversityRow,
+  transformCourseRow,
+  generateUniversitiesSampleCSV,
+  generateCoursesSampleCSV,
+} from "./csvImportUtils";
+import { importBatches, insertImportBatchSchema } from "@shared/schema";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
 type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';

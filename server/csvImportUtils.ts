@@ -1,0 +1,447 @@
+import Papa from 'papaparse';
+import { InsertUniversity, InsertCourse } from '@shared/schema';
+
+export interface ValidationError {
+  row: number;
+  field: string;
+  message: string;
+  value: any;
+}
+
+export interface ParsedCSVRow {
+  rowIndex: number;
+  isValid: boolean;
+  data: any; // The actual CSV row data (normalized)
+  errors: ValidationError[]; // Validation errors for this specific row
+}
+
+export interface ParsedCSVResult {
+  rows: ParsedCSVRow[]; // Structured rows with validity flags
+  data: any[]; // Raw parsed data (for backwards compatibility)
+  errors: ValidationError[]; // All validation errors
+  totalCount: number;
+  validCount: number;
+  errorCount: number;
+  parseErrors: string[]; // PapaParse errors
+  hasCriticalErrors: boolean; // True if parse failed or has critical issues
+}
+
+// Parse CSV file with error handling
+export function parseCSV(fileContent: string): ParsedCSVResult {
+  const parseResult = Papa.parse(fileContent, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => header.trim(),
+  });
+
+  const parseErrors: string[] = [];
+  
+  // Capture PapaParse errors
+  if (parseResult.errors && parseResult.errors.length > 0) {
+    parseErrors.push(...parseResult.errors.map(e => 
+      `Row ${e.row !== undefined ? e.row + 1 : 'unknown'}: ${e.message}`
+    ));
+  }
+
+  // Check for empty headers
+  if (parseResult.meta?.fields) {
+    const emptyHeaders = parseResult.meta.fields.filter(h => !h || h.trim() === '');
+    if (emptyHeaders.length > 0) {
+      parseErrors.push(`Found ${emptyHeaders.length} empty column header(s)`);
+    }
+  }
+
+  // Critical errors should block the batch
+  const hasCriticalErrors = parseErrors.length > 0;
+
+  // For now, return basic structure - validation will be done by type-specific functions
+  return {
+    rows: [], // Will be populated by validateAndStructureData()
+    data: parseResult.data,
+    errors: [],
+    totalCount: parseResult.data.length,
+    validCount: 0,
+    errorCount: 0,
+    parseErrors,
+    hasCriticalErrors,
+  };
+}
+
+// Normalize university row values
+export function normalizeUniversityRow(row: any): any {
+  const normalized = { ...row };
+  
+  // Trim all string fields
+  Object.keys(normalized).forEach(key => {
+    if (typeof normalized[key] === 'string') {
+      normalized[key] = normalized[key].trim();
+    }
+  });
+  
+  return normalized;
+}
+
+// Validate university row
+export function validateUniversityRow(row: any, rowIndex: number): ValidationError[] {
+  const errors: ValidationError[] = [];
+  
+  // Normalize before validation
+  const normalized = normalizeUniversityRow(row);
+
+  // Required fields
+  if (!normalized.name || normalized.name === '') {
+    errors.push({
+      row: rowIndex,
+      field: 'name',
+      message: 'University name is required',
+      value: row.name,
+    });
+  }
+
+  // Optional field validations
+  if (row.establishedYear && isNaN(parseInt(row.establishedYear))) {
+    errors.push({
+      row: rowIndex,
+      field: 'establishedYear',
+      message: 'Established year must be a number',
+      value: row.establishedYear,
+    });
+  }
+
+  if (row.scholarshipPercentage && (isNaN(parseInt(row.scholarshipPercentage)) || parseInt(row.scholarshipPercentage) < 0 || parseInt(row.scholarshipPercentage) > 100)) {
+    errors.push({
+      row: rowIndex,
+      field: 'scholarshipPercentage',
+      message: 'Scholarship percentage must be between 0 and 100',
+      value: row.scholarshipPercentage,
+    });
+  }
+
+  if (row.website && !isValidUrl(row.website)) {
+    errors.push({
+      row: rowIndex,
+      field: 'website',
+      message: 'Website must be a valid URL',
+      value: row.website,
+    });
+  }
+
+  return errors;
+}
+
+// Normalize course row values
+export function normalizeCourseRow(row: any): any {
+  const normalized = { ...row };
+  
+  // Normalize level to lowercase
+  if (normalized.level) {
+    normalized.level = normalized.level.trim().toLowerCase();
+  }
+  
+  // Normalize delivery mode
+  if (normalized.deliveryMode) {
+    normalized.deliveryMode = normalized.deliveryMode.trim().toLowerCase();
+  }
+  
+  // Normalize currency to uppercase
+  if (normalized.currency) {
+    normalized.currency = normalized.currency.trim().toUpperCase();
+  }
+  
+  // Trim all string fields
+  Object.keys(normalized).forEach(key => {
+    if (typeof normalized[key] === 'string') {
+      normalized[key] = normalized[key].trim();
+    }
+  });
+  
+  return normalized;
+}
+
+// Validate course row
+export function validateCourseRow(row: any, rowIndex: number, universitiesMap: Map<string, string>): ValidationError[] {
+  const errors: ValidationError[] = [];
+  
+  // Normalize before validation
+  const normalized = normalizeCourseRow(row);
+
+  // Required fields
+  if (!normalized.title || normalized.title === '') {
+    errors.push({
+      row: rowIndex,
+      field: 'title',
+      message: 'Course title is required',
+      value: normalized.title,
+    });
+  }
+
+  if (!normalized.subject || normalized.subject === '') {
+    errors.push({
+      row: rowIndex,
+      field: 'subject',
+      message: 'Subject is required',
+      value: normalized.subject,
+    });
+  }
+
+  if (!normalized.level || normalized.level === '') {
+    errors.push({
+      row: rowIndex,
+      field: 'level',
+      message: 'Level is required (undergraduate, postgraduate, certificate, diploma)',
+      value: normalized.level,
+    });
+  } else if (!['undergraduate', 'postgraduate', 'certificate', 'diploma'].includes(normalized.level)) {
+    errors.push({
+      row: rowIndex,
+      field: 'level',
+      message: 'Level must be one of: undergraduate, postgraduate, certificate, diploma',
+      value: normalized.level,
+    });
+  }
+
+  // University linking
+  if (!row.universityName && !row.universityId) {
+    errors.push({
+      row: rowIndex,
+      field: 'universityName',
+      message: 'Either universityName or universityId is required',
+      value: null,
+    });
+  } else if (row.universityName && !universitiesMap.has(row.universityName.trim())) {
+    errors.push({
+      row: rowIndex,
+      field: 'universityName',
+      message: `University "${row.universityName}" not found. Make sure it exists in the system.`,
+      value: row.universityName,
+    });
+  }
+
+  // Numeric validations
+  if (row.fees && isNaN(parseFloat(row.fees))) {
+    errors.push({
+      row: rowIndex,
+      field: 'fees',
+      message: 'Fees must be a number',
+      value: row.fees,
+    });
+  }
+
+  if (row.durationMonths && isNaN(parseInt(row.durationMonths))) {
+    errors.push({
+      row: rowIndex,
+      field: 'durationMonths',
+      message: 'Duration months must be a number',
+      value: row.durationMonths,
+    });
+  }
+
+  if (row.scholarshipPercentage && (isNaN(parseInt(row.scholarshipPercentage)) || parseInt(row.scholarshipPercentage) < 0 || parseInt(row.scholarshipPercentage) > 100)) {
+    errors.push({
+      row: rowIndex,
+      field: 'scholarshipPercentage',
+      message: 'Scholarship percentage must be between 0 and 100',
+      value: row.scholarshipPercentage,
+    });
+  }
+
+  return errors;
+}
+
+// Transform CSV row to University insert data
+export function transformUniversityRow(row: any, userId: string): Partial<InsertUniversity> {
+  const university: any = {
+    userId,
+    name: row.name?.trim(),
+    description: row.description?.trim() || null,
+    location: row.location?.trim() || null,
+    country: row.country?.trim() || null,
+    website: row.website?.trim() || null,
+    contactEmail: row.contactEmail?.trim() || null,
+    contactPhone: row.contactPhone?.trim() || null,
+    providerType: row.providerType?.trim() || null,
+    approvalStatus: 'pending', // All imported universities start as pending
+  };
+
+  // Parse numeric fields
+  if (row.establishedYear) {
+    university.establishedYear = parseInt(row.establishedYear);
+  }
+  if (row.numberOfCampuses) {
+    university.numberOfCampuses = parseInt(row.numberOfCampuses);
+  }
+  if (row.scholarshipPercentage) {
+    university.scholarshipPercentage = parseInt(row.scholarshipPercentage);
+  }
+
+  // Parse array fields (comma-separated)
+  if (row.topDisciplines) {
+    university.topDisciplines = row.topDisciplines.split(',').map((d: string) => d.trim()).filter(Boolean);
+  }
+
+  return university;
+}
+
+// Transform CSV row to Course insert data
+export function transformCourseRow(row: any, universityId: string): Partial<InsertCourse> {
+  const course: any = {
+    universityId,
+    title: row.title?.trim(),
+    subject: row.subject?.trim(),
+    level: row.level?.trim().toLowerCase(),
+    description: row.description?.trim() || null,
+    duration: row.duration?.trim() || null,
+    location: row.location?.trim() || null,
+    country: row.country?.trim() || null,
+    courseCode: row.courseCode?.trim() || null,
+    prerequisites: row.prerequisites?.trim() || null,
+    eligibilityRequirements: row.eligibilityRequirements?.trim() || null,
+    englishRequirements: row.englishRequirements?.trim() || null,
+    deliveryMode: row.deliveryMode?.trim() || null,
+    currency: row.currency?.trim() || 'AUD',
+    isActive: true,
+  };
+
+  // Parse numeric fields
+  if (row.fees) {
+    course.fees = parseFloat(row.fees);
+  }
+  if (row.durationMonths) {
+    course.durationMonths = parseInt(row.durationMonths);
+  }
+  if (row.durationWeeks) {
+    course.durationWeeks = parseInt(row.durationWeeks);
+  }
+  if (row.scholarshipPercentage) {
+    course.scholarshipPercentage = parseInt(row.scholarshipPercentage);
+  }
+  if (row.applicationFees) {
+    course.applicationFees = parseFloat(row.applicationFees);
+  }
+  if (row.costOfLiving) {
+    course.costOfLiving = parseFloat(row.costOfLiving);
+  }
+
+  // Parse boolean fields
+  if (row.prPathway !== undefined) {
+    course.prPathway = row.prPathway === 'true' || row.prPathway === '1' || row.prPathway === true;
+  }
+  if (row.workRights !== undefined) {
+    course.workRights = row.workRights === 'true' || row.workRights === '1' || row.workRights === true;
+  }
+
+  // Parse array fields (comma-separated)
+  if (row.intakes) {
+    course.intakes = row.intakes.split(',').map((i: string) => i.trim()).filter(Boolean);
+  }
+  if (row.studyAreas) {
+    course.studyAreas = row.studyAreas.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  if (row.careerOutcomes) {
+    course.careerOutcomes = row.careerOutcomes.split(',').map((c: string) => c.trim()).filter(Boolean);
+  }
+  if (row.campusLocations) {
+    course.campusLocations = row.campusLocations.split(',').map((l: string) => l.trim()).filter(Boolean);
+  }
+
+  return course;
+}
+
+// Helper: Check if URL is valid
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Generate sample CSV templates
+export function generateUniversitiesSampleCSV(): string {
+  const sampleData = [
+    {
+      name: 'University of Sydney',
+      description: 'A leading public research university in Australia, known for academic excellence',
+      location: 'Sydney',
+      country: 'Australia',
+      website: 'https://sydney.edu.au',
+      contactEmail: 'admissions@sydney.edu.au',
+      contactPhone: '+61-2-9351-2222',
+      establishedYear: '1850',
+      numberOfCampuses: '10',
+      providerType: 'Public University',
+      scholarshipPercentage: '25',
+      topDisciplines: 'Medicine,Engineering,Business,Law',
+    },
+    {
+      name: 'Melbourne Institute of Technology',
+      description: 'Modern vocational education provider specializing in practical skills',
+      location: 'Melbourne',
+      country: 'Australia',
+      website: 'https://mit.edu.au',
+      contactEmail: 'info@mit.edu.au',
+      contactPhone: '+61-3-9600-3888',
+      establishedYear: '1996',
+      numberOfCampuses: '3',
+      providerType: 'Private Institutions',
+      scholarshipPercentage: '15',
+      topDisciplines: 'Information Technology,Networking,Business',
+    },
+  ];
+
+  return Papa.unparse(sampleData);
+}
+
+export function generateCoursesSampleCSV(): string {
+  const sampleData = [
+    {
+      universityName: 'University of Sydney',
+      title: 'Master of Business Administration',
+      subject: 'Business',
+      level: 'postgraduate',
+      description: 'Advanced business administration degree focusing on leadership and strategy',
+      duration: '2 years',
+      durationMonths: '24',
+      fees: '45000',
+      currency: 'AUD',
+      location: 'Sydney',
+      country: 'Australia',
+      courseCode: 'MBA-2024',
+      deliveryMode: 'on-campus',
+      intakes: 'February,July',
+      studyAreas: 'Finance,Marketing,Operations,Strategy',
+      careerOutcomes: 'Business Manager,Consultant,Executive',
+      prerequisites: 'Bachelor degree with 3 years work experience',
+      englishRequirements: 'IELTS 7.0 overall',
+      scholarshipPercentage: '20',
+      prPathway: 'false',
+      workRights: 'true',
+    },
+    {
+      universityName: 'Melbourne Institute of Technology',
+      title: 'Diploma of Information Technology',
+      subject: 'Information Technology',
+      level: 'diploma',
+      description: 'Practical IT diploma covering programming, networking, and database management',
+      duration: '1 year',
+      durationMonths: '12',
+      fees: '18000',
+      currency: 'AUD',
+      location: 'Melbourne',
+      country: 'Australia',
+      courseCode: 'DIT-2024',
+      deliveryMode: 'hybrid',
+      intakes: 'January,April,July,October',
+      studyAreas: 'Programming,Networking,Database,Web Development',
+      careerOutcomes: 'Software Developer,IT Support,Network Administrator',
+      prerequisites: 'Year 12 completion',
+      englishRequirements: 'IELTS 5.5 overall',
+      scholarshipPercentage: '10',
+      prPathway: 'true',
+      workRights: 'true',
+    },
+  ];
+
+  return Papa.unparse(sampleData);
+}

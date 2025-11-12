@@ -12,6 +12,7 @@ import {
   integer,
   decimal,
   date,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -483,6 +484,10 @@ export const studentLeads = pgTable("student_leads", {
   index("created_at_leads_idx").on(table.createdAt),
 ]);
 
+// Enums for CSV import batches
+export const importBatchTypeEnum = pgEnum('import_batch_type', ['universities', 'courses']);
+export const importBatchStatusEnum = pgEnum('import_batch_status', ['pending', 'approved', 'rejected', 'failed']);
+
 // Contact submissions table for general contact form inquiries
 export const contactSubmissions = pgTable("contact_submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -503,6 +508,29 @@ export const contactSubmissions = pgTable("contact_submissions", {
   index("category_idx").on(table.category),
   index("assigned_to_idx").on(table.assignedTo),
   index("created_at_contact_idx").on(table.createdAt),
+]);
+
+// CSV Import batches table for bulk import with approval workflow
+export const importBatches = pgTable("import_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: importBatchTypeEnum("type").notNull(),
+  status: importBatchStatusEnum("status").notNull().default("pending"),
+  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  fileName: text("file_name").notNull(),
+  rawCsvText: text("raw_csv_text").notNull(), // Original CSV content for audit
+  rawData: jsonb("raw_data").notNull(), // Parsed CSV data with per-row validation flags (includes isValid for each row)
+  validationErrors: jsonb("validation_errors"), // Array of validation issues
+  errorCount: integer("error_count").default(0), // Count of rows with validation errors
+  validCount: integer("valid_count").default(0), // Count of valid rows
+  importedCount: integer("imported_count").default(0),
+  totalCount: integer("total_count").notNull(),
+  notes: text("notes"), // Admin notes/reason for rejection
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+}, (table) => [
+  index("type_status_idx").on(table.type, table.status),
+  index("uploaded_by_idx").on(table.uploadedBy),
+  index("created_at_import_idx").on(table.createdAt),
 ]);
 
 // Relations
@@ -922,6 +950,12 @@ export const insertContactSubmissionSchema = createInsertSchema(contactSubmissio
   updatedAt: true,
 });
 
+export const insertImportBatchSchema = createInsertSchema(importBatches).omit({
+  id: true,
+  createdAt: true,
+  processedAt: true,
+});
+
 export const upsertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
@@ -995,3 +1029,6 @@ export type InsertStudentLead = z.infer<typeof insertStudentLeadSchema>;
 
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
 export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
+
+export type ImportBatch = typeof importBatches.$inferSelect;
+export type InsertImportBatch = z.infer<typeof insertImportBatchSchema>;
