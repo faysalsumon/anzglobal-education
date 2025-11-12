@@ -188,17 +188,34 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess } = useAuth();
   
-  // Consultants default to applications tab, others default to users
-  const defaultTab = isConsultant ? "applications" : "users";
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  // Default tab based on role: restricted admins use applications, full admins use users
+  const defaultTab = (isConsultant || !hasFullAdminAccess) ? "applications" : "users";
   
-  // Handle hash-based navigation
-  useEffect(() => {
+  // Initialize activeTab from hash with access control validation
+  const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import'].includes(hash)) {
-      setActiveTab(hash);
+    const validTabs = ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import'];
+    const fullAdminOnlyTabs = ['users', 'institutions', 'data-import'];
+    
+    if (hash && validTabs.includes(hash)) {
+      // Check access for full-admin-only tabs
+      if (fullAdminOnlyTabs.includes(hash) && !hasFullAdminAccess) {
+        return defaultTab; // Restricted admin - use default
+      }
+      return hash; // Valid tab with proper access
     }
-  }, []);
+    return defaultTab; // No hash or invalid hash
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Sync active tab to URL hash only when it changes and differs from current hash
+  useEffect(() => {
+    const currentHash = window.location.hash.replace('#', '');
+    if (currentHash !== activeTab) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${activeTab}`);
+    }
+  }, [activeTab]);
   
   // User state
   const [userSearchQuery, setUserSearchQuery] = useState("");
