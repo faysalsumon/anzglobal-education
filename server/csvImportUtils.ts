@@ -82,7 +82,12 @@ export function normalizeUniversityRow(row: any): any {
 }
 
 // Validate university row
-export function validateUniversityRow(row: any, rowIndex: number): ValidationError[] {
+export function validateUniversityRow(
+  row: any, 
+  rowIndex: number, 
+  existingNames?: Set<string>, // Existing university names in DB
+  batchNames?: Set<string> // Names already seen in this batch
+): ValidationError[] {
   const errors: ValidationError[] = [];
   
   // Normalize before validation
@@ -96,6 +101,29 @@ export function validateUniversityRow(row: any, rowIndex: number): ValidationErr
       message: 'University name is required',
       value: row.name,
     });
+  } else {
+    // Check for duplicates in database
+    if (existingNames && existingNames.has(normalized.name.toLowerCase())) {
+      errors.push({
+        row: rowIndex,
+        field: 'name',
+        message: `University "${normalized.name}" already exists in database`,
+        value: normalized.name,
+      });
+    }
+    
+    // Check for duplicates within this batch
+    if (batchNames && batchNames.has(normalized.name.toLowerCase())) {
+      errors.push({
+        row: rowIndex,
+        field: 'name',
+        message: `Duplicate university name "${normalized.name}" found in this CSV`,
+        value: normalized.name,
+      });
+    } else if (batchNames) {
+      // Add to batch set for subsequent rows
+      batchNames.add(normalized.name.toLowerCase());
+    }
   }
 
   // Optional field validations
@@ -159,7 +187,14 @@ export function normalizeCourseRow(row: any): any {
 }
 
 // Validate course row
-export function validateCourseRow(row: any, rowIndex: number, universitiesMap: Map<string, string>): ValidationError[] {
+export function validateCourseRow(
+  row: any, 
+  rowIndex: number, 
+  universitiesMap: Map<string, string>,
+  existingCourseKeys?: Set<string>, // Existing "title:universityId" keys in DB
+  batchCourseKeys?: Set<string>, // Keys already seen in this batch
+  validUniversityIds?: Set<string> // Valid university IDs for verifying universityId field
+): ValidationError[] {
   const errors: ValidationError[] = [];
   
   // Normalize before validation
@@ -200,7 +235,7 @@ export function validateCourseRow(row: any, rowIndex: number, universitiesMap: M
     });
   }
 
-  // University linking
+  // University linking and duplicate detection
   if (!row.universityName && !row.universityId) {
     errors.push({
       row: rowIndex,
@@ -208,13 +243,62 @@ export function validateCourseRow(row: any, rowIndex: number, universitiesMap: M
       message: 'Either universityName or universityId is required',
       value: null,
     });
-  } else if (row.universityName && !universitiesMap.has(row.universityName.trim())) {
-    errors.push({
-      row: rowIndex,
-      field: 'universityName',
-      message: `University "${row.universityName}" not found. Make sure it exists in the system.`,
-      value: row.universityName,
-    });
+  } else {
+    // Determine universityId from either universityName or universityId
+    let universityId: string | undefined;
+    
+    if (row.universityName) {
+      if (!universitiesMap.has(row.universityName.trim().toLowerCase())) {
+        errors.push({
+          row: rowIndex,
+          field: 'universityName',
+          message: `University "${row.universityName}" not found. Make sure it exists in the system.`,
+          value: row.universityName,
+        });
+      } else {
+        universityId = universitiesMap.get(row.universityName.trim().toLowerCase());
+      }
+    } else if (row.universityId) {
+      // Validate that the universityId exists
+      const providedId = row.universityId.trim();
+      if (validUniversityIds && !validUniversityIds.has(providedId)) {
+        errors.push({
+          row: rowIndex,
+          field: 'universityId',
+          message: `University ID "${providedId}" not found. Make sure it exists in the system.`,
+          value: providedId,
+        });
+      } else {
+        universityId = providedId;
+      }
+    }
+    
+    // Check for duplicates if we have both title and universityId
+    if (universityId && normalized.title) {
+      const courseKey = `${normalized.title.toLowerCase()}:${universityId}`;
+      
+      // Check for duplicates in database
+      if (existingCourseKeys && existingCourseKeys.has(courseKey)) {
+        errors.push({
+          row: rowIndex,
+          field: 'title',
+          message: `Course "${normalized.title}" already exists for this university in database`,
+          value: normalized.title,
+        });
+      }
+      
+      // Check for duplicates within this batch
+      if (batchCourseKeys && batchCourseKeys.has(courseKey)) {
+        errors.push({
+          row: rowIndex,
+          field: 'title',
+          message: `Duplicate course "${normalized.title}" for this university found in this CSV`,
+          value: normalized.title,
+        });
+      } else if (batchCourseKeys) {
+        batchCourseKeys.add(courseKey);
+      }
+    }
   }
 
   // Numeric validations

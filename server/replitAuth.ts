@@ -129,14 +129,34 @@ export async function setupAuth(app: Express) {
         if (loginIntent === 'student') {
           console.log('[STUDENT CALLBACK] Processing student login for userId:', userId);
           
+          // Check if user already exists - if they're an admin/university, preserve their role
+          const existingUser = await storage.getUser(userId);
+          if (existingUser && (existingUser.userType === 'admin' || existingUser.userType === 'university')) {
+            console.log('[STUDENT CALLBACK] User is actually admin/university type:', existingUser.userType, '- redirecting to home instead');
+            // Clear the login intent flag
+            delete sessionData.loginIntent;
+            delete sessionData.studentLoginRedirect;
+            
+            // Log in and redirect to home (admin/university dashboard)
+            req.logIn(user, (loginErr) => {
+              if (loginErr) {
+                console.error("Login error:", loginErr);
+                return res.redirect("/?error=login_failed");
+              }
+              res.redirect("/");
+            });
+            return;
+          }
+          
           // Ensure user exists with userType 'student'
+          // Note: Only new users get userType='student'. Existing users preserve their type.
           await storage.upsertUser({
             id: userId,
             email: claims.email,
             firstName: claims.first_name,
             lastName: claims.last_name,
             profileImageUrl: claims.profile_image_url,
-            userType: 'student',
+            userType: existingUser && existingUser.userType ? existingUser.userType : 'student', // Explicit default to student
           });
 
           // Check if student profile exists
@@ -192,6 +212,35 @@ export async function setupAuth(app: Express) {
           });
         } else {
           // Default behavior for non-student logins (universities/admins)
+          // Check if user already exists to preserve their existing role/type
+          const existingUser = await storage.getUser(userId);
+          
+          if (existingUser) {
+            // User exists - preserve their existing userType and role
+            console.log('[NON-STUDENT CALLBACK] Existing user found:', userId, 'type:', existingUser.userType, 'role:', existingUser.role);
+            // Update profile info but keep userType and role
+            await storage.upsertUser({
+              id: userId,
+              email: claims.email,
+              firstName: claims.first_name,
+              lastName: claims.last_name,
+              profileImageUrl: claims.profile_image_url,
+              userType: existingUser.userType, // Preserve existing type
+              role: existingUser.role, // Preserve existing role
+            });
+          } else {
+            // New user - create with default type (university)
+            console.log('[NON-STUDENT CALLBACK] New user, creating as university type:', userId);
+            await storage.upsertUser({
+              id: userId,
+              email: claims.email,
+              firstName: claims.first_name,
+              lastName: claims.last_name,
+              profileImageUrl: claims.profile_image_url,
+              userType: 'university', // Default for non-student logins
+            });
+          }
+          
           req.logIn(user, (loginErr) => {
             if (loginErr) {
               console.error("Login error:", loginErr);

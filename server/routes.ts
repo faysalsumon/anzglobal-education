@@ -129,6 +129,18 @@ async function checkAdminAccess(
     return null;
   }
   
+  // Check if user has role directly in users table (for direct admin creation)
+  // Note: This supports admins created directly in DB (e.g., for testing) without admin_team_members entries.
+  // Production admins should ideally have admin_team_members entries for full team management features.
+  if (user.role && ['super_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+    const userRole = user.role as AdminRole;
+    if (requiredRoles && !requiredRoles.includes(userRole)) {
+      return null;
+    }
+    return { role: userRole };
+  }
+  
+  // Otherwise check admin_team_members table
   const adminMember = await storage.getAdminTeamMemberByUserId(userId);
   if (!adminMember || !adminMember.isActive) {
     return null;
@@ -4097,20 +4109,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let validationErrors: ValidationError[] = [];
       const structuredRows: ParsedCSVRow[] = [];
       let universitiesMap = new Map<string, string>();
+      
+      // Load existing data for duplicate detection
+      let existingNames: Set<string> | undefined;
+      let batchNames: Set<string> | undefined;
+      let existingCourseKeys: Set<string> | undefined;
+      let batchCourseKeys: Set<string> | undefined;
+      let validUniversityIds: Set<string> | undefined; // For validating universityId field in courses
 
-      if (type === 'courses') {
+      if (type === 'universities') {
+        // Load existing university names from DB
+        const allUniversities = await storage.getAllUniversities();
+        existingNames = new Set(allUniversities.map(u => u.name.toLowerCase()));
+        batchNames = new Set(); // Track duplicates within this batch
+      } else if (type === 'courses') {
         // Pre-fetch all universities for course validation
         const allUniversities = await storage.getAllUniversities();
+        validUniversityIds = new Set<string>(); // Hoist to outer scope
         allUniversities.forEach(uni => {
           universitiesMap.set(uni.name.toLowerCase(), uni.id);
+          validUniversityIds!.add(uni.id); // Track valid IDs for universityId field validation
         });
+        
+        // Load existing course keys from DB
+        const allCourses = await storage.getAllCourses();
+        existingCourseKeys = new Set(
+          allCourses.map(c => `${c.title.toLowerCase()}:${c.universityId}`)
+        );
+        batchCourseKeys = new Set(); // Track duplicates within this batch
       }
 
       // Validate each row and create structured data
       parseResult.data.forEach((row, index) => {
         const rowErrors = type === 'universities'
-          ? validateUniversityRow(row, index + 1)
-          : validateCourseRow(row, index + 1, universitiesMap);
+          ? validateUniversityRow(row, index + 1, existingNames, batchNames)
+          : validateCourseRow(row, index + 1, universitiesMap, existingCourseKeys, batchCourseKeys, validUniversityIds);
 
         const normalized = type === 'universities'
           ? normalizeUniversityRow(row)
@@ -4220,11 +4253,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const validRows = structuredRows.filter(r => r.isValid);
 
           if (batch.type === 'universities') {
+            // Load existing universities for duplicate detection
+            const allUniversities = await storage.getAllUniversities();
+            const existingNames = new Set(allUniversities.map(u => u.name.toLowerCase()));
+            
             // Import universities
             for (const row of validRows) {
               try {
                 const universityData = transformUniversityRow(row.data);
+                
+                // Skip if already exists (idempotency guard)
+                if (existingNames.has(universityData.name.toLowerCase())) {
+                  console.log(`[CSV Import] Skipping duplicate university: ${universityData.name}`);
+                  continue;
+                }
+                
                 await storage.createUniversity(universityData);
+                existingNames.add(universityData.name.toLowerCase()); // Add to set for subsequent rows
                 importedCount++;
               } catch (error: any) {
                 importErrors.push(`Row ${row.rowIndex}: ${error.message}`);
@@ -4237,12 +4282,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
             allUniversities.forEach(uni => {
               universitiesMap.set(uni.name.toLowerCase(), uni.id);
             });
+            
+            // Load existing courses for duplicate detection
+            const allCourses = await storage.getAllCourses();
+            const existingCourseKeys = new Set(
+              allCourses.map(c => `${c.title.toLowerCase()}:${c.universityId}`)
+            );
 
             // Import courses
             for (const row of validRows) {
               try {
-                const courseData = transformCourseRow(row.data, universitiesMap);
+                // Derive universityId from either universityName or universityId field
+                let universityId: string | undefined;
+                if (row.data.universityName) {
+                  universityId = universitiesMap.get(row.data.universityName.toLowerCase());
+                } else if (row.data.universityId) {
+                  universityId = row.data.universityId;
+                }
+                
+                if (!universityId) {
+                  importErrors.push(`Row ${row.rowIndex}: Could not determine university ID`);
+                  continue;
+                }
+                
+                const courseData = transformCourseRow(row.data, universityId);
+                const courseKey = `${courseData.title!.toLowerCase()}:${courseData.universityId}`;
+                
+                // Skip if already exists (idempotency guard)
+                if (existingCourseKeys.has(courseKey)) {
+                  console.log(`[CSV Import] Skipping duplicate course: ${courseData.title} for university ${courseData.universityId}`);
+                  continue;
+                }
+                
                 await storage.createCourse(courseData);
+                existingCourseKeys.add(courseKey); // Add to set for subsequent rows
                 importedCount++;
               } catch (error: any) {
                 importErrors.push(`Row ${row.rowIndex}: ${error.message}`);

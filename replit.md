@@ -20,11 +20,11 @@ Node.js Express.js server in TypeScript. Authentication uses OpenID Connect (OID
 
 ### Data Storage
 
-PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles, team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, and messages. GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images.
+PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles, team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, messages, document folders, documents, and import_batches (CSV bulk import staging). Enum types enforce status/type fields (e.g., import_status, import_type). GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images.
 
 ### Authentication & Authorization
 
-Replit's OIDC service is the authentication provider. Express-session manages sessions with PostgreSQL storage. Role-based access control uses a `userType` field (`university`, `student`, `admin`) with a granular admin role hierarchy: `super_admin`, `support_manager`, and `support_staff` (consultant) with varying access levels. Security is enforced via backend middleware (`checkAdminAccess()`) and frontend conditional rendering/query gating. Admin authentication includes OIDC and email/password login with bcrypt.
+Replit's OIDC service is the authentication provider. Express-session manages sessions with PostgreSQL storage. Role-based access control uses a `userType` field (`university`, `student`, `admin`) with a granular admin role hierarchy: `super_admin`, `support_manager`, `support_staff` (consultant), and `operations_staff` with varying access levels. Security is enforced via backend middleware (`checkAdminAccess()`) which supports dual-source role checking: direct role in users table (for test/migrated admins) or admin_team_members table (for team-managed admins). OIDC callback preserves existing admin/university user roles even when login intent is 'student'. Frontend uses conditional rendering and query gating. Admin authentication includes OIDC and email/password login with bcrypt.
 
 ### UI/UX and Features
 
@@ -50,6 +50,14 @@ Key features include:
   - **Grid/List Views**: Switchable document display modes for optimal viewing
   - **Persistence**: All folders and documents persist across sessions with no duplicates on re-login
   - **Access Control**: Folder and document ownership validated via userId (FK to users table)
+- **CSV Bulk Import**: Enterprise-grade data migration system for institutions transitioning from existing platforms (e.g., WordPress). Super admin and support manager roles can upload, validate, and approve CSV imports with:
+  - **Two-Phase Workflow**: Upload/parse CSV into staging table → preview with validation → approve to execute in transaction
+  - **Template Download**: Pre-configured CSV templates with all required fields and example data for universities and courses
+  - **Validation Engine**: Per-row validation with error tracking, duplicate detection, and foreign key validation (courses link to universities by name)
+  - **Security**: CSV-only file filter, 2MB size limit, role-based access (super_admin/support_manager), sanitized JSON storage
+  - **Database Schema**: `import_batches` table tracks all imports with status (pending/approved/rejected), validation results, and metadata
+  - **Transactional Import**: Approval executes full batch in database transaction with per-row error capture and rollback on failure
+  - **Import History**: List view shows all past imports with status, counts, timestamps, and ability to download original files
 
 UI components ensure a smooth experience with responsive data tables, form validation, and toast notifications.
 
@@ -75,6 +83,7 @@ UI components ensure a smooth experience with responsive data tables, form valid
 - **Image Processing**: Multer, Sharp
 - **Real-time**: ws (WebSocket), cookie, cookie-signature
 - **Google Maps**: @googlemaps/js-api-loader
+- **CSV Processing**: papaparse (for bulk data import)
 
 **Replit-Specific Integrations**:
 - `@replit/vite-plugin-runtime-error-modal`
