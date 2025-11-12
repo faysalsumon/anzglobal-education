@@ -34,6 +34,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
 
 interface User {
   id: string;
@@ -194,7 +195,7 @@ export default function AdminDashboard() {
   // Handle hash-based navigation
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications'].includes(hash)) {
+    if (hash && ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import'].includes(hash)) {
       setActiveTab(hash);
     }
   }, []);
@@ -851,6 +852,13 @@ export default function AdminDashboard() {
             <FileText className="h-4 w-4 mr-2" />
             Applications ({applications?.length || 0})
           </TabsTrigger>
+          {/* Data Import - Only for full admins (super_admin & support_manager) */}
+          {hasFullAdminAccess && (
+            <TabsTrigger value="data-import" data-testid="tab-data-import">
+              <Upload className="h-4 w-4 mr-2" />
+              Data Import
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Users Tab */}
@@ -1693,6 +1701,11 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Data Import Tab */}
+        <TabsContent value="data-import" className="space-y-4">
+          <AdminCsvImportPanel />
         </TabsContent>
       </Tabs>
 
