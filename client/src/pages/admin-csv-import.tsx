@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,21 +29,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Upload, FileText, CheckCircle2, XCircle, Clock, AlertTriangle, Download, Home } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface ValidationError {
+export interface ValidationError {
   row: number;
   field: string;
   message: string;
   value: any;
 }
 
-interface ParsedCSVRow {
+export interface ParsedCSVRow {
   rowIndex: number;
   isValid: boolean;
   data: any;
   errors: ValidationError[];
 }
 
-interface ImportBatch {
+export interface ImportBatch {
   id: string;
   type: 'universities' | 'courses';
   status: 'pending' | 'approved' | 'rejected' | 'failed';
@@ -60,7 +61,8 @@ interface ImportBatch {
   processedAt: string | null;
 }
 
-export default function AdminCSVImport() {
+// Reusable CSV Import Panel Component
+export function AdminCsvImportPanel() {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importType, setImportType] = useState<'universities' | 'courses'>('universities');
@@ -209,28 +211,7 @@ export default function AdminCSVImport() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/admin" data-testid="link-admin-home">
-              <Home className="w-4 h-4" />
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>CSV Data Import</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Bulk Data Import</h1>
-        <p className="text-muted-foreground mt-1">Import universities and courses from CSV files</p>
-      </div>
-
+    <div className="space-y-6">
       <Tabs defaultValue="upload" className="w-full">
         <TabsList>
           <TabsTrigger value="upload" data-testid="tab-upload">Upload CSV</TabsTrigger>
@@ -521,6 +502,39 @@ export default function AdminCSVImport() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Page wrapper with breadcrumb
+export default function AdminCSVImport() {
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/" data-testid="link-admin-home">
+                <Home className="w-4 h-4" />
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>CSV Data Import</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Bulk Data Import</h1>
+        <p className="text-muted-foreground mt-1">Import universities and courses from CSV files</p>
+      </div>
+
+      {/* Reusable panel */}
+      <AdminCsvImportPanel />
     </div>
   );
 }
