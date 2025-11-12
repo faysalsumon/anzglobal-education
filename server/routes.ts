@@ -52,6 +52,17 @@ import fs from "fs/promises";
 import { calculateProfileCompletion } from "./profileCompletion";
 import { hashPassword, verifyPassword, generateVerificationToken, getUserDisplayName } from "./auth-utils";
 import {
+  parseCSV,
+  validateUniversityRow,
+  validateCourseRow,
+  normalizeUniversityRow,
+  normalizeCourseRow,
+  transformUniversityRow,
+  transformCourseRow,
+  ValidationError,
+  ParsedCSVRow,
+} from "./csvImportUtils";
+import {
   notifyNewApplication,
   notifyApplicationStatusChange,
   notifyTeamMemberAdded,
@@ -158,6 +169,21 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error(`File type not allowed. Supported types: PDF, DOC, DOCX, XLS, XLSX, images (JPG, PNG, GIF, WebP), TXT, CSV`));
+    }
+  },
+});
+
+// CSV upload configuration - restricted to CSV only with 2MB limit for bulk imports
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit for CSV files
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
     }
   },
 });
@@ -4028,6 +4054,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // ========================================
+  // CSV BULK IMPORT ROUTES (Admin Only)
+  // ========================================
+
+  // Upload and parse CSV file
+  app.post("/api/admin/csv-import/upload", isAuthenticated, csvUpload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin or support manager access required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { type } = req.body; // 'universities' or 'courses'
+      
+      if (!type || (type !== 'universities' && type !== 'courses')) {
+        return res.status(400).json({ message: "Invalid type. Must be 'universities' or 'courses'" });
+      }
+
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf-8');
+      const parseResult = parseCSV(csvContent);
+
+      // Check for critical parse errors
+      if (parseResult.hasCriticalErrors || parseResult.parseErrors.length > 0) {
+        return res.status(400).json({
+          message: "CSV parsing failed",
+          parseErrors: parseResult.parseErrors,
+        });
+      }
+
+      // Validate based on type
+      let validationErrors: ValidationError[] = [];
+      const structuredRows: ParsedCSVRow[] = [];
+      let universitiesMap = new Map<string, string>();
+
+      if (type === 'courses') {
+        // Pre-fetch all universities for course validation
+        const allUniversities = await storage.getAllUniversities();
+        allUniversities.forEach(uni => {
+          universitiesMap.set(uni.name.toLowerCase(), uni.id);
+        });
+      }
+
+      // Validate each row and create structured data
+      parseResult.data.forEach((row, index) => {
+        const rowErrors = type === 'universities'
+          ? validateUniversityRow(row, index + 1)
+          : validateCourseRow(row, index + 1, universitiesMap);
+
+        const normalized = type === 'universities'
+          ? normalizeUniversityRow(row)
+          : normalizeCourseRow(row);
+
+        structuredRows.push({
+          rowIndex: index + 1,
+          isValid: rowErrors.length === 0,
+          data: normalized,
+          errors: rowErrors,
+        });
+
+        validationErrors.push(...rowErrors);
+      });
+
+      const validCount = structuredRows.filter(r => r.isValid).length;
+      const errorCount = structuredRows.filter(r => !r.isValid).length;
+
+      // Store in database
+      const [batch] = await db.insert(importBatches).values({
+        type: type as 'universities' | 'courses',
+        uploadedBy: userId,
+        fileName: req.file.originalname,
+        rawCsvText: csvContent,
+        rawData: structuredRows,
+        validationErrors: validationErrors,
+        errorCount,
+        validCount,
+        totalCount: parseResult.totalCount,
+      }).returning();
+
+      res.json({
+        batchId: batch.id,
+        totalCount: batch.totalCount,
+        validCount,
+        errorCount,
+        validationErrors,
+        canApprove: errorCount === 0 && validCount > 0,
+      });
+    } catch (error: any) {
+      console.error("Error uploading CSV:", error);
+      res.status(500).json({ message: error.message || "Failed to upload CSV" });
+    }
+  });
+
+  // List all import batches
+  app.get("/api/admin/csv-import", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const batches = await db
+        .select()
+        .from(importBatches)
+        .orderBy(desc(importBatches.createdAt));
+
+      res.json(batches);
+    } catch (error: any) {
+      console.error("Error listing CSV batches:", error);
+      res.status(500).json({ message: "Failed to list import batches" });
+    }
+  });
+
+  // Approve and execute import
+  app.post("/api/admin/csv-import/:batchId/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin or support manager access required" });
+      }
+
+      const { batchId } = req.params;
+
+      // Get batch
+      const [batch] = await db
+        .select()
+        .from(importBatches)
+        .where(eq(importBatches.id, batchId));
+
+      if (!batch) {
+        return res.status(404).json({ message: "Import batch not found" });
+      }
+
+      // Double-check status
+      if (batch.status !== 'pending') {
+        return res.status(400).json({ message: `Batch is already ${batch.status}` });
+      }
+
+      // Check if there are any valid rows to import
+      if (batch.validCount === 0) {
+        return res.status(400).json({ message: "No valid rows to import" });
+      }
+
+      let importedCount = 0;
+      const importErrors: string[] = [];
+
+      // Execute import in transaction
+      try {
+        await db.transaction(async (tx) => {
+          const structuredRows = batch.rawData as ParsedCSVRow[];
+          const validRows = structuredRows.filter(r => r.isValid);
+
+          if (batch.type === 'universities') {
+            // Import universities
+            for (const row of validRows) {
+              try {
+                const universityData = transformUniversityRow(row.data);
+                await storage.createUniversity(universityData);
+                importedCount++;
+              } catch (error: any) {
+                importErrors.push(`Row ${row.rowIndex}: ${error.message}`);
+              }
+            }
+          } else if (batch.type === 'courses') {
+            // Pre-fetch universities map for course import
+            const allUniversities = await storage.getAllUniversities();
+            const universitiesMap = new Map<string, string>();
+            allUniversities.forEach(uni => {
+              universitiesMap.set(uni.name.toLowerCase(), uni.id);
+            });
+
+            // Import courses
+            for (const row of validRows) {
+              try {
+                const courseData = transformCourseRow(row.data, universitiesMap);
+                await storage.createCourse(courseData);
+                importedCount++;
+              } catch (error: any) {
+                importErrors.push(`Row ${row.rowIndex}: ${error.message}`);
+              }
+            }
+          }
+
+          // Update batch status
+          await tx
+            .update(importBatches)
+            .set({
+              status: importErrors.length > 0 ? 'failed' : 'approved',
+              importedCount,
+              processedAt: new Date(),
+              notes: importErrors.length > 0
+                ? `Imported ${importedCount} of ${validRows.length} valid rows. Errors: ${importErrors.join('; ')}`
+                : undefined,
+            })
+            .where(eq(importBatches.id, batchId));
+        });
+
+        res.json({
+          message: "Import completed successfully",
+          importedCount,
+          totalValid: batch.validCount,
+          errors: importErrors,
+        });
+      } catch (error: any) {
+        // Update batch as failed
+        await db
+          .update(importBatches)
+          .set({
+            status: 'failed',
+            processedAt: new Date(),
+            notes: `Import failed: ${error.message}`,
+          })
+          .where(eq(importBatches.id, batchId));
+
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Error approving import:", error);
+      res.status(500).json({ message: error.message || "Failed to approve import" });
+    }
+  });
+
+  // Reject import batch
+  app.post("/api/admin/csv-import/:batchId/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Super admin or support manager access required" });
+      }
+
+      const { batchId } = req.params;
+      const { notes } = req.body;
+
+      const [batch] = await db
+        .select()
+        .from(importBatches)
+        .where(eq(importBatches.id, batchId));
+
+      if (!batch) {
+        return res.status(404).json({ message: "Import batch not found" });
+      }
+
+      if (batch.status !== 'pending') {
+        return res.status(400).json({ message: `Batch is already ${batch.status}` });
+      }
+
+      await db
+        .update(importBatches)
+        .set({
+          status: 'rejected',
+          processedAt: new Date(),
+          notes,
+        })
+        .where(eq(importBatches.id, batchId));
+
+      res.json({ message: "Import batch rejected" });
+    } catch (error: any) {
+      console.error("Error rejecting import:", error);
+      res.status(500).json({ message: "Failed to reject import batch" });
+    }
+  });
+
+  // Download sample CSV templates
+  app.get("/api/admin/csv-import/templates/:type", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { type } = req.params;
+
+      let csvContent = '';
+      let filename = '';
+
+      if (type === 'universities') {
+        filename = 'universities_template.csv';
+        csvContent = [
+          'name,description,location,country,website,studentCount,internationalStudents,yearEstablished',
+          'Example University,"A leading institution for higher education","New York, NY",USA,https://example.edu,25000,5000,1850',
+          'Tech Institute,"Innovative technology-focused university","San Francisco, CA",USA,https://tech.edu,15000,3000,1965',
+        ].join('\n');
+      } else if (type === 'courses') {
+        filename = 'courses_template.csv';
+        csvContent = [
+          'universityName,title,subject,level,deliveryMode,duration,durationUnit,tuitionFee,currency,intakeMonths,description,entryRequirements',
+          'Example University,Master of Business Administration,Business,postgraduate,on-campus,24,months,45000,USD,"January,September","Comprehensive MBA program with focus on leadership and strategy","Bachelor degree with 3.0 GPA, GMAT 600+"',
+          'Tech Institute,Bachelor of Computer Science,Computer Science,undergraduate,on-campus,48,months,35000,USD,"September","Four-year undergraduate program in computer science and software engineering","High school diploma, Mathematics proficiency"',
+        ].join('\n');
+      } else {
+        return res.status(400).json({ message: "Invalid type. Must be 'universities' or 'courses'" });
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+    } catch (error: any) {
+      console.error("Error generating template:", error);
+      res.status(500).json({ message: "Failed to generate template" });
     }
   });
 
