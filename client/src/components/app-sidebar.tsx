@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen, Camera } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen, Camera, Home as HomeIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,7 +67,7 @@ export function AppSidebar() {
   const unreadCount = unreadData?.count || 0;
 
   const universityItems = [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "My Institutions", url: "/university/institutions", icon: Building2 },
     { title: "Courses", url: "/university/courses", icon: BookOpen },
     { title: "Applications", url: "/university/applications", icon: FileText },
@@ -77,7 +77,7 @@ export function AppSidebar() {
   ];
 
   const studentItems = [
-    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Browse Courses", url: "/student/courses", icon: Search },
     { title: "My Applications", url: "/student/applications", icon: FileText },
     { title: "My Documents", url: "/student/documents", icon: FolderOpen },
@@ -105,7 +105,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
-        <Link href="/" className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1 -mx-2 -my-1" data-testid="link-logo">
+        <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1 -mx-2 -my-1" data-testid="link-logo">
           <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto" />
         </Link>
       </SidebarHeader>
@@ -131,6 +131,22 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild data-testid="nav-public-site">
+                  <Link href="/">
+                    <HomeIcon className="h-4 w-4" />
+                    <span>Public Site</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

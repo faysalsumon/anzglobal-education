@@ -923,21 +923,29 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <Breadcrumb data-testid="breadcrumb">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/" data-testid="breadcrumb-home">
-                  <Home className="h-4 w-4" />
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <div className="flex items-center justify-between gap-4">
+          <Breadcrumb data-testid="breadcrumb">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/admin/dashboard" data-testid="breadcrumb-home">
+                    <Home className="h-4 w-4" />
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Button variant="outline" size="sm" asChild data-testid="button-public-site">
+            <Link href="/">
+              <Home className="h-4 w-4 mr-2" />
+              Public Site
+            </Link>
+          </Button>
+        </div>
         
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">

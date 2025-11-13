@@ -43,6 +43,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes accessible to everyone */}
+      <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/compare-courses" component={CompareCourses} />
@@ -52,13 +53,13 @@ function Router() {
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />
       <Route path="/institutions" component={PublicInstitutions} />
       
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : !user?.userType ? (
-        <Route path="/" component={UserTypeSelection} />
-      ) : (
+      {!isLoading && isAuthenticated && !user?.userType && (
+        <Route path="/user-type" component={UserTypeSelection} />
+      )}
+      
+      {!isLoading && isAuthenticated && user?.userType && (
         <>
-          <Route path="/" component={Home} />
+          <Route path="/dashboard" component={Home} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/admin/csv-import" component={AdminCSVImport} />
           <Route path="/university/profile" component={UniversityProfile} />
