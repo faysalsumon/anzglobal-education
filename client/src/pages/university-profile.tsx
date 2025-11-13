@@ -24,11 +24,9 @@ import { Sparkles, Loader2, Upload, Image as ImageIcon, Home } from "lucide-reac
 import { insertUniversitySchema, type InsertUniversity, type University } from "@shared/schema";
 import { z } from "zod";
 
-const formSchema = insertUniversitySchema.extend({
-  name: z.string().min(1, "Name is required"),
-  location: z.string().min(1, "Location is required"),
-  country: z.string().min(1, "Country is required"),
-});
+// Note: insertUniversitySchema already has validation including refine(), so we can use it directly
+// We just need to ensure required fields are validated
+const formSchema = insertUniversitySchema;
 
 const PROVIDER_TYPES = [
   "Institution",
@@ -65,7 +63,8 @@ export default function UniversityProfile() {
       contactPhone: "",
       numberOfCampuses: undefined,
       providerType: "",
-      scholarshipPercentage: undefined,
+      scholarshipPercentageMin: undefined,
+      scholarshipPercentageMax: undefined,
       topDisciplines: [],
       smallDescription: "",
       fullDescription: "",
@@ -91,7 +90,8 @@ export default function UniversityProfile() {
         contactPhone: university.contactPhone || "",
         numberOfCampuses: university.numberOfCampuses || undefined,
         providerType: university.providerType || "",
-        scholarshipPercentage: university.scholarshipPercentage || undefined,
+        scholarshipPercentageMin: university.scholarshipPercentageMin || undefined,
+        scholarshipPercentageMax: university.scholarshipPercentageMax || undefined,
         topDisciplines: university.topDisciplines || [],
         smallDescription: university.smallDescription || "",
         fullDescription: university.fullDescription || "",
@@ -101,7 +101,7 @@ export default function UniversityProfile() {
       });
       
       // Set scholarship toggle state
-      setHasScholarship(!!university.scholarshipPercentage && university.scholarshipPercentage > 0);
+      setHasScholarship(!!(university.scholarshipPercentageMin || university.scholarshipPercentageMax));
       
       // Set preview images
       if (university.logo) {
@@ -545,7 +545,8 @@ export default function UniversityProfile() {
                         const hasScholarshipValue = value === "yes";
                         setHasScholarship(hasScholarshipValue);
                         if (!hasScholarshipValue) {
-                          form.setValue("scholarshipPercentage", undefined);
+                          form.setValue("scholarshipPercentageMin", undefined);
+                          form.setValue("scholarshipPercentageMax", undefined);
                         }
                       }}
                       className="flex gap-4"
@@ -568,31 +569,52 @@ export default function UniversityProfile() {
                 </FormItem>
 
                 {hasScholarship && (
-                  <FormField
-                    control={form.control}
-                    name="scholarshipPercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Scholarship Percentage</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            placeholder="20"
-                            min="0"
-                            max="100"
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            data-testid="input-scholarship-percentage"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Percentage of scholarship offered (0-100%)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="scholarshipPercentageMin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Min %</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="10"
+                              min="0"
+                              max="100"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              data-testid="input-scholarship-percentage-min"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="scholarshipPercentageMax"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Max %</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="20"
+                              min="0"
+                              max="100"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              data-testid="input-scholarship-percentage-max"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
               </div>
 
