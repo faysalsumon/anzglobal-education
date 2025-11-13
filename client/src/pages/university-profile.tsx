@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import {
   Breadcrumb,
@@ -30,10 +31,11 @@ const formSchema = insertUniversitySchema.extend({
 });
 
 const PROVIDER_TYPES = [
-  "Private Institutions",
+  "Institution",
   "TAFE",
-  "Private University",
-  "Public University",
+  "University",
+  "College",
+  "School",
 ];
 
 export default function UniversityProfile() {
@@ -42,6 +44,7 @@ export default function UniversityProfile() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hasScholarship, setHasScholarship] = useState<boolean>(false);
 
   const { data: university } = useQuery<University>({
     queryKey: ["/api/university/profile"],
@@ -68,6 +71,7 @@ export default function UniversityProfile() {
       fullDescription: "",
       institutionGallery: [],
       topCourses: [],
+      campusAddresses: [],
     },
   });
 
@@ -93,7 +97,11 @@ export default function UniversityProfile() {
         fullDescription: university.fullDescription ?? "",
         institutionGallery: university.institutionGallery || [],
         topCourses: university.topCourses || [],
+        campusAddresses: (university.campusAddresses as any) || [],
       });
+      
+      // Set scholarship toggle state
+      setHasScholarship(!!university.scholarshipPercentage && university.scholarshipPercentage > 0);
       
       // Set preview images
       if (university.logo) {
@@ -526,26 +534,67 @@ export default function UniversityProfile() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="scholarshipPercentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Scholarship Percentage</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="20"
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        data-testid="input-scholarship-percentage"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              {/* Scholarship Availability */}
+              <div className="space-y-4">
+                <FormItem>
+                  <FormLabel>Scholarship Available</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      value={hasScholarship ? "yes" : "no"}
+                      onValueChange={(value) => {
+                        const hasScholarshipValue = value === "yes";
+                        setHasScholarship(hasScholarshipValue);
+                        if (!hasScholarshipValue) {
+                          form.setValue("scholarshipPercentage", undefined);
+                        }
+                      }}
+                      className="flex gap-4"
+                      data-testid="radio-scholarship-available"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yes" id="scholarship-yes" data-testid="radio-scholarship-yes" />
+                        <FormLabel htmlFor="scholarship-yes" className="font-normal cursor-pointer">
+                          Yes
+                        </FormLabel>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="no" id="scholarship-no" data-testid="radio-scholarship-no" />
+                        <FormLabel htmlFor="scholarship-no" className="font-normal cursor-pointer">
+                          No
+                        </FormLabel>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                </FormItem>
+
+                {hasScholarship && (
+                  <FormField
+                    control={form.control}
+                    name="scholarshipPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Scholarship Percentage</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            placeholder="20"
+                            min="0"
+                            max="100"
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            data-testid="input-scholarship-percentage"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Percentage of scholarship offered (0-100%)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </div>
 
               <FormField
                 control={form.control}
@@ -572,6 +621,120 @@ export default function UniversityProfile() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Campus Addresses */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Campus Addresses</CardTitle>
+              <CardDescription>
+                {form.watch("numberOfCampuses") 
+                  ? `Enter address details for ${form.watch("numberOfCampuses")} campus${form.watch("numberOfCampuses") > 1 ? "es" : ""}`
+                  : "Enter the number of campuses first to add addresses"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {form.watch("numberOfCampuses") && form.watch("numberOfCampuses")! > 0 ? (
+                Array.from({ length: form.watch("numberOfCampuses")! }).map((_, index) => {
+                  const campusAddresses = form.watch("campusAddresses") || [];
+                  const currentAddress = campusAddresses[index] || { address: "", city: "", state: "", postcode: "", country: "" };
+
+                  return (
+                    <div key={index} className="space-y-4 p-4 border rounded-lg">
+                      <h4 className="font-medium">Campus {index + 1}</h4>
+                      
+                      <FormItem>
+                        <FormLabel>Street Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            value={currentAddress.address || ""}
+                            onChange={(e) => {
+                              const newAddresses = [...(form.watch("campusAddresses") || [])];
+                              newAddresses[index] = { ...currentAddress, address: e.target.value };
+                              form.setValue("campusAddresses", newAddresses);
+                            }}
+                            placeholder="123 University Ave"
+                            data-testid={`input-campus-${index}-address`}
+                          />
+                        </FormControl>
+                      </FormItem>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={currentAddress.city || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, city: e.target.value };
+                                form.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="Sydney"
+                              data-testid={`input-campus-${index}-city`}
+                            />
+                          </FormControl>
+                        </FormItem>
+
+                        <FormItem>
+                          <FormLabel>State/Province</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={currentAddress.state || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, state: e.target.value };
+                                form.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="NSW"
+                              data-testid={`input-campus-${index}-state`}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormItem>
+                          <FormLabel>Postcode</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={currentAddress.postcode || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, postcode: e.target.value };
+                                form.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="2000"
+                              data-testid={`input-campus-${index}-postcode`}
+                            />
+                          </FormControl>
+                        </FormItem>
+
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={currentAddress.country || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, country: e.target.value };
+                                form.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="Australia"
+                              data-testid={`input-campus-${index}-country`}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Please enter the number of campuses in the "Institution Details" section above to add campus addresses.
+                </p>
+              )}
             </CardContent>
           </Card>
 
