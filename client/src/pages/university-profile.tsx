@@ -100,8 +100,11 @@ export default function UniversityProfile() {
         campusAddresses: (university.campusAddresses as any) || [],
       });
       
-      // Set scholarship toggle state
-      setHasScholarship(!!(university.scholarshipPercentageMin || university.scholarshipPercentageMax));
+      // Set scholarship toggle state - use explicit null/undefined check to handle 0% scholarships
+      setHasScholarship(
+        university.scholarshipPercentageMin !== null && university.scholarshipPercentageMin !== undefined ||
+        university.scholarshipPercentageMax !== null && university.scholarshipPercentageMax !== undefined
+      );
       
       // Set preview images
       if (university.logo) {

@@ -61,7 +61,8 @@ interface Institution {
   providerType: string | null;
   numberOfCampuses: number | null;
   establishedYear: number | null;
-  scholarshipPercentage: number | null;
+  scholarshipPercentageMin: number | null;
+  scholarshipPercentageMax: number | null;
   topDisciplines: string[] | null;
   logo: string | null;
   topCourses: string[] | null;
@@ -183,7 +184,8 @@ const institutionSchema = z.object({
   providerType: z.string().min(1, "Provider type is required"),
   numberOfCampuses: z.coerce.number().int().positive().optional().or(z.literal("")),
   establishedYear: z.coerce.number().int().min(1800).max(new Date().getFullYear()).optional().or(z.literal("")),
-  scholarshipPercentage: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
+  scholarshipPercentageMin: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
+  scholarshipPercentageMax: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
   logo: z.string().optional(),
   topDisciplines: z.string().optional(),
   topCourses: z.string().optional(),
@@ -302,7 +304,8 @@ export default function AdminDashboard() {
       galleryImages: [],
       campusAddresses: [],
       hasScholarship: false,
-      scholarshipPercentage: "" as any,
+      scholarshipPercentageMin: "" as any,
+      scholarshipPercentageMax: "" as any,
       numberOfCampuses: "" as any,
     },
   });
@@ -795,7 +798,11 @@ export default function AdminDashboard() {
 
   const handleEditInstitution = (institution: Institution) => {
     setEditingInstitution(institution);
-    const hasScholarship = institution.scholarshipPercentage !== null && institution.scholarshipPercentage !== undefined;
+    // Use explicit null/undefined check to handle 0% scholarships
+    const hasScholarship = (
+      institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMin !== undefined ||
+      institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax !== undefined
+    );
     institutionForm.reset({
       name: institution.name,
       location: institution.location,
@@ -806,7 +813,8 @@ export default function AdminDashboard() {
       providerType: institution.providerType || "",
       numberOfCampuses: institution.numberOfCampuses as any,
       establishedYear: institution.establishedYear as any,
-      scholarshipPercentage: institution.scholarshipPercentage as any,
+      scholarshipPercentageMin: institution.scholarshipPercentageMin as any,
+      scholarshipPercentageMax: institution.scholarshipPercentageMax as any,
       logo: institution.logo || "",
       topDisciplines: institution.topDisciplines?.join(", ") || "",
       topCourses: institution.topCourses?.join(", ") || "",
@@ -827,7 +835,8 @@ export default function AdminDashboard() {
       topCourses: data.topCourses
         ? data.topCourses.split(',').map(c => c.trim()).filter(Boolean)
         : undefined,
-      scholarshipPercentage: data.hasScholarship ? data.scholarshipPercentage : undefined,
+      scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
+      scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
     };
     
     // Remove hasScholarship as it's not a database field
@@ -2129,7 +2138,8 @@ export default function AdminDashboard() {
                     variant={institutionForm.watch("hasScholarship") === false ? "default" : "outline"}
                     onClick={() => {
                       institutionForm.setValue("hasScholarship", false);
-                      institutionForm.setValue("scholarshipPercentage", "" as any);
+                      institutionForm.setValue("scholarshipPercentageMin", "" as any);
+                      institutionForm.setValue("scholarshipPercentageMax", "" as any);
                     }}
                     data-testid="button-admin-scholarshipNo"
                   >
@@ -2137,19 +2147,34 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 {institutionForm.watch("hasScholarship") === true && (
-                  <FormField
-                    control={institutionForm.control}
-                    name="scholarshipPercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Scholarship Percentage</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-admin-scholarshipPercentage" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={institutionForm.control}
+                      name="scholarshipPercentageMin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Min %</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-admin-scholarshipPercentageMin" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={institutionForm.control}
+                      name="scholarshipPercentageMax"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Max %</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="20" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-admin-scholarshipPercentageMax" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
               </div>
 
