@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home } from "lucide-react";
 import type { University } from "@shared/schema";
+import { InstitutionLogo } from "@/components/institution-logo";
 
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
@@ -77,14 +78,12 @@ export default function PublicInstitutionDetail() {
           </Breadcrumb>
 
           <div className="flex flex-col md:flex-row items-start gap-6">
-            {institution.logo && (
-              <img
-                src={institution.logo}
-                alt={institution.name}
-                className="w-32 h-32 object-contain rounded"
-                data-testid="img-logo"
-              />
-            )}
+            <InstitutionLogo
+              src={institution.logo}
+              alt={institution.name}
+              size="xl"
+              testId="img-logo"
+            />
             <div className="flex-1">
               <div className="flex flex-wrap gap-2 mb-2">
                 {institution.providerType && (

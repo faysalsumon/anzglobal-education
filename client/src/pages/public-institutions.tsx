@@ -31,6 +31,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Favorite } from "@shared/schema";
+import { InstitutionLogo } from "@/components/institution-logo";
 
 type University = {
   id: string;
@@ -338,15 +339,13 @@ export default function PublicInstitutions() {
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-6">
-                      <div className="flex items-start gap-4 mb-4">
-                        {institution.logo && (
-                          <img
-                            src={institution.logo}
-                            alt={institution.name}
-                            className="w-16 h-16 object-contain rounded flex-shrink-0"
-                            data-testid={`img-logo-${institution.id}`}
-                          />
-                        )}
+                      <div className="flex items-start gap-3 sm:gap-4 mb-4">
+                        <InstitutionLogo
+                          src={institution.logo}
+                          alt={institution.name}
+                          size="md"
+                          testId={`img-logo-${institution.id}`}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center flex-wrap gap-2 mb-1">
                             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
