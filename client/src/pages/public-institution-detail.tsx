@@ -15,6 +15,14 @@ import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
 import type { University } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 
+interface CampusAddress {
+  address?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}
+
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
@@ -97,7 +105,7 @@ export default function PublicInstitutionDetail() {
                     {institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMax !== null
                       ? `${institution.scholarshipPercentageMin}%-${institution.scholarshipPercentageMax}% Scholarship Available`
                       : institution.scholarshipPercentageMin !== null
-                      ? `Up to ${institution.scholarshipPercentageMin}% Scholarship Available`
+                      ? `From ${institution.scholarshipPercentageMin}% Scholarship Available`
                       : `Up to ${institution.scholarshipPercentageMax}% Scholarship Available`}
                   </Badge>
                 )}
@@ -249,9 +257,9 @@ export default function PublicInstitutionDetail() {
                   <CardTitle>Campus Locations</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(institution.campusAddresses as any[]).map((campus: any, index: number) => (
+                  {(institution.campusAddresses as CampusAddress[]).map((campus, index) => (
                     <div key={index} className="space-y-1" data-testid={`campus-${index}`}>
-                      {institution.campusAddresses!.length > 1 && (
+                      {(institution.campusAddresses as CampusAddress[]).length > 1 && (
                         <p className="text-sm font-medium">Campus {index + 1}</p>
                       )}
                       <div className="flex items-start gap-2">
@@ -264,7 +272,7 @@ export default function PublicInstitutionDetail() {
                           {campus.country && <p>{campus.country}</p>}
                         </div>
                       </div>
-                      {index < institution.campusAddresses!.length - 1 && (
+                      {index < (institution.campusAddresses as CampusAddress[]).length - 1 && (
                         <div className="border-t pt-4 mt-4" />
                       )}
                     </div>
