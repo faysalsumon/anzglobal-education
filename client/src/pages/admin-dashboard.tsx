@@ -34,8 +34,9 @@ import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit,
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
+import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
 
 interface User {
   id: string;
@@ -2197,16 +2198,33 @@ export default function AdminDashboard() {
                         
                         <div className="space-y-2">
                           <FormLabel>Street Address</FormLabel>
-                          <Input
+                          <GoogleAddressAutocomplete
                             value={currentAddress.address || ""}
-                            onChange={(e) => {
+                            onAddressSelect={(components: AddressComponents) => {
+                              // Merge address fields into existing entry to preserve any additional properties
                               const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
-                              newAddresses[index] = { ...currentAddress, address: e.target.value };
+                              newAddresses[index] = {
+                                ...currentAddress,
+                                address: components.address,
+                                city: components.city,
+                                state: components.state,
+                                postcode: components.postcode,
+                                country: components.country,
+                              };
                               institutionForm.setValue("campusAddresses", newAddresses);
                             }}
-                            placeholder="123 University Ave"
-                            data-testid={`input-admin-campusAddress-${index}`}
+                            onInputChange={(value: string) => {
+                              // Allow manual typing
+                              const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                              newAddresses[index] = { ...currentAddress, address: value };
+                              institutionForm.setValue("campusAddresses", newAddresses);
+                            }}
+                            placeholder="Start typing an address..."
+                            testId={`input-admin-campusAddress-${index}`}
                           />
+                          <FormDescription className="text-xs">
+                            Start typing to search for an address, or enter manually
+                          </FormDescription>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
