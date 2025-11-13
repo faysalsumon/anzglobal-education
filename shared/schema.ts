@@ -57,7 +57,6 @@ export const universities = pgTable("universities", {
   description: text("description"),
   logo: text("logo"),
   website: text("website"),
-  location: text("location"),
   country: text("country"),
   establishedYear: integer("established_year"),
   contactEmail: text("contact_email"),
