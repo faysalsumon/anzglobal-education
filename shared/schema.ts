@@ -72,6 +72,7 @@ export const universities = pgTable("universities", {
   fullDescription: text("full_description"), // AI-powered
   institutionGallery: text("institution_gallery").array(), // Up to 3 images, 600x400px
   topCourses: text("top_courses").array(), // Array of course IDs or names
+  campusAddresses: jsonb("campus_addresses"), // Array of campus address objects: [{address: string, city: string, state: string, postcode: string}]
   
   // Approval workflow
   approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected'
@@ -798,6 +799,15 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  // Validate campus addresses structure
+  campusAddresses: z.array(z.object({
+    address: z.string(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postcode: z.string().optional(),
+    country: z.string().optional(),
+  })).optional(),
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
