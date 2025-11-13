@@ -24,6 +24,7 @@ import { Sparkles, Loader2, Upload, Image as ImageIcon, Home } from "lucide-reac
 import { insertUniversitySchema, type InsertUniversity, type University } from "@shared/schema";
 import { z } from "zod";
 import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
+import { GalleryManager } from "@/components/gallery-manager";
 
 // Note: insertUniversitySchema already has validation including refine(), so we can use it directly
 // We just need to ensure required fields are validated
@@ -931,56 +932,21 @@ export default function UniversityProfile() {
             </CardContent>
           </Card>
 
-          {/* Institution Gallery (AI-powered) */}
+          {/* Institution Gallery (Upload or AI-powered) */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5 text-accent" />
-                    Institution Gallery
-                  </CardTitle>
-                  <CardDescription>AI-generated campus images (3 images, 600x400px each)</CardDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={generateGallery}
-                  disabled={aiLoading === "gallery"}
-                  data-testid="button-generate-gallery"
-                >
-                  {aiLoading === "gallery" ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Gallery with AI
-                    </>
-                  )}
-                </Button>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-accent" />
+                Institution Gallery
+              </CardTitle>
+              <CardDescription>Upload images or generate them with AI (up to 6 images, 600x400px each)</CardDescription>
             </CardHeader>
             <CardContent>
-              {(galleryPreviews.length > 0 || (university?.institutionGallery && university.institutionGallery.length > 0)) && (
-                <div className="grid gap-4 md:grid-cols-3 mb-4">
-                  {(galleryPreviews.length > 0 ? galleryPreviews : university?.institutionGallery || []).map((image, index) => (
-                    <div key={index} className="aspect-[3/2] rounded-md border overflow-hidden">
-                      <img
-                        src={image}
-                        alt={`Gallery image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        data-testid={`img-gallery-${index}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Click "Generate Gallery with AI" to create professional campus images. This may take a minute.
-              </p>
+              <GalleryManager
+                images={form.watch("institutionGallery") || []}
+                onChange={(images) => form.setValue("institutionGallery", images)}
+                maxImages={6}
+              />
             </CardContent>
           </Card>
 

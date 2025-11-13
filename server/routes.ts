@@ -925,6 +925,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gallery Image Upload Route - allows uploading multiple gallery images
+  app.post("/api/university/upload-gallery-image", isAuthenticated, upload.single('image'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user has university access OR admin access
+      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!universityAccess && !adminAccess) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Resize to 600x400 for gallery consistency
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(600, 400, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      // Save to public directory
+      const universityId = universityAccess?.university.id || adminAccess ? 'admin-upload' : userId;
+      const filename = `gallery-${universityId}-${Date.now()}.jpg`;
+      const localPath = path.join(process.cwd(), 'public', 'institutions');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const imagePath = `/institutions/${filename}`;
+
+      res.json({ imagePath });
+    } catch (error) {
+      console.error("Error uploading gallery image:", error);
+      res.status(500).json({ message: "Failed to upload gallery image" });
+    }
+  });
+
+  // AI-powered Single Gallery Image Generation
+  app.post("/api/university/generate-gallery-image", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user has university access OR admin access
+      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!universityAccess && !adminAccess) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({ message: "Image prompt is required" });
+      }
+
+      // Generate single image with DALL-E
+      const response = await generateInstitutionGalleryImages(
+        prompt,
+        "custom prompt",
+        ""
+      );
+
+      if (!response || response.length === 0) {
+        throw new Error("No image generated");
+      }
+
+      // Download and resize the generated image
+      const imageUrl = response[0];
+      const fetchResponse = await fetch(imageUrl);
+      const arrayBuffer = await fetchResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Resize to 600x400
+      const resizedBuffer = await sharp(buffer)
+        .resize(600, 400, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      // Save to public directory
+      const universityId = universityAccess?.university.id || 'admin-upload';
+      const filename = `gallery-ai-${universityId}-${Date.now()}.jpg`;
+      const localPath = path.join(process.cwd(), 'public', 'institutions');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const imagePath = `/institutions/${filename}`;
+
+      res.json({ imagePath });
+    } catch (error: any) {
+      console.error("Error generating gallery image:", error);
+      
+      // Handle OpenAI-specific errors
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key configured." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate image. Please try again." });
+    }
+  });
+
   // Public institutions route - only show approved and active institutions
   app.get("/api/institutions", async (req, res) => {
     try {
