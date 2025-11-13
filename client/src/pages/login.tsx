@@ -45,9 +45,8 @@ export default function Login() {
       // Small delay to ensure cache invalidation completes
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Always redirect to home page after login
-      // User can navigate to their dashboard from there
-      setLocation("/");
+      // Redirect to dashboard after login
+      setLocation("/dashboard");
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -132,7 +131,7 @@ export default function Login() {
           
           <div className="mt-6 text-center text-sm">
             <a
-              href="/api/auth/login"
+              href="/api/login"
               className="text-primary hover:underline"
               data-testid="link-replit-auth"
             >

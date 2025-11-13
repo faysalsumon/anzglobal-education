@@ -123,7 +123,7 @@ export async function setupAuth(app: Express) {
         const userId = claims.sub;
         const sessionData = req.session as any;
         const loginIntent = sessionData?.loginIntent;
-        const studentRedirect = sessionData?.studentLoginRedirect || '/student/documents';
+        const studentRedirect = sessionData?.studentLoginRedirect || '/dashboard';
 
         // If this is a student login, provision student profile and folders
         if (loginIntent === 'student') {
@@ -132,18 +132,20 @@ export async function setupAuth(app: Express) {
           // Check if user already exists - if they're an admin/university, preserve their role
           const existingUser = await storage.getUser(userId);
           if (existingUser && (existingUser.userType === 'admin' || existingUser.userType === 'university')) {
-            console.log('[STUDENT CALLBACK] User is actually admin/university type:', existingUser.userType, '- redirecting to home instead');
+            console.log('[STUDENT CALLBACK] User is actually admin/university type:', existingUser.userType, '- redirecting to dashboard instead');
             // Clear the login intent flag
             delete sessionData.loginIntent;
             delete sessionData.studentLoginRedirect;
             
-            // Log in and redirect to home (admin/university dashboard)
+            // Log in and redirect to appropriate dashboard
             req.logIn(user, (loginErr) => {
               if (loginErr) {
                 console.error("Login error:", loginErr);
-                return res.redirect("/?error=login_failed");
+                return res.redirect("/login?error=login_failed");
               }
-              res.redirect("/");
+              // Redirect based on user type
+              const redirectUrl = existingUser.userType === 'admin' ? '/admin/dashboard' : '/dashboard';
+              res.redirect(redirectUrl);
             });
             return;
           }
@@ -206,7 +208,7 @@ export async function setupAuth(app: Express) {
           req.logIn(user, (loginErr) => {
             if (loginErr) {
               console.error("Login error:", loginErr);
-              return res.redirect("/?error=login_failed");
+              return res.redirect("/login?error=login_failed");
             }
             res.redirect(studentRedirect);
           });
@@ -241,20 +243,24 @@ export async function setupAuth(app: Express) {
             });
           }
           
-          req.logIn(user, (loginErr) => {
+          req.logIn(user, async (loginErr) => {
             if (loginErr) {
               console.error("Login error:", loginErr);
               return res.redirect("/api/login");
             }
-            // Honor returnTo if set, otherwise redirect to home
-            const returnTo = (sessionData?.returnTo as string) || "/";
+            // Get user type to determine default redirect
+            const currentUser = await storage.getUser(userId);
+            const defaultRedirect = currentUser?.userType === 'admin' ? '/admin/dashboard' : '/dashboard';
+            
+            // Honor returnTo if set, otherwise redirect to role-appropriate dashboard
+            const returnTo = (sessionData?.returnTo as string) || defaultRedirect;
             delete sessionData?.returnTo;
             res.redirect(returnTo);
           });
         }
       } catch (error) {
         console.error("Callback error:", error);
-        res.redirect("/?error=auth_failed");
+        res.redirect("/login?error=auth_failed");
       }
     })(req, res, next);
   });
