@@ -111,7 +111,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-xl shadow-sm">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background backdrop-blur-xl shadow-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
           <div className="flex items-center gap-2">
             <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
