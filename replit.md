@@ -20,7 +20,7 @@ Node.js Express.js server in TypeScript. Authentication uses OpenID Connect (OID
 
 ### Data Storage
 
-PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles (with `campusAddresses` JSONB field for dynamic multi-campus data and `scholarshipPercentageMin`/`scholarshipPercentageMax` integer fields for scholarship ranges), team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB and `scholarshipPercentageMin`/`scholarshipPercentageMax` for scholarship ranges), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, messages, document folders, documents, and import_batches (CSV bulk import staging). Enum types enforce status/type fields (e.g., import_status, import_type). GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images.
+PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles (with `country` text field and `campusAddresses` JSONB field for comprehensive multi-campus location data, plus `scholarshipPercentageMin`/`scholarshipPercentageMax` integer fields for scholarship ranges), team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB and `scholarshipPercentageMin`/`scholarshipPercentageMax` for scholarship ranges), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, messages, document folders, documents, and import_batches (CSV bulk import staging). Enum types enforce status/type fields (e.g., import_status, import_type). GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images. Note: The redundant `location` field was removed from universities table as `campusAddresses` provides more comprehensive location data.
 
 ### Authentication & Authorization
 
@@ -35,13 +35,14 @@ The platform features modern AI-style branding with gradient backgrounds and con
   1. **Logo Upload**: 160x160px image with circular border (#F0F0F0 1px), stored in object storage
   2. **Institute Name**: Required text field
   3. **Website**: URL field with validation
-  4. **Institute Type**: Dropdown with 5 options (Institution, TAFE, University, College, School)
-  5. **Institution Gallery**: Multi-image upload for showcasing campus facilities
-  6. **Top Disciplines**: Comma-separated list of academic strengths
-  7. **Top Courses**: Featured course offerings
-  8. **Scholarship**: Yes/No toggle with conditional range inputs (Min % and Max % from 0-100%). Supports 0% scholarships and validates that min ≤ max
-  9. **Number of Campuses**: Numeric field controlling dynamic campus address inputs
-  10-12. **Campus Addresses**: Dynamic JSONB array with 5 fields per campus (address, city, state, postcode, country), automatically resizing based on numberOfCampuses
+  4. **Country**: Text field for primary country (AI generation uses this field)
+  5. **Institute Type**: Dropdown with 5 options (Institution, TAFE, University, College, School)
+  6. **Institution Gallery**: Multi-image upload for showcasing campus facilities
+  7. **Top Disciplines**: Comma-separated list of academic strengths
+  8. **Top Courses**: Featured course offerings
+  9. **Scholarship**: Yes/No toggle with conditional range inputs (Min % and Max % from 0-100%). Supports 0% scholarships and validates that min ≤ max
+  10. **Number of Campuses**: Numeric field controlling dynamic campus address inputs
+  11-12. **Campus Addresses**: Dynamic JSONB array with 5 fields per campus (address, city, state, postcode, country), automatically resizing based on numberOfCampuses
 - **Student Experience**: Intelligent course discovery with advanced filtering, AI-assisted profile creation, streamlined application process, favorites functionality, and side-by-side course comparison tools (up to 4 courses).
 
 **Landing Page**: Clean, clutter-free header with only Student authentication button. Search functionality in hero section allows course and institution discovery. Footer contains navigation links including Browse Courses, Browse Institutions, and Contact Us.
