@@ -23,6 +23,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, Upload, Image as ImageIcon, Home } from "lucide-react";
 import { insertUniversitySchema, type InsertUniversity, type University } from "@shared/schema";
 import { z } from "zod";
+import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
 
 // Note: insertUniversitySchema already has validation including refine(), so we can use it directly
 // We just need to ensure required fields are validated
@@ -654,17 +655,34 @@ export default function UniversityProfile() {
                       <FormItem>
                         <FormLabel>Street Address</FormLabel>
                         <FormControl>
-                          <Input
+                          <GoogleAddressAutocomplete
                             value={currentAddress.address || ""}
-                            onChange={(e) => {
+                            onAddressSelect={(components: AddressComponents) => {
+                              // Merge address fields into existing entry to preserve any additional properties
                               const newAddresses = [...(form.watch("campusAddresses") || [])];
-                              newAddresses[index] = { ...currentAddress, address: e.target.value };
+                              newAddresses[index] = {
+                                ...currentAddress,
+                                address: components.address,
+                                city: components.city,
+                                state: components.state,
+                                postcode: components.postcode,
+                                country: components.country,
+                              };
                               form.setValue("campusAddresses", newAddresses);
                             }}
-                            placeholder="123 University Ave"
-                            data-testid={`input-campus-${index}-address`}
+                            onInputChange={(value: string) => {
+                              // Allow manual typing
+                              const newAddresses = [...(form.watch("campusAddresses") || [])];
+                              newAddresses[index] = { ...currentAddress, address: value };
+                              form.setValue("campusAddresses", newAddresses);
+                            }}
+                            placeholder="Start typing an address..."
+                            testId={`input-campus-${index}-address`}
                           />
                         </FormControl>
+                        <FormDescription className="text-xs">
+                          Start typing to search for an address, or enter manually
+                        </FormDescription>
                       </FormItem>
 
                       <div className="grid gap-4 md:grid-cols-2">
