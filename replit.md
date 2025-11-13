@@ -26,6 +26,8 @@ PostgreSQL, accessed via Neon's serverless driver, is the primary database, util
 
 Replit's OIDC service is the authentication provider. Express-session manages sessions with PostgreSQL storage. Role-based access control uses a `userType` field (`university`, `student`, `admin`) with a granular admin role hierarchy: `super_admin`, `support_manager`, `support_staff` (consultant), and `operations_staff` with varying access levels. Security is enforced via backend middleware (`checkAdminAccess()`) which supports dual-source role checking: direct role in users table (for test/migrated admins) or admin_team_members table (for team-managed admins). OIDC callback preserves existing admin/university user roles even when login intent is 'student'. Frontend uses conditional rendering and query gating. Admin authentication includes OIDC and email/password login with bcrypt.
 
+**Central Login Portal**: A dedicated `/admin/login` page provides unified authentication for all user types (admin, university, student) with intelligent role-based redirection. After successful login, users are automatically routed to their appropriate dashboard: admins to `/admin/dashboard`, universities to `/university/profile`, and students to `/student/courses`. The page supports both email/password authentication and Replit Auth (OIDC), using `queryClient.fetchQuery` for race-condition-free user data retrieval and smart redirect logic. The login flow ensures proper session management and cache invalidation.
+
 ### UI/UX and Features
 
 The platform features modern AI-style branding with gradient backgrounds and contemporary visual effects. It offers dual user experiences:
