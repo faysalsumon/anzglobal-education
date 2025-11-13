@@ -63,6 +63,17 @@ interface Institution {
   establishedYear: number | null;
   scholarshipPercentage: number | null;
   topDisciplines: string[] | null;
+  logo: string | null;
+  topCourses: string[] | null;
+  galleryImages: string[] | null;
+  campusAddresses: Array<{
+    address: string;
+    city: string;
+    state: string;
+    postcode: string;
+    country: string;
+  }> | null;
+  approvalStatus: string | null;
   isActive: boolean;
   createdAt: string | null;
 }
@@ -169,10 +180,22 @@ const institutionSchema = z.object({
   contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
   contactPhone: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
-  providerType: z.string().optional(),
+  providerType: z.string().min(1, "Provider type is required"),
   numberOfCampuses: z.coerce.number().int().positive().optional().or(z.literal("")),
   establishedYear: z.coerce.number().int().min(1800).max(new Date().getFullYear()).optional().or(z.literal("")),
   scholarshipPercentage: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
+  logo: z.string().optional(),
+  topDisciplines: z.string().optional(),
+  topCourses: z.string().optional(),
+  galleryImages: z.array(z.string()).optional(),
+  campusAddresses: z.array(z.object({
+    address: z.string(),
+    city: z.string(),
+    state: z.string(),
+    postcode: z.string(),
+    country: z.string(),
+  })).optional(),
+  hasScholarship: z.boolean().optional(),
 });
 
 const courseSchema = z.object({
@@ -184,6 +207,8 @@ const courseSchema = z.object({
   level: z.string().optional(),
   subject: z.string().min(1, "Subject is required"),
 });
+
+const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -271,6 +296,14 @@ export default function AdminDashboard() {
       contactPhone: "",
       website: "",
       providerType: "",
+      logo: "",
+      topDisciplines: "",
+      topCourses: "",
+      galleryImages: [],
+      campusAddresses: [],
+      hasScholarship: false,
+      scholarshipPercentage: "" as any,
+      numberOfCampuses: "" as any,
     },
   });
 
@@ -315,6 +348,18 @@ export default function AdminDashboard() {
   const { data: inquiryLeads, isLoading: inquiryLeadsLoading } = useQuery<InquiryLead[]>({
     queryKey: ["/api/admin/leads"],
   });
+
+  // Watch numberOfCampuses and update campusAddresses array
+  useEffect(() => {
+    const numberOfCampuses = institutionForm.watch("numberOfCampuses");
+    if (numberOfCampuses && numberOfCampuses > 0) {
+      const currentAddresses = institutionForm.getValues("campusAddresses") || [];
+      const newAddresses = Array.from({ length: numberOfCampuses }, (_, i) => 
+        currentAddresses[i] || { address: "", city: "", state: "", postcode: "", country: "" }
+      );
+      institutionForm.setValue("campusAddresses", newAddresses);
+    }
+  }, [institutionForm.watch("numberOfCampuses")]);
 
   // User mutations
   const createUserMutation = useMutation({
@@ -750,6 +795,7 @@ export default function AdminDashboard() {
 
   const handleEditInstitution = (institution: Institution) => {
     setEditingInstitution(institution);
+    const hasScholarship = institution.scholarshipPercentage !== null && institution.scholarshipPercentage !== undefined;
     institutionForm.reset({
       name: institution.name,
       location: institution.location,
@@ -761,15 +807,36 @@ export default function AdminDashboard() {
       numberOfCampuses: institution.numberOfCampuses as any,
       establishedYear: institution.establishedYear as any,
       scholarshipPercentage: institution.scholarshipPercentage as any,
+      logo: institution.logo || "",
+      topDisciplines: institution.topDisciplines?.join(", ") || "",
+      topCourses: institution.topCourses?.join(", ") || "",
+      galleryImages: institution.galleryImages || [],
+      campusAddresses: institution.campusAddresses || [],
+      hasScholarship,
     });
     setInstitutionDialogOpen(true);
   };
 
   const handleSubmitInstitution = (data: z.infer<typeof institutionSchema>) => {
+    // Transform form data to API format
+    const apiData: any = {
+      ...data,
+      topDisciplines: data.topDisciplines 
+        ? data.topDisciplines.split(',').map(d => d.trim()).filter(Boolean)
+        : undefined,
+      topCourses: data.topCourses
+        ? data.topCourses.split(',').map(c => c.trim()).filter(Boolean)
+        : undefined,
+      scholarshipPercentage: data.hasScholarship ? data.scholarshipPercentage : undefined,
+    };
+    
+    // Remove hasScholarship as it's not a database field
+    delete apiData.hasScholarship;
+    
     if (editingInstitution) {
-      updateInstitutionMutation.mutate({ id: editingInstitution.id, data });
+      updateInstitutionMutation.mutate({ id: editingInstitution.id, data: apiData });
     } else {
-      createInstitutionMutation.mutate(data);
+      createInstitutionMutation.mutate(apiData);
     }
   };
 
@@ -1838,32 +1905,78 @@ export default function AdminDashboard() {
           </DialogHeader>
           <Form {...institutionForm}>
             <form onSubmit={institutionForm.handleSubmit(handleSubmitInstitution)} className="space-y-4">
+              {/* Logo URL */}
+              <FormField
+                control={institutionForm.control}
+                name="logo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Logo URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://example.com/logo.png" data-testid="input-admin-logo" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Name */}
               <FormField
                 control={institutionForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="University Name" data-testid="input-institution-name" />
+                      <Input {...field} placeholder="University Name" data-testid="input-admin-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Location */}
               <FormField
                 control={institutionForm.control}
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Location *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="City, Country" data-testid="input-institution-location" />
+                      <Input {...field} placeholder="City, Country" data-testid="input-admin-location" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Provider Type - Select Dropdown */}
+              <FormField
+                control={institutionForm.control}
+                name="providerType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Provider Type *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-admin-providerType">
+                          <SelectValue placeholder="Select provider type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PROVIDER_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Description */}
               <FormField
                 control={institutionForm.control}
                 name="description"
@@ -1871,12 +1984,14 @@ export default function AdminDashboard() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Brief description" />
+                      <Textarea {...field} placeholder="Brief description" rows={3} data-testid="input-admin-description" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Contact Information */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={institutionForm.control}
@@ -1885,7 +2000,7 @@ export default function AdminDashboard() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="contact@university.edu" />
+                        <Input {...field} type="email" placeholder="contact@university.edu" data-testid="input-admin-contactEmail" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1898,13 +2013,15 @@ export default function AdminDashboard() {
                     <FormItem>
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="+1234567890" />
+                        <Input {...field} placeholder="+1234567890" data-testid="input-admin-contactPhone" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Website */}
               <FormField
                 control={institutionForm.control}
                 name="website"
@@ -1912,26 +2029,15 @@ export default function AdminDashboard() {
                   <FormItem>
                     <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="https://university.edu" />
+                      <Input {...field} placeholder="https://university.edu" data-testid="input-admin-website" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Established Year and Number of Campuses */}
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={institutionForm.control}
-                  name="providerType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Provider Type</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Public University" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
                   control={institutionForm.control}
                   name="establishedYear"
@@ -1939,14 +2045,12 @@ export default function AdminDashboard() {
                     <FormItem>
                       <FormLabel>Established Year</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="1950" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
+                        <Input {...field} type="number" placeholder="1950" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-admin-establishedYear" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={institutionForm.control}
                   name="numberOfCampuses"
@@ -1954,31 +2058,202 @@ export default function AdminDashboard() {
                     <FormItem>
                       <FormLabel>Number of Campuses</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="1" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={institutionForm.control}
-                  name="scholarshipPercentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Scholarship %</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                        <Input {...field} type="number" placeholder="1" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-admin-numberOfCampuses" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Top Disciplines */}
+              <FormField
+                control={institutionForm.control}
+                name="topDisciplines"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Top Disciplines (comma-separated)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Computer Science, Business, Engineering" data-testid="input-admin-topDisciplines" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Top Courses */}
+              <FormField
+                control={institutionForm.control}
+                name="topCourses"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Top Courses (comma-separated)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Bachelor of IT, Master of Business, Diploma in Nursing" data-testid="input-admin-topCourses" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Gallery Images - Simplified URL inputs */}
+              <div className="space-y-2">
+                <FormLabel>Gallery Images (URLs)</FormLabel>
+                <p className="text-sm text-muted-foreground">Enter image URLs, one per line</p>
+                <Textarea
+                  placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"
+                  rows={4}
+                  value={institutionForm.watch("galleryImages")?.join("\n") || ""}
+                  onChange={(e) => {
+                    const urls = e.target.value.split("\n").map(url => url.trim()).filter(Boolean);
+                    institutionForm.setValue("galleryImages", urls);
+                  }}
+                  data-testid="input-admin-galleryImages"
+                />
+              </div>
+
+              {/* Scholarship Toggle */}
+              <div className="space-y-3">
+                <FormLabel>Does this institution offer scholarships?</FormLabel>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={institutionForm.watch("hasScholarship") === true ? "default" : "outline"}
+                    onClick={() => institutionForm.setValue("hasScholarship", true)}
+                    data-testid="button-admin-scholarshipYes"
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={institutionForm.watch("hasScholarship") === false ? "default" : "outline"}
+                    onClick={() => {
+                      institutionForm.setValue("hasScholarship", false);
+                      institutionForm.setValue("scholarshipPercentage", "" as any);
+                    }}
+                    data-testid="button-admin-scholarshipNo"
+                  >
+                    No
+                  </Button>
+                </div>
+                {institutionForm.watch("hasScholarship") === true && (
+                  <FormField
+                    control={institutionForm.control}
+                    name="scholarshipPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Scholarship Percentage</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-admin-scholarshipPercentage" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* Dynamic Campus Addresses */}
+              {institutionForm.watch("numberOfCampuses") && Number(institutionForm.watch("numberOfCampuses")) > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <FormLabel>Campus Addresses</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      {institutionForm.watch("numberOfCampuses")} campus{Number(institutionForm.watch("numberOfCampuses") ?? 0) > 1 ? "es" : ""} to configure
+                    </p>
+                  </div>
+                  {Array.from({ length: Number(institutionForm.watch("numberOfCampuses") ?? 0) }).map((_, index) => {
+                    const campusAddresses = institutionForm.watch("campusAddresses") || [];
+                    const currentAddress = campusAddresses[index] || { address: "", city: "", state: "", postcode: "", country: "" };
+
+                    return (
+                      <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                        <h4 className="font-medium text-sm">Campus {index + 1}</h4>
+                        
+                        <div className="space-y-2">
+                          <FormLabel>Street Address</FormLabel>
+                          <Input
+                            value={currentAddress.address || ""}
+                            onChange={(e) => {
+                              const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                              newAddresses[index] = { ...currentAddress, address: e.target.value };
+                              institutionForm.setValue("campusAddresses", newAddresses);
+                            }}
+                            placeholder="123 University Ave"
+                            data-testid={`input-admin-campusAddress-${index}`}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <FormLabel>City</FormLabel>
+                            <Input
+                              value={currentAddress.city || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, city: e.target.value };
+                                institutionForm.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="Sydney"
+                              data-testid={`input-admin-campusCity-${index}`}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <FormLabel>State/Province</FormLabel>
+                            <Input
+                              value={currentAddress.state || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, state: e.target.value };
+                                institutionForm.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="NSW"
+                              data-testid={`input-admin-campusState-${index}`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <FormLabel>Postcode</FormLabel>
+                            <Input
+                              value={currentAddress.postcode || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, postcode: e.target.value };
+                                institutionForm.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="2000"
+                              data-testid={`input-admin-campusPostcode-${index}`}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <FormLabel>Country</FormLabel>
+                            <Input
+                              value={currentAddress.country || ""}
+                              onChange={(e) => {
+                                const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                                newAddresses[index] = { ...currentAddress, country: e.target.value };
+                                institutionForm.setValue("campusAddresses", newAddresses);
+                              }}
+                              placeholder="Australia"
+                              data-testid={`input-admin-campusCountry-${index}`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setInstitutionDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setInstitutionDialogOpen(false)} data-testid="button-admin-cancel">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending} data-testid="button-submit-institution">
+                <Button type="submit" disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending} data-testid="button-admin-submit">
                   {editingInstitution ? "Update" : "Create"}
                 </Button>
               </DialogFooter>
