@@ -15,10 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, ArrowLeft, Plus, X } from "lucide-react";
 import { Link } from "wouter";
-import { insertCourseSchema, type InsertCourse, type Course } from "@shared/schema";
+import { baseCourseSchema, type InsertCourse, type Course } from "@shared/schema";
 import { z } from "zod";
 
-const formSchema = insertCourseSchema.extend({
+const formSchema = baseCourseSchema.extend({
   title: z.string().min(1, "Title is required"),
   subject: z.string().min(1, "Subject is required"),
   level: z.string().min(1, "Level is required"),

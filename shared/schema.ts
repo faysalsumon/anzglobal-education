@@ -825,7 +825,8 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
   path: ["scholarshipPercentageMin"],
 });
 
-export const insertCourseSchema = createInsertSchema(courses).omit({
+// Base schema without refine() - can be extended by frontend forms
+const baseCourseSchema = createInsertSchema(courses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -860,7 +861,10 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   
   // Validate delivery mode
   deliveryMode: z.enum(['online', 'on-campus', 'hybrid']).optional(),
-}).refine((data) => {
+});
+
+// Refined schema with validation - use for backend
+export const insertCourseSchema = baseCourseSchema.refine((data) => {
   // If both min and max are provided, ensure min <= max
   if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&
       data.scholarshipPercentageMax !== null && data.scholarshipPercentageMax !== undefined) {
@@ -871,6 +875,9 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   message: "Scholarship minimum percentage must be less than or equal to maximum percentage",
   path: ["scholarshipPercentageMin"],
 });
+
+// Export base schema for frontend forms that need to extend it
+export { baseCourseSchema };
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
   id: true,
