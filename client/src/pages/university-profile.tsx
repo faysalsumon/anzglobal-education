@@ -56,7 +56,6 @@ export default function UniversityProfile() {
       description: "",
       logo: "",
       website: "",
-      location: "",
       country: "",
       establishedYear: undefined,
       contactEmail: "",
@@ -83,7 +82,6 @@ export default function UniversityProfile() {
         description: university.description || "",
         logo: university.logo || "",
         website: university.website || "",
-        location: university.location || "",
         country: university.country || "",
         establishedYear: university.establishedYear || undefined,
         contactEmail: university.contactEmail || "",
@@ -138,11 +136,11 @@ export default function UniversityProfile() {
 
   const generateDescription = async () => {
     const name = form.getValues("name");
-    const location = form.getValues("location");
-    if (!name || !location) {
+    const country = form.getValues("country");
+    if (!name || !country) {
       toast({
         title: "Missing information",
-        description: "Please enter university name and location first.",
+        description: "Please enter university name and country first.",
         variant: "destructive",
       });
       return;
@@ -152,7 +150,7 @@ export default function UniversityProfile() {
     try {
       const response = await apiRequest("POST", "/api/ai/generate-university-description", {
         name,
-        location,
+        country,
       }) as any as { description: string };
       form.setValue("description", response.description);
       toast({
@@ -172,13 +170,13 @@ export default function UniversityProfile() {
 
   const generateSmallDescription = async () => {
     const name = form.getValues("name");
-    const location = form.getValues("location");
+    const country = form.getValues("country");
     const providerType = form.getValues("providerType");
     
-    if (!name || !location) {
+    if (!name || !country) {
       toast({
         title: "Missing information",
-        description: "Please enter university name and location first.",
+        description: "Please enter university name and country first.",
         variant: "destructive",
       });
       return;
@@ -186,10 +184,10 @@ export default function UniversityProfile() {
 
     setAiLoading("smallDescription");
     try {
-      console.log("Generating small description with:", { name, location, providerType });
+      console.log("Generating small description with:", { name, country, providerType });
       const response = await apiRequest("POST", "/api/university/generate-small-description", {
         name,
-        location,
+        country,
         providerType,
       }) as any as { description: string };
       console.log("Received response:", response);
@@ -213,14 +211,14 @@ export default function UniversityProfile() {
 
   const generateFullDescription = async () => {
     const name = form.getValues("name");
-    const location = form.getValues("location");
+    const country = form.getValues("country");
     const providerType = form.getValues("providerType");
     const topDisciplines = form.getValues("topDisciplines");
     
-    if (!name || !location) {
+    if (!name || !country) {
       toast({
         title: "Missing information",
-        description: "Please enter university name and location first.",
+        description: "Please enter university name and country first.",
         variant: "destructive",
       });
       return;
@@ -230,7 +228,7 @@ export default function UniversityProfile() {
     try {
       const response = await apiRequest("POST", "/api/university/generate-full-description", {
         name,
-        location,
+        country,
         providerType,
         topDisciplines,
       }) as any as { description: string };
@@ -252,13 +250,13 @@ export default function UniversityProfile() {
 
   const generateGallery = async () => {
     const name = form.getValues("name");
-    const location = form.getValues("location");
+    const country = form.getValues("country");
     const providerType = form.getValues("providerType");
     
-    if (!name || !location) {
+    if (!name || !country) {
       toast({
         title: "Missing information",
-        description: "Please enter university name and location first.",
+        description: "Please enter university name and country first.",
         variant: "destructive",
       });
       return;
@@ -268,7 +266,7 @@ export default function UniversityProfile() {
     try {
       const response = await apiRequest("POST", "/api/university/generate-gallery", {
         name,
-        location,
+        country,
         providerType,
       }) as any as { galleryImages: string[] };
       form.setValue("institutionGallery", response.galleryImages);
@@ -413,35 +411,19 @@ export default function UniversityProfile() {
                 )}
               />
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Sydney, NSW" data-testid="input-location" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Australia" data-testid="input-country" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Australia" data-testid="input-country" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
