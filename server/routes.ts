@@ -1239,6 +1239,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/admin/upload-profile-photo - Upload admin profile photo
+  app.post("/api/admin/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin access required." });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Resize to 200x200 with cover
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(200, 200, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      // Save to public directory
+      const filename = `admin-profile-${user.id}-${Date.now()}.jpg`;
+      const localPath = path.join(process.cwd(), 'public', 'admins');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const photoPath = `/admins/${filename}`;
+
+      // Update user with new profile photo
+      await storage.updateUser(user.id, {
+        ...user,
+        profileImageUrl: photoPath,
+      });
+
+      res.json({ photoPath });
+    } catch (error) {
+      console.error("Error uploading admin profile photo:", error);
+      res.status(500).json({ message: "Failed to upload photo" });
+    }
+  });
+
   // GET /api/student/profile/completion - Check profile completion status
   app.get("/api/student/profile/completion", isAuthenticated, async (req: any, res) => {
     try {
