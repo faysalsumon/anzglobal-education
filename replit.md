@@ -42,7 +42,7 @@ The platform features modern AI-style branding with gradient backgrounds and con
   8. **Top Courses**: Featured course offerings
   9. **Scholarship**: Yes/No toggle with conditional range inputs (Min % and Max % from 0-100%). Supports 0% scholarships and validates that min ≤ max
   10. **Number of Campuses**: Numeric field controlling dynamic campus address inputs
-  11-12. **Campus Addresses**: Dynamic JSONB array with 5 fields per campus (address, city, state, postcode, country), automatically resizing based on numberOfCampuses
+  11-12. **Campus Addresses**: Dynamic JSONB array with 5 fields per campus (address, city, state, postcode, country), automatically resizing based on numberOfCampuses. Features Google Places API autocomplete on street address field for intelligent address entry with automatic field population
 - **Student Experience**: Intelligent course discovery with advanced filtering, AI-assisted profile creation, streamlined application process, favorites functionality, and side-by-side course comparison tools (up to 4 courses).
 
 **Landing Page**: Clean, clutter-free header with only Student authentication button. Search functionality in hero section allows course and institution discovery. Footer contains navigation links including Browse Courses, Browse Institutions, and Contact Us.
@@ -90,7 +90,7 @@ UI components ensure a smooth experience with responsive data tables, form valid
 
 **CDN**: Google Fonts CDN.
 
-**Google Maps API**: Google Places API for address autocomplete.
+**Google Maps API**: Google Places API for address autocomplete. Used in university campus addresses (`GoogleAddressAutocomplete` component) to search for full street addresses and auto-populate all address fields (street, city, state, postcode, country). Also used in `GooglePlacesAutocomplete` component for city-only search.
 
 **NPM Packages**:
 - **UI**: Radix UI, Shadcn/ui, Lucide React, class-variance-authority, Tailwind CSS
