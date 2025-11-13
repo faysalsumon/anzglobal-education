@@ -713,8 +713,8 @@ export default function AdminDashboard() {
   const filteredInstitutions = institutions?.filter(institution => {
     return (
       institutionSearchQuery === "" ||
-      institution.name.toLowerCase().includes(institutionSearchQuery.toLowerCase()) ||
-      institution.country.toLowerCase().includes(institutionSearchQuery.toLowerCase())
+      institution.name?.toLowerCase().includes(institutionSearchQuery.toLowerCase()) ||
+      institution.country?.toLowerCase().includes(institutionSearchQuery.toLowerCase())
     );
   });
 
@@ -722,7 +722,7 @@ export default function AdminDashboard() {
   const filteredCourses = courses?.filter(course => {
     const matchesSearch =
       courseSearchQuery === "" ||
-      course.title.toLowerCase().includes(courseSearchQuery.toLowerCase()) ||
+      course.title?.toLowerCase().includes(courseSearchQuery.toLowerCase()) ||
       course.institutionName?.toLowerCase().includes(courseSearchQuery.toLowerCase());
 
     const matchesStatus =
@@ -1785,9 +1785,9 @@ export default function AdminDashboard() {
                           const searchLower = applicationSearchQuery.toLowerCase();
                           const matchesSearch =
                             !searchLower ||
-                            app.student.name.toLowerCase().includes(searchLower) ||
-                            app.course.title.toLowerCase().includes(searchLower) ||
-                            app.university.name.toLowerCase().includes(searchLower);
+                            app.student.name?.toLowerCase().includes(searchLower) ||
+                            app.course.title?.toLowerCase().includes(searchLower) ||
+                            app.university.name?.toLowerCase().includes(searchLower);
                           
                           const matchesStatus =
                             applicationStatusFilter === 'all' ||
@@ -1960,7 +1960,7 @@ export default function AdminDashboard() {
               <div className="space-y-3">
                 <FormLabel>Institution Logo</FormLabel>
                 <FormDescription className="text-xs">
-                  Upload your institution's logo (will be resized to 160x160px and displayed as circular)
+                  Upload any size image - it will be automatically resized to 160x160px and displayed as circular
                 </FormDescription>
                 <div className="flex items-center gap-4">
                   {logoPreview && (
@@ -1992,7 +1992,7 @@ export default function AdminDashboard() {
                       {logoPreview ? "Change Logo" : "Upload Logo"}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Recommended: Square image, min 160x160px
+                      Any size accepted - automatically resized to 160x160px
                     </p>
                   </div>
                 </div>
