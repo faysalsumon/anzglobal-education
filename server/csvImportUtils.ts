@@ -136,13 +136,42 @@ export function validateUniversityRow(
     });
   }
 
-  if (row.scholarshipPercentage && (isNaN(parseInt(row.scholarshipPercentage)) || parseInt(row.scholarshipPercentage) < 0 || parseInt(row.scholarshipPercentage) > 100)) {
-    errors.push({
-      row: rowIndex,
-      field: 'scholarshipPercentage',
-      message: 'Scholarship percentage must be between 0 and 100',
-      value: row.scholarshipPercentage,
-    });
+  // Validate scholarship range - use explicit checks to handle 0% values
+  if (row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") {
+    const min = parseInt(row.scholarshipPercentageMin);
+    if (isNaN(min) || min < 0 || min > 100) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMin',
+        message: 'Scholarship minimum percentage must be between 0 and 100',
+        value: row.scholarshipPercentageMin,
+      });
+    }
+  }
+  if (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "") {
+    const max = parseInt(row.scholarshipPercentageMax);
+    if (isNaN(max) || max < 0 || max > 100) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMax',
+        message: 'Scholarship maximum percentage must be between 0 and 100',
+        value: row.scholarshipPercentageMax,
+      });
+    }
+  }
+  // Validate min <= max if both are provided
+  if ((row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") &&
+      (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "")) {
+    const min = parseInt(row.scholarshipPercentageMin);
+    const max = parseInt(row.scholarshipPercentageMax);
+    if (!isNaN(min) && !isNaN(max) && min > max) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMin',
+        message: `Scholarship minimum (${min}) cannot be greater than maximum (${max})`,
+        value: row.scholarshipPercentageMin,
+      });
+    }
   }
 
   if (row.website && !isValidUrl(row.website)) {
@@ -320,13 +349,42 @@ export function validateCourseRow(
     });
   }
 
-  if (row.scholarshipPercentage && (isNaN(parseInt(row.scholarshipPercentage)) || parseInt(row.scholarshipPercentage) < 0 || parseInt(row.scholarshipPercentage) > 100)) {
-    errors.push({
-      row: rowIndex,
-      field: 'scholarshipPercentage',
-      message: 'Scholarship percentage must be between 0 and 100',
-      value: row.scholarshipPercentage,
-    });
+  // Validate scholarship range - use explicit checks to handle 0% values
+  if (row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") {
+    const min = parseInt(row.scholarshipPercentageMin);
+    if (isNaN(min) || min < 0 || min > 100) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMin',
+        message: 'Scholarship minimum percentage must be between 0 and 100',
+        value: row.scholarshipPercentageMin,
+      });
+    }
+  }
+  if (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "") {
+    const max = parseInt(row.scholarshipPercentageMax);
+    if (isNaN(max) || max < 0 || max > 100) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMax',
+        message: 'Scholarship maximum percentage must be between 0 and 100',
+        value: row.scholarshipPercentageMax,
+      });
+    }
+  }
+  // Validate min <= max if both are provided
+  if ((row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") &&
+      (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "")) {
+    const min = parseInt(row.scholarshipPercentageMin);
+    const max = parseInt(row.scholarshipPercentageMax);
+    if (!isNaN(min) && !isNaN(max) && min > max) {
+      errors.push({
+        row: rowIndex,
+        field: 'scholarshipPercentageMin',
+        message: `Scholarship minimum (${min}) cannot be greater than maximum (${max})`,
+        value: row.scholarshipPercentageMin,
+      });
+    }
   }
 
   return errors;
@@ -354,8 +412,12 @@ export function transformUniversityRow(row: any, userId: string): Partial<Insert
   if (row.numberOfCampuses) {
     university.numberOfCampuses = parseInt(row.numberOfCampuses);
   }
-  if (row.scholarshipPercentage) {
-    university.scholarshipPercentage = parseInt(row.scholarshipPercentage);
+  // Use explicit checks to handle 0% values
+  if (row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") {
+    university.scholarshipPercentageMin = parseInt(row.scholarshipPercentageMin);
+  }
+  if (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "") {
+    university.scholarshipPercentageMax = parseInt(row.scholarshipPercentageMax);
   }
 
   // Parse array fields (comma-separated)
@@ -406,8 +468,12 @@ export function transformCourseRow(row: any, universityId: string): Partial<Inse
   if (row.durationWeeks) {
     course.durationWeeks = parseInt(row.durationWeeks);
   }
-  if (row.scholarshipPercentage) {
-    course.scholarshipPercentage = parseInt(row.scholarshipPercentage);
+  // Use explicit checks to handle 0% values
+  if (row.scholarshipPercentageMin !== undefined && row.scholarshipPercentageMin !== "") {
+    course.scholarshipPercentageMin = parseInt(row.scholarshipPercentageMin);
+  }
+  if (row.scholarshipPercentageMax !== undefined && row.scholarshipPercentageMax !== "") {
+    course.scholarshipPercentageMax = parseInt(row.scholarshipPercentageMax);
   }
   if (row.applicationFees) {
     course.applicationFees = parseFloat(row.applicationFees);
@@ -465,7 +531,8 @@ export function generateUniversitiesSampleCSV(): string {
       establishedYear: '1850',
       numberOfCampuses: '2',
       providerType: 'University',
-      scholarshipPercentage: '25',
+      scholarshipPercentageMin: '20',
+      scholarshipPercentageMax: '30',
       topDisciplines: 'Medicine,Engineering,Business,Law',
       campusAddresses: '[{"address":"University Ave","city":"Sydney","state":"NSW","postcode":"2006","country":"Australia"},{"address":"Cumberland Campus","city":"Lidcombe","state":"NSW","postcode":"2141","country":"Australia"}]',
     },
@@ -480,7 +547,8 @@ export function generateUniversitiesSampleCSV(): string {
       establishedYear: '1996',
       numberOfCampuses: '1',
       providerType: 'TAFE',
-      scholarshipPercentage: '15',
+      scholarshipPercentageMin: '10',
+      scholarshipPercentageMax: '20',
       topDisciplines: 'Information Technology,Networking,Business',
       campusAddresses: '[{"address":"123 Collins St","city":"Melbourne","state":"VIC","postcode":"3000","country":"Australia"}]',
     },
@@ -495,7 +563,8 @@ export function generateUniversitiesSampleCSV(): string {
       establishedYear: '2005',
       numberOfCampuses: '1',
       providerType: 'School',
-      scholarshipPercentage: '10',
+      scholarshipPercentageMin: '5',
+      scholarshipPercentageMax: '15',
       topDisciplines: 'Business,Finance,Management',
       campusAddresses: '[{"address":"456 Market St","city":"Sydney","state":"NSW","postcode":"2000","country":"Australia"}]',
     },
@@ -525,7 +594,8 @@ export function generateCoursesSampleCSV(): string {
       careerOutcomes: 'Business Manager,Consultant,Executive',
       prerequisites: 'Bachelor degree with 3 years work experience',
       englishRequirements: 'IELTS 7.0 overall',
-      scholarshipPercentage: '20',
+      scholarshipPercentageMin: '15',
+      scholarshipPercentageMax: '25',
       prPathway: 'false',
       workRights: 'true',
     },
@@ -548,7 +618,8 @@ export function generateCoursesSampleCSV(): string {
       careerOutcomes: 'Software Developer,IT Support,Network Administrator',
       prerequisites: 'Year 12 completion',
       englishRequirements: 'IELTS 5.5 overall',
-      scholarshipPercentage: '10',
+      scholarshipPercentageMin: '5',
+      scholarshipPercentageMax: '15',
       prPathway: 'true',
       workRights: 'true',
     },

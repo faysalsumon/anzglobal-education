@@ -20,7 +20,7 @@ Node.js Express.js server in TypeScript. Authentication uses OpenID Connect (OID
 
 ### Data Storage
 
-PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles (with `campusAddresses` JSONB field for dynamic multi-campus data), team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, messages, document folders, documents, and import_batches (CSV bulk import staging). Enum types enforce status/type fields (e.g., import_status, import_type). GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images.
+PostgreSQL, accessed via Neon's serverless driver, is the primary database, utilizing Drizzle ORM for schema-first design and migrations. The schema includes tables for sessions, users (universities, students, admins), university profiles (with `campusAddresses` JSONB field for dynamic multi-campus data and `scholarshipPercentageMin`/`scholarshipPercentageMax` integer fields for scholarship ranges), team members with role-based permissions, courses (with extensive fields including `englishRequirementsStructured` JSONB and `scholarshipPercentageMin`/`scholarshipPercentageMax` for scholarship ranges), course recommendations (caching AI-powered matches), student profiles, applications, referral tracking, student leads (for inquiry management), contact submissions, favorites, course comparisons, notifications (Facebook-style), conversations, messages, document folders, documents, and import_batches (CSV bulk import staging). Enum types enforce status/type fields (e.g., import_status, import_type). GIN indexes optimize filtering on array and JSONB fields. Replit Object Storage is used for images.
 
 ### Authentication & Authorization
 
@@ -39,7 +39,7 @@ The platform features modern AI-style branding with gradient backgrounds and con
   5. **Institution Gallery**: Multi-image upload for showcasing campus facilities
   6. **Top Disciplines**: Comma-separated list of academic strengths
   7. **Top Courses**: Featured course offerings
-  8. **Scholarship**: Yes/No toggle with conditional percentage input (0-100%)
+  8. **Scholarship**: Yes/No toggle with conditional range inputs (Min % and Max % from 0-100%). Supports 0% scholarships and validates that min ≤ max
   9. **Number of Campuses**: Numeric field controlling dynamic campus address inputs
   10-12. **Campus Addresses**: Dynamic JSONB array with 5 fields per campus (address, city, state, postcode, country), automatically resizing based on numberOfCampuses
 - **Student Experience**: Intelligent course discovery with advanced filtering, AI-assisted profile creation, streamlined application process, favorites functionality, and side-by-side course comparison tools (up to 4 courses).
@@ -66,8 +66,8 @@ Key features include:
   - **Two Entry Points**: Accessible as standalone page (`/admin/csv-import`) and integrated "Data Import" tab in Admin Dashboard (`/admin/dashboard#data-import`)
   - **Reusable Component**: `AdminCsvImportPanel` component enables code reuse across both entry points with shared query keys for cache consistency
   - **Two-Phase Workflow**: Upload/parse CSV into staging table → preview with validation → approve to execute in transaction
-  - **Template Download**: Pre-configured CSV templates with all required fields and example data for universities and courses, including new provider types (Institution, TAFE, University, College, School) and campus addresses (JSON-formatted)
-  - **Validation Engine**: Per-row validation with error tracking, duplicate detection, and foreign key validation (courses link to universities by name)
+  - **Template Download**: Pre-configured CSV templates with all required fields and example data for universities and courses, including new provider types (Institution, TAFE, University, College, School), campus addresses (JSON-formatted), and scholarship ranges (scholarshipPercentageMin, scholarshipPercentageMax)
+  - **Validation Engine**: Per-row validation with error tracking, duplicate detection, foreign key validation (courses link to universities by name), and scholarship range validation (min ≤ max, both 0-100%, handles 0% values correctly)
   - **Security**: CSV-only file filter, 2MB size limit, role-based access (super_admin/support_manager), sanitized JSON storage
   - **Database Schema**: `import_batches` table tracks all imports with status (pending/approved/rejected), validation results, and metadata
   - **Transactional Import**: Approval executes full batch in database transaction with per-row error capture and rollback on failure
