@@ -32,6 +32,7 @@ import CompareCourses from "@/pages/compare-courses";
 import Contact from "@/pages/contact";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
+import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminCSVImport from "@/pages/admin-csv-import";
 import ChatPage from "@/pages/chat";
@@ -43,6 +44,7 @@ function Router() {
     <Switch>
       {/* Public routes accessible to everyone */}
       <Route path="/login" component={Login} />
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/compare-courses" component={CompareCourses} />
       <Route path="/contact" component={Contact} />
       <Route path="/courses/:id" component={PublicCourseDetail} />

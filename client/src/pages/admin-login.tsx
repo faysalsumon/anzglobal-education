@@ -1,0 +1,182 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Mail, Lock, ShieldCheck } from "lucide-react";
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export default function AdminLogin() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: z.infer<typeof loginSchema>) => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest("POST", "/api/auth/login", data) as any;
+      
+      // Invalidate auth cache and refetch to get updated user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Use fetchQuery to get the fresh user data (avoids manual GET and race conditions)
+      const user = await queryClient.fetchQuery({
+        queryKey: ["/api/auth/user"],
+      }) as any;
+      
+      // Role-based redirection logic to EXISTING routes
+      let redirectPath = "/";
+      let welcomeMessage = `Welcome back, ${response.firstName || response.email}!`;
+      
+      if (user.userType === "admin") {
+        redirectPath = "/admin/dashboard";
+        welcomeMessage = `Welcome to Admin Portal, ${response.firstName || response.email}!`;
+      } else if (user.userType === "university") {
+        // University users land on their profile page
+        redirectPath = "/university/profile";
+        welcomeMessage = `Welcome to University Portal, ${response.firstName || response.email}!`;
+      } else if (user.userType === "student") {
+        // Student users land on courses page
+        redirectPath = "/student/courses";
+        welcomeMessage = `Welcome back, ${response.firstName || response.email}!`;
+      }
+      
+      toast({
+        title: "Login successful",
+        description: welcomeMessage,
+      });
+
+      setLocation(redirectPath);
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-10 w-10 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center">
+              <ShieldCheck className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <div className="text-xl font-bold">ANZ Global Education</div>
+              <div className="text-xs text-muted-foreground">Central Login Portal</div>
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Sign In</CardTitle>
+          <CardDescription>
+            Enter your credentials to access your dashboard
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="your.email@example.com"
+                          className="pl-10"
+                          data-testid="input-email"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Enter your password"
+                          className="pl-10"
+                          data-testid="input-password"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+                data-testid="button-login"
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </Form>
+          
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => window.location.href = "/api/login"}
+              data-testid="button-replit-auth"
+            >
+              Continue with Replit Auth
+            </Button>
+          </div>
+
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            <p>Access for: Admin • University • Student</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
