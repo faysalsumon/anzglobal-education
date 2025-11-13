@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -275,6 +275,10 @@ export default function AdminDashboard() {
   // Applications state
   const [applicationSearchQuery, setApplicationSearchQuery] = useState("");
   const [applicationStatusFilter, setApplicationStatusFilter] = useState<string>("all");
+
+  // Logo upload state
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Forms
   const userForm = useForm<z.infer<typeof userSchema>>({
@@ -793,12 +797,14 @@ export default function AdminDashboard() {
   // Institution handlers
   const handleCreateInstitution = () => {
     setEditingInstitution(null);
+    setLogoPreview(null);
     institutionForm.reset();
     setInstitutionDialogOpen(true);
   };
 
   const handleEditInstitution = (institution: Institution) => {
     setEditingInstitution(institution);
+    setLogoPreview(institution.logo || null);
     // Use explicit null/undefined check to handle 0% scholarships
     const hasScholarship = (
       institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMin !== undefined ||
@@ -824,6 +830,41 @@ export default function AdminDashboard() {
       hasScholarship,
     });
     setInstitutionDialogOpen(true);
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    try {
+      const response = await fetch("/api/university/upload-logo", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload logo");
+      }
+
+      const data = await response.json();
+      institutionForm.setValue("logo", data.logoPath);
+      setLogoPreview(data.logoPath);
+      
+      toast({
+        title: "Logo uploaded",
+        description: "Institution logo has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmitInstitution = (data: z.infer<typeof institutionSchema>) => {
@@ -1915,20 +1956,47 @@ export default function AdminDashboard() {
           </DialogHeader>
           <Form {...institutionForm}>
             <form onSubmit={institutionForm.handleSubmit(handleSubmitInstitution)} className="space-y-4">
-              {/* Logo URL */}
-              <FormField
-                control={institutionForm.control}
-                name="logo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Logo URL</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://example.com/logo.png" data-testid="input-admin-logo" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Logo Upload */}
+              <div className="space-y-3">
+                <FormLabel>Institution Logo</FormLabel>
+                <FormDescription className="text-xs">
+                  Upload your institution's logo (will be resized to 160x160px and displayed as circular)
+                </FormDescription>
+                <div className="flex items-center gap-4">
+                  {logoPreview && (
+                    <div className="w-20 h-20 rounded-full border border-[#F0F0F0] bg-white flex items-center justify-center overflow-hidden">
+                      <img
+                        src={logoPreview}
+                        alt="Institution logo"
+                        className="w-full h-full object-cover"
+                        data-testid="img-admin-logo-preview"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      ref={logoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      data-testid="input-admin-logo-file"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => logoFileInputRef.current?.click()}
+                      data-testid="button-admin-upload-logo"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {logoPreview ? "Change Logo" : "Upload Logo"}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Recommended: Square image, min 160x160px
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Name */}
               <FormField
