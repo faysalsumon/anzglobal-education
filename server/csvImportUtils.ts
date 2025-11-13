@@ -363,6 +363,16 @@ export function transformUniversityRow(row: any, userId: string): Partial<Insert
     university.topDisciplines = row.topDisciplines.split(',').map((d: string) => d.trim()).filter(Boolean);
   }
 
+  // Parse campus addresses (JSON string)
+  if (row.campusAddresses) {
+    try {
+      university.campusAddresses = JSON.parse(row.campusAddresses);
+    } catch (e) {
+      // If parsing fails, ignore campus addresses rather than failing the whole import
+      console.error(`Failed to parse campusAddresses for university ${row.name}:`, e);
+    }
+  }
+
   return university;
 }
 
@@ -446,31 +456,48 @@ export function generateUniversitiesSampleCSV(): string {
   const sampleData = [
     {
       name: 'University of Sydney',
-      description: 'A leading public research university in Australia, known for academic excellence',
+      description: 'A leading research university in Australia, known for academic excellence',
       location: 'Sydney',
       country: 'Australia',
       website: 'https://sydney.edu.au',
       contactEmail: 'admissions@sydney.edu.au',
       contactPhone: '+61-2-9351-2222',
       establishedYear: '1850',
-      numberOfCampuses: '10',
-      providerType: 'Public University',
+      numberOfCampuses: '2',
+      providerType: 'University',
       scholarshipPercentage: '25',
       topDisciplines: 'Medicine,Engineering,Business,Law',
+      campusAddresses: '[{"address":"University Ave","city":"Sydney","state":"NSW","postcode":"2006","country":"Australia"},{"address":"Cumberland Campus","city":"Lidcombe","state":"NSW","postcode":"2141","country":"Australia"}]',
     },
     {
-      name: 'Melbourne Institute of Technology',
-      description: 'Modern vocational education provider specializing in practical skills',
+      name: 'Melbourne TAFE College',
+      description: 'Vocational education provider specializing in practical skills and career training',
       location: 'Melbourne',
       country: 'Australia',
-      website: 'https://mit.edu.au',
-      contactEmail: 'info@mit.edu.au',
+      website: 'https://melbourne-tafe.edu.au',
+      contactEmail: 'info@melbourne-tafe.edu.au',
       contactPhone: '+61-3-9600-3888',
       establishedYear: '1996',
-      numberOfCampuses: '3',
-      providerType: 'Private Institutions',
+      numberOfCampuses: '1',
+      providerType: 'TAFE',
       scholarshipPercentage: '15',
       topDisciplines: 'Information Technology,Networking,Business',
+      campusAddresses: '[{"address":"123 Collins St","city":"Melbourne","state":"VIC","postcode":"3000","country":"Australia"}]',
+    },
+    {
+      name: 'Sydney Business School',
+      description: 'Private business school focused on executive education and MBA programs',
+      location: 'Sydney',
+      country: 'Australia',
+      website: 'https://sydneybiz.edu.au',
+      contactEmail: 'admissions@sydneybiz.edu.au',
+      contactPhone: '+61-2-8765-4321',
+      establishedYear: '2005',
+      numberOfCampuses: '1',
+      providerType: 'School',
+      scholarshipPercentage: '10',
+      topDisciplines: 'Business,Finance,Management',
+      campusAddresses: '[{"address":"456 Market St","city":"Sydney","state":"NSW","postcode":"2000","country":"Australia"}]',
     },
   ];
 

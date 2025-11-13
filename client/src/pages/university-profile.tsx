@@ -82,19 +82,19 @@ export default function UniversityProfile() {
         userId: university.userId,
         name: university.name || "",
         description: university.description || "",
-        logo: university.logo ?? "",
-        website: university.website ?? "",
+        logo: university.logo || "",
+        website: university.website || "",
         location: university.location || "",
         country: university.country || "",
         establishedYear: university.establishedYear || undefined,
-        contactEmail: university.contactEmail ?? "",
-        contactPhone: university.contactPhone ?? "",
+        contactEmail: university.contactEmail || "",
+        contactPhone: university.contactPhone || "",
         numberOfCampuses: university.numberOfCampuses || undefined,
         providerType: university.providerType || "",
         scholarshipPercentage: university.scholarshipPercentage || undefined,
         topDisciplines: university.topDisciplines || [],
-        smallDescription: university.smallDescription ?? "",
-        fullDescription: university.fullDescription ?? "",
+        smallDescription: university.smallDescription || "",
+        fullDescription: university.fullDescription || "",
         institutionGallery: university.institutionGallery || [],
         topCourses: university.topCourses || [],
         campusAddresses: (university.campusAddresses as any) || [],
@@ -150,7 +150,7 @@ export default function UniversityProfile() {
       const response = await apiRequest("POST", "/api/ai/generate-university-description", {
         name,
         location,
-      }) as { description: string };
+      }) as any as { description: string };
       form.setValue("description", response.description);
       toast({
         title: "Description generated",
@@ -188,7 +188,7 @@ export default function UniversityProfile() {
         name,
         location,
         providerType,
-      }) as { description: string };
+      }) as any as { description: string };
       console.log("Received response:", response);
       console.log("Setting form value to:", response.description);
       form.setValue("smallDescription", response.description);
@@ -230,7 +230,7 @@ export default function UniversityProfile() {
         location,
         providerType,
         topDisciplines,
-      }) as { description: string };
+      }) as any as { description: string };
       form.setValue("fullDescription", response.description);
       toast({
         title: "Full description generated",
@@ -267,7 +267,7 @@ export default function UniversityProfile() {
         name,
         location,
         providerType,
-      }) as { galleryImages: string[] };
+      }) as any as { galleryImages: string[] };
       form.setValue("institutionGallery", response.galleryImages);
       setGalleryPreviews(response.galleryImages);
       toast({
@@ -356,7 +356,7 @@ export default function UniversityProfile() {
                 {(logoPreview || university?.logo) && (
                   <div className="w-40 h-40 rounded-full border border-[#F0F0F0] bg-white flex items-center justify-center overflow-hidden">
                     <img
-                      src={logoPreview || university?.logo}
+                      src={logoPreview || university?.logo || ""}
                       alt="Institution logo"
                       className="w-full h-full object-cover"
                       data-testid="img-logo-preview"
@@ -469,7 +469,7 @@ export default function UniversityProfile() {
                     <FormItem>
                       <FormLabel>Website</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="https://university.edu" data-testid="input-website" />
+                        <Input {...field} value={field.value || ""} placeholder="https://university.edu" data-testid="input-website" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -493,7 +493,7 @@ export default function UniversityProfile() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provider Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger data-testid="select-provider-type">
                             <SelectValue placeholder="Select provider type" />
@@ -630,7 +630,7 @@ export default function UniversityProfile() {
               <CardTitle>Campus Addresses</CardTitle>
               <CardDescription>
                 {form.watch("numberOfCampuses") 
-                  ? `Enter address details for ${form.watch("numberOfCampuses")} campus${form.watch("numberOfCampuses") > 1 ? "es" : ""}`
+                  ? `Enter address details for ${form.watch("numberOfCampuses")} campus${(form.watch("numberOfCampuses") ?? 0) > 1 ? "es" : ""}`
                   : "Enter the number of campuses first to add addresses"}
               </CardDescription>
             </CardHeader>
@@ -779,6 +779,7 @@ export default function UniversityProfile() {
                     <FormControl>
                       <Textarea
                         {...field}
+                        value={field.value || ""}
                         placeholder="A brief, impactful description of your institution..."
                         className="min-h-[100px]"
                         data-testid="textarea-small-description"
@@ -835,6 +836,7 @@ export default function UniversityProfile() {
                     <FormControl>
                       <Textarea
                         {...field}
+                        value={field.value || ""}
                         placeholder="Provide a detailed description covering history, programs, facilities, student life, and unique features..."
                         className="min-h-[200px]"
                         data-testid="textarea-full-description"
@@ -891,6 +893,7 @@ export default function UniversityProfile() {
                     <FormControl>
                       <Textarea
                         {...field}
+                        value={field.value || ""}
                         placeholder="Describe your university, its history, values, and what makes it unique..."
                         className="min-h-[200px]"
                         data-testid="textarea-description"
@@ -1004,7 +1007,7 @@ export default function UniversityProfile() {
                   <FormItem>
                     <FormLabel>Contact Email</FormLabel>
                     <FormControl>
-                      <Input {...field} type="email" placeholder="admissions@university.edu" data-testid="input-contact-email" />
+                      <Input {...field} value={field.value || ""} type="email" placeholder="admissions@university.edu" data-testid="input-contact-email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1018,7 +1021,7 @@ export default function UniversityProfile() {
                   <FormItem>
                     <FormLabel>Contact Phone</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="+61 2 1234 5678" data-testid="input-contact-phone" />
+                      <Input {...field} value={field.value || ""} placeholder="+61 2 1234 5678" data-testid="input-contact-phone" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
