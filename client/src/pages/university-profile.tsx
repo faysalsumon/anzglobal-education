@@ -420,7 +420,7 @@ export default function UniversityProfile() {
                   <FormItem>
                     <FormLabel>Country *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Australia" data-testid="input-country" />
+                      <Input {...field} value={field.value ?? ""} placeholder="Australia" data-testid="input-country" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
