@@ -91,21 +91,25 @@ export default function PublicInstitutionDetail() {
                     {institution.providerType}
                   </Badge>
                 )}
-                {institution.scholarshipPercentage && (
+                {(institution.scholarshipPercentageMin !== null || institution.scholarshipPercentageMax !== null) && (
                   <Badge className="bg-accent text-accent-foreground" data-testid="badge-scholarship">
                     <Award className="h-3 w-3 mr-1" />
-                    {institution.scholarshipPercentage}% Scholarship Available
+                    {institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMax !== null
+                      ? `${institution.scholarshipPercentageMin}%-${institution.scholarshipPercentageMax}% Scholarship Available`
+                      : institution.scholarshipPercentageMin !== null
+                      ? `Up to ${institution.scholarshipPercentageMin}% Scholarship Available`
+                      : `Up to ${institution.scholarshipPercentageMax}% Scholarship Available`}
                   </Badge>
                 )}
               </div>
               <h1 className="text-3xl font-bold mb-2" data-testid="text-name">
                 {institution.name}
               </h1>
-              {institution.location && (
+              {institution.country && (
                 <div className="flex items-center gap-2 text-muted-foreground mb-4">
                   <MapPin className="h-4 w-4" />
-                  <span data-testid="text-location">
-                    {institution.location}, {institution.country}
+                  <span data-testid="text-country">
+                    {institution.country}
                   </span>
                 </div>
               )}
@@ -124,17 +128,24 @@ export default function PublicInstitutionDetail() {
               <Card>
                 <CardHeader>
                   <CardTitle>Campus Gallery</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Explore our campus facilities and environment
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {institution.institutionGallery.map((image, index) => (
-                      <div key={index} className="aspect-[3/2] rounded-md overflow-hidden border">
+                      <div 
+                        key={index} 
+                        className="group relative aspect-[3/2] rounded-md overflow-hidden border hover-elevate cursor-pointer"
+                      >
                         <img
                           src={image}
                           alt={`${institution.name} campus ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           data-testid={`img-gallery-${index}`}
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     ))}
                   </div>
@@ -231,6 +242,37 @@ export default function PublicInstitutionDetail() {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
+            {/* Campus Locations */}
+            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campus Locations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(institution.campusAddresses as any[]).map((campus: any, index: number) => (
+                    <div key={index} className="space-y-1" data-testid={`campus-${index}`}>
+                      {institution.campusAddresses!.length > 1 && (
+                        <p className="text-sm font-medium">Campus {index + 1}</p>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-muted-foreground">
+                          {campus.address && <p>{campus.address}</p>}
+                          <p>
+                            {[campus.city, campus.state, campus.postcode].filter(Boolean).join(', ')}
+                          </p>
+                          {campus.country && <p>{campus.country}</p>}
+                        </div>
+                      </div>
+                      {index < institution.campusAddresses!.length - 1 && (
+                        <div className="border-t pt-4 mt-4" />
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Institution Details</CardTitle>
