@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, FileText, User, LogOut, Sparkles, Search, BookOpen, Users, MessageSquare, PlusCircle, FolderOpen, Camera } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,12 +19,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { type StudentProfile } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { ProfilePictureDialog } from "@/components/profile-picture-dialog";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isUniversity, isStudent } = useAuth();
   const isAdmin = user?.userType === "admin";
   const hasFullAdminAccess = isAdmin && (user?.role === "super_admin" || user?.role === "support_manager");
+  const [profilePictureDialogOpen, setProfilePictureDialogOpen] = useState(false);
 
   // Helper to get portal label based on user type and role
   const getPortalLabel = () => {
@@ -126,25 +137,55 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
         <div className="flex items-center gap-3 mb-3">
-          <Avatar className="h-9 w-9">
-            <AvatarImage 
-              src={isStudent ? (studentProfile?.profileImageUrl || undefined) : undefined} 
-              alt={user?.firstName || "User"} 
-            />
-            <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full p-0" data-testid="button-profile-menu">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage 
+                    src={
+                      isStudent 
+                        ? (studentProfile?.profileImageUrl || undefined) 
+                        : isAdmin 
+                        ? (user?.profileImageUrl || undefined)
+                        : undefined
+                    } 
+                    alt={user?.firstName || "User"} 
+                  />
+                  <AvatarFallback>{user?.firstName?.[0] || "U"}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => setProfilePictureDialogOpen(true)} data-testid="menu-change-profile-picture">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Change Profile Picture
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <a href="/api/logout" className="cursor-pointer" data-testid="menu-logout">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="w-full gap-2" asChild data-testid="button-logout">
-          <a href="/api/logout">
-            <LogOut className="h-4 w-4" />
-            Logout
-          </a>
-        </Button>
       </SidebarFooter>
+
+      {isAdmin && (
+        <ProfilePictureDialog 
+          open={profilePictureDialogOpen}
+          onOpenChange={setProfilePictureDialogOpen}
+        />
+      )}
     </Sidebar>
   );
 }
