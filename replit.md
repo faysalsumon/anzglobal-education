@@ -37,7 +37,12 @@ The platform features modern AI-style branding with gradient backgrounds and con
   3. **Website**: URL field with validation
   4. **Country**: Text field for primary country (AI generation uses this field)
   5. **Institute Type**: Dropdown with 5 options (Institution, TAFE, University, College, School)
-  6. **Institution Gallery**: Multi-image upload for showcasing campus facilities
+  6. **Institution Gallery**: Dual-mode image management - institutions can upload photos OR generate professional campus images using OpenAI DALL-E with text prompts. Supports up to 6 images, automatically resized to 600x400px. Features:
+     - **File Upload**: Multi-image upload with automatic resizing and validation
+     - **AI Generation**: Custom prompt-based image generation using DALL-E
+     - **Reusable Component**: `GalleryManager` component provides unified interface for both upload modes
+     - **Backend Endpoints**: `POST /api/university/upload-gallery-image` (multipart upload) and `POST /api/university/generate-gallery-image` (AI generation with prompt)
+     - **Storage**: Images stored in `/public/institutions/` directory with unique filenames
   7. **Top Disciplines**: Comma-separated list of academic strengths
   8. **Top Courses**: Featured course offerings
   9. **Scholarship**: Yes/No toggle with conditional range inputs (Min % and Max % from 0-100%). Supports 0% scholarships and validates that min ≤ max
