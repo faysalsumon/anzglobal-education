@@ -877,13 +877,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Logo Upload Route
+  // Logo Upload Route - allows both university users and platform admins
   app.post("/api/university/upload-logo", isAuthenticated, upload.single('logo'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
       
-      if (!access) {
+      // Check if user has university access OR admin access
+      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!universityAccess && !adminAccess) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -891,25 +894,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Resize to 160x160 with circular processing
+      // Resize to 160x160 automatically (regardless of uploaded size)
       const resizedBuffer = await sharp(req.file.buffer)
         .resize(160, 160, { fit: 'cover' })
         .png()
         .toBuffer();
 
       // Save to public directory
-      const filename = `college-logo-${access.university.id}-${Date.now()}.png`;
+      const universityId = universityAccess?.university.id || 'admin-upload';
+      const filename = `college-logo-${universityId}-${Date.now()}.png`;
       const localPath = path.join(process.cwd(), 'public', 'institutions');
       await fs.mkdir(localPath, { recursive: true });
       await fs.writeFile(path.join(localPath, filename), resizedBuffer);
       
       const logoPath = `/institutions/${filename}`;
 
-      // Update university with new logo
-      await storage.updateUniversity(access.university.id, {
-        ...access.university,
-        logo: logoPath,
-      });
+      // If university user, update their university profile immediately
+      // If admin user, just return the path (they'll use it in their form)
+      if (universityAccess) {
+        await storage.updateUniversity(universityAccess.university.id, {
+          ...universityAccess.university,
+          logo: logoPath,
+        });
+      }
 
       res.json({ logoPath });
     } catch (error) {
