@@ -64,7 +64,8 @@ export const universities = pgTable("universities", {
   contactPhone: text("contact_phone"),
   numberOfCampuses: integer("number_of_campuses"),
   providerType: text("provider_type"), // Private Institutions, TAFE, Private University, Public University
-  scholarshipPercentage: integer("scholarship_percentage"),
+  scholarshipPercentageMin: integer("scholarship_percentage_min"),
+  scholarshipPercentageMax: integer("scholarship_percentage_max"),
   topDisciplines: text("top_disciplines").array(),
   
   // New detailed fields
@@ -109,7 +110,8 @@ export const courses = pgTable("courses", {
   // Additional course details
   courseCode: text("course_code"),
   prPathway: boolean("pr_pathway").default(false),
-  scholarshipPercentage: integer("scholarship_percentage"),
+  scholarshipPercentageMin: integer("scholarship_percentage_min"),
+  scholarshipPercentageMax: integer("scholarship_percentage_max"),
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
   curriculumUrl: text("curriculum_url"),
@@ -808,6 +810,19 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
     postcode: z.string().optional(),
     country: z.string().optional(),
   })).optional(),
+  // Validate scholarship range
+  scholarshipPercentageMin: z.number().int().min(0).max(100).optional(),
+  scholarshipPercentageMax: z.number().int().min(0).max(100).optional(),
+}).refine((data) => {
+  // If both min and max are provided, ensure min <= max
+  if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&
+      data.scholarshipPercentageMax !== null && data.scholarshipPercentageMax !== undefined) {
+    return data.scholarshipPercentageMin <= data.scholarshipPercentageMax;
+  }
+  return true;
+}, {
+  message: "Scholarship minimum percentage must be less than or equal to maximum percentage",
+  path: ["scholarshipPercentageMin"],
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
@@ -821,6 +836,10 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   careerOutcomes: z.array(z.string()).optional().default([]),
   pathways: z.array(z.string()).optional().default([]),
   campusLocations: z.array(z.string()).optional().default([]),
+  
+  // Validate scholarship range
+  scholarshipPercentageMin: z.number().int().min(0).max(100).optional(),
+  scholarshipPercentageMax: z.number().int().min(0).max(100).optional(),
   
   // Validate English requirements structure
   englishRequirementsStructured: z.object({
@@ -841,6 +860,16 @@ export const insertCourseSchema = createInsertSchema(courses).omit({
   
   // Validate delivery mode
   deliveryMode: z.enum(['online', 'on-campus', 'hybrid']).optional(),
+}).refine((data) => {
+  // If both min and max are provided, ensure min <= max
+  if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&
+      data.scholarshipPercentageMax !== null && data.scholarshipPercentageMax !== undefined) {
+    return data.scholarshipPercentageMin <= data.scholarshipPercentageMax;
+  }
+  return true;
+}, {
+  message: "Scholarship minimum percentage must be less than or equal to maximum percentage",
+  path: ["scholarshipPercentageMin"],
 });
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
