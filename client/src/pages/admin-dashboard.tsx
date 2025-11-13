@@ -53,7 +53,7 @@ interface Institution {
   id: string;
   name: string;
   description: string | null;
-  location: string;
+  country: string;
   contactEmail: string | null;
   contactPhone: string | null;
   website: string | null;
@@ -176,7 +176,7 @@ const userSchema = z.object({
 
 const institutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  location: z.string().min(1, "Location is required"),
+  country: z.string().min(1, "Country is required"),
   description: z.string().optional(),
   contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
   contactPhone: z.string().optional(),
@@ -292,7 +292,7 @@ export default function AdminDashboard() {
     resolver: zodResolver(institutionSchema),
     defaultValues: {
       name: "",
-      location: "",
+      country: "",
       description: "",
       contactEmail: "",
       contactPhone: "",
@@ -709,7 +709,7 @@ export default function AdminDashboard() {
     return (
       institutionSearchQuery === "" ||
       institution.name.toLowerCase().includes(institutionSearchQuery.toLowerCase()) ||
-      institution.location.toLowerCase().includes(institutionSearchQuery.toLowerCase())
+      institution.country.toLowerCase().includes(institutionSearchQuery.toLowerCase())
     );
   });
 
@@ -805,7 +805,7 @@ export default function AdminDashboard() {
     );
     institutionForm.reset({
       name: institution.name,
-      location: institution.location,
+      country: institution.country,
       description: institution.description || "",
       contactEmail: institution.contactEmail || "",
       contactPhone: institution.contactPhone || "",
@@ -1175,7 +1175,7 @@ export default function AdminDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or location..."
+                  placeholder="Search by name or country..."
                   value={institutionSearchQuery}
                   onChange={(e) => setInstitutionSearchQuery(e.target.value)}
                   className="pl-10"
@@ -1205,7 +1205,7 @@ export default function AdminDashboard() {
                       filteredInstitutions.map((institution) => (
                         <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`}>
                           <TableCell className="font-medium">{institution.name}</TableCell>
-                          <TableCell>{institution.location}</TableCell>
+                          <TableCell>{institution.country}</TableCell>
                           <TableCell>{institution.providerType || "N/A"}</TableCell>
                           <TableCell>
                             {institution.approvalStatus === "approved" && (
@@ -1944,15 +1944,15 @@ export default function AdminDashboard() {
                 )}
               />
 
-              {/* Location */}
+              {/* Country */}
               <FormField
                 control={institutionForm.control}
-                name="location"
+                name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location *</FormLabel>
+                    <FormLabel>Country *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="City, Country" data-testid="input-admin-location" />
+                      <Input {...field} placeholder="Australia" data-testid="input-admin-country" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
