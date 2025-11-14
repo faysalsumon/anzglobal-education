@@ -2765,6 +2765,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Student Education Management
+  app.get("/api/student/education", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const educations = await storage.getEducationsByStudentProfileId(profile.id);
+      res.json(educations);
+    } catch (error) {
+      console.error("Error fetching education records:", error);
+      res.status(500).json({ message: "Failed to fetch education records" });
+    }
+  });
+
+  app.post("/api/student/education", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const data = insertStudentEducationSchema.parse({
+        ...req.body,
+        studentProfileId: profile.id,
+      });
+
+      const education = await storage.createEducation(data);
+      res.json(education);
+    } catch (error: any) {
+      console.error("Error creating education record:", error);
+      res.status(400).json({ message: error.message || "Failed to create education record" });
+    }
+  });
+
+  app.patch("/api/student/education/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const educations = await storage.getEducationsByStudentProfileId(profile.id);
+      const education = educations.find(e => e.id === req.params.id);
+      
+      if (!education) {
+        return res.status(404).json({ message: "Education record not found" });
+      }
+
+      const data = insertStudentEducationSchema.partial().parse(req.body);
+      const updated = await storage.updateEducation(req.params.id, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating education record:", error);
+      res.status(400).json({ message: error.message || "Failed to update education record" });
+    }
+  });
+
+  app.delete("/api/student/education/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const educations = await storage.getEducationsByStudentProfileId(profile.id);
+      const education = educations.find(e => e.id === req.params.id);
+      
+      if (!education) {
+        return res.status(404).json({ message: "Education record not found" });
+      }
+
+      await storage.deleteEducation(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting education record:", error);
+      res.status(500).json({ message: "Failed to delete education record" });
+    }
+  });
+
+  // Student Language Scores Management
+  app.get("/api/student/language-scores", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const scores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+      res.json(scores);
+    } catch (error) {
+      console.error("Error fetching language scores:", error);
+      res.status(500).json({ message: "Failed to fetch language scores" });
+    }
+  });
+
+  app.post("/api/student/language-scores", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const data = insertStudentLanguageScoreSchema.parse({
+        ...req.body,
+        studentProfileId: profile.id,
+      });
+
+      const score = await storage.createLanguageScore(data);
+      res.json(score);
+    } catch (error: any) {
+      console.error("Error creating language score:", error);
+      res.status(400).json({ message: error.message || "Failed to create language score" });
+    }
+  });
+
+  app.patch("/api/student/language-scores/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const scores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+      const score = scores.find(s => s.id === req.params.id);
+      
+      if (!score) {
+        return res.status(404).json({ message: "Language score not found" });
+      }
+
+      const data = insertStudentLanguageScoreSchema.partial().parse(req.body);
+      const updated = await storage.updateLanguageScore(req.params.id, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating language score:", error);
+      res.status(400).json({ message: error.message || "Failed to update language score" });
+    }
+  });
+
+  app.delete("/api/student/language-scores/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const scores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+      const score = scores.find(s => s.id === req.params.id);
+      
+      if (!score) {
+        return res.status(404).json({ message: "Language score not found" });
+      }
+
+      await storage.deleteLanguageScore(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting language score:", error);
+      res.status(500).json({ message: "Failed to delete language score" });
+    }
+  });
+
   // Public platform statistics endpoint
   app.get("/api/platform/stats", async (req, res) => {
     try {
