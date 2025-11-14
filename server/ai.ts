@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 
+// Node.js 18+ has built-in fetch, but TypeScript needs to know about it
+declare const fetch: typeof global.fetch;
+
 // Using standard OpenAI API with user's API key
 // Will be configured in later stages of platform development
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({

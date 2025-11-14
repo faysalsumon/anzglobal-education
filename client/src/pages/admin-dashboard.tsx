@@ -30,13 +30,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
+import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
 
 interface User {
   id: string;
@@ -257,6 +258,7 @@ export default function AdminDashboard() {
   // Institution state
   const [institutionSearchQuery, setInstitutionSearchQuery] = useState("");
   const [institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
+  const [aiExtractorDialogOpen, setAiExtractorDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [deletingInstitution, setDeletingInstitution] = useState<Institution | null>(null);
   const [rejectingInstitution, setRejectingInstitution] = useState<Institution | null>(null);
@@ -1214,10 +1216,16 @@ export default function AdminDashboard() {
                   <CardTitle>Institution Management</CardTitle>
                   <CardDescription>View and manage all institutions</CardDescription>
                 </div>
-                <Button onClick={handleCreateInstitution} data-testid="button-create-institution">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Institution
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => setAiExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    AI Extract
+                  </Button>
+                  <Button onClick={handleCreateInstitution} data-testid="button-create-institution">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Institution
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -2378,6 +2386,56 @@ export default function AdminDashboard() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Institution Data Extractor Dialog */}
+      <Dialog open={aiExtractorDialogOpen} onOpenChange={setAiExtractorDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Institution Data Extractor
+            </DialogTitle>
+            <DialogDescription>
+              Enter an institution's website URL and AI will automatically extract profile information for your review.
+            </DialogDescription>
+          </DialogHeader>
+          <AIInstitutionExtractor
+            onDataApproved={(approvedData) => {
+              // Pre-fill the institution form with approved data
+              institutionForm.reset({
+                name: approvedData.name || "",
+                country: approvedData.country || "",
+                description: approvedData.description || "",
+                overview: approvedData.overview || "",
+                contactEmail: approvedData.contactEmail || "",
+                contactPhone: approvedData.contactPhone || "",
+                website: approvedData.website || "",
+                providerType: approvedData.providerType || "",
+                topDisciplines: approvedData.topDisciplines || [],
+                topCourses: approvedData.topCourses || [],
+                numberOfCampuses: approvedData.numberOfCampuses || undefined,
+                establishedYear: approvedData.establishedYear || undefined,
+                scholarshipPercentageMin: approvedData.scholarshipPercentageMin || undefined,
+                scholarshipPercentageMax: approvedData.scholarshipPercentageMax || undefined,
+                campusAddresses: approvedData.campusAddresses || [],
+                logo: "",
+                userId: "",
+                galleryImages: [],
+              });
+
+              // Close AI extractor and open institution form
+              setAiExtractorDialogOpen(false);
+              setEditingInstitution(null);
+              setInstitutionDialogOpen(true);
+
+              toast({
+                title: "Data loaded",
+                description: "AI-extracted data has been loaded into the institution form. Review and submit when ready.",
+              });
+            }}
+          />
         </DialogContent>
       </Dialog>
 
