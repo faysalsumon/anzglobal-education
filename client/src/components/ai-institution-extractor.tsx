@@ -78,10 +78,23 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
       });
     },
     onError: (error: any) => {
+      let title = "Extraction failed";
+      let description = error.message || "Failed to extract data from website. Please check the URL and try again.";
+      
+      // Handle rate limiting with better messaging
+      if (error.rateLimit) {
+        const resetDate = new Date(error.rateLimit.resetDate);
+        const minutesUntilReset = Math.ceil((resetDate.getTime() - Date.now()) / 60000);
+        
+        title = "Rate Limit Exceeded";
+        description = `${error.message}\n\nYou've used all ${error.rateLimit.limit} requests for this hour. You can try again in ${minutesUntilReset} minute${minutesUntilReset !== 1 ? 's' : ''} (at ${resetDate.toLocaleTimeString()}).`;
+      }
+      
       toast({
-        title: "Extraction failed",
-        description: error.message || "Failed to extract data from website. Please check the URL and try again.",
+        title,
+        description,
         variant: "destructive",
+        duration: 8000, // Show rate limit errors longer
       });
     },
   });
