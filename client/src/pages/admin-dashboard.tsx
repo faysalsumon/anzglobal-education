@@ -2504,34 +2504,24 @@ export default function AdminDashboard() {
           </DialogHeader>
           <AICourseExtractor
             onDataApproved={(approvedData) => {
-              // Pre-fill the course form with approved data using setValue
-              // Use shouldDirty: false to preserve pristine state and avoid premature validation
-              const setValueOptions = { shouldDirty: false, shouldTouch: false, shouldValidate: false };
-              
-              if (approvedData.universityId) {
-                courseForm.setValue("universityId", approvedData.universityId, setValueOptions);
-              }
-              if (approvedData.title) {
-                courseForm.setValue("title", approvedData.title, setValueOptions);
-              }
-              if (approvedData.description) {
-                courseForm.setValue("description", approvedData.description, setValueOptions);
-              }
-              if (approvedData.subject) {
-                courseForm.setValue("subject", approvedData.subject, setValueOptions);
-              }
-              if (approvedData.level) {
-                courseForm.setValue("level", approvedData.level, setValueOptions);
-              }
-              if (approvedData.duration) {
-                courseForm.setValue("duration", approvedData.duration, setValueOptions);
-              }
-              if (approvedData.fees !== null && approvedData.fees !== undefined) {
-                courseForm.setValue("fees", approvedData.fees, setValueOptions);
-              }
-
-              // Close AI extractor and open course form
+              // Close the AI extractor dialog
               setAiCourseExtractorDialogOpen(false);
+              
+              // Prepare form data by merging AI-extracted data with defaults
+              const formData = {
+                universityId: approvedData.universityId || "",
+                title: approvedData.title || "",
+                description: approvedData.description || "",
+                subject: approvedData.subject || "",
+                level: approvedData.level || "",
+                duration: approvedData.duration || "",
+                fees: (approvedData.fees !== null && approvedData.fees !== undefined) ? approvedData.fees : ("" as any),
+              };
+              
+              // Reset form with the merged data - this sets all fields at once
+              courseForm.reset(formData);
+              
+              // Open the course creation dialog
               setEditingCourse(null);
               setCourseDialogOpen(true);
 

@@ -593,29 +593,68 @@ export async function extractCourseDataFromWebsite(url: string): Promise<Extract
   // This includes domain allowlist, DNS resolution checks, private IP protection
   const validatedUrl = await validateUrl(url);
   
-  // Fetch webpage content with timeout and size limits (same security measures as institution extraction)
+  // Fetch webpage content with redirect following (max 3 hops) and security validation
   let htmlContent: string;
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const MAX_REDIRECTS = 3;
+    const visitedUrls = new Set<string>();
+    let currentUrl = validatedUrl.toString();
+    let redirectCount = 0;
+    let response: Response | null = null;
 
-    const response = await fetch(validatedUrl.toString(), {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
-      },
-      signal: controller.signal,
-      redirect: 'manual', // Prevent following redirects to avoid SSRF bypass
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Reject redirects to prevent SSRF bypass via redirect chains
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error('Redirects are not allowed for security reasons. Please provide the final URL.');
+    // Follow redirects with security re-validation at each hop
+    while (redirectCount <= MAX_REDIRECTS) {
+      // Prevent redirect loops
+      if (visitedUrls.has(currentUrl)) {
+        throw new Error('Redirect loop detected');
+      }
+      visitedUrls.add(currentUrl);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per request
+
+      response = await fetch(currentUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
+        },
+        signal: controller.signal,
+        redirect: 'manual', // Handle redirects manually for security
+      });
+      
+      clearTimeout(timeoutId);
+
+      // Handle redirects with security re-validation
+      if (response.status >= 300 && response.status < 400) {
+        if (redirectCount >= MAX_REDIRECTS) {
+          throw new Error('Maximum redirect limit (3) exceeded');
+        }
+
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new Error('Redirect response missing Location header');
+        }
+
+        // Resolve relative URLs
+        const redirectUrl = new URL(location, currentUrl);
+        
+        // Prevent protocol downgrade (https -> http)
+        if (currentUrl.startsWith('https:') && redirectUrl.protocol === 'http:') {
+          throw new Error('Protocol downgrade (HTTPS to HTTP) not allowed');
+        }
+
+        // Re-validate redirect target through same SSRF checks
+        const revalidatedUrl = await validateUrl(redirectUrl.toString());
+        currentUrl = revalidatedUrl.toString();
+        redirectCount++;
+        continue;
+      }
+
+      // Non-redirect response - break loop
+      break;
     }
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.statusText}`);
+    if (!response || !response.ok) {
+      throw new Error(`Failed to fetch website: ${response?.statusText || 'Unknown error'}`);
     }
     
     // Limit response size to 2MB to prevent DoS

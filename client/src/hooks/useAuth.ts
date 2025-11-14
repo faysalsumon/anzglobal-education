@@ -11,7 +11,8 @@ export function useAuth() {
     retry: false,
   });
 
-  const adminRole = user?.adminRole || null;
+  // Fallback to user.role if adminRole is not set (for compatibility with backend)
+  const adminRole = user?.adminRole || user?.role || null;
   
   // Permission flags
   const isSuperAdmin = adminRole === "super_admin";

@@ -219,12 +219,17 @@ export async function setupAuth(app: Express) {
           
           if (existingUser) {
             // User exists - use claims role if provided (for testing), otherwise preserve existing
-            const userType = claims.role === 'super_admin' || claims.role === 'support_manager' || claims.role === 'support_agent'
-              ? 'admin'
-              : existingUser.userType;
-            const role = claims.role || existingUser.role;
+            // Check both claims.role and claims.adminRole for admin designation
+            const isAdmin = claims.role === 'super_admin' || 
+                          claims.role === 'support_manager' || 
+                          claims.role === 'support_agent' ||
+                          claims.adminRole === 'super_admin' ||
+                          claims.adminRole === 'support_manager' ||
+                          claims.adminRole === 'support_agent';
+            const userType = isAdmin ? 'admin' : existingUser.userType;
+            const role = claims.adminRole || claims.role || existingUser.role;
             
-            console.log('[NON-STUDENT CALLBACK] Existing user found:', userId, 'type:', existingUser.userType, 'role:', existingUser.role, 'claims.role:', claims.role);
+            console.log('[NON-STUDENT CALLBACK] Existing user found:', userId, 'type:', existingUser.userType, 'role:', existingUser.role, 'claims.role:', claims.role, 'claims.adminRole:', claims.adminRole);
             // Update profile info and apply role from claims if present
             await storage.upsertUser({
               id: userId,
@@ -233,16 +238,20 @@ export async function setupAuth(app: Express) {
               lastName: claims.last_name,
               profileImageUrl: claims.profile_image_url,
               userType: userType, // Use claims role if admin, otherwise preserve
-              role: role, // Use claims role if provided
+              role: role, // Use claims adminRole/role if provided
             });
           } else {
             // New user - use claims role if provided, otherwise default to university
-            const userType = claims.role === 'super_admin' || claims.role === 'support_manager' || claims.role === 'support_agent'
-              ? 'admin'
-              : 'university';
-            const role = claims.role || 'user';
+            const isAdmin = claims.role === 'super_admin' || 
+                          claims.role === 'support_manager' || 
+                          claims.role === 'support_agent' ||
+                          claims.adminRole === 'super_admin' ||
+                          claims.adminRole === 'support_manager' ||
+                          claims.adminRole === 'support_agent';
+            const userType = isAdmin ? 'admin' : 'university';
+            const role = claims.adminRole || claims.role || 'user';
             
-            console.log('[NON-STUDENT CALLBACK] New user, creating with type:', userType, 'role:', role);
+            console.log('[NON-STUDENT CALLBACK] New user, creating with type:', userType, 'role:', role, 'claims.adminRole:', claims.adminRole);
             await storage.upsertUser({
               id: userId,
               email: claims.email,
@@ -250,7 +259,7 @@ export async function setupAuth(app: Express) {
               lastName: claims.last_name,
               profileImageUrl: claims.profile_image_url,
               userType: userType, // Use claims role if admin, otherwise default
-              role: role, // Use claims role if provided
+              role: role, // Use claims adminRole/role if provided
             });
           }
           
