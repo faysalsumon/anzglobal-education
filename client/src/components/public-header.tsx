@@ -167,44 +167,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     <SheetTitle>Menu</SheetTitle>
                   </SheetHeader>
                   <nav className="flex flex-col gap-4 mt-8">
-                    {/* Top bar links */}
-                    <div className="pb-4 border-b">
-                      <p className="text-xs font-semibold text-muted-foreground mb-3">QUICK LINKS</p>
-                      <Link
-                        href="/institutions"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-top-institutions"
-                      >
-                        TOP INSTITUTIONS
-                      </Link>
-                      <Link
-                        href="/courses?filter=trending"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-courses-demand"
-                      >
-                        COURSES IN DEMAND
-                      </Link>
-                      <Link
-                        href="/knowledge-base"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-knowledge-base"
-                      >
-                        KNOWLEDGE BASE
-                      </Link>
-                      <Link
-                        href="/blog"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-blog"
-                      >
-                        BLOG
-                      </Link>
-                    </div>
-
-                    {/* Main nav links */}
+                    {/* Main nav links - NOW FIRST */}
                     <div className="pb-4 border-b">
                       <p className="text-xs font-semibold text-muted-foreground mb-3">NAVIGATION</p>
                       <Link
@@ -233,8 +196,8 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                       </Link>
                     </div>
 
-                    {/* Services */}
-                    <div className="pb-4">
+                    {/* Services - NOW SECOND */}
+                    <div className="pb-4 border-b">
                       <p className="text-xs font-semibold text-muted-foreground mb-3">SERVICES</p>
                       {servicesMenuItems.map((item) => (
                         <Link
@@ -247,6 +210,27 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                           {item.title}
                         </Link>
                       ))}
+                    </div>
+
+                    {/* Quick Links - NOW LAST */}
+                    <div className="pb-4">
+                      <p className="text-xs font-semibold text-muted-foreground mb-3">QUICK LINKS</p>
+                      <Link
+                        href="/knowledge-base"
+                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                        data-testid="mobile-link-knowledge-base"
+                      >
+                        KNOWLEDGE BASE
+                      </Link>
+                      <Link
+                        href="/blog"
+                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                        data-testid="mobile-link-blog"
+                      >
+                        BLOG
+                      </Link>
                     </div>
 
                     {/* Student Login */}
