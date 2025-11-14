@@ -38,6 +38,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
+import { AICourseExtractor } from "@/components/ai-course-extractor";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
 
 interface User {
@@ -269,6 +270,7 @@ export default function AdminDashboard() {
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
   const [courseStatusFilter, setCourseStatusFilter] = useState<string>("all");
   const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+  const [aiCourseExtractorDialogOpen, setAiCourseExtractorDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
 
@@ -1421,10 +1423,18 @@ export default function AdminDashboard() {
                 </div>
                 {/* Only full admins (super_admin & support_manager) can create courses */}
                 {hasFullAdminAccess && (
-                  <Button onClick={handleCreateCourse} data-testid="button-create-course">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Course
-                  </Button>
+                  <div className="flex gap-2">
+                    {isSuperAdmin && (
+                      <Button onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        AI Extract
+                      </Button>
+                    )}
+                    <Button onClick={handleCreateCourse} data-testid="button-create-course">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Course
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
@@ -2419,7 +2429,6 @@ export default function AdminDashboard() {
                 scholarshipPercentageMax: approvedData.scholarshipPercentageMax || undefined,
                 campusAddresses: approvedData.campusAddresses || [],
                 logo: "",
-                userId: "",
                 galleryImages: [],
               });
 
@@ -2480,6 +2489,60 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Course Data Extractor Dialog */}
+      <Dialog open={aiCourseExtractorDialogOpen} onOpenChange={setAiCourseExtractorDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Course Data Extractor
+            </DialogTitle>
+            <DialogDescription>
+              Enter a course's website URL and AI will automatically extract comprehensive course information for your review.
+            </DialogDescription>
+          </DialogHeader>
+          <AICourseExtractor
+            onDataApproved={(approvedData) => {
+              // Pre-fill the course form with approved data using setValue
+              // Use shouldDirty: false to preserve pristine state and avoid premature validation
+              const setValueOptions = { shouldDirty: false, shouldTouch: false, shouldValidate: false };
+              
+              if (approvedData.universityId) {
+                courseForm.setValue("universityId", approvedData.universityId, setValueOptions);
+              }
+              if (approvedData.title) {
+                courseForm.setValue("title", approvedData.title, setValueOptions);
+              }
+              if (approvedData.description) {
+                courseForm.setValue("description", approvedData.description, setValueOptions);
+              }
+              if (approvedData.subject) {
+                courseForm.setValue("subject", approvedData.subject, setValueOptions);
+              }
+              if (approvedData.level) {
+                courseForm.setValue("level", approvedData.level, setValueOptions);
+              }
+              if (approvedData.duration) {
+                courseForm.setValue("duration", approvedData.duration, setValueOptions);
+              }
+              if (approvedData.fees !== null && approvedData.fees !== undefined) {
+                courseForm.setValue("fees", approvedData.fees, setValueOptions);
+              }
+
+              // Close AI extractor and open course form
+              setAiCourseExtractorDialogOpen(false);
+              setEditingCourse(null);
+              setCourseDialogOpen(true);
+
+              toast({
+                title: "Course data loaded",
+                description: "AI-extracted course information has been loaded into the form. Review and submit when ready.",
+              });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Course Create/Edit Dialog */}
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
