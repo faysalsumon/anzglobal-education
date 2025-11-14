@@ -22,7 +22,9 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 **Student Document Management** offers organized, color-coded folders with multi-format file uploads. An **Enterprise CSV Bulk Import** system allows super admins and support managers to upload, validate, and approve large datasets for universities and courses, including templates, per-row validation, and transactional execution. An **AI Institution Data Extraction** feature (super admin only) securely extracts institution data from website URLs using OpenAI GPT-4o, with stringent security measures like rate limiting, domain allowlisting, and SSRF protection.
 
-**Current Limitations**: Education and Language test score management (student profile sections) are not yet implemented. Application submission currently requires only basic personal information (firstName, lastName) to be completed. **TODO**: Once Education and Language sections are fully implemented with CRUD interfaces, restore the 100% profile completion requirement in `/api/applications` endpoint (server/routes.ts line 2669).
+**Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD operations. Students can add multiple education records (level, institution, field of study, GPA) and language test scores (IELTS, TOEFL, PTE, Duolingo) with intelligent validation. 100% profile completion (personal info + ≥1 education + ≥1 language score) is required for application submission.
+
+**Course Pages**: Both student and public course detail pages display scholarship as a fixed value ("Up to X%") rather than a range, making it more student-friendly. Career pathways section shows potential career roles and detailed career progression when data is available. Institution pages display scholarship as a range to show the full scholarship opportunity.
 
 ### Technical Implementation
 

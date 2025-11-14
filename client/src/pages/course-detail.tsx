@@ -264,12 +264,9 @@ export default function CourseDetail() {
                     (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined)) && (
                     <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
                       <Award className="h-3 w-3 mr-1" />
-                      {course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined && 
-                       course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
-                        ? `${course.scholarshipPercentageMin}-${course.scholarshipPercentageMax}%`
-                        : course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
-                          ? `Up to ${course.scholarshipPercentageMax}%`
-                          : `${course.scholarshipPercentageMin}%`} Scholarship
+                      {course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
+                        ? `Up to ${course.scholarshipPercentageMax}%`
+                        : `${course.scholarshipPercentageMin}%`} Scholarship
                     </Badge>
                   )}
                   {course.prPathway && (
@@ -701,8 +698,8 @@ export default function CourseDetail() {
             )}
 
             {/* Career Outcomes & Career Path */}
-            {(course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+            {((course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath) && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-career-pathways">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-primary" />
