@@ -1,16 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Home, Heart } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Search, MapPin, Home, Heart, SlidersHorizontal, X } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,12 +19,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Favorite } from "@shared/schema";
+import { useInstitutionFilters } from "@/hooks/useInstitutionFilters";
+import { FilterCommandMultiSelect } from "@/components/filter-command-multi-select";
+import { FilterRangeSlider } from "@/components/filter-range-slider";
+import { ActiveFilterChips } from "@/components/active-filter-chips";
 import { InstitutionLogo } from "@/components/institution-logo";
+import type { Favorite } from "@shared/schema";
 
 type University = {
   id: string;
@@ -47,31 +61,86 @@ type University = {
   userId: string;
   providerType: string | null;
   numberOfCampuses: number | null;
-  scholarshipPercentage: number | null;
+  scholarshipPercentageMin: number | null;
+  scholarshipPercentageMax: number | null;
+  tuitionFeesMin: string | null;
+  tuitionFeesMax: string | null;
+  tuitionCurrency: string | null;
+  deliveryModes: string[] | null;
+  intakePeriods: string[] | null;
+  accreditationStatus: string | null;
+  rankingBand: string | null;
+  facilities: string[] | null;
+  internationalStudentSupport: boolean | null;
+  tags: string[] | null;
   topDisciplines: string[] | null;
+};
+
+type FilterMetadata = {
+  countries: string[];
+  providerTypes: string[];
+  deliveryModes: string[];
+  intakePeriods: string[];
+  facilities: string[];
+  accreditationStatuses: string[];
+  rankingBands: string[];
+  tags: string[];
+  disciplines: string[];
+  scholarshipRange: { min: number; max: number };
+  tuitionRange: { min: number; max: number };
+  totalCount: number;
 };
 
 export default function PublicInstitutions() {
   const [location] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [scholarshipFilter, setScholarshipFilter] = useState("all");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const { user, isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
 
-  // Read search query from URL params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const searchParam = params.get("search");
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
-  }, [location]);
+  const {
+    filters,
+    setSearch,
+    toggleMultiSelect,
+    setRange,
+    setSingleSelect,
+    setInternationalSupport,
+    clearFilters,
+    activeFilterChips,
+    hasActiveFilters,
+    queryParamsString,
+  } = useInstitutionFilters();
 
+  // Initialize search input from filters (preserves URL param)
+  const [searchInput, setSearchInput] = useState(filters.search);
+
+  // Sync searchInput with filters.search when it changes externally
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, setSearch]);
+
+  // Fetch filter metadata
+  const { data: filterMetadata } = useQuery<FilterMetadata>({
+    queryKey: ["/api/institutions/filter-metadata"],
+  });
+
+  // Fetch institutions with filters - use stable queryParamsString from hook
   const { data: institutions = [], isLoading } = useQuery<University[]>({
-    queryKey: ["/api/institutions"],
+    queryKey: ["/api/institutions", queryParamsString],
+    queryFn: async () => {
+      const url = queryParamsString ? `/api/institutions?${queryParamsString}` : "/api/institutions";
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch institutions");
+      return response.json();
+    },
   });
 
   const { data: favorites = [] } = useQuery<Favorite[]>({
@@ -153,40 +222,234 @@ export default function PublicInstitutions() {
     );
   };
 
-  // Get unique locations for filter
-  const locations = Array.from(new Set(institutions.map((i) => i.location))).filter((loc): loc is string => Boolean(loc));
+  // Filter controls component (used in both Sheet and desktop sidebar)
+  const FilterControls = () => (
+    <div className="space-y-4">
+      <Accordion type="multiple" defaultValue={["disciplines", "location", "type"]} className="w-full">
+        {/* Disciplines */}
+        {filterMetadata && filterMetadata.disciplines.length > 0 && (
+          <AccordionItem value="disciplines">
+            <AccordionTrigger>Disciplines</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select disciplines"
+                options={filterMetadata.disciplines}
+                selected={filters.disciplines}
+                onToggle={(value) => toggleMultiSelect('disciplines', value)}
+                placeholder="Search disciplines..."
+                testId="filter-disciplines"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-  // Get unique provider types for filter
-  const providerTypes = Array.from(new Set(institutions.map((i) => i.providerType))).filter((type): type is string => Boolean(type));
+        {/* Location */}
+        {filterMetadata && filterMetadata.countries.length > 0 && (
+          <AccordionItem value="location">
+            <AccordionTrigger>Location</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select countries"
+                options={filterMetadata.countries}
+                selected={filters.countries}
+                onToggle={(value) => toggleMultiSelect('countries', value)}
+                placeholder="Search countries..."
+                testId="filter-countries"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-  // Get unique scholarship percentages for filter
-  const scholarshipPercentages = Array.from(
-    new Set(institutions.map((i) => i.scholarshipPercentage).filter((s) => s !== null))
-  ).sort((a, b) => (a as number) - (b as number));
+        {/* Institution Type */}
+        {filterMetadata && filterMetadata.providerTypes.length > 0 && (
+          <AccordionItem value="type">
+            <AccordionTrigger>Institution Type</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select types"
+                options={filterMetadata.providerTypes}
+                selected={filters.providerTypes}
+                onToggle={(value) => toggleMultiSelect('providerTypes', value)}
+                placeholder="Search types..."
+                testId="filter-provider-types"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-  // Filter institutions based on search and filters
-  const filteredInstitutions = institutions.filter((institution) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      institution.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      institution.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      institution.topDisciplines?.some((d) =>
-        d.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+        {/* Delivery Modes */}
+        {filterMetadata && filterMetadata.deliveryModes.length > 0 && (
+          <AccordionItem value="delivery">
+            <AccordionTrigger>Delivery Modes</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select modes"
+                options={filterMetadata.deliveryModes}
+                selected={filters.deliveryModes}
+                onToggle={(value) => toggleMultiSelect('deliveryModes', value)}
+                placeholder="Search delivery modes..."
+                testId="filter-delivery-modes"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-    const matchesLocation =
-      locationFilter === "all" || institution.location === locationFilter;
+        {/* Intake Periods */}
+        {filterMetadata && filterMetadata.intakePeriods.length > 0 && (
+          <AccordionItem value="intake">
+            <AccordionTrigger>Intake Periods</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select intakes"
+                options={filterMetadata.intakePeriods}
+                selected={filters.intakePeriods}
+                onToggle={(value) => toggleMultiSelect('intakePeriods', value)}
+                placeholder="Search intake periods..."
+                testId="filter-intake-periods"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-    const matchesType =
-      typeFilter === "all" || institution.providerType === typeFilter;
+        {/* Facilities */}
+        {filterMetadata && filterMetadata.facilities.length > 0 && (
+          <AccordionItem value="facilities">
+            <AccordionTrigger>Facilities</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              <FilterCommandMultiSelect
+                label="Select facilities"
+                options={filterMetadata.facilities}
+                selected={filters.facilities}
+                onToggle={(value) => toggleMultiSelect('facilities', value)}
+                placeholder="Search facilities..."
+                testId="filter-facilities"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-    const matchesScholarship =
-      scholarshipFilter === "all" ||
-      (institution.scholarshipPercentage !== null &&
-        institution.scholarshipPercentage.toString() === scholarshipFilter);
+        {/* Scholarship Range */}
+        {filterMetadata && (
+          <AccordionItem value="scholarship">
+            <AccordionTrigger>Scholarship Range</AccordionTrigger>
+            <AccordionContent>
+              <FilterRangeSlider
+                label="Percentage"
+                min={filterMetadata.scholarshipRange.min}
+                max={filterMetadata.scholarshipRange.max}
+                value={filters.scholarshipMin !== undefined || filters.scholarshipMax !== undefined
+                  ? [filters.scholarshipMin || filterMetadata.scholarshipRange.min, filters.scholarshipMax || filterMetadata.scholarshipRange.max]
+                  : undefined}
+                onChange={(min, max) => setRange('scholarship', min, max)}
+                formatValue={(v) => `${v}%`}
+                testId="filter-scholarship-range"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-    return matchesSearch && matchesLocation && matchesType && matchesScholarship;
-  });
+        {/* Tuition Range */}
+        {filterMetadata && (
+          <AccordionItem value="tuition">
+            <AccordionTrigger>Tuition Range</AccordionTrigger>
+            <AccordionContent>
+              <FilterRangeSlider
+                label="Annual Fees"
+                min={filterMetadata.tuitionRange.min}
+                max={filterMetadata.tuitionRange.max}
+                value={filters.tuitionMin !== undefined || filters.tuitionMax !== undefined
+                  ? [filters.tuitionMin || filterMetadata.tuitionRange.min, filters.tuitionMax || filterMetadata.tuitionRange.max]
+                  : undefined}
+                onChange={(min, max) => setRange('tuition', min, max)}
+                formatValue={(v) => `$${v.toLocaleString()}`}
+                step={1000}
+                testId="filter-tuition-range"
+              />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Accreditation */}
+        {filterMetadata && filterMetadata.accreditationStatuses.length > 0 && (
+          <AccordionItem value="accreditation">
+            <AccordionTrigger>Accreditation</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              {filterMetadata.accreditationStatuses.map((status) => (
+                <div key={status} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`accred-${status}`}
+                    checked={filters.accreditationStatus === status}
+                    onCheckedChange={(checked) =>
+                      setSingleSelect('accreditationStatus', checked ? status : undefined)
+                    }
+                    data-testid={`checkbox-accreditation-${status}`}
+                  />
+                  <Label htmlFor={`accred-${status}`} className="text-sm font-normal cursor-pointer">
+                    {status}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Ranking */}
+        {filterMetadata && filterMetadata.rankingBands.length > 0 && (
+          <AccordionItem value="ranking">
+            <AccordionTrigger>Ranking Band</AccordionTrigger>
+            <AccordionContent className="space-y-2">
+              {filterMetadata.rankingBands.map((band) => (
+                <div key={band} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`rank-${band}`}
+                    checked={filters.rankingBand === band}
+                    onCheckedChange={(checked) =>
+                      setSingleSelect('rankingBand', checked ? band : undefined)
+                    }
+                    data-testid={`checkbox-ranking-${band}`}
+                  />
+                  <Label htmlFor={`rank-${band}`} className="text-sm font-normal cursor-pointer">
+                    {band}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* International Support */}
+        <AccordionItem value="support">
+          <AccordionTrigger>Other</AccordionTrigger>
+          <AccordionContent className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="international-support"
+                checked={filters.internationalSupport === true}
+                onCheckedChange={(checked) =>
+                  setInternationalSupport(checked ? true : undefined)
+                }
+                data-testid="checkbox-international-support"
+              />
+              <Label htmlFor="international-support" className="text-sm font-normal cursor-pointer">
+                International Student Support
+              </Label>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      {hasActiveFilters && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={clearFilters}
+          data-testid="button-clear-all-filters-sidebar"
+        >
+          Clear All Filters
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -231,43 +494,12 @@ export default function PublicInstitutions() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Find Your Institutes"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search institutions, disciplines..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
                 data-testid="input-search-institutions"
               />
-            </div>
-
-            {/* Filter Dropdowns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger data-testid="select-location">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map((location) => (
-                    <SelectItem key={location} value={location}>
-                      {location}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger data-testid="select-type">
-                  <SelectValue placeholder="Type of Institution" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {providerTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>
@@ -275,64 +507,86 @@ export default function PublicInstitutions() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Filters Sidebar */}
-          <aside className="w-full md:w-64 flex-shrink-0">
+        {/* Mobile Filter Button + Active Chips */}
+        <div className="lg:hidden mb-6 space-y-4">
+          <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="w-full" data-testid="button-open-filters">
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Filters
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-2">
+                    {activeFilterChips.length}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-full sm:max-w-md overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filter Institutions</SheetTitle>
+                <SheetDescription>
+                  Refine your search with the filters below
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <FilterControls />
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {hasActiveFilters && (
+            <ActiveFilterChips
+              chips={activeFilterChips}
+              onClearAll={clearFilters}
+              testId="active-filters-mobile"
+            />
+          )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Desktop Filters Sidebar */}
+          <aside className="hidden lg:block w-80 flex-shrink-0">
             <Card>
               <CardContent className="p-6">
-                <h2 className="font-bold text-lg mb-4">Filters:</h2>
-
-                {/* Scholarship Filter */}
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-2 text-sm">Scholarship</h3>
-                  <Select value={scholarshipFilter} onValueChange={setScholarshipFilter}>
-                    <SelectTrigger data-testid="select-scholarship">
-                      <SelectValue placeholder="Scholarship" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {scholarshipPercentages.map((percentage) => (
-                        <SelectItem key={percentage} value={String(percentage)}>
-                          {percentage}%
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Clear Filters */}
-                {(searchQuery || locationFilter !== "all" || typeFilter !== "all" || scholarshipFilter !== "all") && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setLocationFilter("all");
-                      setTypeFilter("all");
-                      setScholarshipFilter("all");
-                    }}
-                    data-testid="button-clear-filters"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
+                <h2 className="font-bold text-lg mb-4">Filters</h2>
+                <FilterControls />
               </CardContent>
             </Card>
           </aside>
 
           {/* Institutions Grid */}
           <div className="flex-1">
+            {/* Desktop Active Chips */}
+            {hasActiveFilters && (
+              <div className="hidden lg:block mb-6">
+                <ActiveFilterChips
+                  chips={activeFilterChips}
+                  onClearAll={clearFilters}
+                  testId="active-filters-desktop"
+                />
+              </div>
+            )}
+
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-muted-foreground">
+              {!isLoading && (
+                <span data-testid="text-results-count">
+                  {institutions.length} institution{institutions.length !== 1 ? 's' : ''} found
+                </span>
+              )}
+            </div>
+
             {isLoading ? (
               <div className="text-center py-12 text-muted-foreground">
                 Loading institutions...
               </div>
-            ) : filteredInstitutions.length === 0 ? (
+            ) : institutions.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No institutions found matching your criteria.
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredInstitutions.map((institution) => (
+                {institutions.map((institution) => (
                   <Card
                     key={institution.id}
                     className="hover-elevate active-elevate-2"
@@ -348,13 +602,15 @@ export default function PublicInstitutions() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center flex-wrap gap-2 mb-1">
-                            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
-                              {institution.providerType || "Institution"}
-                            </span>
-                            {institution.scholarshipPercentage && (
-                              <span className="text-xs px-2 py-1 bg-accent/10 text-accent rounded">
-                                {institution.scholarshipPercentage}% Scholarship
-                              </span>
+                            {institution.providerType && (
+                              <Badge variant="secondary" className="text-xs">
+                                {institution.providerType}
+                              </Badge>
+                            )}
+                            {institution.rankingBand && (
+                              <Badge variant="outline" className="text-xs">
+                                {institution.rankingBand}
+                              </Badge>
                             )}
                           </div>
                           <h3 className="font-bold text-lg" data-testid={`text-name-${institution.id}`}>
@@ -395,27 +651,66 @@ export default function PublicInstitutions() {
                         {institution.description}
                       </p>
 
-                      {institution.topDisciplines && institution.topDisciplines.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-xs font-semibold mb-2">Top Disciplines:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {institution.topDisciplines.slice(0, 3).map((discipline) => (
-                              <span
-                                key={discipline}
-                                className="text-xs px-2 py-1 bg-secondary rounded"
-                              >
-                                {discipline}
-                              </span>
-                            ))}
+                      {/* Enhanced metadata display */}
+                      <div className="space-y-3 mb-4">
+                        {/* Scholarship & Tuition */}
+                        {(institution.scholarshipPercentageMin || institution.tuitionFeesMin) && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMax !== null && (
+                              <Badge variant="secondary">
+                                Scholarship: {institution.scholarshipPercentageMin}% - {institution.scholarshipPercentageMax}%
+                              </Badge>
+                            )}
+                            {institution.tuitionFeesMin && institution.tuitionFeesMax && (
+                              <Badge variant="outline">
+                                Tuition: ${parseFloat(institution.tuitionFeesMin).toLocaleString()} - ${parseFloat(institution.tuitionFeesMax).toLocaleString()} {institution.tuitionCurrency || 'AUD'}
+                              </Badge>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {institution.numberOfCampuses && (
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Number of Campuses: {institution.numberOfCampuses}
-                        </p>
-                      )}
+                        {/* Delivery Modes */}
+                        {institution.deliveryModes && institution.deliveryModes.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold mb-1">Delivery Modes:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {institution.deliveryModes.map((mode) => (
+                                <Badge key={mode} variant="secondary" className="text-xs">
+                                  {mode}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Intake Periods */}
+                        {institution.intakePeriods && institution.intakePeriods.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold mb-1">Intakes:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {institution.intakePeriods.map((intake) => (
+                                <Badge key={intake} variant="outline" className="text-xs">
+                                  {intake}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Top Disciplines */}
+                        {institution.topDisciplines && institution.topDisciplines.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold mb-1">Top Disciplines:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {institution.topDisciplines.slice(0, 3).map((discipline) => (
+                                <Badge key={discipline} variant="secondary" className="text-xs">
+                                  {discipline}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="flex gap-2">
                         <Button
