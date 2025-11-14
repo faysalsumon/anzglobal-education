@@ -631,7 +631,7 @@ export default function StudentProfilePage() {
       startDate: education.startDate || "",
       endDate: education.endDate || "",
       isCurrentlyStudying: education.isCurrentlyStudying || false,
-      gpa: education.gpa || "",
+      gpa: education.gpa != null ? String(education.gpa) : "",
       gradeScale: education.gradeScale || "",
     });
     setEducationDialogOpen(true);
@@ -651,11 +651,11 @@ export default function StudentProfilePage() {
     setEditingLanguageScore(score);
     languageScoreForm.reset({
       testType: score.testType || "",
-      overallScore: score.overallScore || "",
-      listeningScore: score.listeningScore || "",
-      readingScore: score.readingScore || "",
-      writingScore: score.writingScore || "",
-      speakingScore: score.speakingScore || "",
+      overallScore: score.overallScore != null ? String(score.overallScore) : "",
+      listeningScore: score.listeningScore != null ? String(score.listeningScore) : "",
+      readingScore: score.readingScore != null ? String(score.readingScore) : "",
+      writingScore: score.writingScore != null ? String(score.writingScore) : "",
+      speakingScore: score.speakingScore != null ? String(score.speakingScore) : "",
       testDate: score.testDate || "",
       expiryDate: score.expiryDate || "",
     });
