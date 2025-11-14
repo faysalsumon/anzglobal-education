@@ -71,29 +71,66 @@ import {
 } from "./notifications";
 import express from "express";
 
-// Rate limiter for AI extraction endpoint
-// Simple in-memory rate limiter: 5 requests per hour per user
+// Environment-aware rate limiting for AI extraction endpoint
+// DEV: 30/hr, PREVIEW: 15/hr, PROD: 5/hr
+function getAIExtractionRateLimit(): number {
+  const env = process.env.NODE_ENV || 'development';
+  
+  if (env === 'development') {
+    return 30; // More generous for testing
+  } else if (env === 'preview') {
+    return 15; // Moderate for staging
+  } else {
+    return 5; // Conservative for production
+  }
+}
+
+// Rate limiter state storage
 const aiExtractionRateLimits = new Map<string, { count: number; resetTime: number }>();
 
-function checkAIExtractionRateLimit(userId: string): boolean {
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetTime: number;
+  limit: number;
+}
+
+function checkAIExtractionRateLimit(userId: string, isSuperAdmin: boolean = false): RateLimitResult {
   const now = Date.now();
+  const limit = isSuperAdmin ? 100 : getAIExtractionRateLimit(); // Super admins get 100/hr
   const userLimit = aiExtractionRateLimits.get(userId);
 
   if (!userLimit || now > userLimit.resetTime) {
     // Reset or create new limit window (1 hour)
+    const resetTime = now + 60 * 60 * 1000;
     aiExtractionRateLimits.set(userId, {
       count: 1,
-      resetTime: now + 60 * 60 * 1000, // 1 hour from now
+      resetTime,
     });
-    return true;
+    return {
+      allowed: true,
+      remaining: limit - 1,
+      resetTime,
+      limit,
+    };
   }
 
-  if (userLimit.count >= 5) {
-    return false; // Rate limit exceeded
+  if (userLimit.count >= limit) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: userLimit.resetTime,
+      limit,
+    };
   }
 
   userLimit.count++;
-  return true;
+  return {
+    allowed: true,
+    remaining: limit - userLimit.count,
+    resetTime: userLimit.resetTime,
+    limit,
+  };
 }
 
 import {
@@ -3144,12 +3181,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // SECURITY: Rate limiting - 5 requests per hour per user
-      if (!checkAIExtractionRateLimit(userId)) {
+      // SECURITY: Environment-aware rate limiting with super admin bypass
+      const rateLimitResult = checkAIExtractionRateLimit(userId, true); // Super admins get higher limits
+      
+      if (!rateLimitResult.allowed) {
+        const resetDate = new Date(rateLimitResult.resetTime);
+        const minutesUntilReset = Math.ceil((rateLimitResult.resetTime - Date.now()) / 60000);
+        
+        console.log(`[Rate Limit] User ${userId} exceeded limit. Reset at ${resetDate.toISOString()}`);
+        
         return res.status(429).json({ 
-          message: "Rate limit exceeded. Maximum 5 AI extraction requests per hour allowed." 
+          message: `Rate limit exceeded. You can make ${rateLimitResult.limit} requests per hour. Please try again in ${minutesUntilReset} minutes.`,
+          rateLimit: {
+            limit: rateLimitResult.limit,
+            remaining: 0,
+            resetTime: rateLimitResult.resetTime,
+            resetDate: resetDate.toISOString()
+          }
         });
       }
+      
+      // Log successful rate limit check
+      console.log(`[Rate Limit] User ${userId} - ${rateLimitResult.remaining}/${rateLimitResult.limit} requests remaining`);
 
       const { url } = req.body;
       
