@@ -1092,14 +1092,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public institutions route - only show approved and active institutions
+  // Filter metadata endpoint - returns available filter options with counts
+  app.get("/api/institutions/filter-metadata", async (req, res) => {
+    try {
+      const allInstitutions = await storage.getAllUniversities();
+      const approvedInstitutions = allInstitutions.filter(i => 
+        i.approvalStatus === 'approved' && i.isActive
+      );
+
+      // Extract unique values for each filter category
+      const countries = Array.from(new Set(approvedInstitutions.map(i => i.country).filter(Boolean)));
+      const providerTypes = Array.from(new Set(approvedInstitutions.map(i => i.providerType).filter(Boolean)));
+      const deliveryModes = Array.from(new Set(approvedInstitutions.flatMap(i => i.deliveryModes || []).filter(Boolean)));
+      const intakePeriods = Array.from(new Set(approvedInstitutions.flatMap(i => i.intakePeriods || []).filter(Boolean)));
+      const facilities = Array.from(new Set(approvedInstitutions.flatMap(i => i.facilities || []).filter(Boolean)));
+      const accreditationStatuses = Array.from(new Set(approvedInstitutions.map(i => i.accreditationStatus).filter(Boolean)));
+      const rankingBands = Array.from(new Set(approvedInstitutions.map(i => i.rankingBand).filter(Boolean)));
+      const allTags = Array.from(new Set(approvedInstitutions.flatMap(i => i.tags || []).filter(Boolean)));
+      const allDisciplines = Array.from(new Set(approvedInstitutions.flatMap(i => i.topDisciplines || []).filter(Boolean)));
+
+      // Calculate ranges
+      const scholarshipRanges = approvedInstitutions
+        .map(i => ({ min: i.scholarshipPercentageMin, max: i.scholarshipPercentageMax }))
+        .filter(r => r.min !== null || r.max !== null);
+      const tuitionRanges = approvedInstitutions
+        .map(i => ({ min: i.tuitionFeesMin, max: i.tuitionFeesMax }))
+        .filter(r => r.min !== null || r.max !== null);
+
+      res.json({
+        countries: countries.sort(),
+        providerTypes: providerTypes.sort(),
+        deliveryModes: deliveryModes.sort(),
+        intakePeriods: intakePeriods.sort(),
+        facilities: facilities.sort(),
+        accreditationStatuses: accreditationStatuses.sort(),
+        rankingBands: rankingBands.sort(),
+        tags: allTags.sort(),
+        disciplines: allDisciplines.sort(),
+        scholarshipRange: {
+          min: scholarshipRanges.length > 0 ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
+          max: scholarshipRanges.length > 0 ? Math.max(...scholarshipRanges.map(r => r.max || 0)) : 100,
+        },
+        tuitionRange: {
+          min: tuitionRanges.length > 0 ? Math.min(...tuitionRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
+          max: tuitionRanges.length > 0 ? Math.max(...tuitionRanges.map(r => r.max || 0)) : 100000,
+        },
+        totalCount: approvedInstitutions.length,
+      });
+    } catch (error) {
+      console.error("Error fetching filter metadata:", error);
+      res.status(500).json({ message: "Failed to fetch filter metadata" });
+    }
+  });
+
+  // Public institutions route with comprehensive filtering support
   app.get("/api/institutions", async (req, res) => {
     try {
       const allInstitutions = await storage.getAllUniversities();
-      // Filter to only show approved and active institutions
-      const institutions = allInstitutions.filter(i => 
+      let institutions = allInstitutions.filter(i => 
         i.approvalStatus === 'approved' && i.isActive
       );
+
+      // Apply filters from query parameters
+      const {
+        search,
+        countries,
+        providerTypes,
+        deliveryModes,
+        intakePeriods,
+        facilities,
+        disciplines,
+        tags,
+        scholarshipMin,
+        scholarshipMax,
+        tuitionMin,
+        tuitionMax,
+        accreditationStatus,
+        rankingBand,
+        internationalSupport,
+      } = req.query;
+
+      // Search filter (name, description, disciplines)
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        institutions = institutions.filter(i =>
+          i.name.toLowerCase().includes(searchLower) ||
+          i.description?.toLowerCase().includes(searchLower) ||
+          i.topDisciplines?.some(d => d.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Country filter (multi-select)
+      if (countries) {
+        const countryList = Array.isArray(countries) ? countries : [countries];
+        institutions = institutions.filter(i => i.country && countryList.includes(i.country));
+      }
+
+      // Provider type filter (multi-select)
+      if (providerTypes) {
+        const typeList = Array.isArray(providerTypes) ? providerTypes : [providerTypes];
+        institutions = institutions.filter(i => i.providerType && typeList.includes(i.providerType));
+      }
+
+      // Delivery modes filter (array overlap)
+      if (deliveryModes) {
+        const modeList = Array.isArray(deliveryModes) ? deliveryModes : [deliveryModes];
+        institutions = institutions.filter(i => 
+          i.deliveryModes && i.deliveryModes.some(mode => modeList.includes(mode))
+        );
+      }
+
+      // Intake periods filter (array overlap)
+      if (intakePeriods) {
+        const intakeList = Array.isArray(intakePeriods) ? intakePeriods : [intakePeriods];
+        institutions = institutions.filter(i => 
+          i.intakePeriods && i.intakePeriods.some(intake => intakeList.includes(intake))
+        );
+      }
+
+      // Facilities filter (array overlap)
+      if (facilities) {
+        const facilityList = Array.isArray(facilities) ? facilities : [facilities];
+        institutions = institutions.filter(i => 
+          i.facilities && i.facilities.some(facility => facilityList.includes(facility))
+        );
+      }
+
+      // Disciplines filter (array overlap)
+      if (disciplines) {
+        const disciplineList = Array.isArray(disciplines) ? disciplines : [disciplines];
+        institutions = institutions.filter(i => 
+          i.topDisciplines && i.topDisciplines.some(disc => disciplineList.includes(disc))
+        );
+      }
+
+      // Tags filter (array overlap)
+      if (tags) {
+        const tagList = Array.isArray(tags) ? tags : [tags];
+        institutions = institutions.filter(i => 
+          i.tags && i.tags.some(tag => tagList.includes(tag))
+        );
+      }
+
+      // Scholarship range filter
+      if (scholarshipMin !== undefined || scholarshipMax !== undefined) {
+        const minVal = scholarshipMin ? parseFloat(scholarshipMin as string) : 0;
+        const maxVal = scholarshipMax ? parseFloat(scholarshipMax as string) : 100;
+        institutions = institutions.filter(i => {
+          if (!i.scholarshipPercentageMin && !i.scholarshipPercentageMax) return false;
+          const instMin = i.scholarshipPercentageMin || 0;
+          const instMax = i.scholarshipPercentageMax || 100;
+          // Check if ranges overlap
+          return instMax >= minVal && instMin <= maxVal;
+        });
+      }
+
+      // Tuition range filter
+      if (tuitionMin !== undefined || tuitionMax !== undefined) {
+        const minVal = tuitionMin ? parseFloat(tuitionMin as string) : 0;
+        const maxVal = tuitionMax ? parseFloat(tuitionMax as string) : Number.MAX_SAFE_INTEGER;
+        institutions = institutions.filter(i => {
+          if (!i.tuitionFeesMin && !i.tuitionFeesMax) return false;
+          const instMin = parseFloat(i.tuitionFeesMin as any) || 0;
+          const instMax = parseFloat(i.tuitionFeesMax as any) || Number.MAX_SAFE_INTEGER;
+          // Check if ranges overlap
+          return instMax >= minVal && instMin <= maxVal;
+        });
+      }
+
+      // Accreditation status filter
+      if (accreditationStatus && typeof accreditationStatus === 'string') {
+        institutions = institutions.filter(i => i.accreditationStatus === accreditationStatus);
+      }
+
+      // Ranking band filter
+      if (rankingBand && typeof rankingBand === 'string') {
+        institutions = institutions.filter(i => i.rankingBand === rankingBand);
+      }
+
+      // International student support filter
+      if (internationalSupport === 'true') {
+        institutions = institutions.filter(i => i.internationalStudentSupport === true);
+      }
+
       res.json(institutions);
     } catch (error) {
       console.error("Error fetching institutions:", error);
