@@ -552,3 +552,195 @@ Extract the following fields and return as JSON:
     throw new Error("Failed to parse extracted data from AI");
   }
 }
+
+interface ExtractedCourseData {
+  title: string | null;
+  description: string | null;
+  subject: string | null;
+  level: string | null;
+  duration: string | null;
+  durationMonths: number | null;
+  fees: number | null;
+  currency: string | null;
+  location: string | null;
+  country: string | null;
+  startDate: string | null;
+  applicationDeadline: string | null;
+  prerequisites: string | null;
+  courseCode: string | null;
+  prPathway: boolean | null;
+  scholarshipPercentageMin: number | null;
+  scholarshipPercentageMax: number | null;
+  eligibilityRequirements: string | null;
+  englishRequirements: string | null;
+  academicRequirements: string | null;
+  intakes: string[] | null;
+  studyAreas: string[] | null;
+  careerOutcomes: string[] | null;
+  careerPath: string | null;
+  deliveryMode: string | null;
+  campusLocations: string[] | null;
+  workRights: boolean | null;
+  internshipAvailable: boolean | null;
+  internshipDetails: string | null;
+  minimumAge: number | null;
+}
+
+export async function extractCourseDataFromWebsite(url: string): Promise<ExtractedCourseData> {
+  checkAIConfigured();
+  
+  // SECURITY: Use the same validateUrl function to prevent SSRF attacks
+  // This includes domain allowlist, DNS resolution checks, private IP protection
+  const validatedUrl = await validateUrl(url);
+  
+  // Fetch webpage content with timeout and size limits (same security measures as institution extraction)
+  let htmlContent: string;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    const response = await fetch(validatedUrl.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
+      },
+      signal: controller.signal,
+      redirect: 'manual', // Prevent following redirects to avoid SSRF bypass
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Reject redirects to prevent SSRF bypass via redirect chains
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Redirects are not allowed for security reasons. Please provide the final URL.');
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch website: ${response.statusText}`);
+    }
+    
+    // Limit response size to 2MB to prevent DoS
+    const MAX_SIZE = 2 * 1024 * 1024;
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+      throw new Error('Website content too large (max 2MB)');
+    }
+
+    // Read with size limit
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Unable to read response body');
+    }
+
+    let receivedLength = 0;
+    const chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      chunks.push(value);
+      receivedLength += value.length;
+
+      if (receivedLength > MAX_SIZE) {
+        reader.cancel();
+        throw new Error('Website content exceeded size limit (max 2MB)');
+      }
+    }
+
+    const chunksAll = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      chunksAll.set(chunk, position);
+      position += chunk.length;
+    }
+
+    htmlContent = new TextDecoder('utf-8').decode(chunksAll);
+    
+    // Limit content size to avoid token limits (first 50000 characters)
+    if (htmlContent.length > 50000) {
+      htmlContent = htmlContent.substring(0, 50000);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to fetch website content: ${error.message}`);
+  }
+
+  // Use OpenAI to extract structured course data
+  const prompt = `You are an expert at extracting structured course/program data from educational website content.
+
+Analyze the following webpage content and extract as much accurate information as possible about the educational course or program.
+
+IMPORTANT INSTRUCTIONS:
+- Only extract information that is clearly stated on the website
+- Return null for any field that cannot be confidently determined
+- For arrays, return null if no information is found
+- Be conservative - accuracy is more important than completeness
+- For level, use one of: "undergraduate", "postgraduate", "certificate", "diploma", "foundation", "pathway"
+- For deliveryMode, use one of: "online", "on-campus", "hybrid", or null
+- For duration, extract as human-readable text (e.g., "2 years", "18 months", "12 weeks")
+- For durationMonths, convert duration to months as an integer
+- For fees, extract annual tuition as a number (without currency symbols)
+- For currency, extract the currency code (e.g., "AUD", "USD", "GBP")
+- For scholarships, extract percentage ranges if mentioned (e.g., "10-50% scholarships" means min=10, max=50)
+- For intakes, extract available intake months (e.g., ["February", "July"])
+- For studyAreas, extract key curriculum topics and subjects covered
+- For careerOutcomes, extract potential job roles/career paths (e.g., ["Software Engineer", "Data Analyst"])
+- For careerPath, extract detailed career progression description if available
+- For prPathway, set to true if course explicitly mentions permanent residency/PR pathway
+- For workRights, set to true if course mentions work rights or visa eligibility
+
+Website URL: ${url}
+
+Webpage Content:
+${htmlContent}
+
+Extract the following fields and return as JSON:
+{
+  "title": "Course title",
+  "description": "Course description (100-300 words)",
+  "subject": "Primary subject area (e.g., 'Computer Science', 'Business', 'Engineering')",
+  "level": "undergraduate|postgraduate|certificate|diploma|foundation|pathway",
+  "duration": "2 years",
+  "durationMonths": 24,
+  "fees": 25000.00,
+  "currency": "AUD",
+  "location": "City, State",
+  "country": "Australia",
+  "startDate": "February 2025",
+  "applicationDeadline": "December 2024",
+  "prerequisites": "High school diploma or equivalent",
+  "courseCode": "CS101",
+  "prPathway": false,
+  "scholarshipPercentageMin": 10,
+  "scholarshipPercentageMax": 50,
+  "eligibilityRequirements": "Academic and other entry requirements",
+  "englishRequirements": "IELTS 6.5 or equivalent",
+  "academicRequirements": "Minimum GPA 3.0",
+  "intakes": ["February", "July"],
+  "studyAreas": ["Programming", "Database Systems", "Web Development"],
+  "careerOutcomes": ["Software Developer", "Web Developer", "Systems Analyst"],
+  "careerPath": "Detailed career progression description",
+  "deliveryMode": "on-campus|online|hybrid",
+  "campusLocations": ["Sydney", "Melbourne"],
+  "workRights": false,
+  "internshipAvailable": true,
+  "internshipDetails": "6-month industry placement",
+  "minimumAge": 18
+}`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 2500,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    const extractedData = JSON.parse(content) as ExtractedCourseData;
+    return extractedData;
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+    throw new Error("Failed to parse extracted data from AI");
+  }
+}

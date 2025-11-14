@@ -47,6 +47,7 @@ import {
   generateInstitutionFullDescription,
   generateInstitutionGalleryImages,
   extractInstitutionDataFromWebsite,
+  extractCourseDataFromWebsite,
 } from "./ai";
 import multer from "multer";
 import sharp from "sharp";
@@ -3464,6 +3465,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(500).json({ 
         message: error.message || "Failed to extract institution data. Please try again." 
+      });
+    }
+  });
+
+  // AI-powered course data extraction from website
+  // SECURITY: Restricted to super_admin only + rate limited due to SSRF risks
+  // Only allows extraction from allowlisted educational domains (.edu, .ac.*, university/college domains)
+  app.post("/api/admin/extract-course-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // SECURITY: Restrict to super_admin only (most trusted role)
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ 
+          message: "Super admin access required. This feature is restricted for security reasons." 
+        });
+      }
+
+      // SECURITY: Environment-aware rate limiting with super admin bypass
+      const rateLimitResult = checkAIExtractionRateLimit(userId, true); // Super admins get higher limits
+      
+      if (!rateLimitResult.allowed) {
+        const resetDate = new Date(rateLimitResult.resetTime);
+        const minutesUntilReset = Math.ceil((rateLimitResult.resetTime - Date.now()) / 60000);
+        
+        console.log(`[Rate Limit] User ${userId} exceeded limit. Reset at ${resetDate.toISOString()}`);
+        
+        return res.status(429).json({ 
+          message: `Rate limit exceeded. You can make ${rateLimitResult.limit} requests per hour. Please try again in ${minutesUntilReset} minutes.`,
+          rateLimit: {
+            limit: rateLimitResult.limit,
+            remaining: 0,
+            resetTime: rateLimitResult.resetTime,
+            resetDate: resetDate.toISOString()
+          }
+        });
+      }
+      
+      // Log successful rate limit check
+      console.log(`[Rate Limit] User ${userId} - ${rateLimitResult.remaining}/${rateLimitResult.limit} requests remaining`);
+
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ message: "Course website URL is required" });
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+
+      // Extract data using AI
+      const extractedData = await extractCourseDataFromWebsite(url);
+      
+      res.json({ 
+        success: true,
+        data: extractedData 
+      });
+    } catch (error: any) {
+      console.error("Error extracting course data:", error);
+      
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: error.message || "Failed to extract course data. Please try again." 
       });
     }
   });
