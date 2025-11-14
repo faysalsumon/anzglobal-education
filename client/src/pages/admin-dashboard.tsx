@@ -2403,7 +2403,6 @@ export default function AdminDashboard() {
                 name: approvedData.name || "",
                 country: approvedData.country || "",
                 description: approvedData.description || "",
-                overview: approvedData.overview || "",
                 contactEmail: approvedData.contactEmail || "",
                 contactPhone: approvedData.contactPhone || "",
                 website: approvedData.website || "",

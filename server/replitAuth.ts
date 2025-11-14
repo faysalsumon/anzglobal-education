@@ -218,28 +218,39 @@ export async function setupAuth(app: Express) {
           const existingUser = await storage.getUser(userId);
           
           if (existingUser) {
-            // User exists - preserve their existing userType and role
-            console.log('[NON-STUDENT CALLBACK] Existing user found:', userId, 'type:', existingUser.userType, 'role:', existingUser.role);
-            // Update profile info but keep userType and role
+            // User exists - use claims role if provided (for testing), otherwise preserve existing
+            const userType = claims.role === 'super_admin' || claims.role === 'support_manager' || claims.role === 'support_agent'
+              ? 'admin'
+              : existingUser.userType;
+            const role = claims.role || existingUser.role;
+            
+            console.log('[NON-STUDENT CALLBACK] Existing user found:', userId, 'type:', existingUser.userType, 'role:', existingUser.role, 'claims.role:', claims.role);
+            // Update profile info and apply role from claims if present
             await storage.upsertUser({
               id: userId,
               email: claims.email,
               firstName: claims.first_name,
               lastName: claims.last_name,
               profileImageUrl: claims.profile_image_url,
-              userType: existingUser.userType, // Preserve existing type
-              role: existingUser.role, // Preserve existing role
+              userType: userType, // Use claims role if admin, otherwise preserve
+              role: role, // Use claims role if provided
             });
           } else {
-            // New user - create with default type (university)
-            console.log('[NON-STUDENT CALLBACK] New user, creating as university type:', userId);
+            // New user - use claims role if provided, otherwise default to university
+            const userType = claims.role === 'super_admin' || claims.role === 'support_manager' || claims.role === 'support_agent'
+              ? 'admin'
+              : 'university';
+            const role = claims.role || 'user';
+            
+            console.log('[NON-STUDENT CALLBACK] New user, creating with type:', userType, 'role:', role);
             await storage.upsertUser({
               id: userId,
               email: claims.email,
               firstName: claims.first_name,
               lastName: claims.last_name,
               profileImageUrl: claims.profile_image_url,
-              userType: 'university', // Default for non-student logins
+              userType: userType, // Use claims role if admin, otherwise default
+              role: role, // Use claims role if provided
             });
           }
           
