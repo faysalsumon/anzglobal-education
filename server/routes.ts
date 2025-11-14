@@ -70,6 +70,32 @@ import {
   createNotification,
 } from "./notifications";
 import express from "express";
+
+// Rate limiter for AI extraction endpoint
+// Simple in-memory rate limiter: 5 requests per hour per user
+const aiExtractionRateLimits = new Map<string, { count: number; resetTime: number }>();
+
+function checkAIExtractionRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = aiExtractionRateLimits.get(userId);
+
+  if (!userLimit || now > userLimit.resetTime) {
+    // Reset or create new limit window (1 hour)
+    aiExtractionRateLimits.set(userId, {
+      count: 1,
+      resetTime: now + 60 * 60 * 1000, // 1 hour from now
+    });
+    return true;
+  }
+
+  if (userLimit.count >= 5) {
+    return false; // Rate limit exceeded
+  }
+
+  userLimit.count++;
+  return true;
+}
+
 import {
   parseCSV,
   validateUniversityRow,
@@ -3103,13 +3129,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered institution data extraction from website
+  // SECURITY: Restricted to super_admin only + rate limited due to SSRF risks
+  // Only allows extraction from allowlisted educational domains (.edu, .ac.*, university/college domains)
   app.post("/api/admin/extract-institution-data", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      // SECURITY: Restrict to super_admin only (most trusted role)
+      const access = await checkAdminAccess(userId, ['super_admin']);
       
       if (!access) {
-        return res.status(403).json({ message: "Admin access required" });
+        return res.status(403).json({ 
+          message: "Super admin access required. This feature is restricted for security reasons." 
+        });
+      }
+
+      // SECURITY: Rate limiting - 5 requests per hour per user
+      if (!checkAIExtractionRateLimit(userId)) {
+        return res.status(429).json({ 
+          message: "Rate limit exceeded. Maximum 5 AI extraction requests per hour allowed." 
+        });
       }
 
       const { url } = req.body;

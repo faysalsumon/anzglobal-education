@@ -288,6 +288,55 @@ function isPrivateIP(ip: string): boolean {
   return false;
 }
 
+// Allowlist of approved educational domains
+// Only allow extraction from known educational institutions to reduce SSRF risk
+const ALLOWED_EDUCATION_DOMAINS = [
+  // Common educational TLDs
+  '.edu',           // US higher education
+  '.edu.au',        // Australian education
+  '.edu.cn',        // Chinese education
+  '.edu.hk',        // Hong Kong education
+  '.edu.sg',        // Singapore education
+  '.edu.my',        // Malaysian education
+  '.edu.nz',        // New Zealand education
+  '.edu.ph',        // Philippines education
+  '.edu.tw',        // Taiwan education
+  '.edu.in',        // Indian education
+  '.edu.pk',        // Pakistani education
+  '.edu.bd',        // Bangladeshi education
+  '.edu.lk',        // Sri Lankan education
+  '.edu.np',        // Nepalese education
+  '.edu.mm',        // Myanmar education
+  '.edu.kh',        // Cambodian education
+  '.edu.vn',        // Vietnamese education
+  '.edu.th',        // Thai education
+  '.edu.id',        // Indonesian education
+  '.edu.bn',        // Brunei education
+  '.edu.mo',        // Macau education
+  // Academic domains (UK, Europe, etc.)
+  '.ac.uk',         // UK academic
+  '.ac.nz',         // New Zealand academic
+  '.ac.za',         // South African academic
+  '.ac.jp',         // Japanese academic
+  '.ac.kr',         // Korean academic
+  '.ac.il',         // Israeli academic
+  '.ac.at',         // Austrian academic
+  '.ac.be',         // Belgian academic
+  '.ac.in',         // Indian academic
+  '.ac.th',         // Thai academic
+  '.ac.ae',         // UAE academic
+  // University-specific patterns (common worldwide)
+  'university.',
+  'universi',       // Covers university, universitas, universiteit, etc.
+  'college.',
+  'institute.',
+  'school.',
+  'academy.',
+  'tafe.',          // Australian TAFE
+  'polytechnic.',
+  '.uni-',          // German/European universities
+];
+
 // Validate URL to prevent SSRF attacks
 async function validateUrl(urlString: string): Promise<URL> {
   let url: URL;
@@ -303,6 +352,24 @@ async function validateUrl(urlString: string): Promise<URL> {
   }
 
   const hostname = url.hostname.toLowerCase();
+
+  // Check if domain is in allowlist
+  const isAllowed = ALLOWED_EDUCATION_DOMAINS.some(pattern => {
+    if (pattern.startsWith('.')) {
+      // TLD pattern - check if hostname ends with it
+      return hostname.endsWith(pattern);
+    } else if (pattern.endsWith('.')) {
+      // Subdomain pattern - check if hostname contains it
+      return hostname.includes(pattern);
+    } else {
+      // Contains pattern - check if hostname includes it
+      return hostname.includes(pattern);
+    }
+  });
+
+  if (!isAllowed) {
+    throw new Error('Domain not in allowlist. Only educational institution websites (.edu, .ac.*, university/college domains) are allowed for security reasons.');
+  }
 
   // Reject localhost variants
   const forbiddenHosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]'];
