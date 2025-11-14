@@ -2023,7 +2023,7 @@ export default function AdminDashboard() {
                   <FormItem>
                     <FormLabel>Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="University Name" data-testid="input-admin-name" />
+                      <Input {...field} placeholder="Institution/University name" data-testid="input-admin-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
