@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Home, Heart, SlidersHorizontal, X } from "lucide-react";
+import { PublicLayout } from "@/components/public-layout";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -452,58 +453,40 @@ export default function PublicInstitutions() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <Link href="/">
-              <h1 className="text-2xl font-bold text-primary" data-testid="link-home">
-                ANZ Global Education
-              </h1>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/courses">
-                <Button variant="ghost" data-testid="link-courses">
-                  Find Courses
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <PublicLayout>
+      <div className="container mx-auto px-4 py-6">
+        {/* Breadcrumb */}
+        <Breadcrumb data-testid="breadcrumb" className="mb-4">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/" data-testid="breadcrumb-home">
+                  <Home className="h-4 w-4" />
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage data-testid="breadcrumb-current">Institutions</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-          {/* Breadcrumb */}
-          <Breadcrumb data-testid="breadcrumb" className="mb-4">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/" data-testid="breadcrumb-home">
-                    <Home className="h-4 w-4" />
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage data-testid="breadcrumb-current">Institutions</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-
-          {/* Search Bar */}
-          <div className="max-w-3xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search institutions, disciplines..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10"
-                data-testid="input-search-institutions"
-              />
-            </div>
+        {/* Search Bar */}
+        <div className="max-w-3xl mx-auto mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search institutions, disciplines..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-institutions"
+            />
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
@@ -769,6 +752,6 @@ export default function PublicInstitutions() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PublicLayout>
   );
 }

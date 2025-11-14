@@ -26,7 +26,18 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.
 
-**Navigation System**: Modern dual-mode navigation with complete parity across device sizes:
+**Navigation System**: Dual navigation architecture separating public and authenticated experiences:
+
+**Public Pages** (landing, courses, institutions):
+- Use **PublicLayout** component wrapping **PublicHeader** for consistent navigation
+- **PublicHeader** features two-tier navigation:
+  - Blue utility bar (#4F5DBE) with TOP INSTITUTIONS, COURSES IN DEMAND, KNOWLEDGE BASE, BLOG, STUDENT LOGIN
+  - White main navigation with logo (home link), FIND INSTITUTES, FIND COURSES, SERVICES dropdown, ABOUT, FREE COUNSELING button
+- Mobile: Hamburger menu (Sheet component) with organized sections (QUICK LINKS, NAVIGATION, SERVICES)
+- Student login uses proper anchor links for accessibility (except landing page which has modal)
+- Breadcrumbs on list pages (Home > Current Page) provide additional navigation
+
+**Authenticated Dashboard** (all user types):
 - **TopNavBar** (Desktop): Horizontal navigation with logo, menu items, notifications, and user menu. Sticky positioning with z-[9999].
 - **MobileBottomNav** (Mobile <768px): App-style bottom tabs with 6 navigation items, icons, labels, active indicators, and unread badges.
 - **Navigation Parity**: All user types have identical navigation items on both desktop and mobile:

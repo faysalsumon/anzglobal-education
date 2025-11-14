@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PublicLayout } from "@/components/public-layout";
 import {
   Select,
   SelectContent,
@@ -325,36 +326,7 @@ export default function PublicCourses() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Link href="/" className="flex items-center gap-2 md:gap-3">
-              <img src={logoUrl} alt="ANZ Global Education" className="h-8 sm:h-10 w-auto" />
-            </Link>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-            <Button variant="outline" asChild size="sm" data-testid="button-back-home" className="hidden sm:flex">
-              <a href="/">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </a>
-            </Button>
-            <Button variant="outline" asChild size="icon" data-testid="button-back-home-mobile" className="sm:hidden">
-              <a href="/">
-                <ArrowLeft className="h-4 w-4" />
-              </a>
-            </Button>
-            <Button asChild size="sm" data-testid="button-login-header">
-              <a href="/api/login?type=student" className="flex items-center">
-                <LogIn className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Login to Apply</span>
-              </a>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <PublicLayout>
 
       <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
         <div className="space-y-4 sm:space-y-6">
@@ -742,6 +714,6 @@ export default function PublicCourses() {
           </div>
         </div>
       )}
-    </div>
+    </PublicLayout>
   );
 }

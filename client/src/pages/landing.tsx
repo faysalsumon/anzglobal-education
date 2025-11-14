@@ -10,6 +10,7 @@ import type { Course, University } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { TypingText } from "@/components/typing-text";
+import { PublicLayout } from "@/components/public-layout";
 
 interface PlatformStats {
   institutionCount: number;
@@ -109,45 +110,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-[9999] border-b border-border/40 bg-background shadow-sm backdrop-blur-sm isolate">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 gap-4">
-          <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
-            <div className="hidden sm:block h-6 w-px bg-border/60" />
-            <span className="hidden sm:inline-block text-xs font-medium text-muted-foreground">
-              AI-Powered Platform
-            </span>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-2">
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={() => setShowStudentAuthModal(true)}
-              className="relative overflow-hidden group"
-              data-testid="button-student-auth"
-            >
-              <span className="relative z-10 flex items-center">
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Student
-              </span>
-            </Button>
-          </nav>
-          
-          <div className="md:hidden flex items-center gap-2">
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => setShowStudentAuthModal(true)}
-              data-testid="button-student-auth-mobile"
-            >
-              <GraduationCap className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
+    <PublicLayout onStudentLoginClick={() => setShowStudentAuthModal(true)}>
 
       {/* Hero Section */}
       <section className="overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white isolate -z-10">
@@ -562,6 +525,6 @@ export default function Landing() {
         open={showInstitutionAuthModal} 
         onOpenChange={setShowInstitutionAuthModal}
       />
-    </div>
+    </PublicLayout>
   );
 }
