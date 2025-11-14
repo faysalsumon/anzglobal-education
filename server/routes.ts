@@ -33,6 +33,8 @@ import {
   conversations,
   messages,
   sessions,
+  importBatches,
+  insertImportBatchSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not } from "drizzle-orm";
 import { z } from "zod";
@@ -62,6 +64,8 @@ import {
   transformCourseRow,
   ValidationError,
   ParsedCSVRow,
+  generateUniversitiesSampleCSV,
+  generateCoursesSampleCSV,
 } from "./csvImportUtils";
 import {
   notifyNewApplication,
@@ -132,17 +136,6 @@ function checkAIExtractionRateLimit(userId: string, isSuperAdmin: boolean = fals
     limit,
   };
 }
-
-import {
-  parseCSV,
-  validateUniversityRow,
-  validateCourseRow,
-  transformUniversityRow,
-  transformCourseRow,
-  generateUniversitiesSampleCSV,
-  generateCoursesSampleCSV,
-} from "./csvImportUtils";
-import { importBatches, insertImportBatchSchema } from "@shared/schema";
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
 type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
@@ -3162,6 +3155,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching institutions:", error);
       res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
+  // Get AI extraction quota status
+  app.get("/api/admin/ai-extraction/quota", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user has access to AI features
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ 
+          message: "Super admin access required" 
+        });
+      }
+
+      // Get current quota status without consuming a request
+      const now = Date.now();
+      const userLimit = aiExtractionRateLimits.get(userId);
+      const isSuperAdmin = true;
+      const limit = isSuperAdmin ? 100 : getAIExtractionRateLimit();
+      
+      if (!userLimit || now > userLimit.resetTime) {
+        // No current limit or expired - user has full quota
+        return res.json({
+          limit,
+          remaining: limit,
+          used: 0,
+          resetTime: now + 60 * 60 * 1000,
+          resetDate: new Date(now + 60 * 60 * 1000).toISOString()
+        });
+      }
+
+      const remaining = Math.max(0, limit - userLimit.count);
+      const resetDate = new Date(userLimit.resetTime);
+      
+      res.json({
+        limit,
+        remaining,
+        used: userLimit.count,
+        resetTime: userLimit.resetTime,
+        resetDate: resetDate.toISOString()
+      });
+    } catch (error) {
+      console.error("Error checking AI extraction quota:", error);
+      res.status(500).json({ message: "Failed to check quota status" });
     }
   });
 
