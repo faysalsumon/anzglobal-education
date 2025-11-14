@@ -20,7 +20,11 @@ Key features include a clean **Landing Page** with prominent search, a tabbed **
 
 For administration, a **Super Admin Dashboard** provides full CRUD operations. **Public Listings** display institutions and courses with dynamic filtering. A Facebook-style **Notifications** system provides real-time updates. A WhatsApp-style **Real-time Chat** facilitates direct messaging between users, with restricted initiation to prevent spam.
 
-**Student Document Management** offers organized, color-coded folders with multi-format file uploads. An **Enterprise CSV Bulk Import** system allows super admins and support managers to upload, validate, and approve large datasets for universities and courses, including templates, per-row validation, and transactional execution. An **AI Institution Data Extraction** feature (super admin only) securely extracts institution data from website URLs using OpenAI GPT-4o, with stringent security measures like rate limiting, domain allowlisting, and SSRF protection.
+**Student Document Management** offers organized, color-coded folders with multi-format file uploads. An **Enterprise CSV Bulk Import** system allows super admins and support managers to upload, validate, and approve large datasets for universities and courses, including templates, per-row validation, and transactional execution.
+
+**AI Data Extraction Features** (super admin only):
+- **AI Institution Data Extraction**: Securely extracts institution data from website URLs using OpenAI GPT-4o, with stringent security measures like rate limiting, domain allowlisting, and SSRF protection.
+- **AI Course Data Extraction**: Extracts comprehensive course information (30+ fields) from provider websites including title, description, fees, duration, career outcomes, requirements, and more. Features field-by-field approval system, edit capability, and comprehensive SSRF protection. Available as a standalone tool for super admins to extract and approve course data before adding to the system.
 
 **Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD operations. Students can add multiple education records (level, institution, field of study, GPA) and language test scores (IELTS, TOEFL, PTE, Duolingo) with intelligent validation. 100% profile completion (personal info + ≥1 education + ≥1 language score) is required for application submission.
 
