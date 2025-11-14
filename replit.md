@@ -12,7 +12,9 @@ Preferred communication style: Simple, everyday language.
 
 ### UI/UX and Features
 
-The platform features a modern AI-style branding with gradient backgrounds. It offers dual user experiences: an **Institution Portal** for managing courses, applications, and teams (including AI-powered content generation and image management with DALL-E integration for campus images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, streamlined applications, favorites, and course comparison tools.
+The platform features a modern AI-style branding with gradient backgrounds and a contemporary navigation system. **Desktop users** experience a horizontal top navigation bar with logo, menu items, notifications, and user profile. **Mobile users** enjoy an app-style bottom tab navigation (Instagram/Twitter style) preparing for future native mobile app launch. Complete navigation parity ensures all features are accessible on both desktop and mobile devices.
+
+The platform offers dual user experiences: an **Institution Portal** for managing courses, applications, and teams (including AI-powered content generation and image management with DALL-E integration for campus images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, streamlined applications, favorites, and course comparison tools.
 
 Key features include a clean **Landing Page** with prominent search, a tabbed **Student Authentication Modal** supporting social and email/password logins, and a detailed **Public Course Detail Page**. Lead generation forms capture unauthenticated user inquiries. A comprehensive **Contact Us Page** with category-based submissions is available.
 
@@ -23,6 +25,14 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 ### Technical Implementation
 
 The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.
+
+**Navigation System**: Modern dual-mode navigation with complete parity across device sizes:
+- **TopNavBar** (Desktop): Horizontal navigation with logo, menu items, notifications, and user menu. Sticky positioning with z-[9999].
+- **MobileBottomNav** (Mobile <768px): App-style bottom tabs with 6 navigation items, icons, labels, active indicators, and unread badges.
+- **Navigation Parity**: All user types have identical navigation items on both desktop and mobile:
+  - Students (6 items): Dashboard, Courses, Applications, Documents, Messages, Profile
+  - Universities (6 items): Dashboard, Institutions, Courses, Applications, Team, Messages
+  - Admins (5-6 items): Dashboard, Courses, Institutions, Messages, Profile, Manage (super_admin/support_manager only)
 
 The **backend** uses Node.js Express.js in TypeScript. Authentication is handled by OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage. The API is RESTful and organized by user type. Real-time chat uses WebSockets. AI integration leverages the OpenAI API (GPT-4o) for content generation. Shared Zod schemas ensure type-safe validation, and Multer/Sharp handle image processing.
 

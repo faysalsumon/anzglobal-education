@@ -3,10 +3,9 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { TopNavBar } from "@/components/top-nav-bar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { useAuth } from "@/hooks/useAuth";
-import { NotificationBell } from "@/components/NotificationBell";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
@@ -88,30 +87,18 @@ function Router() {
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  const style = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
-  };
-
   if (isLoading || !isAuthenticated || !user?.userType) {
     return <Router />;
   }
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex h-14 items-center justify-between gap-4 border-b px-6">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <NotificationBell />
-          </header>
-          <main className="flex-1 overflow-y-auto p-6">
-            <Router />
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    <div className="flex flex-col h-screen w-full">
+      <TopNavBar />
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+        <Router />
+      </main>
+      <MobileBottomNav />
+    </div>
   );
 }
 
