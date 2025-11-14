@@ -38,6 +38,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { AdminCsvImportPanel } from "@/pages/admin-csv-import";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
+import { GalleryImageManager } from "@/components/gallery-image-manager";
 
 interface User {
   id: string;
@@ -2190,21 +2191,14 @@ export default function AdminDashboard() {
                 )}
               />
 
-              {/* Gallery Images - Simplified URL inputs */}
-              <div className="space-y-2">
-                <FormLabel>Gallery Images (URLs)</FormLabel>
-                <p className="text-sm text-muted-foreground">Enter image URLs, one per line</p>
-                <Textarea
-                  placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"
-                  rows={4}
-                  value={institutionForm.watch("galleryImages")?.join("\n") || ""}
-                  onChange={(e) => {
-                    const urls = e.target.value.split("\n").map(url => url.trim()).filter(Boolean);
-                    institutionForm.setValue("galleryImages", urls);
-                  }}
-                  data-testid="input-admin-galleryImages"
-                />
-              </div>
+              {/* Gallery Images - Upload, AI Generate, or URL */}
+              <GalleryImageManager
+                value={institutionForm.watch("galleryImages") || []}
+                onChange={(urls) => institutionForm.setValue("galleryImages", urls)}
+                institutionName={institutionForm.watch("name")}
+                institutionLocation={institutionForm.watch("country")}
+                institutionProviderType={institutionForm.watch("providerType")}
+              />
 
               {/* Scholarship Toggle */}
               <div className="space-y-3">
