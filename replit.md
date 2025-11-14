@@ -22,6 +22,8 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 **Student Document Management** offers organized, color-coded folders with multi-format file uploads. An **Enterprise CSV Bulk Import** system allows super admins and support managers to upload, validate, and approve large datasets for universities and courses, including templates, per-row validation, and transactional execution. An **AI Institution Data Extraction** feature (super admin only) securely extracts institution data from website URLs using OpenAI GPT-4o, with stringent security measures like rate limiting, domain allowlisting, and SSRF protection.
 
+**Current Limitations**: Education and Language test score management (student profile sections) are not yet implemented. Application submission currently requires only basic personal information (firstName, lastName) to be completed. **TODO**: Once Education and Language sections are fully implemented with CRUD interfaces, restore the 100% profile completion requirement in `/api/applications` endpoint (server/routes.ts line 2669).
+
 ### Technical Implementation
 
 The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.

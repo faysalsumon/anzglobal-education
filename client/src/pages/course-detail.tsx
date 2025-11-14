@@ -58,7 +58,7 @@ export default function CourseDetail() {
   const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const { data: course, isLoading, isError, error } = useQuery<CourseWithUniversity>({
-    queryKey: [`/api/courses/${courseId}`],
+    queryKey: ["/api/courses", courseId],
     enabled: !!courseId,
   });
 
@@ -110,10 +110,19 @@ export default function CourseDetail() {
       setShowApplicationForm(false);
       form.reset();
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      // Extract completion payload from 403 errors to guide students
+      const completionData = error?.response?.data?.completion;
+      const errorMessage = error?.response?.data?.message || error.message;
+      
+      let description = errorMessage;
+      if (completionData && !completionData.isComplete) {
+        description = `${errorMessage}\n\nMissing: ${completionData.missingFields.join(", ")}`;
+      }
+      
       toast({
         title: "Error",
-        description: error.message,
+        description,
         variant: "destructive",
       });
     },

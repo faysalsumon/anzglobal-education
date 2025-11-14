@@ -2663,14 +2663,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Please create student profile first" });
       }
 
-      // Check profile completion before allowing application
+      // Calculate profile completion for informational purposes
       const educations = await storage.getEducationsByStudentProfileId(profile.id);
       const languageScores = await storage.getLanguageScoresByStudentProfileId(profile.id);
       const completionResult = calculateProfileCompletion(profile, educations, languageScores);
 
-      if (!completionResult.isComplete) {
+      // Temporarily relaxed: Only require basic personal info to be complete
+      // TODO: Restore 100% requirement once Education and Language sections are implemented
+      const hasBasicInfo = profile.firstName && profile.lastName;
+      
+      if (!hasBasicInfo) {
         return res.status(403).json({
-          message: "Please complete your profile 100% before applying to courses",
+          message: "Please complete your basic personal information before applying",
           completion: completionResult,
         });
       }
