@@ -7,7 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
-  Users, TrendingUp, CheckCircle, Building2, Briefcase
+  Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
+  Target, MonitorPlay, Plane
 } from "lucide-react";
 import type { Course, University } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -124,20 +125,32 @@ export default function PublicCourseDetail() {
 
                 {/* Feature Badges */}
                 <div className="flex flex-wrap gap-2">
-                  {course.scholarshipPercentage && (
+                  {((course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined) || 
+                    (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined)) && (
                     <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
                       <Award className="h-3 w-3 mr-1" />
-                      {course.scholarshipPercentage}% Scholarship Available
+                      {course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined && 
+                       course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
+                        ? `${course.scholarshipPercentageMin}-${course.scholarshipPercentageMax}%`
+                        : course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
+                          ? `Up to ${course.scholarshipPercentageMax}%`
+                          : `${course.scholarshipPercentageMin}%`} Scholarship
                     </Badge>
                   )}
                   {course.prPathway && (
                     <Badge className="bg-gradient-to-r from-primary to-primary/80 border-0 text-white px-4 py-1.5" data-testid="badge-pr-pathway">
-                      <Sparkles className="h-3 w-3 mr-1" />
+                      <Plane className="h-3 w-3 mr-1" />
                       PR Pathway
                     </Badge>
                   )}
+                  {course.deliveryMode && (
+                    <Badge className="bg-gradient-to-r from-accent to-accent/80 border-0 text-white px-4 py-1.5" data-testid="badge-delivery-mode">
+                      <MonitorPlay className="h-3 w-3 mr-1" />
+                      {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
+                    </Badge>
+                  )}
                   {course.internshipAvailable && (
-                    <Badge className="bg-gradient-to-r from-accent to-accent/80 border-0 text-white px-4 py-1.5">
+                    <Badge className="bg-gradient-to-r from-accent to-accent/80 border-0 text-white px-4 py-1.5" data-testid="badge-internship">
                       <Briefcase className="h-3 w-3 mr-1" />
                       Internship Available
                     </Badge>
@@ -311,8 +324,33 @@ export default function PublicCourseDetail() {
               </Card>
             )}
 
-            {/* English Requirements */}
-            {course.englishRequirements && (
+            {/* Academic Requirements */}
+            {(course.academicRequirements || course.minimumAge) && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Academic Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  {course.minimumAge && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
+                      <p className="text-lg font-semibold" data-testid="text-minimum-age">{course.minimumAge} years old</p>
+                    </div>
+                  )}
+                  {course.academicRequirements && (
+                    <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-academic-requirements">
+                      {course.academicRequirements}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* English Language Requirements */}
+            {(course.englishRequirementsStructured || course.englishRequirements) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -320,31 +358,242 @@ export default function PublicCourseDetail() {
                     English Language Requirements
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">
-                    {course.englishRequirements}
-                  </p>
+                <CardContent className="pt-6 space-y-6">
+                  {course.englishRequirementsStructured && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-3 text-left font-semibold">Skill</th>
+                            {course.englishRequirementsStructured.IELTS && (
+                              <th className="p-3 text-center font-semibold">IELTS</th>
+                            )}
+                            {course.englishRequirementsStructured.TOEFL && (
+                              <th className="p-3 text-center font-semibold">TOEFL</th>
+                            )}
+                            {course.englishRequirementsStructured.PTE && (
+                              <th className="p-3 text-center font-semibold">PTE</th>
+                            )}
+                            {course.englishRequirementsStructured.Duolingo && (
+                              <th className="p-3 text-center font-semibold">Duolingo</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b">
+                            <td className="p-3 font-medium">Overall</td>
+                            {course.englishRequirementsStructured.IELTS && (
+                              <td className="p-3 text-center" data-testid="text-ielts-overall">
+                                {course.englishRequirementsStructured.IELTS.overall || "—"}
+                              </td>
+                            )}
+                            {course.englishRequirementsStructured.TOEFL && (
+                              <td className="p-3 text-center" data-testid="text-toefl-overall">
+                                {course.englishRequirementsStructured.TOEFL.overall || "—"}
+                              </td>
+                            )}
+                            {course.englishRequirementsStructured.PTE && (
+                              <td className="p-3 text-center" data-testid="text-pte-overall">
+                                {course.englishRequirementsStructured.PTE.overall || "—"}
+                              </td>
+                            )}
+                            {course.englishRequirementsStructured.Duolingo && (
+                              <td className="p-3 text-center" data-testid="text-duolingo-overall">
+                                {course.englishRequirementsStructured.Duolingo.overall || "—"}
+                              </td>
+                            )}
+                          </tr>
+                          {(course.englishRequirementsStructured.IELTS?.min_each_band || 
+                            course.englishRequirementsStructured.PTE?.listening ||
+                            course.englishRequirementsStructured.PTE?.reading ||
+                            course.englishRequirementsStructured.PTE?.writing ||
+                            course.englishRequirementsStructured.PTE?.speaking) && (
+                            <>
+                              {course.englishRequirementsStructured.IELTS?.min_each_band && (
+                                <tr className="border-b bg-muted/20">
+                                  <td className="p-3 font-medium">Min Each Band</td>
+                                  <td className="p-3 text-center" data-testid="text-ielts-min-band">
+                                    {course.englishRequirementsStructured.IELTS.min_each_band}
+                                  </td>
+                                  {course.englishRequirementsStructured.TOEFL && <td className="p-3 text-center">—</td>}
+                                  {course.englishRequirementsStructured.PTE && <td className="p-3 text-center">—</td>}
+                                  {course.englishRequirementsStructured.Duolingo && <td className="p-3 text-center">—</td>}
+                                </tr>
+                              )}
+                              {course.englishRequirementsStructured.PTE?.listening && (
+                                <tr className="border-b">
+                                  <td className="p-3 font-medium">Listening</td>
+                                  {course.englishRequirementsStructured.IELTS && <td className="p-3 text-center">—</td>}
+                                  {course.englishRequirementsStructured.TOEFL && <td className="p-3 text-center">—</td>}
+                                  <td className="p-3 text-center" data-testid="text-pte-listening">
+                                    {course.englishRequirementsStructured.PTE.listening}
+                                  </td>
+                                  {course.englishRequirementsStructured.Duolingo && <td className="p-3 text-center">—</td>}
+                                </tr>
+                              )}
+                            </>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {course.englishRequirements && (
+                    <div className="space-y-2">
+                      {course.englishRequirementsStructured && (
+                        <p className="text-sm font-semibold text-muted-foreground">Additional Information:</p>
+                      )}
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">
+                        {course.englishRequirements}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Career Outcomes */}
-            {course.careerOutcomes && course.careerOutcomes.length > 0 && (
+            {/* Career Outcomes & Career Path */}
+            {(course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-primary" />
-                    Career Pathways
+                    <Target className="h-5 w-5 text-primary" />
+                    Career Outcomes & Progression
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="flex flex-wrap gap-2">
-                    {course.careerOutcomes.map((career, index) => (
-                      <Badge key={index} variant="secondary" className="px-3 py-1">
-                        {career}
+                <CardContent className="pt-6 space-y-6">
+                  {course.careerOutcomes && course.careerOutcomes.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-sm text-muted-foreground mb-3">Potential Career Roles</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {course.careerOutcomes.map((career, index) => (
+                          <Badge key={index} variant="secondary" className="px-3 py-1.5" data-testid={`badge-career-${index}`}>
+                            <Briefcase className="h-3 w-3 mr-1" />
+                            {career}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {course.careerPath && (
+                    <div className="border-l-4 border-primary/30 pl-6 space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        Your Career Journey
+                      </h3>
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-career-path">
+                        {course.careerPath}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Immigration & Work Rights */}
+            {(course.prPathway || course.workRights || course.internshipAvailable) && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <Plane className="h-5 w-5 text-primary" />
+                    Immigration & Work Opportunities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  {course.prPathway && (
+                    <div className="p-4 bg-gradient-to-r from-primary/10 to-transparent rounded-lg border border-primary/20">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-primary/20 rounded-lg">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold mb-1">Permanent Residency Pathway</h4>
+                          <p className="text-sm text-muted-foreground">
+                            This course provides a pathway to Permanent Residency, helping you build a future in your study destination.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {course.workRights && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                      <span className="font-medium">Work rights available during and after study</span>
+                    </div>
+                  )}
+                  {course.internshipAvailable && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Briefcase className="h-5 w-5 text-primary flex-shrink-0" />
+                        <span className="font-medium">Internship opportunities included</span>
+                      </div>
+                      {course.internshipDetails && (
+                        <p className="text-sm text-muted-foreground pl-4" data-testid="text-internship-details">
+                          {course.internshipDetails}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Course Details */}
+            {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Course Details & Logistics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-5">
+                  {course.deliveryMode && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Delivery Mode</p>
+                      <Badge variant="outline" className="px-3 py-1.5" data-testid="badge-delivery-mode-detail">
+                        <MonitorPlay className="h-3 w-3 mr-1" />
+                        {course.deliveryMode === "online" ? "Online Learning" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid (Online + On-Campus)"}
                       </Badge>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+                  {course.intakes && course.intakes.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Available Intakes</p>
+                      <div className="flex flex-wrap gap-2">
+                        {course.intakes.map((intake, index) => (
+                          <Badge key={index} variant="secondary" className="px-3 py-1" data-testid={`badge-intake-${index}`}>
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {intake}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {course.studyAreas && course.studyAreas.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Study Areas Covered</p>
+                      <div className="flex flex-wrap gap-2">
+                        {course.studyAreas.map((area, index) => (
+                          <Badge key={index} variant="outline" className="px-3 py-1" data-testid={`badge-study-area-${index}`}>
+                            {area}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {course.campusLocations && course.campusLocations.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Available Campuses</p>
+                      <div className="flex flex-wrap gap-2">
+                        {course.campusLocations.map((location, index) => (
+                          <Badge key={index} variant="outline" className="px-3 py-1" data-testid={`badge-campus-${index}`}>
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {location}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -414,10 +663,10 @@ export default function PublicCourseDetail() {
                       <h3 className="font-bold text-base leading-tight mb-1" data-testid="text-institution-name">
                         {course.university.name}
                       </h3>
-                      {course.university.location && (
+                      {course.university.country && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{course.university.location}, {course.university.country}</span>
+                          <span className="truncate">{course.university.country}</span>
                         </p>
                       )}
                     </div>
@@ -454,14 +703,14 @@ export default function PublicCourseDetail() {
                         <span className="font-semibold" data-testid="text-institution-campuses">{course.university.numberOfCampuses}</span>
                       </div>
                     )}
-                    {course.university.scholarshipPercentage && (
+                    {course.university.scholarshipPercentageMax && (
                       <div className="flex items-center justify-between text-sm p-3 bg-gradient-to-r from-secondary/10 to-transparent rounded-lg border border-secondary/20">
                         <span className="text-muted-foreground flex items-center gap-2">
                           <Award className="h-4 w-4 text-secondary" />
                           Scholarship
                         </span>
                         <Badge className="bg-secondary text-white font-semibold border-0" data-testid="badge-institution-scholarship">
-                          {course.university.scholarshipPercentage}%
+                          Up to {course.university.scholarshipPercentageMax}%
                         </Badge>
                       </div>
                     )}

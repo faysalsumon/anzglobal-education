@@ -17,6 +17,27 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Shared TypeScript interfaces for JSONB fields
+export interface EnglishRequirementsStructured {
+  IELTS?: {
+    overall?: number;
+    min_each_band?: number;
+  };
+  TOEFL?: {
+    overall?: number;
+  };
+  PTE?: {
+    overall?: number;
+    listening?: number;
+    reading?: number;
+    writing?: number;
+    speaking?: number;
+  };
+  Duolingo?: {
+    overall?: number;
+  };
+}
+
 // Session storage table (mandatory for Replit Auth)
 export const sessions = pgTable(
   "sessions",
@@ -147,12 +168,13 @@ export const courses = pgTable("courses", {
   intakes: text("intakes").array(), // ["January", "February", "April", "May", etc.]
   studyAreas: text("study_areas").array(), // Curriculum topics and learning areas
   careerOutcomes: text("career_outcomes").array(), // Potential career paths
+  careerPath: text("career_path"), // Detailed career progression and trajectory description
   pathways: text("pathways").array(), // Progression routes (e.g., "University degrees", "RMIT University")
   
   // Detailed entry requirements for AI matching
   minimumAge: integer("minimum_age"), // Minimum age requirement
   academicRequirements: text("academic_requirements"), // Detailed academic entry criteria
-  englishRequirementsStructured: jsonb("english_requirements_structured"), // Structured: { IELTS: {overall, min_each_band}, TOEFL: {overall}, PTE: {overall}, etc. }
+  englishRequirementsStructured: jsonb("english_requirements_structured").$type<EnglishRequirementsStructured>(), // Structured English requirements
   
   // Delivery and work-related fields for comprehensive recommendations
   deliveryMode: text("delivery_mode"), // 'online', 'on-campus', 'hybrid'
@@ -881,6 +903,7 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   careerOutcomes: z.array(z.string()).optional().default([]),
   pathways: z.array(z.string()).optional().default([]),
   campusLocations: z.array(z.string()).optional().default([]),
+  images: z.array(z.string()).optional().default([]),
   
   // Validate scholarship range
   scholarshipPercentageMin: z.number().int().min(0).max(100).optional(),

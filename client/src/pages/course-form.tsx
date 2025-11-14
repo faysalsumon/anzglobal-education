@@ -63,18 +63,28 @@ export default function CourseForm() {
       applicationDeadline: "",
       prerequisites: "",
       thumbnailUrl: "",
+      courseCode: "",
+      prPathway: false,
+      scholarshipPercentageMin: undefined,
+      scholarshipPercentageMax: undefined,
+      eligibilityRequirements: "",
+      englishRequirements: "",
+      curriculumUrl: "",
+      costOfLiving: undefined,
+      applicationFees: undefined,
       isActive: true,
       intakes: [],
       studyAreas: [],
       careerOutcomes: [],
+      careerPath: "",
       pathways: [],
       minimumAge: undefined,
       academicRequirements: "",
       englishRequirementsStructured: {
-        ielts: {},
-        toefl: {},
-        pte: {},
-        duolingo: {},
+        IELTS: {},
+        TOEFL: {},
+        PTE: {},
+        Duolingo: {},
       },
       deliveryMode: undefined,
       campusLocations: [],
@@ -103,18 +113,28 @@ export default function CourseForm() {
         applicationDeadline: course.applicationDeadline ?? "",
         prerequisites: course.prerequisites ?? "",
         thumbnailUrl: course.thumbnailUrl ?? "",
+        courseCode: course.courseCode ?? "",
+        prPathway: course.prPathway ?? false,
+        scholarshipPercentageMin: course.scholarshipPercentageMin ?? undefined,
+        scholarshipPercentageMax: course.scholarshipPercentageMax ?? undefined,
+        eligibilityRequirements: course.eligibilityRequirements ?? "",
+        englishRequirements: course.englishRequirements ?? "",
+        curriculumUrl: course.curriculumUrl ?? "",
+        costOfLiving: course.costOfLiving ?? undefined,
+        applicationFees: course.applicationFees ?? undefined,
         isActive: course.isActive ?? true,
         intakes: course.intakes ?? [],
         studyAreas: course.studyAreas ?? [],
         careerOutcomes: course.careerOutcomes ?? [],
+        careerPath: course.careerPath ?? "",
         pathways: course.pathways ?? [],
         minimumAge: course.minimumAge ?? undefined,
         academicRequirements: course.academicRequirements ?? "",
         englishRequirementsStructured: course.englishRequirementsStructured ?? {
-          ielts: {},
-          toefl: {},
-          pte: {},
-          duolingo: {},
+          IELTS: {},
+          TOEFL: {},
+          PTE: {},
+          Duolingo: {},
         },
         deliveryMode: (course.deliveryMode as "online" | "on-campus" | "hybrid" | undefined) ?? undefined,
         campusLocations: course.campusLocations ?? [],
@@ -305,6 +325,23 @@ export default function CourseForm() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="courseCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course Code</FormLabel>
+                    <FormDescription>
+                      Unique identifier for this course (e.g., CS101, MBA2024)
+                    </FormDescription>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} placeholder="CS101" data-testid="input-course-code" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
@@ -631,7 +668,8 @@ export default function CourseForm() {
           {/* Fees & Dates */}
           <Card>
             <CardHeader>
-              <CardTitle>Fees & Dates</CardTitle>
+              <CardTitle>Fees & Financial Information</CardTitle>
+              <CardDescription>Tuition fees, scholarships, and related costs</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -640,7 +678,7 @@ export default function CourseForm() {
                   name="fees"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Fees</FormLabel>
+                      <FormLabel>Tuition Fees</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -682,6 +720,108 @@ export default function CourseForm() {
                           <SelectItem value="NZD">NZD</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="applicationFees"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Application Fees</FormLabel>
+                      <FormDescription>One-time application processing fee</FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="100.00"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value || undefined);
+                          }}
+                          data-testid="input-application-fees"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="costOfLiving"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost of Living (Annual)</FormLabel>
+                      <FormDescription>Estimated yearly living expenses</FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="18000.00"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value || undefined);
+                          }}
+                          data-testid="input-cost-of-living"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="scholarshipPercentageMin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scholarship Range (Min %)</FormLabel>
+                      <FormDescription>Minimum scholarship percentage available</FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="10"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value ? parseInt(e.target.value) : undefined);
+                          }}
+                          data-testid="input-scholarship-min"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="scholarshipPercentageMax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scholarship Range (Max %)</FormLabel>
+                      <FormDescription>Maximum scholarship percentage available</FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="50"
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            field.onChange(e.target.value ? parseInt(e.target.value) : undefined);
+                          }}
+                          data-testid="input-scholarship-max"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -761,6 +901,29 @@ export default function CourseForm() {
                         placeholder="List any entry requirements or prerequisites..."
                         className="min-h-[100px]"
                         data-testid="textarea-prerequisites"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="eligibilityRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Eligibility Requirements</FormLabel>
+                    <FormDescription>
+                      General eligibility criteria for applicants
+                    </FormDescription>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="e.g., Must be 18 years or older, Valid passport, etc..."
+                        className="min-h-[100px]"
+                        data-testid="textarea-eligibility-requirements"
                       />
                     </FormControl>
                     <FormMessage />
@@ -1209,6 +1372,29 @@ export default function CourseForm() {
                   />
                 </div>
               </div>
+
+              <FormField
+                control={form.control}
+                name="englishRequirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>English Requirements (Summary)</FormLabel>
+                    <FormDescription>
+                      Plain text summary of English language requirements (optional, for display purposes)
+                    </FormDescription>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="e.g., IELTS 6.5 overall with no band less than 6.0, or equivalent"
+                        className="min-h-[80px]"
+                        data-testid="textarea-english-requirements"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
@@ -1308,6 +1494,82 @@ export default function CourseForm() {
                         </Badge>
                       ))}
                     </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="careerPath"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Career Path Description</FormLabel>
+                    <FormDescription>
+                      Detailed description of the career progression and trajectory for graduates
+                    </FormDescription>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="Describe the typical career progression, opportunities for advancement, industry demand, and long-term prospects..."
+                        className="min-h-[120px]"
+                        data-testid="textarea-career-path"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Immigration & Resources */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Immigration & Resources</CardTitle>
+              <CardDescription>PR eligibility and additional course resources</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="prPathway"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">PR Pathway Eligible</FormLabel>
+                      <FormDescription>
+                        Does this course provide a pathway to Permanent Residency?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-pr-pathway"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="curriculumUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Curriculum URL</FormLabel>
+                    <FormDescription>
+                      Link to detailed curriculum or course prospectus
+                    </FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        placeholder="https://university.edu/courses/curriculum.pdf" 
+                        data-testid="input-curriculum-url" 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
