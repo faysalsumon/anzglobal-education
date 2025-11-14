@@ -74,6 +74,18 @@ export const universities = pgTable("universities", {
   topCourses: text("top_courses").array(), // Array of course IDs or names
   campusAddresses: jsonb("campus_addresses"), // Array of campus address objects: [{address: string, city: string, state: string, postcode: string}]
   
+  // Filter-friendly fields (nullable, precomputed from course data)
+  tuitionFeesMin: decimal("tuition_fees_min", { precision: 10, scale: 2 }), // Minimum tuition across all programs
+  tuitionFeesMax: decimal("tuition_fees_max", { precision: 10, scale: 2 }), // Maximum tuition across all programs
+  tuitionCurrency: varchar("tuition_currency", { length: 3 }).default("AUD"), // Currency code
+  deliveryModes: text("delivery_modes").array(), // ["on-campus", "online", "hybrid"]
+  intakePeriods: text("intake_periods").array(), // ["January", "February", "July", "September"]
+  accreditationStatus: text("accreditation_status"), // "Fully Accredited", "Provisional", etc.
+  rankingBand: text("ranking_band"), // "Top 100", "Top 500", "Regional Leader", etc.
+  facilities: text("facilities").array(), // ["Library", "Sports Center", "Career Services", "Student Housing"]
+  internationalStudentSupport: boolean("international_student_support"), // Whether institution provides international student support
+  tags: text("tags").array(), // AI-generated or admin-curated tags for discovery
+  
   // Approval workflow
   approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected'
   rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
@@ -84,7 +96,20 @@ export const universities = pgTable("universities", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // GIN indexes for array fields to support efficient filtering
+  topDisciplinesIdx: index("universities_top_disciplines_gin_idx").using("gin", table.topDisciplines),
+  deliveryModesIdx: index("universities_delivery_modes_gin_idx").using("gin", table.deliveryModes),
+  intakePeriodsIdx: index("universities_intake_periods_gin_idx").using("gin", table.intakePeriods),
+  facilitiesIdx: index("universities_facilities_gin_idx").using("gin", table.facilities),
+  tagsIdx: index("universities_tags_gin_idx").using("gin", table.tags),
+  // B-tree indexes for range filtering
+  scholarshipRangeIdx: index("universities_scholarship_range_idx").on(table.scholarshipPercentageMin, table.scholarshipPercentageMax),
+  tuitionRangeIdx: index("universities_tuition_range_idx").on(table.tuitionFeesMin, table.tuitionFeesMax),
+  // Composite indexes for common filter patterns
+  countryProviderIdx: index("universities_country_provider_idx").on(table.country, table.providerType),
+  activeApprovedIdx: index("universities_active_approved_idx").on(table.isActive, table.approvalStatus),
+}));
 
 // Courses table
 export const courses = pgTable("courses", {
@@ -812,8 +837,18 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
   // Validate scholarship range
   scholarshipPercentageMin: z.number().int().min(0).max(100).optional(),
   scholarshipPercentageMax: z.number().int().min(0).max(100).optional(),
+  // Validate new filter fields
+  deliveryModes: z.array(z.string()).optional(),
+  intakePeriods: z.array(z.string()).optional(),
+  facilities: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  tuitionFeesMin: z.number().min(0).optional(),
+  tuitionFeesMax: z.number().min(0).optional(),
+  accreditationStatus: z.string().optional(),
+  rankingBand: z.string().optional(),
+  internationalStudentSupport: z.boolean().optional(),
 }).refine((data) => {
-  // If both min and max are provided, ensure min <= max
+  // If both scholarship min and max are provided, ensure min <= max
   if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&
       data.scholarshipPercentageMax !== null && data.scholarshipPercentageMax !== undefined) {
     return data.scholarshipPercentageMin <= data.scholarshipPercentageMax;
@@ -822,6 +857,16 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
 }, {
   message: "Scholarship minimum percentage must be less than or equal to maximum percentage",
   path: ["scholarshipPercentageMin"],
+}).refine((data) => {
+  // If both tuition min and max are provided, ensure min <= max
+  if (data.tuitionFeesMin !== null && data.tuitionFeesMin !== undefined &&
+      data.tuitionFeesMax !== null && data.tuitionFeesMax !== undefined) {
+    return data.tuitionFeesMin <= data.tuitionFeesMax;
+  }
+  return true;
+}, {
+  message: "Minimum tuition fees must be less than or equal to maximum tuition fees",
+  path: ["tuitionFeesMin"],
 });
 
 // Base schema without refine() - can be extended by frontend forms
