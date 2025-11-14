@@ -44,6 +44,7 @@ import {
   generateInstitutionSmallDescription,
   generateInstitutionFullDescription,
   generateInstitutionGalleryImages,
+  extractInstitutionDataFromWebsite,
 } from "./ai";
 import multer from "multer";
 import sharp from "sharp";
@@ -3098,6 +3099,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching institutions:", error);
       res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
+  // AI-powered institution data extraction from website
+  app.post("/api/admin/extract-institution-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ message: "Website URL is required" });
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+
+      // Extract data using AI
+      const extractedData = await extractInstitutionDataFromWebsite(url);
+      
+      res.json({ 
+        success: true,
+        data: extractedData 
+      });
+    } catch (error: any) {
+      console.error("Error extracting institution data:", error);
+      
+      // Handle AI configuration and OpenAI-specific errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account at platform.openai.com/settings/organization/billing" 
+        });
+      }
+      
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: error.message || "Failed to extract institution data. Please try again." 
+      });
     }
   });
 

@@ -216,3 +216,119 @@ export async function generateInstitutionGalleryImages(
 
   return imageUrls;
 }
+
+interface ExtractedInstitutionData {
+  name: string | null;
+  description: string | null;
+  overview: string | null;
+  country: string | null;
+  establishedYear: number | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  providerType: string | null;
+  topDisciplines: string[] | null;
+  topCourses: string[] | null;
+  numberOfCampuses: number | null;
+  campusAddresses: Array<{
+    address: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  }> | null;
+  scholarshipPercentageMin: number | null;
+  scholarshipPercentageMax: number | null;
+}
+
+export async function extractInstitutionDataFromWebsite(url: string): Promise<ExtractedInstitutionData> {
+  checkAIConfigured();
+  
+  // Fetch webpage content
+  let htmlContent: string;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch website: ${response.statusText}`);
+    }
+    
+    htmlContent = await response.text();
+    
+    // Limit content size to avoid token limits (first 50000 characters)
+    if (htmlContent.length > 50000) {
+      htmlContent = htmlContent.substring(0, 50000);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to fetch website content: ${error.message}`);
+  }
+
+  // Use OpenAI to extract structured data
+  const prompt = `You are an expert at extracting structured institution/university data from website content.
+
+Analyze the following webpage content and extract as much accurate information as possible about the educational institution.
+
+IMPORTANT INSTRUCTIONS:
+- Only extract information that is clearly stated on the website
+- Return null for any field that cannot be confidently determined
+- For arrays, return null if no information is found
+- Be conservative - accuracy is more important than completeness
+- Extract EXACT contact information (email, phone) if visible
+- For campus addresses, extract complete address information including street, city, state, postcode, country
+- For provider type, choose from: "Institution", "TAFE", "University", "College", "School", or null
+- For scholarships, extract percentage ranges if mentioned (e.g., "10-50% scholarships" means min=10, max=50)
+- For established year, extract the founding/establishment year as a 4-digit integer
+
+Website URL: ${url}
+
+Webpage Content:
+${htmlContent}
+
+Extract the following fields and return as JSON:
+{
+  "name": "Official institution name",
+  "description": "Brief description (100-200 words)",
+  "overview": "Longer overview if available (1-2 sentences)",
+  "country": "Primary country location",
+  "establishedYear": 1995,
+  "contactEmail": "contact@institution.edu",
+  "contactPhone": "+1234567890",
+  "website": "https://institution.edu",
+  "providerType": "University",
+  "topDisciplines": ["Engineering", "Medicine", "Business"],
+  "topCourses": ["Computer Science", "MBA", "Nursing"],
+  "numberOfCampuses": 3,
+  "campusAddresses": [
+    {
+      "address": "123 Main St",
+      "city": "Sydney",
+      "state": "NSW",
+      "postcode": "2000",
+      "country": "Australia"
+    }
+  ],
+  "scholarshipPercentageMin": 10,
+  "scholarshipPercentageMax": 50
+}`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 2000,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    const extractedData = JSON.parse(content) as ExtractedInstitutionData;
+    return extractedData;
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+    throw new Error("Failed to parse extracted data from AI");
+  }
+}
