@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Home, Heart, MapPin, Eye } from "lucide-react";
-import { insertStudentProfileSchema, insertStudentEducationSchema, type StudentProfile, type StudentEducation, type Favorite, type University, type Course } from "@shared/schema";
+import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type Favorite, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
@@ -55,11 +57,160 @@ const bioSchema = z.object({
 const educationFormSchema = z.object({
   level: z.string().min(1, "Education level is required"),
   institution: z.string().min(1, "Institution is required"),
-  fieldOfStudy: z.string().min(1, "Field of study is required"),
-  startDate: z.string().min(1, "Start date is required"),
+  fieldOfStudy: z.string().optional(),
+  country: z.string().optional(),
+  startDate: z.string().optional(),
   endDate: z.string().optional(),
+  isCurrentlyStudying: z.boolean().default(false),
   gpa: z.string().optional(),
-  documentsUrl: z.string().optional(),
+  gradeScale: z.string().optional(),
+});
+
+const languageScoreFormSchema = z.object({
+  testType: z.string().min(1, "Test type is required"),
+  overallScore: z.string().min(1, "Overall score is required").refine(
+    (val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "Overall score must be a valid number" }
+  ),
+  listeningScore: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "Listening score must be a valid number" }
+  ),
+  readingScore: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "Reading score must be a valid number" }
+  ),
+  writingScore: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "Writing score must be a valid number" }
+  ),
+  speakingScore: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "Speaking score must be a valid number" }
+  ),
+  testDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const testType = data.testType.toLowerCase();
+  const overallScore = parseFloat(data.overallScore);
+  
+  // Validate score ranges based on test type
+  if (testType === "ielts") {
+    if (overallScore < 0 || overallScore > 9) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "IELTS overall score must be between 0 and 9",
+        path: ["overallScore"],
+      });
+    }
+    const validateIELTSScore = (score: string | undefined, field: string) => {
+      if (score && score !== "") {
+        const num = parseFloat(score);
+        if (num < 0 || num > 9) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `IELTS ${field} score must be between 0 and 9`,
+            path: [field],
+          });
+        }
+      }
+    };
+    validateIELTSScore(data.listeningScore, "listeningScore");
+    validateIELTSScore(data.readingScore, "readingScore");
+    validateIELTSScore(data.writingScore, "writingScore");
+    validateIELTSScore(data.speakingScore, "speakingScore");
+  } else if (testType === "toefl") {
+    if (overallScore < 0 || overallScore > 120) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "TOEFL overall score must be between 0 and 120",
+        path: ["overallScore"],
+      });
+    }
+    const validateTOEFLScore = (score: string | undefined, field: string) => {
+      if (score && score !== "") {
+        const num = parseFloat(score);
+        if (num < 0 || num > 30) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `TOEFL ${field} score must be between 0 and 30`,
+            path: [field],
+          });
+        }
+      }
+    };
+    validateTOEFLScore(data.listeningScore, "listeningScore");
+    validateTOEFLScore(data.readingScore, "readingScore");
+    validateTOEFLScore(data.writingScore, "writingScore");
+    validateTOEFLScore(data.speakingScore, "speakingScore");
+  } else if (testType === "pte") {
+    if (overallScore < 10 || overallScore > 90) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "PTE overall score must be between 10 and 90",
+        path: ["overallScore"],
+      });
+    }
+    const validatePTEScore = (score: string | undefined, field: string) => {
+      if (score && score !== "") {
+        const num = parseFloat(score);
+        if (num < 10 || num > 90) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `PTE ${field} score must be between 10 and 90`,
+            path: [field],
+          });
+        }
+      }
+    };
+    validatePTEScore(data.listeningScore, "listeningScore");
+    validatePTEScore(data.readingScore, "readingScore");
+    validatePTEScore(data.writingScore, "writingScore");
+    validatePTEScore(data.speakingScore, "speakingScore");
+  } else if (testType === "duolingo") {
+    if (overallScore < 10 || overallScore > 160) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Duolingo overall score must be between 10 and 160",
+        path: ["overallScore"],
+      });
+    }
+    const validateDuolingoScore = (score: string | undefined, field: string) => {
+      if (score && score !== "") {
+        const num = parseFloat(score);
+        if (num < 10 || num > 160) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Duolingo ${field} score must be between 10 and 160`,
+            path: [field],
+          });
+        }
+      }
+    };
+    validateDuolingoScore(data.listeningScore, "listeningScore");
+    validateDuolingoScore(data.readingScore, "readingScore");
+    validateDuolingoScore(data.writingScore, "writingScore");
+    validateDuolingoScore(data.speakingScore, "speakingScore");
+  }
 });
 
 interface ProfileCompletionResult {
@@ -83,6 +234,10 @@ export default function StudentProfilePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [educationDialogOpen, setEducationDialogOpen] = useState(false);
+  const [languageDialogOpen, setLanguageDialogOpen] = useState(false);
+  const [editingEducation, setEditingEducation] = useState<StudentEducation | null>(null);
+  const [editingLanguageScore, setEditingLanguageScore] = useState<StudentLanguageScore | null>(null);
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -148,6 +303,35 @@ export default function StudentProfilePage() {
     },
   });
 
+  const educationForm = useForm<z.infer<typeof educationFormSchema>>({
+    resolver: zodResolver(educationFormSchema),
+    defaultValues: {
+      level: "",
+      institution: "",
+      fieldOfStudy: "",
+      country: "",
+      startDate: "",
+      endDate: "",
+      isCurrentlyStudying: false,
+      gpa: "",
+      gradeScale: "",
+    },
+  });
+
+  const languageScoreForm = useForm<z.infer<typeof languageScoreFormSchema>>({
+    resolver: zodResolver(languageScoreFormSchema),
+    defaultValues: {
+      testType: "",
+      overallScore: "",
+      listeningScore: "",
+      readingScore: "",
+      writingScore: "",
+      speakingScore: "",
+      testDate: "",
+      expiryDate: "",
+    },
+  });
+
   useEffect(() => {
     if (profile) {
       personalForm.reset({
@@ -191,6 +375,102 @@ export default function StudentProfilePage() {
       toast({
         title: "Profile saved",
         description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createEducationMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof educationFormSchema>) => {
+      if (editingEducation) {
+        return await apiRequest("PUT", `/api/student/educations/${editingEducation.id}`, data);
+      }
+      return await apiRequest("POST", "/api/student/educations", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/educations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
+      setEducationDialogOpen(false);
+      setEditingEducation(null);
+      educationForm.reset();
+      toast({
+        title: "Success",
+        description: editingEducation ? "Education updated" : "Education added",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEducationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/student/educations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/educations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
+      toast({
+        title: "Success",
+        description: "Education deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createLanguageScoreMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof languageScoreFormSchema>) => {
+      if (editingLanguageScore) {
+        return await apiRequest("PUT", `/api/student/language-scores/${editingLanguageScore.id}`, data);
+      }
+      return await apiRequest("POST", "/api/student/language-scores", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/language-scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
+      setLanguageDialogOpen(false);
+      setEditingLanguageScore(null);
+      languageScoreForm.reset();
+      toast({
+        title: "Success",
+        description: editingLanguageScore ? "Language score updated" : "Language score added",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteLanguageScoreMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/student/language-scores/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/language-scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
+      toast({
+        title: "Success",
+        description: "Language score deleted",
       });
     },
     onError: (error: Error) => {
@@ -303,6 +583,57 @@ export default function StudentProfilePage() {
       setAiLoading(false);
       setAiField(null);
     }
+  };
+
+  const handleEducationSubmit = educationForm.handleSubmit((data) => {
+    createEducationMutation.mutate(data);
+  });
+
+  const handleEditEducation = (education: StudentEducation) => {
+    setEditingEducation(education);
+    educationForm.reset({
+      level: education.level || "",
+      institution: education.institution || "",
+      fieldOfStudy: education.fieldOfStudy || "",
+      country: education.country || "",
+      startDate: education.startDate || "",
+      endDate: education.endDate || "",
+      isCurrentlyStudying: education.isCurrentlyStudying || false,
+      gpa: education.gpa || "",
+      gradeScale: education.gradeScale || "",
+    });
+    setEducationDialogOpen(true);
+  };
+
+  const handleAddEducation = () => {
+    setEditingEducation(null);
+    educationForm.reset();
+    setEducationDialogOpen(true);
+  };
+
+  const handleLanguageScoreSubmit = languageScoreForm.handleSubmit((data) => {
+    createLanguageScoreMutation.mutate(data);
+  });
+
+  const handleEditLanguageScore = (score: StudentLanguageScore) => {
+    setEditingLanguageScore(score);
+    languageScoreForm.reset({
+      testType: score.testType || "",
+      overallScore: score.overallScore || "",
+      listeningScore: score.listeningScore || "",
+      readingScore: score.readingScore || "",
+      writingScore: score.writingScore || "",
+      speakingScore: score.speakingScore || "",
+      testDate: score.testDate || "",
+      expiryDate: score.expiryDate || "",
+    });
+    setLanguageDialogOpen(true);
+  };
+
+  const handleAddLanguageScore = () => {
+    setEditingLanguageScore(null);
+    languageScoreForm.reset();
+    setLanguageDialogOpen(true);
   };
 
   const handlePersonalSubmit = personalForm.handleSubmit(
@@ -628,38 +959,515 @@ export default function StudentProfilePage() {
 
         <TabsContent value="education">
           <Card>
-            <CardHeader>
-              <CardTitle>Education History</CardTitle>
-              <CardDescription>Add your educational qualifications</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Education History</CardTitle>
+                <CardDescription>Add your educational qualifications</CardDescription>
+              </div>
+              <Dialog open={educationDialogOpen} onOpenChange={setEducationDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleAddEducation} data-testid="button-add-education">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Education
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingEducation ? "Edit Education" : "Add Education"}</DialogTitle>
+                    <DialogDescription>
+                      {editingEducation ? "Update your education details" : "Add a new education qualification"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...educationForm}>
+                    <form onSubmit={handleEducationSubmit} className="space-y-4">
+                      <FormField
+                        control={educationForm.control}
+                        name="level"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Education Level *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-education-level">
+                                  <SelectValue placeholder="Select level" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="high_school">High School</SelectItem>
+                                <SelectItem value="diploma">Diploma</SelectItem>
+                                <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
+                                <SelectItem value="master">Master's Degree</SelectItem>
+                                <SelectItem value="phd">PhD</SelectItem>
+                                <SelectItem value="certificate">Certificate</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={educationForm.control}
+                        name="institution"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Institution *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="University/School name" data-testid="input-education-institution" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={educationForm.control}
+                          name="fieldOfStudy"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Field of Study</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., Computer Science" data-testid="input-education-field" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={educationForm.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., Australia" data-testid="input-education-country" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={educationForm.control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} type="date" data-testid="input-education-start-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={educationForm.control}
+                          name="endDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} type="date" data-testid="input-education-end-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={educationForm.control}
+                        name="isCurrentlyStudying"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-currently-studying"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>I am currently studying here</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={educationForm.control}
+                          name="gpa"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>GPA/Grade</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 3.8" data-testid="input-education-gpa" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={educationForm.control}
+                          name="gradeScale"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Grade Scale</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 4.0, 100" data-testid="input-education-grade-scale" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEducationDialogOpen(false)}
+                          data-testid="button-cancel-education"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={createEducationMutation.isPending}
+                          data-testid="button-save-education"
+                        >
+                          {createEducationMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Education"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-4">Education management coming soon (Task 12)</p>
-                <p className="text-sm">
-                  {educations.length > 0
-                    ? `You have ${educations.length} education record(s)`
-                    : "No education records yet"}
-                </p>
-              </div>
+              {educations.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <GraduationCap className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No education records yet</p>
+                  <p className="text-sm mb-4">Add your educational qualifications to complete your profile</p>
+                  <Button onClick={handleAddEducation} data-testid="button-add-education-empty">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Education
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Institution</TableHead>
+                      <TableHead>Field of Study</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead>GPA</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {educations.map((edu: StudentEducation) => (
+                      <TableRow key={edu.id} data-testid={`row-education-${edu.id}`}>
+                        <TableCell data-testid={`text-education-level-${edu.id}`}>
+                          <Badge variant="secondary">
+                            {edu.level === "high_school" ? "High School" : edu.level === "bachelor" ? "Bachelor's" : edu.level === "master" ? "Master's" : edu.level === "phd" ? "PhD" : edu.level === "diploma" ? "Diploma" : "Certificate"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell data-testid={`text-education-institution-${edu.id}`}>{edu.institution}</TableCell>
+                        <TableCell data-testid={`text-education-field-${edu.id}`}>{edu.fieldOfStudy || "-"}</TableCell>
+                        <TableCell data-testid={`text-education-dates-${edu.id}`}>
+                          {edu.startDate || "N/A"} - {edu.isCurrentlyStudying ? "Present" : edu.endDate || "N/A"}
+                        </TableCell>
+                        <TableCell data-testid={`text-education-gpa-${edu.id}`}>
+                          {edu.gpa ? `${edu.gpa}${edu.gradeScale ? `/${edu.gradeScale}` : ""}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditEducation(edu)}
+                              data-testid={`button-edit-education-${edu.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this education record?")) {
+                                  deleteEducationMutation.mutate(edu.id);
+                                }
+                              }}
+                              disabled={deleteEducationMutation.isPending}
+                              data-testid={`button-delete-education-${edu.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="language">
           <Card>
-            <CardHeader>
-              <CardTitle>Language Test Scores</CardTitle>
-              <CardDescription>Add IELTS, TOEFL, or PTE scores</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Language Test Scores</CardTitle>
+                <CardDescription>Add IELTS, TOEFL, PTE, or Duolingo scores</CardDescription>
+              </div>
+              <Dialog open={languageDialogOpen} onOpenChange={setLanguageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleAddLanguageScore} data-testid="button-add-language-score">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Score
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingLanguageScore ? "Edit Language Score" : "Add Language Score"}</DialogTitle>
+                    <DialogDescription>
+                      {editingLanguageScore ? "Update your test score details" : "Add a new language test score"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...languageScoreForm}>
+                    <form onSubmit={handleLanguageScoreSubmit} className="space-y-4">
+                      <FormField
+                        control={languageScoreForm.control}
+                        name="testType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Test Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-language-test-type">
+                                  <SelectValue placeholder="Select test type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="ielts">IELTS (0-9)</SelectItem>
+                                <SelectItem value="toefl">TOEFL (0-120)</SelectItem>
+                                <SelectItem value="pte">PTE Academic (10-90)</SelectItem>
+                                <SelectItem value="duolingo">Duolingo English Test (10-160)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={languageScoreForm.control}
+                        name="overallScore"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Overall Score *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., 7.5" data-testid="input-language-overall-score" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="listeningScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Listening Score</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 8.0" data-testid="input-language-listening" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="readingScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Reading Score</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.5" data-testid="input-language-reading" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="writingScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Writing Score</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.0" data-testid="input-language-writing" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="speakingScore"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Speaking Score</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.5" data-testid="input-language-speaking" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="testDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Test Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} type="date" data-testid="input-language-test-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={languageScoreForm.control}
+                          name="expiryDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expiry Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} type="date" data-testid="input-language-expiry-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setLanguageDialogOpen(false)}
+                          data-testid="button-cancel-language"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={createLanguageScoreMutation.isPending}
+                          data-testid="button-save-language"
+                        >
+                          {createLanguageScoreMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Score"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-4">Language score management coming soon (Task 13)</p>
-                <p className="text-sm">
-                  {languageScores.length > 0
-                    ? `You have ${languageScores.length} language test score(s)`
-                    : "No language test scores yet"}
-                </p>
-              </div>
+              {languageScores.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Languages className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No language test scores yet</p>
+                  <p className="text-sm mb-4">Add your IELTS, TOEFL, PTE, or Duolingo scores</p>
+                  <Button onClick={handleAddLanguageScore} data-testid="button-add-language-empty">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Score
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Test Type</TableHead>
+                      <TableHead>Overall</TableHead>
+                      <TableHead>Section Scores</TableHead>
+                      <TableHead>Test Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {languageScores.map((score: StudentLanguageScore) => (
+                      <TableRow key={score.id} data-testid={`row-language-${score.id}`}>
+                        <TableCell data-testid={`text-language-type-${score.id}`}>
+                          <Badge variant="secondary">
+                            {score.testType.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell data-testid={`text-language-overall-${score.id}`}>
+                          <span className="font-semibold">{score.overallScore}</span>
+                        </TableCell>
+                        <TableCell data-testid={`text-language-sections-${score.id}`}>
+                          <div className="text-sm">
+                            {score.listeningScore && `L: ${score.listeningScore} `}
+                            {score.readingScore && `R: ${score.readingScore} `}
+                            {score.writingScore && `W: ${score.writingScore} `}
+                            {score.speakingScore && `S: ${score.speakingScore}`}
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`text-language-date-${score.id}`}>
+                          {score.testDate || "N/A"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditLanguageScore(score)}
+                              data-testid={`button-edit-language-${score.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this language score?")) {
+                                  deleteLanguageScoreMutation.mutate(score.id);
+                                }
+                              }}
+                              disabled={deleteLanguageScoreMutation.isPending}
+                              data-testid={`button-delete-language-${score.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

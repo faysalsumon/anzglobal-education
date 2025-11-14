@@ -2668,13 +2668,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const languageScores = await storage.getLanguageScoresByStudentProfileId(profile.id);
       const completionResult = calculateProfileCompletion(profile, educations, languageScores);
 
-      // Temporarily relaxed: Only require basic personal info to be complete
-      // TODO: Restore 100% requirement once Education and Language sections are implemented
-      const hasBasicInfo = profile.firstName && profile.lastName;
-      
-      if (!hasBasicInfo) {
+      // Require 100% profile completion (personal info + at least 1 education + at least 1 language score)
+      if (!completionResult.isComplete) {
         return res.status(403).json({
-          message: "Please complete your basic personal information before applying",
+          message: "Please complete your profile (100%) before applying. Required: personal information, at least one education record, and at least one language test score.",
           completion: completionResult,
         });
       }
