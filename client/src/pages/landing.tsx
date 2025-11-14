@@ -53,7 +53,7 @@ export default function Landing() {
     ? institutions
         .filter((institution) => 
           institution.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          institution.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          institution.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           institution.description?.toLowerCase().includes(searchQuery.toLowerCase())
         )
         .slice(0, 5)
@@ -150,7 +150,7 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white z-0">
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl min-h-[120px] sm:min-h-[140px] md:min-h-[160px]">
@@ -261,7 +261,7 @@ export default function Landing() {
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{institution.name}</p>
                             <p className="text-sm text-gray-500 truncate">
-                              {institution.location}, {institution.country}
+                              {institution.country}
                             </p>
                           </div>
                         </div>
