@@ -3840,11 +3840,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const courseData = req.body;
-
-      if (!courseData.title || !courseData.universityId) {
-        return res.status(400).json({ message: "Title and university ID are required" });
+      // Validate and normalize course data (converts empty strings to undefined for numeric fields)
+      const validationResult = insertCourseSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid course data", 
+          errors: validationResult.error.errors 
+        });
       }
+
+      const courseData = validationResult.data;
 
       // Verify institution exists
       const institution = await storage.getUniversityById(courseData.universityId);

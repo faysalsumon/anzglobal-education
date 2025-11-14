@@ -891,6 +891,41 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
   path: ["tuitionFeesMin"],
 });
 
+// Helper for optional numeric fields - converts empty strings to undefined, parses numeric strings, rejects invalid strings
+const optionalNumber = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    if (typeof val === "number") return val;
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if (trimmed === "") return undefined;
+      const parsed = Number(trimmed);
+      if (isNaN(parsed)) return val; // Return original to trigger validation error
+      return parsed;
+    }
+    return val;
+  },
+  z.number().optional()
+);
+
+const optionalInteger = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    if (typeof val === "number") return Number.isInteger(val) ? val : val; // Return floats as-is for validation error
+    if (typeof val === "string") {
+      const trimmed = val.trim();
+      if (trimmed === "") return undefined;
+      // Only accept integer strings (no decimals)
+      if (!/^-?\d+$/.test(trimmed)) return val; // Return original to trigger validation error
+      const parsed = parseInt(trimmed, 10);
+      if (isNaN(parsed)) return val;
+      return parsed;
+    }
+    return val;
+  },
+  z.number().int().optional()
+);
+
 // Base schema without refine() - can be extended by frontend forms
 const baseCourseSchema = createInsertSchema(courses).omit({
   id: true,
@@ -905,9 +940,49 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   campusLocations: z.array(z.string()).optional().default([]),
   images: z.array(z.string()).optional().default([]),
   
+  // Validate numeric fields with empty string handling
+  fees: optionalNumber,
+  durationMonths: optionalInteger,
+  durationWeeks: optionalInteger,
+  costOfLiving: optionalNumber,
+  applicationFees: optionalNumber,
+  minimumAge: optionalInteger,
+  
   // Validate scholarship range
-  scholarshipPercentageMin: z.number().int().min(0).max(100).optional(),
-  scholarshipPercentageMax: z.number().int().min(0).max(100).optional(),
+  scholarshipPercentageMin: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      if (typeof val === "number") return Number.isInteger(val) ? val : val; // Return floats as-is for validation error
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        if (trimmed === "") return undefined;
+        // Only accept integer strings (no decimals)
+        if (!/^-?\d+$/.test(trimmed)) return val; // Return original to trigger validation error
+        const parsed = parseInt(trimmed, 10);
+        if (isNaN(parsed)) return val;
+        return parsed;
+      }
+      return val;
+    },
+    z.number().int().min(0).max(100).optional()
+  ),
+  scholarshipPercentageMax: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      if (typeof val === "number") return Number.isInteger(val) ? val : val; // Return floats as-is for validation error
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        if (trimmed === "") return undefined;
+        // Only accept integer strings (no decimals)
+        if (!/^-?\d+$/.test(trimmed)) return val; // Return original to trigger validation error
+        const parsed = parseInt(trimmed, 10);
+        if (isNaN(parsed)) return val;
+        return parsed;
+      }
+      return val;
+    },
+    z.number().int().min(0).max(100).optional()
+  ),
   
   // Validate English requirements structure
   englishRequirementsStructured: z.object({

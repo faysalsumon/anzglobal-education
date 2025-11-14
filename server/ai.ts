@@ -637,9 +637,10 @@ export async function extractCourseDataFromWebsite(url: string): Promise<Extract
         // Resolve relative URLs
         const redirectUrl = new URL(location, currentUrl);
         
-        // Prevent protocol downgrade (https -> http)
-        if (currentUrl.startsWith('https:') && redirectUrl.protocol === 'http:') {
-          throw new Error('Protocol downgrade (HTTPS to HTTP) not allowed');
+        // Prevent protocol downgrade at any hop (https -> http) but allow upgrades (http -> https)
+        const currentUrlObj = new URL(currentUrl);
+        if (currentUrlObj.protocol === "https:" && redirectUrl.protocol !== "https:") {
+          throw new Error(`Protocol downgrade not allowed (HTTPS to ${redirectUrl.protocol})`);
         }
 
         // Re-validate redirect target through same SSRF checks
