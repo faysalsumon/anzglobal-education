@@ -2404,6 +2404,7 @@ export default function AdminDashboard() {
           <AIInstitutionExtractor
             onDataApproved={(approvedData) => {
               // Pre-fill the institution form with approved data
+              // Convert arrays to comma-separated strings for form compatibility
               institutionForm.reset({
                 name: approvedData.name || "",
                 country: approvedData.country || "",
@@ -2413,8 +2414,12 @@ export default function AdminDashboard() {
                 contactPhone: approvedData.contactPhone || "",
                 website: approvedData.website || "",
                 providerType: approvedData.providerType || "",
-                topDisciplines: approvedData.topDisciplines || [],
-                topCourses: approvedData.topCourses || [],
+                topDisciplines: Array.isArray(approvedData.topDisciplines) 
+                  ? approvedData.topDisciplines.join(", ") 
+                  : (approvedData.topDisciplines || ""),
+                topCourses: Array.isArray(approvedData.topCourses)
+                  ? approvedData.topCourses.join(", ")
+                  : (approvedData.topCourses || ""),
                 numberOfCampuses: approvedData.numberOfCampuses || undefined,
                 establishedYear: approvedData.establishedYear || undefined,
                 scholarshipPercentageMin: approvedData.scholarshipPercentageMin || undefined,
