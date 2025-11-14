@@ -53,9 +53,15 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
 
   const extractMutation = useMutation({
     mutationFn: async (websiteUrl: string) => {
-      return await apiRequest("POST", "/api/admin/extract-institution-data", { url: websiteUrl });
+      const response = await apiRequest("POST", "/api/admin/extract-institution-data", { url: websiteUrl });
+      return await response.json();
     },
     onSuccess: (response: any) => {
+      // Response is now parsed JSON: { success: true, data: extractedData }
+      if (!response.success || !response.data) {
+        throw new Error("Invalid response from server");
+      }
+      
       const data = response.data;
       setExtractedData(data);
       
