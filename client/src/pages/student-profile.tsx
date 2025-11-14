@@ -62,7 +62,14 @@ const educationFormSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   isCurrentlyStudying: z.boolean().default(false),
-  gpa: z.string().optional(),
+  gpa: z.string().optional().refine(
+    (val) => {
+      if (!val || val === "") return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: "GPA must be a valid number" }
+  ),
   gradeScale: z.string().optional(),
 });
 
@@ -388,10 +395,23 @@ export default function StudentProfilePage() {
 
   const createEducationMutation = useMutation({
     mutationFn: async (data: z.infer<typeof educationFormSchema>) => {
+      // Transform form data to match backend schema
+      const payload = {
+        level: data.level,
+        institution: data.institution,
+        fieldOfStudy: data.fieldOfStudy || undefined,
+        country: data.country || undefined,
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined,
+        isCurrentlyStudying: data.isCurrentlyStudying,
+        gpa: data.gpa && data.gpa !== "" ? parseFloat(data.gpa) : undefined,
+        gradeScale: data.gradeScale || undefined,
+      };
+      
       if (editingEducation) {
-        return await apiRequest("PUT", `/api/student/educations/${editingEducation.id}`, data);
+        return await apiRequest("PUT", `/api/student/educations/${editingEducation.id}`, payload);
       }
-      return await apiRequest("POST", "/api/student/educations", data);
+      return await apiRequest("POST", "/api/student/educations", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/student/educations"] });
@@ -436,10 +456,22 @@ export default function StudentProfilePage() {
 
   const createLanguageScoreMutation = useMutation({
     mutationFn: async (data: z.infer<typeof languageScoreFormSchema>) => {
+      // Transform form data to match backend schema
+      const payload = {
+        testType: data.testType.toLowerCase(),
+        overallScore: parseFloat(data.overallScore),
+        listeningScore: data.listeningScore && data.listeningScore !== "" ? parseFloat(data.listeningScore) : undefined,
+        readingScore: data.readingScore && data.readingScore !== "" ? parseFloat(data.readingScore) : undefined,
+        writingScore: data.writingScore && data.writingScore !== "" ? parseFloat(data.writingScore) : undefined,
+        speakingScore: data.speakingScore && data.speakingScore !== "" ? parseFloat(data.speakingScore) : undefined,
+        testDate: data.testDate || undefined,
+        expiryDate: data.expiryDate || undefined,
+      };
+      
       if (editingLanguageScore) {
-        return await apiRequest("PUT", `/api/student/language-scores/${editingLanguageScore.id}`, data);
+        return await apiRequest("PUT", `/api/student/language-scores/${editingLanguageScore.id}`, payload);
       }
-      return await apiRequest("POST", "/api/student/language-scores", data);
+      return await apiRequest("POST", "/api/student/language-scores", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/student/language-scores"] });
