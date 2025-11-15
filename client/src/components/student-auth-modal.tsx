@@ -41,7 +41,7 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px] gap-6" data-testid="dialog-student-auth">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-[440px] max-h-[90vh] overflow-y-auto gap-6" data-testid="dialog-student-auth">
         <DialogHeader className="space-y-3">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <GraduationCap className="h-6 w-6 text-primary" />
