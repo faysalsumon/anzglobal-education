@@ -982,31 +982,32 @@ export default function AdminDashboard() {
           </header>
 
           {/* Content Grid: Main + Right Rail */}
-          <div className="flex-1 p-4 lg:p-6">
-            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6">
-              {/* Main Column */}
-              <main className="space-y-6">
-                <div>
-                  <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
-                    {isConsultant 
-                      ? "Consultant Dashboard" 
-                      : isSuperAdmin 
-                        ? "Super Admin Dashboard" 
-                        : "Admin Dashboard"}
-                  </h1>
-                  <p className="text-muted-foreground">
-                    {isConsultant 
-                      ? "Manage student applications and leads" 
-                      : "Manage all platform users, institutions, and courses"}
-                  </p>
-                </div>
+          <div className="flex-1">
+            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 md:gap-8">
+                {/* Main Column */}
+                <main className="space-y-6 md:space-y-8 min-w-0">
+                  <div>
+                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" data-testid="text-dashboard-title">
+                      {isConsultant 
+                        ? "Consultant Dashboard" 
+                        : isSuperAdmin 
+                          ? "Super Admin Dashboard" 
+                          : "Admin Dashboard"}
+                    </h1>
+                    <p className="text-muted-foreground text-sm md:text-base mt-1">
+                      {isConsultant 
+                        ? "Manage student applications and leads" 
+                        : "Manage all platform users, institutions, and courses"}
+                    </p>
+                  </div>
 
-                <div className="space-y-4">
+                  <div className="space-y-6 md:space-y-8">
         {/* Users Tab */}
         {activeTab === "users" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           {/* Stats */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -1102,7 +1103,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Users Table */}
-              <div className="rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1206,7 +1207,7 @@ export default function AdminDashboard() {
 
         {/* Institutions Tab */}
         {activeTab === "institutions" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1240,7 +1241,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Institutions Table */}
-              <div className="rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1371,9 +1372,9 @@ export default function AdminDashboard() {
 
         {/* Courses Tab */}
         {activeTab === "courses" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           {/* Stats */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
@@ -1461,7 +1462,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Courses Table */}
-              <div className="rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1559,7 +1560,7 @@ export default function AdminDashboard() {
 
         {/* Student Leads Tab */}
         {activeTab === "student-leads" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1657,7 +1658,7 @@ export default function AdminDashboard() {
 
         {/* Inquiry Leads Tab */}
         {activeTab === "inquiry-leads" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1747,7 +1748,7 @@ export default function AdminDashboard() {
 
         {/* Applications Tab */}
         {activeTab === "applications" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1872,13 +1873,13 @@ export default function AdminDashboard() {
 
         {/* Data Import Tab */}
         {activeTab === "blogs" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
             <AdminBlogManagement />
           </div>
         )}
 
         {activeTab === "data-import" && (
-          <div className="space-y-4">
+          <div className="space-y-6 md:space-y-8">
             <AdminCsvImportPanel />
           </div>
         )}
@@ -2025,6 +2026,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* User Create/Edit Dialog */}
