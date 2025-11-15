@@ -74,9 +74,8 @@ export default function PublicInstitutionDetail() {
     "description": institution.description || metaDescription,
     "url": institution.website,
     "logo": institution.logo,
-    "address": institution.location ? {
+    "address": institution.country ? {
       "@type": "PostalAddress",
-      "addressLocality": institution.location,
       "addressCountry": institution.country
     } : undefined,
     "contactPoint": {

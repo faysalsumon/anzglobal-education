@@ -457,7 +457,7 @@ export default function PublicInstitutions() {
   const siteUrl = window.location.origin;
   const pageUrl = `${siteUrl}/institutions`;
   const pageTitle = "Find Institutions - ANZ Global Education";
-  const pageDescription = `Explore ${metadata?.totalCount || 100}+ top universities and institutions worldwide. Search by country, ranking, programs, and facilities. Find your ideal institution for international study.`;
+  const pageDescription = `Explore ${filterMetadata?.totalCount || 100}+ top universities and institutions worldwide. Search by country, ranking, programs, and facilities. Find your ideal institution for international study.`;
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (

@@ -4912,15 +4912,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SEO ROUTES
   // ========================================
 
-  // Generate dynamic sitemap.xml with all published blogs
+  // Generate dynamic sitemap.xml with all published blogs, courses, and institutions
   app.get("/sitemap.xml", async (req, res) => {
     try {
-      const result = await storage.getPublishedBlogs({
-        limit: 10000, // Get all published blogs
+      // Fetch all published blogs
+      const blogResult = await storage.getPublishedBlogs({
+        limit: 10000,
         offset: 0,
       });
 
-      const blogs = result.blogs;
+      // Fetch all active courses
+      const courses = await storage.getAllCourses();
+      const activeCourses = courses.filter(c => c.isActive !== false);
+
+      // Fetch all universities
+      const universities = await storage.getAllUniversities();
+
+      const blogs = blogResult.blogs;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
 
       // Build XML sitemap
@@ -4954,6 +4962,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 ${blogs.map((blog) => `  <url>
     <loc>${baseUrl}/blog/${blog.slug}</loc>
     <lastmod>${blog.updatedAt ? new Date(blog.updatedAt).toISOString().split('T')[0] : new Date(blog.publishedAt || blog.createdAt!).toISOString().split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('\n')}
+${activeCourses.map((course) => `  <url>
+    <loc>${baseUrl}/courses/${course.id}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('\n')}
+${universities.map((uni) => `  <url>
+    <loc>${baseUrl}/institutions/${uni.id}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`).join('\n')}
