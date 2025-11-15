@@ -98,6 +98,10 @@ interface Course {
   isActive: boolean;
   institutionName?: string;
   createdAt: string | null;
+  approvalStatus: string;
+  rejectionReason: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
 }
 
 interface StudentLead {
@@ -276,6 +280,8 @@ export default function AdminDashboard() {
   const [aiCourseExtractorDialogOpen, setAiCourseExtractorDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
+  const [rejectingCourse, setRejectingCourse] = useState<Course | null>(null);
+  const [courseRejectionReason, setCourseRejectionReason] = useState("");
 
   // Student leads state
   const [studentLeadSearchQuery, setStudentLeadSearchQuery] = useState("");
@@ -660,13 +666,13 @@ export default function AdminDashboard() {
 
   const approveInstitutionMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/approve`, {});
+      return await apiRequest("PATCH", `/api/admin/institutions/${id}/approve`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       toast({
         title: "Institution approved",
-        description: "The institution has been approved successfully",
+        description: "The institution has been approved and is now publicly visible",
       });
     },
     onError: (error: any) => {
@@ -680,7 +686,7 @@ export default function AdminDashboard() {
 
   const rejectInstitutionMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/reject`, { reason });
+      return await apiRequest("PATCH", `/api/admin/institutions/${id}/reject`, { reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
@@ -688,7 +694,49 @@ export default function AdminDashboard() {
       setRejectionReason("");
       toast({
         title: "Institution rejected",
-        description: "The institution has been rejected",
+        description: "The institution has been rejected and will remain hidden from public",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approveCourseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("PATCH", `/api/admin/courses/${id}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      toast({
+        title: "Course approved",
+        description: "The course has been approved and is now publicly visible",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectCourseMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return await apiRequest("PATCH", `/api/admin/courses/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setRejectingCourse(null);
+      setCourseRejectionReason("");
+      toast({
+        title: "Course rejected",
+        description: "The course has been rejected and will remain hidden from public",
       });
     },
     onError: (error: any) => {
@@ -1471,6 +1519,7 @@ export default function AdminDashboard() {
                       <TableHead>Level</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Fees</TableHead>
+                      <TableHead>Approval</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -1478,7 +1527,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {coursesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={8} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredCourses && filteredCourses.length > 0 ? (
                       filteredCourses.map((course) => (
@@ -1489,6 +1538,49 @@ export default function AdminDashboard() {
                           <TableCell>{course.duration || "-"}</TableCell>
                           <TableCell>
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {/* Approval Status Badge */}
+                            {course.approvalStatus === 'pending' && (
+                              <Badge variant="secondary" data-testid={`badge-course-approval-${course.id}`}>
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending
+                              </Badge>
+                            )}
+                            {course.approvalStatus === 'approved' && (
+                              <Badge variant="default" className="bg-green-600 hover:bg-green-700" data-testid={`badge-course-approval-${course.id}`}>
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Approved
+                              </Badge>
+                            )}
+                            {course.approvalStatus === 'rejected' && (
+                              <Badge variant="destructive" data-testid={`badge-course-approval-${course.id}`}>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Rejected
+                              </Badge>
+                            )}
+                            {/* Approve/Reject buttons for pending courses */}
+                            {hasFullAdminAccess && course.approvalStatus === 'pending' && (
+                              <div className="flex gap-1 mt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => approveCourseMutation.mutate(course.id)}
+                                  disabled={approveCourseMutation.isPending}
+                                  data-testid={`button-approve-course-${course.id}`}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setRejectingCourse(course)}
+                                  data-testid={`button-reject-course-${course.id}`}
+                                >
+                                  <XCircle className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             {/* Only full admins can change status */}
@@ -1547,7 +1639,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">No courses found</TableCell>
+                        <TableCell colSpan={8} className="text-center">No courses found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -2907,6 +2999,65 @@ export default function AdminDashboard() {
               data-testid="button-confirm-reject-institution"
             >
               Reject Institution
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Course Dialog */}
+      <Dialog open={!!rejectingCourse} onOpenChange={(open) => {
+        if (!open) {
+          setRejectingCourse(null);
+          setCourseRejectionReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Course</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting <strong>{rejectingCourse?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="course-rejection-reason">Rejection Reason</Label>
+              <Textarea
+                id="course-rejection-reason"
+                placeholder="Please provide a clear reason for the rejection..."
+                value={courseRejectionReason}
+                onChange={(e) => setCourseRejectionReason(e.target.value)}
+                rows={4}
+                data-testid={rejectingCourse ? `input-course-rejection-reason-${rejectingCourse.id}` : "input-course-rejection-reason"}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setRejectingCourse(null);
+                setCourseRejectionReason("");
+              }}
+              data-testid="button-cancel-reject-course"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (rejectingCourse && courseRejectionReason.trim()) {
+                  rejectCourseMutation.mutate({
+                    id: rejectingCourse.id,
+                    reason: courseRejectionReason.trim(),
+                  });
+                }
+              }}
+              disabled={!courseRejectionReason.trim() || rejectCourseMutation.isPending}
+              data-testid="button-confirm-reject-course"
+            >
+              Reject Course
             </Button>
           </DialogFooter>
         </DialogContent>
