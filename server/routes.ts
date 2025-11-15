@@ -1590,6 +1590,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/profile - Get admin profile details
+  app.get("/api/admin/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin access required." });
+      }
+
+      // Return safe user data (exclude sensitive fields)
+      const { password, verificationToken, resetPasswordToken, ...safeUserData } = user;
+      res.json(safeUserData);
+    } catch (error) {
+      console.error("Error fetching admin profile:", error);
+      res.status(500).json({ message: "Failed to fetch admin profile" });
+    }
+  });
+
+  // PUT /api/admin/profile - Update admin profile details
+  app.put("/api/admin/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.userType !== "admin") {
+        return res.status(403).json({ message: "Access denied. Admin access required." });
+      }
+
+      // Only allow updating specific fields
+      const allowedFields = ['firstName', 'lastName', 'profileImageUrl'];
+      const updates: any = {};
+      
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      // Return safe user data (exclude sensitive fields)
+      const { password, verificationToken, resetPasswordToken, ...safeUserData } = updatedUser;
+      res.json(safeUserData);
+    } catch (error: any) {
+      console.error("Error updating admin profile:", error);
+      res.status(400).json({ message: error.message || "Failed to update admin profile" });
+    }
+  });
+
   // POST /api/admin/upload-profile-photo - Upload admin profile photo
   app.post("/api/admin/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
