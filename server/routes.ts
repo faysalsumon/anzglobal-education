@@ -409,12 +409,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      // If admin user, include their admin team member role
+      // If admin user, include their admin team member role with fallback to user.role
       if (user && user.userType === 'admin') {
         const adminMember = await storage.getAdminTeamMemberByUserId(userId);
         res.json({
           ...user,
-          adminRole: adminMember?.role || null,
+          // Prefer adminTeamMember role, fallback to user.role for compatibility
+          adminRole: adminMember?.role || user.role || null,
         });
       } else {
         res.json(user);
