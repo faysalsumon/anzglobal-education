@@ -51,6 +51,9 @@ import {
   blogs,
   type Blog,
   type InsertBlog,
+  contactInquiries,
+  type ContactInquiry,
+  type InsertContactInquiry,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull } from "drizzle-orm";
@@ -182,6 +185,14 @@ export interface IStorage {
   publishBlog(id: string): Promise<Blog>;
   unpublishBlog(id: string): Promise<Blog>;
   deleteBlog(id: string): Promise<void>;
+  
+  // Contact inquiry operations
+  getAllContactInquiries(filters?: { status?: string; type?: string; assignedTo?: string }): Promise<ContactInquiry[]>;
+  getContactInquiryById(id: string): Promise<ContactInquiry | undefined>;
+  createContactInquiry(inquiry: InsertContactInquiry): Promise<ContactInquiry>;
+  updateContactInquiry(id: string, data: Partial<InsertContactInquiry>): Promise<ContactInquiry>;
+  updateContactInquiryStatus(id: string, status: "new" | "in_progress" | "responded" | "closed"): Promise<ContactInquiry>;
+  assignContactInquiry(id: string, assignedTo: string): Promise<ContactInquiry>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1153,6 +1164,71 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBlog(id: string): Promise<void> {
     await db.delete(blogs).where(eq(blogs.id, id));
+  }
+
+  // Contact inquiry operations
+  async getAllContactInquiries(filters?: { status?: string; type?: string; assignedTo?: string }): Promise<ContactInquiry[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(contactInquiries.status, filters.status as "new" | "in_progress" | "responded" | "closed"));
+    }
+    if (filters?.type) {
+      conditions.push(eq(contactInquiries.inquiryType, filters.type as "student" | "institution"));
+    }
+    if (filters?.assignedTo) {
+      conditions.push(eq(contactInquiries.assignedTo, filters.assignedTo));
+    }
+    
+    const query = db.select().from(contactInquiries);
+    
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(contactInquiries.createdAt));
+    }
+    
+    return await query.orderBy(desc(contactInquiries.createdAt));
+  }
+
+  async getContactInquiryById(id: string): Promise<ContactInquiry | undefined> {
+    const [inquiry] = await db.select().from(contactInquiries).where(eq(contactInquiries.id, id));
+    return inquiry;
+  }
+
+  async createContactInquiry(inquiry: InsertContactInquiry): Promise<ContactInquiry> {
+    const [newInquiry] = await db.insert(contactInquiries).values(inquiry).returning();
+    return newInquiry;
+  }
+
+  async updateContactInquiry(id: string, data: Partial<InsertContactInquiry>): Promise<ContactInquiry> {
+    const [inquiry] = await db
+      .update(contactInquiries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(contactInquiries.id, id))
+      .returning();
+    return inquiry;
+  }
+
+  async updateContactInquiryStatus(id: string, status: "new" | "in_progress" | "responded" | "closed"): Promise<ContactInquiry> {
+    const updateData: any = { status, updatedAt: new Date() };
+    if (status === "responded") {
+      updateData.respondedAt = new Date();
+    }
+    
+    const [inquiry] = await db
+      .update(contactInquiries)
+      .set(updateData)
+      .where(eq(contactInquiries.id, id))
+      .returning();
+    return inquiry;
+  }
+
+  async assignContactInquiry(id: string, assignedTo: string): Promise<ContactInquiry> {
+    const [inquiry] = await db
+      .update(contactInquiries)
+      .set({ assignedTo, updatedAt: new Date() })
+      .where(eq(contactInquiries.id, id))
+      .returning();
+    return inquiry;
   }
 }
 

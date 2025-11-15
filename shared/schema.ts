@@ -1288,3 +1288,81 @@ export const insertBlogSchema = createInsertSchema(blogs).omit({
 
 export type Blog = typeof blogs.$inferSelect;
 export type InsertBlog = z.infer<typeof insertBlogSchema>;
+
+// Contact inquiry type enum
+export const contactInquiryTypeEnum = pgEnum("contact_inquiry_type", ["student", "institution"]);
+
+// Contact inquiry status enum
+export const contactInquiryStatusEnum = pgEnum("contact_inquiry_status", ["new", "in_progress", "responded", "closed"]);
+
+// Contact inquiries table
+export const contactInquiries = pgTable("contact_inquiries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  inquiryType: contactInquiryTypeEnum("inquiry_type").notNull(),
+  status: contactInquiryStatusEnum("status").notNull().default("new"),
+  
+  // Common fields
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  message: text("message").notNull(),
+  
+  // Student-specific fields
+  studentName: varchar("student_name", { length: 255 }),
+  country: varchar("country", { length: 100 }),
+  courseInterest: varchar("course_interest", { length: 255 }),
+  studyLevel: varchar("study_level", { length: 100 }), // Bachelor's, Master's, PhD, etc.
+  visaStatus: varchar("visa_status", { length: 100 }), // Need visa, Have visa, etc.
+  
+  // Institution-specific fields
+  institutionName: varchar("institution_name", { length: 255 }),
+  contactPerson: varchar("contact_person", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  partnershipType: varchar("partnership_type", { length: 100 }), // Recruitment, Academic, Research, etc.
+  
+  // Tracking fields
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  
+  // Admin fields
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  notes: text("notes"),
+  respondedAt: timestamp("responded_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  emailIdx: index("contact_inquiries_email_idx").on(table.email),
+  statusIdx: index("contact_inquiries_status_idx").on(table.status),
+  typeIdx: index("contact_inquiries_type_idx").on(table.inquiryType),
+  createdAtIdx: index("contact_inquiries_created_at_idx").on(table.createdAt),
+}));
+
+export const insertContactInquirySchema = createInsertSchema(contactInquiries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  assignedTo: true,
+  notes: true,
+  respondedAt: true,
+}).extend({
+  email: z.string().email().max(255),
+  phone: z.string().max(50).optional(),
+  message: z.string().min(20).max(5000),
+  
+  // Student fields validation
+  studentName: z.string().min(2).max(255).optional(),
+  country: z.string().max(100).optional(),
+  courseInterest: z.string().max(255).optional(),
+  studyLevel: z.string().max(100).optional(),
+  visaStatus: z.string().max(100).optional(),
+  
+  // Institution fields validation
+  institutionName: z.string().min(2).max(255).optional(),
+  contactPerson: z.string().min(2).max(255).optional(),
+  website: z.string().url().max(255).optional().or(z.literal('')),
+  partnershipType: z.string().max(100).optional(),
+});
+
+export type ContactInquiry = typeof contactInquiries.$inferSelect;
+export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
