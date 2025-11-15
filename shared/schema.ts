@@ -183,6 +183,13 @@ export const courses = pgTable("courses", {
   internshipAvailable: boolean("internship_available"), // Whether internships are part of the program
   internshipDetails: text("internship_details"), // Details about internship opportunities
   
+  // Approval workflow
+  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected'
+  rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
+  submittedForApprovalAt: timestamp("submitted_for_approval_at"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -198,6 +205,7 @@ export const courses = pgTable("courses", {
   // Composite indexes for common query patterns
   universityActiveIdx: index("courses_university_active_idx").on(table.universityId, table.isActive),
   subjectLevelIdx: index("courses_subject_level_idx").on(table.subject, table.level),
+  activeApprovedIdx: index("courses_active_approved_idx").on(table.isActive, table.approvalStatus),
 }));
 
 // Student profiles table

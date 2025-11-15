@@ -24,7 +24,7 @@ const footerSections: FooterSection[] = [
     links: [
       { label: "Find Institutions", href: "/institutions" },
       { label: "Find Courses", href: "/courses" },
-      { label: "Services For Institutions", href: "/contact?topic=institutions" },
+      { label: "Partner with Us", href: "/partner-with-us" },
       { label: "Services For Students", href: "/contact?topic=students" },
     ],
   },
@@ -96,13 +96,12 @@ export function Footer() {
                           {link.label}
                         </a>
                       ) : (
-                        <Link href={link.href}>
-                          <a
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                          >
-                            {link.label}
-                          </a>
+                        <Link
+                          href={link.href}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                          {link.label}
                         </Link>
                       )}
                     </li>
@@ -138,13 +137,12 @@ export function Footer() {
                             {link.label}
                           </a>
                         ) : (
-                          <Link href={link.href}>
-                            <a
-                              className="text-sm text-muted-foreground hover:text-foreground transition-colors block"
-                              data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                            >
-                              {link.label}
-                            </a>
+                          <Link
+                            href={link.href}
+                            className="text-sm text-muted-foreground hover:text-foreground transition-colors block"
+                            data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          >
+                            {link.label}
                           </Link>
                         )}
                       </li>
@@ -165,22 +163,20 @@ export function Footer() {
               Copyright {currentYear} | ANZ Global Education
             </p>
             <div className="flex items-center gap-4">
-              <Link href="/contact?topic=terms">
-                <a
-                  className="hover:underline transition-all"
-                  data-testid="footer-link-terms"
-                >
-                  Terms of Use
-                </a>
+              <Link
+                href="/contact?topic=terms"
+                className="hover:underline transition-all"
+                data-testid="footer-link-terms"
+              >
+                Terms of Use
               </Link>
               <span className="text-primary-foreground/60">|</span>
-              <Link href="/contact?topic=privacy">
-                <a
-                  className="hover:underline transition-all"
-                  data-testid="footer-link-privacy"
-                >
-                  Privacy Policy
-                </a>
+              <Link
+                href="/contact?topic=privacy"
+                className="hover:underline transition-all"
+                data-testid="footer-link-privacy"
+              >
+                Privacy Policy
               </Link>
             </div>
           </div>

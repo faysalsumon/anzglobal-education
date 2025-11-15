@@ -1304,10 +1304,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Course routes
+  // Course routes - only show approved and active courses from approved institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const courses = await storage.getAllCourses();
+      const allCourses = await storage.getAllCourses();
+      const allUniversities = await storage.getAllUniversities();
+      
+      // Filter to only show approved courses from approved institutions
+      const courses = allCourses.filter(course => {
+        const university = allUniversities.find(u => u.id === course.universityId);
+        return course.approvalStatus === 'approved' && 
+               course.isActive &&
+               university?.approvalStatus === 'approved' &&
+               university?.isActive;
+      });
+      
       res.json(courses);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -1324,6 +1335,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch the associated university
       const university = await storage.getUniversityById(course.universityId);
+      
+      // Only return if course and university are approved and active
+      if (course.approvalStatus !== 'approved' || !course.isActive) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (!university || university.approvalStatus !== 'approved' || !university.isActive) {
+        return res.status(404).json({ message: "Course not found" });
+      }
       
       res.json({
         ...course,

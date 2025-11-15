@@ -31,6 +31,7 @@ import PublicBlogArchive from "@/pages/public-blog-archive";
 import PublicBlogDetail from "@/pages/public-blog-detail";
 import CompareCourses from "@/pages/compare-courses";
 import Contact from "@/pages/contact";
+import PartnerWithUs from "@/pages/partner-with-us";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/compare-courses" component={CompareCourses} />
       <Route path="/contact" component={Contact} />
+      <Route path="/partner-with-us" component={PartnerWithUs} />
       <Route path="/courses/:id" component={PublicCourseDetail} />
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />

@@ -112,8 +112,24 @@ export function UniversityDashboard() {
             <p className="text-xs text-muted-foreground mt-1">
               {university ? (
                 <span className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-green-600" />
-                  Profile active
+                  {university.approvalStatus === 'approved' && (
+                    <>
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>Approved & Active</span>
+                    </>
+                  )}
+                  {university.approvalStatus === 'pending' && (
+                    <>
+                      <span className="h-2 w-2 bg-yellow-500 rounded-full" />
+                      <span>Pending Approval</span>
+                    </>
+                  )}
+                  {university.approvalStatus === 'rejected' && (
+                    <>
+                      <span className="h-2 w-2 bg-red-500 rounded-full" />
+                      <span>Rejected</span>
+                    </>
+                  )}
                 </span>
               ) : (
                 "Create your profile"
