@@ -399,15 +399,6 @@ export default function PartnerWithUs() {
               Become a Partner Today
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <div className="mt-8 pt-8 border-t border-white/20">
-              <p className="text-sm opacity-75 mb-2">Questions about partnership opportunities?</p>
-              <a 
-                href="mailto:partners@anzglobal.com.au" 
-                className="text-base font-medium underline hover:no-underline"
-              >
-                partners@anzglobal.com.au
-              </a>
-            </div>
           </div>
         </div>
       </section>
