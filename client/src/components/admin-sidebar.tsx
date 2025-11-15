@@ -17,6 +17,7 @@ import {
   FileText,
   Upload,
   Settings,
+  Newspaper,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -62,6 +63,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: FileText,
       label: "Applications",
       value: "applications",
+      show: true,
+    },
+    {
+      icon: Newspaper,
+      label: "Blogs",
+      value: "blogs",
       show: true,
     },
     {

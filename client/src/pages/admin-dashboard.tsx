@@ -42,6 +42,7 @@ import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
 import { AICourseExtractor } from "@/components/ai-course-extractor";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
 import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminBlogManagement } from "@/components/admin-blog-management";
 
 interface User {
   id: string;
@@ -1870,6 +1871,12 @@ export default function AdminDashboard() {
         )}
 
         {/* Data Import Tab */}
+        {activeTab === "blogs" && (
+          <div className="space-y-4">
+            <AdminBlogManagement />
+          </div>
+        )}
+
         {activeTab === "data-import" && (
           <div className="space-y-4">
             <AdminCsvImportPanel />
