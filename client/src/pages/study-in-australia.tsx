@@ -50,8 +50,8 @@ export default function StudyInAustralia() {
       icon: BookOpen,
       title: "22,000+ Courses",
       description: "Discover programs across all disciplines. Whether you're pursuing undergraduate, postgraduate, or vocational studies—we've got you covered.",
-      gradient: "from-orange-500/10 to-orange-600/10",
-      iconColor: "text-orange-600 dark:text-orange-400"
+      gradient: "from-accent/10 to-accent/20",
+      iconColor: "text-accent dark:text-accent"
     },
     {
       icon: Target,
@@ -106,7 +106,7 @@ export default function StudyInAustralia() {
 
   const popularCategories = [
     { title: "Engineering & IT", count: "3,500+ courses", color: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
-    { title: "Business & Management", count: "4,200+ courses", color: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
+    { title: "Business & Management", count: "4,200+ courses", color: "bg-accent/10 text-accent-foreground dark:text-accent" },
     { title: "Health Sciences", count: "2,800+ courses", color: "bg-green-500/10 text-green-700 dark:text-green-400" },
     { title: "Creative Arts", count: "1,900+ courses", color: "bg-purple-500/10 text-purple-700 dark:text-purple-400" },
     { title: "Education & Teaching", count: "1,500+ courses", color: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400" },
