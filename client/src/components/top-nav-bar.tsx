@@ -136,6 +136,9 @@ export function TopNavBar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
                 <Avatar className="h-8 w-8">
+                  {user?.profileImageUrl && (
+                    <AvatarImage src={user.profileImageUrl} alt={user.email || "User"} />
+                  )}
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {getUserInitials()}
                   </AvatarFallback>
