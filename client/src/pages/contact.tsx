@@ -39,8 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import PublicHeader from "@/components/public-header";
-import Footer from "@/components/footer";
+import { PublicHeader } from "@/components/public-header";
+import { Footer } from "@/components/footer";
 
 // Student contact form schema
 const studentContactSchema = z.object({
