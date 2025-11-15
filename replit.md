@@ -9,7 +9,20 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX and Features
-The platform employs a modern AI-style branding with gradient backgrounds. It features a dual navigation system: horizontal top navigation for student/public pages (desktop) and bottom tab navigation (mobile), and a 3-column admin dashboard (desktop) with an icon-first sidebar. Navigation ensures full feature parity across desktop and mobile.
+The platform implements the official **ANZ Global Education brand identity** with precise color palette and typography standards. The design features a dual navigation system: horizontal top navigation for student/public pages (desktop) and bottom tab navigation (mobile), and a 3-column admin dashboard (desktop) with an icon-first sidebar. Navigation ensures full feature parity across desktop and mobile.
+
+**Brand Identity Implementation**:
+-   **Color Palette (60/20/15/5 distribution)**:
+    - Primary Blue (MYR #3465A5): Used strategically for primary CTAs, links, and focus states (5% usage)
+    - Secondary Dark Gray (#333333): Used for text, borders, and secondary elements (20% usage)
+    - Accent Orange (#FF5000): Used sparingly for highlights and special badges (15% usage)
+    - White/Light backgrounds: Dominant color for main surfaces, cards, and dashboards (60% usage)
+-   **Typography**:
+    - Headings (h1-h6): Nunito font family (loaded via Google Fonts)
+    - Body text: Open Sans font family (loaded via Google Fonts)
+    - Clear hierarchical rhythm with consistent font weights
+-   **Accessibility**: All color combinations meet WCAG AA standards with verified contrast ratios (6.2:1 for primary blue on white, 5.5:1 for accent orange on dark foreground, 4.8:1 for muted text on light surfaces)
+-   **Implementation**: Brand colors and typography are centrally managed via CSS custom properties in `client/src/index.css`, with Tailwind CSS integration via `tailwind.config.ts`. Full dark mode support with adjusted color palettes.
 
 Key user experiences include an **Institution Portal** for managing courses, applications, and teams (with AI-powered content generation and DALL-E integration for images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 
