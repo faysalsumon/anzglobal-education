@@ -205,47 +205,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // First, check if user exists by ID
-    const existingUserById = await db
+    // Check if user exists by email (since email is unique and used for OIDC)
+    const existingUserByEmail = await db
       .select()
       .from(users)
-      .where(eq(users.id, userData.id))
+      .where(eq(users.email, userData.email))
       .limit(1);
     
-    if (existingUserById.length > 0) {
-      // User exists with this ID, update their information (don't update ID - it's the primary key!)
+    if (existingUserByEmail.length > 0) {
+      // User exists with this email, update their information
       const [updatedUser] = await db
         .update(users)
         .set({
-          email: userData.email,
           firstName: userData.firstName,
           lastName: userData.lastName,
-          userType: userData.userType,
-          role: userData.role,
+          userType: userData.userType || existingUserByEmail[0].userType,
+          role: userData.role || existingUserByEmail[0].role,
           lastLogin: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userData.id))
+        .where(eq(users.email, userData.email))
         .returning();
       return updatedUser;
     }
     
-    // If user doesn't exist by ID, insert new user
+    // If user doesn't exist, insert new user
     const [user] = await db
       .insert(users)
       .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          userType: userData.userType,
-          role: userData.role,
-          lastLogin: new Date(),
-          updatedAt: new Date(),
-        },
-      })
       .returning();
     return user;
   }
