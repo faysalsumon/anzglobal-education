@@ -50,6 +50,15 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 - **Assets**: Logo and OG image files in client/public/ for social sharing previews
 - **Phase 1 Note**: Current implementation uses client-side meta tag injection (works with Google/Bing which execute JavaScript). Future Phase 2 would require SSR migration for full AI crawler compatibility (GPTBot, ClaudeBot).
 
+**SEO Implementation - Courses & Institutions** (November 2025): Comprehensive SEO coverage across all public course and institution pages:
+- **Courses Listing Page** (/courses): Dynamic meta tags with course count, unique title/description, Open Graph/Twitter Cards
+- **Course Detail Pages** (/courses/:id): Individual SEO meta tags per course, JSON-LD Course schema with comprehensive course data (provider, subject, level, fees, duration, etc.)
+- **Institutions Listing Page** (/institutions): Dynamic meta tags with institution count, unique title/description, Open Graph/Twitter Cards
+- **Institution Detail Pages** (/institutions/:id): Individual SEO meta tags per institution, JSON-LD EducationalOrganization schema with organization details
+- **Enhanced Sitemap**: `/sitemap.xml` now includes all active courses (priority 0.8) and institutions (priority 0.8) in addition to blog posts and static pages, totaling 29+ dynamic URLs
+- **Implementation**: React Helmet client-side meta tag injection (compatible with Google/Bing JavaScript crawlers), canonical URLs, fallback values for optional fields
+- **Structured Data**: Full JSON-LD schemas for Course and EducationalOrganization entities, supporting rich search results and knowledge graph integration
+
 ### Technical Implementation
 
 The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.
