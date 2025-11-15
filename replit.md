@@ -42,12 +42,12 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 **Admin Profile Management** (November 2025): Complete profile editing system for all admin users (super_admin, support_manager, content_manager):
 - **Personal Information**: Admins can update firstName, lastName, and profile photo via /admin/profile page
-- **Profile Photo Upload**: Integrated file upload with automatic resizing to 200x200px, 5MB limit, JPEG optimization. Uses direct img tag implementation (not Radix UI Avatar) for reliable image display with cache-busting timestamps
+- **Profile Photo Upload**: Integrated file upload with automatic resizing to 200x200px, 5MB limit, JPEG optimization. Uses direct img tag implementation with React state management for reliable display
 - **Security**: Backend enforces admin-only access, restricts updates to non-sensitive fields (email/role/userType are read-only), no privilege escalation possible
 - **UI/UX**: Follows 3-column admin dashboard layout with SidebarProvider, includes read-only account information display (email, role, account status, member since date). Photo updates automatically upon selection with loading overlay and success confirmation
 - **Real-time Updates**: TanStack Query mutations with cache invalidation for immediate UI synchronization
 - **Implementation**: GET/PUT /api/admin/profile endpoints with Zod validation, POST /api/admin/upload-profile-photo for file uploads, storage persistence via storage.updateUser, form validation with react-hook-form
-- **Bug Fixes**: Fixed upsertUser database constraint violation (removed primary key update attempt), replaced Radix Avatar with custom img-based implementation for reliable photo rendering
+- **Bug Fixes Resolved**: (1) Fixed upsertUser database constraint violation by removing primary key update attempt (2) Replaced Radix Avatar with direct img element and dedicated React state (currentPhotoUrl) for reliable rendering (3) Fixed critical Express static file serving issue - added app.use('/admins', express.static()) middleware to serve uploaded photos (files were saving but returning 404)
 
 **Course Pages**: Both student and public course detail pages display scholarship as a fixed value ("Up to X%") rather than a range, making it more student-friendly. Career pathways section shows potential career roles and detailed career progression when data is available. Institution pages display scholarship as a range to show the full scholarship opportunity.
 

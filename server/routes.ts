@@ -266,6 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files from the public directory
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
+  app.use('/admins', express.static(path.join(process.cwd(), 'public', 'admins')));
 
   // Get current authenticated user
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
@@ -1674,7 +1675,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update user with new profile photo
       await storage.updateUser(user.id, {
-        ...user,
         profileImageUrl: photoPath,
       });
 

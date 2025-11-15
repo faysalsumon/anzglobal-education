@@ -7,7 +7,6 @@ import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import {
   Breadcrumb,
@@ -49,6 +48,7 @@ export default function AdminProfile() {
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
 
   // Fetch admin profile
   const { data: profile, isLoading } = useQuery<AdminUser>({
@@ -66,7 +66,7 @@ export default function AdminProfile() {
     },
   });
 
-  // Update form when profile loads
+  // Update form and photo URL when profile loads
   useEffect(() => {
     if (profile) {
       form.reset({
@@ -74,6 +74,7 @@ export default function AdminProfile() {
         lastName: profile.lastName || "",
         profileImageUrl: profile.profileImageUrl || "",
       });
+      setCurrentPhotoUrl(profile.profileImageUrl || null);
     }
   }, [profile, form]);
 
@@ -120,6 +121,7 @@ export default function AdminProfile() {
     },
     onSuccess: (data) => {
       form.setValue("profileImageUrl", data.photoPath);
+      setCurrentPhotoUrl(data.photoPath);
       setImageTimestamp(Date.now());
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -254,21 +256,19 @@ export default function AdminProfile() {
                 <CardContent>
                   <div className="flex items-center gap-6">
                     <div className="relative">
-                      {form.watch("profileImageUrl") || profile?.profileImageUrl ? (
-                        <div className="h-24 w-24 rounded-full overflow-hidden bg-muted flex items-center justify-center" data-testid="avatar-profile">
+                      {currentPhotoUrl ? (
+                        <div className="h-24 w-24 rounded-full overflow-hidden bg-muted" data-testid="avatar-profile">
                           <img
-                            src={`${form.watch("profileImageUrl") || profile?.profileImageUrl}?t=${imageTimestamp}`}
+                            src={`${currentPhotoUrl}?t=${imageTimestamp}`}
                             alt="Profile photo"
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-cover block"
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const fallback = e.currentTarget.nextElementSibling as HTMLDivElement;
-                              if (fallback) fallback.style.display = 'flex';
+                              const container = e.currentTarget.parentElement;
+                              if (container) {
+                                container.innerHTML = `<div class="h-24 w-24 flex items-center justify-center text-2xl font-semibold">${getInitials()}</div>`;
+                              }
                             }}
                           />
-                          <div className="hidden h-24 w-24 items-center justify-center text-2xl font-semibold">
-                            {getInitials()}
-                          </div>
                         </div>
                       ) : (
                         <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center text-2xl font-semibold" data-testid="avatar-profile">
