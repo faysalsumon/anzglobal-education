@@ -6,6 +6,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -25,6 +26,7 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: AdminSidebarProps) {
+  const { isMobile, setOpenMobile } = useSidebar();
   const menuItems = [
     {
       icon: Users,
@@ -83,7 +85,13 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                 return (
                   <SidebarMenuItem key={item.value}>
                     <SidebarMenuButton
-                      onClick={() => onTabChange(item.value)}
+                      onClick={() => {
+                        onTabChange(item.value);
+                        // Close sidebar drawer on mobile after selection
+                        if (isMobile) {
+                          setOpenMobile(false);
+                        }
+                      }}
                       isActive={activeTab === item.value}
                       tooltip={item.label}
                       data-testid={`sidebar-${item.value}`}
