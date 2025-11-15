@@ -1220,3 +1220,53 @@ export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSche
 
 export type ImportBatch = typeof importBatches.$inferSelect;
 export type InsertImportBatch = z.infer<typeof insertImportBatchSchema>;
+
+// Blog Status Enum
+export const blogStatusEnum = pgEnum("blog_status", ["draft", "published"]);
+
+// Blogs table
+export const blogs = pgTable("blogs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  excerpt: text("excerpt"),
+  content: text("content").notNull(),
+  featuredImageUrl: text("featured_image_url"),
+  category: varchar("category", { length: 100 }),
+  tags: text("tags").array(),
+  status: blogStatusEnum("status").notNull().default("draft"),
+  
+  // SEO fields
+  metaTitle: varchar("meta_title", { length: 60 }),
+  metaDescription: text("meta_description"),
+  ogImageUrl: text("og_image_url"),
+  
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  slugIdx: uniqueIndex("blogs_slug_unique_idx").on(table.slug),
+  statusIdx: index("blogs_status_idx").on(table.status),
+  categoryIdx: index("blogs_category_idx").on(table.category),
+  tagsIdx: index("blogs_tags_gin_idx").using("gin", table.tags),
+  publishedAtIdx: index("blogs_published_at_idx").on(table.publishedAt),
+}));
+
+export const insertBlogSchema = createInsertSchema(blogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+  title: z.string().min(1).max(200),
+  excerpt: z.string().max(300).optional(),
+  content: z.string().min(1),
+  category: z.string().max(100).optional(),
+  tags: z.array(z.string()).optional(),
+  metaTitle: z.string().max(60).optional(),
+  metaDescription: z.string().max(160).optional(),
+});
+
+export type Blog = typeof blogs.$inferSelect;
+export type InsertBlog = z.infer<typeof insertBlogSchema>;

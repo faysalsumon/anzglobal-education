@@ -48,6 +48,9 @@ import {
   documentRequests,
   type DocumentRequest,
   type InsertDocumentRequest,
+  blogs,
+  type Blog,
+  type InsertBlog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull } from "drizzle-orm";
@@ -168,6 +171,17 @@ export interface IStorage {
   createDocumentRequest(request: InsertDocumentRequest): Promise<DocumentRequest>;
   updateDocumentRequest(id: string, data: Partial<InsertDocumentRequest>): Promise<DocumentRequest>;
   deleteDocumentRequest(id: string): Promise<void>;
+  
+  // Blog operations
+  getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<Blog[]>;
+  getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: Blog[]; total: number }>;
+  getBlogById(id: string): Promise<Blog | undefined>;
+  getBlogBySlug(slug: string): Promise<Blog | undefined>;
+  createBlog(blog: InsertBlog): Promise<Blog>;
+  updateBlog(id: string, data: Partial<InsertBlog>): Promise<Blog>;
+  publishBlog(id: string): Promise<Blog>;
+  unpublishBlog(id: string): Promise<Blog>;
+  deleteBlog(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1059,6 +1073,102 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDocumentRequest(id: string): Promise<void> {
     await db.delete(documentRequests).where(eq(documentRequests.id, id));
+  }
+
+  // Blog operations
+  async getAllBlogs(filters?: { status?: string; category?: string; tag?: string; authorId?: string }): Promise<Blog[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(blogs.status, filters.status as "draft" | "published"));
+    }
+    if (filters?.category) {
+      conditions.push(eq(blogs.category, filters.category));
+    }
+    if (filters?.authorId) {
+      conditions.push(eq(blogs.authorId, filters.authorId));
+    }
+    
+    const query = db.select().from(blogs);
+    
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions)).orderBy(desc(blogs.createdAt));
+    }
+    
+    return await query.orderBy(desc(blogs.createdAt));
+  }
+
+  async getPublishedBlogs(filters?: { category?: string; tag?: string; limit?: number; offset?: number }): Promise<{ blogs: Blog[]; total: number }> {
+    const conditions = [eq(blogs.status, "published")];
+    
+    if (filters?.category) {
+      conditions.push(eq(blogs.category, filters.category));
+    }
+    
+    const limit = filters?.limit || 10;
+    const offset = filters?.offset || 0;
+    
+    const query = db.select().from(blogs).where(and(...conditions)).orderBy(desc(blogs.publishedAt));
+    
+    const [blogList, totalResult] = await Promise.all([
+      query.limit(limit).offset(offset),
+      db.select().from(blogs).where(and(...conditions))
+    ]);
+    
+    return { blogs: blogList, total: totalResult.length };
+  }
+
+  async getBlogById(id: string): Promise<Blog | undefined> {
+    const [blog] = await db.select().from(blogs).where(eq(blogs.id, id));
+    return blog;
+  }
+
+  async getBlogBySlug(slug: string): Promise<Blog | undefined> {
+    const [blog] = await db.select().from(blogs).where(eq(blogs.slug, slug));
+    return blog;
+  }
+
+  async createBlog(blog: InsertBlog): Promise<Blog> {
+    const [newBlog] = await db.insert(blogs).values(blog).returning();
+    return newBlog;
+  }
+
+  async updateBlog(id: string, data: Partial<InsertBlog>): Promise<Blog> {
+    const [blog] = await db
+      .update(blogs)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(blogs.id, id))
+      .returning();
+    return blog;
+  }
+
+  async publishBlog(id: string): Promise<Blog> {
+    const [blog] = await db
+      .update(blogs)
+      .set({ 
+        status: "published", 
+        publishedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(blogs.id, id))
+      .returning();
+    return blog;
+  }
+
+  async unpublishBlog(id: string): Promise<Blog> {
+    const [blog] = await db
+      .update(blogs)
+      .set({ 
+        status: "draft",
+        updatedAt: new Date() 
+      })
+      .where(eq(blogs.id, id))
+      .returning();
+    return blog;
+  }
+
+  async deleteBlog(id: string): Promise<void> {
+    await db.delete(blogs).where(eq(blogs.id, id));
   }
 }
 
