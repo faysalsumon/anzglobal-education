@@ -73,13 +73,12 @@ export default function PublicCourseDetail() {
     } : undefined,
     "teaches": course.subject || undefined,
     "educationalLevel": course.level || undefined,
-    "availableLanguage": course.languageOfInstruction || "English",
     "timeToComplete": course.duration || undefined,
-    "totalCost": course.tuitionFee ? `${course.tuitionCurrency || 'USD'} ${course.tuitionFee}` : undefined,
-    "offers": course.tuitionFee ? {
+    "totalCost": course.fees ? `${course.currency || 'AUD'} ${course.fees}` : undefined,
+    "offers": course.fees ? {
       "@type": "Offer",
-      "price": course.tuitionFee,
-      "priceCurrency": course.tuitionCurrency || 'USD'
+      "price": course.fees,
+      "priceCurrency": course.currency || 'AUD'
     } : undefined
   };
 
