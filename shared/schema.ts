@@ -939,6 +939,11 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  approvalStatus: true, // Set automatically to 'pending'
+  rejectionReason: true, // Only set by admins
+  submittedForApprovalAt: true, // Set automatically
+  approvedAt: true, // Set by admins
+  approvedBy: true, // Set by admins
 }).extend({
   // Validate array fields - ensure they're arrays and contain valid data
   intakes: z.array(z.string()).optional().default([]),
@@ -1150,6 +1155,10 @@ export const insertImportBatchSchema = createInsertSchema(importBatches).omit({
   id: true,
   createdAt: true,
   processedAt: true,
+});
+
+export const rejectionSchema = z.object({
+  reason: z.string().min(1, "Rejection reason is required").max(1000, "Rejection reason is too long"),
 });
 
 export const upsertUserSchema = createInsertSchema(users).omit({

@@ -23,6 +23,7 @@ import {
   insertStudentLeadSchema,
   insertContactSubmissionSchema,
   insertBlogSchema,
+  rejectionSchema,
   users,
   universities,
   courses,
@@ -2864,8 +2865,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public platform statistics endpoint
   app.get("/api/platform/stats", async (req, res) => {
     try {
-      const stats = await storage.getPlatformStats();
-      res.json(stats);
+      // Only count approved institutions and courses for public stats
+      const allInstitutions = await storage.getAllUniversities();
+      const allCourses = await storage.getAllCourses();
+      
+      const approvedInstitutions = allInstitutions.filter(i => i.approvalStatus === 'approved' && i.isActive);
+      const approvedCourses = allCourses.filter(c => {
+        const institution = allInstitutions.find(i => i.id === c.universityId);
+        return c.approvalStatus === 'approved' && 
+               c.isActive && 
+               institution?.approvalStatus === 'approved' && 
+               institution?.isActive;
+      });
+      
+      res.json({
+        institutionCount: approvedInstitutions.length,
+        courseCount: approvedCourses.length
+      });
     } catch (error) {
       console.error("Error fetching platform stats:", error);
       res.status(500).json({ message: "Failed to fetch platform statistics" });
@@ -3139,6 +3155,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting admin team member:", error);
       res.status(400).json({ message: error.message || "Failed to remove admin team member" });
+    }
+  });
+
+  // Institution and Course Approval Routes
+  app.patch("/api/admin/institutions/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institution = await storage.getUniversityById(req.params.id);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      const updated = await storage.updateUniversity(req.params.id, {
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: userId,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error approving institution:", error);
+      res.status(400).json({ message: error.message || "Failed to approve institution" });
+    }
+  });
+
+  app.patch("/api/admin/institutions/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institution = await storage.getUniversityById(req.params.id);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      const validatedData = rejectionSchema.parse(req.body);
+      const { reason } = validatedData;
+
+      const updated = await storage.updateUniversity(req.params.id, {
+        approvalStatus: 'rejected',
+        rejectionReason: reason,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error rejecting institution:", error);
+      res.status(400).json({ message: error.message || "Failed to reject institution" });
+    }
+  });
+
+  app.patch("/api/admin/courses/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const course = await storage.getCourseById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      const updated = await storage.updateCourse(req.params.id, {
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: userId,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error approving course:", error);
+      res.status(400).json({ message: error.message || "Failed to approve course" });
+    }
+  });
+
+  app.patch("/api/admin/courses/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const course = await storage.getCourseById(req.params.id);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      const validatedData = rejectionSchema.parse(req.body);
+      const { reason } = validatedData;
+
+      const updated = await storage.updateCourse(req.params.id, {
+        approvalStatus: 'rejected',
+        rejectionReason: reason,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error rejecting course:", error);
+      res.status(400).json({ message: error.message || "Failed to reject course" });
     }
   });
 
