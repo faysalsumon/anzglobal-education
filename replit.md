@@ -12,7 +12,18 @@ Preferred communication style: Simple, everyday language.
 
 ### UI/UX and Features
 
-The platform features a modern AI-style branding with gradient backgrounds and a contemporary navigation system. **Desktop users** experience a horizontal top navigation bar with logo, menu items, notifications, and user profile. **Mobile users** enjoy an app-style bottom tab navigation (Instagram/Twitter style) preparing for future native mobile app launch. Complete navigation parity ensures all features are accessible on both desktop and mobile devices.
+The platform features a modern AI-style branding with gradient backgrounds and a contemporary navigation system.
+
+**Navigation Architecture:**
+- **Student & Public Pages**: Horizontal top navigation (desktop) and bottom tab navigation (mobile, Instagram/Twitter style)
+- **Admin Dashboard**: Modern 3-column layout with icon-first sidebar, central workspace, and quick actions panel
+  - **Desktop (≥1024px)**: Full 3-column layout - AdminSidebar (left, icon-only collapsible nav) + Main content (center, tabbed workspace) + Quick Actions (right, 20rem panel)
+  - **Mobile (<1024px)**: Single column with drawer-based sidebar (auto-closes on selection), hidden quick actions panel
+  - **AdminSidebar**: Icon-only navigation using Shadcn Sidebar with `collapsible="icon"`, includes useSidebar hook for mobile drawer state management
+  - **Quick Actions Panel**: Role-gated cards for Quick Actions (New User/Institution/Course), AI Tools (Institution/Course Extract), Overview Stats, and Pending Approvals
+  - **Responsive Grid**: Uses `lg:grid-cols-[minmax(0,1fr)_20rem]` for desktop 3-column layout with proper mobile fallback
+
+Complete navigation parity ensures all features are accessible on both desktop and mobile devices.
 
 The platform offers dual user experiences: an **Institution Portal** for managing courses, applications, and teams (including AI-powered content generation and image management with DALL-E integration for campus images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, streamlined applications, favorites, and course comparison tools.
 
