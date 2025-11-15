@@ -27,6 +27,8 @@ import PublicCourses from "@/pages/public-courses";
 import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
 import PublicInstitutionDetail from "@/pages/public-institution-detail";
+import PublicBlogArchive from "@/pages/public-blog-archive";
+import PublicBlogDetail from "@/pages/public-blog-detail";
 import CompareCourses from "@/pages/compare-courses";
 import Contact from "@/pages/contact";
 import UserTypeSelection from "@/pages/user-type-selection";
@@ -51,6 +53,8 @@ function Router() {
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />
       <Route path="/institutions" component={PublicInstitutions} />
+      <Route path="/blog/:slug" component={PublicBlogDetail} />
+      <Route path="/blog" component={PublicBlogArchive} />
       
       {!isLoading && isAuthenticated && !user?.userType && (
         <Route path="/user-type" component={UserTypeSelection} />

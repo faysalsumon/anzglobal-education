@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
-import type { Course, University } from "@shared/schema";
+import type { Course, University, Blog } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { TypingText } from "@/components/typing-text";
@@ -37,6 +37,11 @@ export default function Landing() {
 
   const { data: institutions = [] } = useQuery<University[]>({
     queryKey: ["/api/institutions"],
+  });
+
+  // Fetch latest blog posts
+  const { data: blogs = [] } = useQuery<Blog[]>({
+    queryKey: ["/api/blogs"],
   });
 
   // Filter courses or institutions based on search query and type
@@ -393,6 +398,70 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Recent Blog Posts Section */}
+      {blogs.length > 0 && (
+        <section className="py-16 md:py-24 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-12">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-2">Latest Insights</h2>
+                <p className="text-muted-foreground">
+                  Stay updated with the latest news and guides in international education
+                </p>
+              </div>
+              <Link href="/blog">
+                <Button variant="outline" data-testid="button-view-all-blogs">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {blogs.slice(0, 3).map((blog) => (
+                <Link key={blog.id} href={`/blog/${blog.slug}`}>
+                  <Card className="h-full hover-elevate group" data-testid={`landing-blog-card-${blog.slug}`}>
+                    {blog.featuredImageUrl && (
+                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                        <img
+                          src={blog.featuredImageUrl}
+                          alt={blog.title}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {blog.publishedAt
+                            ? new Date(blog.publishedAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })
+                            : ""}
+                        </span>
+                      </div>
+                      <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
+                        {blog.title}
+                      </CardTitle>
+                    </CardHeader>
+                    {blog.excerpt && (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {blog.excerpt}
+                        </p>
+                      </CardContent>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-16 md:py-24">
