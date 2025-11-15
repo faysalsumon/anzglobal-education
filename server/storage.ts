@@ -205,35 +205,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // First, try to find user by email if email exists
-    if (userData.email) {
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, userData.email))
-        .limit(1);
-      
-      if (existingUser.length > 0) {
-        // Update existing user - include ALL fields from userData
-        const [updatedUser] = await db
-          .update(users)
-          .set({
-            id: userData.id, // Update ID to match OIDC sub
-            email: userData.email, // Update email
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            userType: userData.userType,
-            role: userData.role,
-            lastLogin: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(users.email, userData.email))
-          .returning();
-        return updatedUser;
-      }
+    // First, check if user exists by ID
+    const existingUserById = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userData.id))
+      .limit(1);
+    
+    if (existingUserById.length > 0) {
+      // User exists with this ID, update their information (don't update ID - it's the primary key!)
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          userType: userData.userType,
+          role: userData.role,
+          lastLogin: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userData.id))
+        .returning();
+      return updatedUser;
     }
     
-    // If no existing user by email, try upsert by ID
+    // If user doesn't exist by ID, insert new user
     const [user] = await db
       .insert(users)
       .values(userData)

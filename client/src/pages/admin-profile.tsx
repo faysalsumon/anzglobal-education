@@ -48,6 +48,7 @@ export default function AdminProfile() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [imageTimestamp, setImageTimestamp] = useState(Date.now());
 
   // Fetch admin profile
   const { data: profile, isLoading } = useQuery<AdminUser>({
@@ -119,6 +120,7 @@ export default function AdminProfile() {
     },
     onSuccess: (data) => {
       form.setValue("profileImageUrl", data.photoPath);
+      setImageTimestamp(Date.now());
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
@@ -146,6 +148,7 @@ export default function AdminProfile() {
           description: "Please select a file smaller than 5MB",
           variant: "destructive",
         });
+        e.target.value = "";
         return;
       }
       
@@ -155,11 +158,13 @@ export default function AdminProfile() {
           description: "Please select an image file",
           variant: "destructive",
         });
+        e.target.value = "";
         return;
       }
 
       setIsUploading(true);
       uploadPhotoMutation.mutate(file);
+      e.target.value = "";
     }
   };
 
@@ -249,15 +254,27 @@ export default function AdminProfile() {
                 <CardContent>
                   <div className="flex items-center gap-6">
                     <div className="relative">
-                      <Avatar className="h-24 w-24" data-testid="avatar-profile">
-                        <AvatarImage 
-                          src={form.watch("profileImageUrl") || profile?.profileImageUrl || ""} 
-                          key={form.watch("profileImageUrl") || profile?.profileImageUrl}
-                        />
-                        <AvatarFallback className="text-2xl">
+                      {form.watch("profileImageUrl") || profile?.profileImageUrl ? (
+                        <div className="h-24 w-24 rounded-full overflow-hidden bg-muted flex items-center justify-center" data-testid="avatar-profile">
+                          <img
+                            src={`${form.watch("profileImageUrl") || profile?.profileImageUrl}?t=${imageTimestamp}`}
+                            alt="Profile photo"
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling as HTMLDivElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                          <div className="hidden h-24 w-24 items-center justify-center text-2xl font-semibold">
+                            {getInitials()}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center text-2xl font-semibold" data-testid="avatar-profile">
                           {getInitials()}
-                        </AvatarFallback>
-                      </Avatar>
+                        </div>
+                      )}
                       {(isUploading || uploadPhotoMutation.isPending) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
