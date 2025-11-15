@@ -4909,6 +4909,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // SEO ROUTES
+  // ========================================
+
+  // Generate dynamic sitemap.xml with all published blogs
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const result = await storage.getPublishedBlogs({
+        limit: 10000, // Get all published blogs
+        offset: 0,
+      });
+
+      const blogs = result.blogs;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+      // Build XML sitemap
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/blog</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/courses</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/institutions</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+${blogs.map((blog) => `  <url>
+    <loc>${baseUrl}/blog/${blog.slug}</loc>
+    <lastmod>${blog.updatedAt ? new Date(blog.updatedAt).toISOString().split('T')[0] : new Date(blog.publishedAt || blog.createdAt!).toISOString().split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('\n')}
+</urlset>`;
+
+      res.header('Content-Type', 'application/xml');
+      res.send(sitemap);
+    } catch (error) {
+      console.error("Error generating sitemap:", error);
+      res.status(500).send("Failed to generate sitemap");
+    }
+  });
+
+  // Generate dynamic robots.txt with environment-aware sitemap URL
+  app.get("/robots.txt", (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    const robotsTxt = `# ANZ Global Education - Robots.txt
+# Allow all crawlers including AI bots
+
+# Google and traditional search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# AI crawlers (GPTBot, Claude, Perplexity, etc.)
+User-agent: GPTBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Google's new AI crawler for Vertex AI
+User-agent: Google-CloudVertexBot
+Allow: /
+
+# Allow all other crawlers
+User-agent: *
+Allow: /
+
+# Disallow admin and API endpoints
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap location (environment-aware)
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+
+    res.header('Content-Type', 'text/plain');
+    res.send(robotsTxt);
+  });
+
+  // ========================================
   // CSV BULK IMPORT ROUTES (Admin Only)
   // ========================================
 

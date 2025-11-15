@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet";
 import { PublicLayout } from "@/components/public-layout";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,8 +60,38 @@ export default function PublicBlogArchive() {
     return `${minutes} min read`;
   };
 
+  // SEO data
+  const siteUrl = window.location.origin;
+  const pageUrl = `${siteUrl}/blog`;
+  const pageTitle = "Blog - ANZ Global Education";
+  const pageDescription = "Insights, guides, and updates from the world of international education. Discover expert advice on studying abroad, university selection, and student success.";
+  const ogImage = `${siteUrl}/og-image.png`;
+
   return (
     <PublicLayout>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{pageTitle}</title>
+        <meta name="title" content={pageTitle} />
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={pageUrl} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
+
       <div className="min-h-screen">
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-primary/90 via-primary to-primary/80 text-primary-foreground py-20">

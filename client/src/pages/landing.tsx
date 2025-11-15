@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -116,8 +117,49 @@ export default function Landing() {
     handleSearch(institution.name);
   };
 
+  // SEO data
+  const siteUrl = window.location.origin;
+  const pageTitle = "ANZ Global Education - Connect Universities and Students Worldwide";
+  const pageDescription = "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
+  const ogImage = `${siteUrl}/og-image.png`;
+
   return (
     <PublicLayout onStudentLoginClick={() => setShowStudentAuthModal(true)}>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{pageTitle}</title>
+        <meta name="title" content={pageTitle} />
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={siteUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={siteUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={siteUrl} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* JSON-LD Organization Schema */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "ANZ Global Education",
+            "url": siteUrl,
+            "logo": `${siteUrl}/logo.png`,
+            "description": pageDescription,
+            "sameAs": []
+          })}
+        </script>
+      </Helmet>
 
       {/* Hero Section */}
       <section className="overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white isolate -z-10">

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
+import { Helmet } from "react-helmet";
 import { PublicLayout } from "@/components/public-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -106,8 +107,80 @@ export default function PublicBlogDetail() {
     );
   }
 
+  // Prepare SEO data
+  const siteUrl = window.location.origin;
+  const blogUrl = `${siteUrl}/blog/${blog.slug}`;
+  const metaTitle = blog.metaTitle || blog.title;
+  const metaDescription = blog.metaDescription || blog.excerpt || blog.content.substring(0, 160);
+  const ogImage = blog.ogImageUrl || blog.featuredImageUrl || `${siteUrl}/og-image.png`;
+
+  // Create JSON-LD structured data for Article
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": blog.title,
+    "description": metaDescription,
+    "image": ogImage,
+    "datePublished": blog.publishedAt,
+    "dateModified": blog.updatedAt || blog.publishedAt,
+    "author": {
+      "@type": "Organization",
+      "name": "ANZ Global Education",
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ANZ Global Education",
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${siteUrl}/logo.png`
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": blogUrl
+    }
+  };
+
   return (
     <PublicLayout>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{metaTitle} | ANZ Global Education</title>
+        <meta name="title" content={metaTitle} />
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={blogUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={blogUrl} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+        {blog.publishedAt && (
+          <meta property="article:published_time" content={new Date(blog.publishedAt).toISOString()} />
+        )}
+        {blog.updatedAt && (
+          <meta property="article:modified_time" content={new Date(blog.updatedAt).toISOString()} />
+        )}
+        {blog.category && <meta property="article:section" content={blog.category} />}
+        {blog.tags && blog.tags.map((tag) => (
+          <meta key={tag} property="article:tag" content={tag} />
+        ))}
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={blogUrl} />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
+
       <div className="min-h-screen">
         {/* Header */}
         <section className="bg-gradient-to-br from-primary/90 via-primary to-primary/80 text-primary-foreground py-12">
