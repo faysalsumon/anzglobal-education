@@ -1,129 +1,56 @@
 # ANZ Global Education Platform
 
 ## Overview
-
-ANZ Global Education is an AI-powered platform designed to streamline international education by connecting universities with prospective students. It offers intelligent course discovery, AI-assisted student profile creation, and comprehensive application/course management tools for institutions. The platform aims to improve global access to education and reduce administrative burdens for universities, tapping into the significant market potential of cross-border education.
+ANZ Global Education is an AI-powered platform designed to connect universities with prospective students globally. Its primary purpose is to streamline international education by offering intelligent course discovery, AI-assisted student profile creation, and comprehensive application/course management tools for educational institutions. The platform aims to enhance global access to education, reduce administrative burdens for universities, and capitalize on the growing cross-border education market.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### UI/UX and Features
+The platform employs a modern AI-style branding with gradient backgrounds. It features a dual navigation system: horizontal top navigation for student/public pages (desktop) and bottom tab navigation (mobile), and a 3-column admin dashboard (desktop) with an icon-first sidebar. Navigation ensures full feature parity across desktop and mobile.
 
-The platform features a modern AI-style branding with gradient backgrounds and a contemporary navigation system.
+Key user experiences include an **Institution Portal** for managing courses, applications, and teams (with AI-powered content generation and DALL-E integration for images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 
-**Navigation Architecture:**
-- **Student & Public Pages**: Horizontal top navigation (desktop) and bottom tab navigation (mobile, Instagram/Twitter style)
-- **Admin Dashboard**: Modern 3-column layout with icon-first sidebar, central workspace, and quick actions panel
-  - **Desktop (≥1024px)**: Full 3-column layout - AdminSidebar (left, icon-only collapsible nav) + Main content (center, content area) + Quick Actions (right, 20rem panel)
-  - **Mobile (<1024px)**: Single column with drawer-based sidebar (auto-closes on selection), hidden quick actions panel
-  - **AdminSidebar**: Icon-only navigation using Shadcn Sidebar with `collapsible="icon"`, includes useSidebar hook for mobile drawer state management. Sidebar is the ONLY navigation method - no horizontal tabs in main content.
-  - **Main Content**: Displays active tab content directly without horizontal tab headers. Content switches via conditional rendering based on activeTab state.
-  - **Quick Actions Panel**: Role-gated cards for Quick Actions (New User/Institution/Course), AI Tools (Institution/Course Extract), Overview Stats, and Pending Approvals
-  - **Responsive Grid**: Uses `lg:grid-cols-[minmax(0,1fr)_20rem]` for desktop 3-column layout with proper mobile fallback
-
-Complete navigation parity ensures all features are accessible on both desktop and mobile devices.
-
-The platform offers dual user experiences: an **Institution Portal** for managing courses, applications, and teams (including AI-powered content generation and image management with DALL-E integration for campus images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, streamlined applications, favorites, and course comparison tools.
-
-Key features include a clean **Landing Page** with prominent search, a tabbed **Student Authentication Modal** supporting social and email/password logins, and a detailed **Public Course Detail Page**. Lead generation forms capture unauthenticated user inquiries. A comprehensive **Contact Us Page** with category-based submissions is available.
-
-For administration, a **Super Admin Dashboard** provides full CRUD operations. **Public Listings** display institutions and courses with dynamic filtering. A Facebook-style **Notifications** system provides real-time updates. A WhatsApp-style **Real-time Chat** facilitates direct messaging between users, with restricted initiation to prevent spam.
-
-**Student Document Management** offers organized, color-coded folders with multi-format file uploads. An **Enterprise CSV Bulk Import** system allows super admins and support managers to upload, validate, and approve large datasets for universities and courses, including templates, per-row validation, and transactional execution.
-
-**AI Data Extraction Features** (super admin only):
-- **AI Institution Data Extraction**: Securely extracts institution data from website URLs using OpenAI GPT-4o, with stringent security measures like rate limiting, domain allowlisting, and SSRF protection.
-- **AI Course Data Extraction**: Extracts comprehensive course information (30+ fields) from provider websites including title, description, fees, duration, career outcomes, requirements, and more. Features field-by-field approval system, edit capability, and comprehensive SSRF protection. Available as a standalone tool for super admins to extract and approve course data before adding to the system. Security includes secure redirect following (max 3 hops with SSRF re-validation per hop, HTTPS downgrade protection), domain allowlisting (.edu, .edu.au, .ac.uk, etc.), DNS validation, private IP blocking, rate limiting (30/hr dev, 15/hr preview, 5/hr prod), size limits (2MB), and timeout controls (15s per request).
-
-**Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD operations. Students can add multiple education records (level, institution, field of study, GPA) and language test scores (IELTS, TOEFL, PTE, Duolingo) with intelligent validation. 100% profile completion (personal info + ≥1 education + ≥1 language score) is required for application submission.
-
-**Admin Profile Management** (November 2025): Complete profile editing system for all admin users (super_admin, support_manager, content_manager):
-- **Personal Information**: Admins can update firstName, lastName, and profile photo via /admin/profile page
-- **Profile Photo Upload**: Integrated file upload with automatic resizing to 200x200px, 5MB limit, JPEG optimization. Uses direct img tag implementation with React state management for reliable display
-- **Security**: Backend enforces admin-only access, restricts updates to non-sensitive fields (email/role/userType are read-only), no privilege escalation possible
-- **UI/UX**: Follows 3-column admin dashboard layout with SidebarProvider, includes read-only account information display (email, role, account status, member since date). Photo updates automatically upon selection with loading overlay and success confirmation
-- **Real-time Updates**: TanStack Query mutations with cache invalidation for immediate UI synchronization
-- **Implementation**: GET/PUT /api/admin/profile endpoints with Zod validation, POST /api/admin/upload-profile-photo for file uploads, storage persistence via storage.updateUser, form validation with react-hook-form
-- **Bug Fixes Resolved**: (1) Fixed upsertUser database constraint violation by removing primary key update attempt (2) Replaced Radix Avatar with direct img element and dedicated React state (currentPhotoUrl) for reliable rendering (3) Fixed critical Express static file serving issue - added app.use('/admins', express.static()) middleware to serve uploaded photos (files were saving but returning 404)
-
-**Course Pages**: Both student and public course detail pages display scholarship as a fixed value ("Up to X%") rather than a range, making it more student-friendly. Career pathways section shows potential career roles and detailed career progression when data is available. Institution pages display scholarship as a range to show the full scholarship opportunity.
-
-**Blog Infrastructure** (November 2025): Full-featured markdown-based blog system with:
-- **Admin Management**: Create, edit, publish/draft workflow with SEO metadata fields (metaTitle, metaDescription, keywords, ogImageUrl)
-- **Public Pages**: Archive page (/blog) with featured post hero and grid layout, individual post pages (/blog/[slug]) with markdown rendering
-- **SEO Implementation (Phase 1)**: React Helmet integration for dynamic meta tags, Open Graph/Twitter Cards for social sharing, JSON-LD Article schema for rich search results
-- **Dynamic Endpoints**: `/sitemap.xml` (auto-generates from published blogs with lastmod dates), `/robots.txt` (environment-aware, allows all crawlers including AI bots)
-- **Assets**: Logo and OG image files in client/public/ for social sharing previews
-- **Phase 1 Note**: Current implementation uses client-side meta tag injection (works with Google/Bing which execute JavaScript). Future Phase 2 would require SSR migration for full AI crawler compatibility (GPTBot, ClaudeBot).
-
-**SEO Implementation - Courses & Institutions** (November 2025): Comprehensive SEO coverage across all public course and institution pages:
-- **Courses Listing Page** (/courses): Dynamic meta tags with course count, unique title/description, Open Graph/Twitter Cards
-- **Course Detail Pages** (/courses/:id): Individual SEO meta tags per course, JSON-LD Course schema with comprehensive course data (provider, subject, level, fees, duration, etc.)
-- **Institutions Listing Page** (/institutions): Dynamic meta tags with institution count, unique title/description, Open Graph/Twitter Cards
-- **Institution Detail Pages** (/institutions/:id): Individual SEO meta tags per institution, JSON-LD EducationalOrganization schema with organization details
-- **Enhanced Sitemap**: `/sitemap.xml` now includes all active courses (priority 0.8) and institutions (priority 0.8) in addition to blog posts and static pages, totaling 29+ dynamic URLs
-- **Implementation**: React Helmet client-side meta tag injection (compatible with Google/Bing JavaScript crawlers), canonical URLs, fallback values for optional fields
-- **Structured Data**: Full JSON-LD schemas for Course and EducationalOrganization entities, supporting rich search results and knowledge graph integration
+Core features include:
+-   **Landing Page** with prominent search.
+-   **Student Authentication Modal** with social and email/password logins.
+-   Detailed **Public Course Detail Pages** and **Institution Pages**.
+-   **Lead generation forms** and a comprehensive **Contact Us Page**.
+-   **Super Admin Dashboard** for full CRUD operations.
+-   **Public Listings** for institutions and courses with dynamic filtering.
+-   Facebook-style **Notifications** and WhatsApp-style **Real-time Chat**.
+-   **Student Document Management** with organized, color-coded folders and multi-format uploads.
+-   **Enterprise CSV Bulk Import** for super admins/support managers to upload, validate, and approve large datasets.
+-   **AI Data Extraction Features** (Super Admin only): Securely extracts institution and course data from website URLs using OpenAI GPT-4o, featuring stringent security measures, field-by-field approval, and comprehensive SSRF protection.
+-   **Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD, requiring 100% profile completion for application submission.
+-   **Admin Profile Management**: Allows admins to update personal info and profile photos, with backend security enforcing role-based access and non-sensitive field restrictions.
+-   **Student Dashboard Polish**: Extensive UI/UX improvements for responsive design, touch targets, and visual hierarchy.
+-   **Course Pages**: Scholarship display as fixed value "Up to X%" for students, while institution pages show ranges. Career pathways section details roles and progression.
+-   **Blog Infrastructure**: Markdown-based blog with admin management (create, edit, publish/draft, SEO fields) and public archive/post pages. Includes dynamic `/sitemap.xml` and `/robots.txt`.
+-   **SEO Implementation (Courses & Institutions)**: Comprehensive SEO for all public course and institution pages, including dynamic meta tags, Open Graph/Twitter Cards, and JSON-LD Course/EducationalOrganization schemas.
 
 ### Technical Implementation
-
-The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.
-
-**Navigation System**: Dual navigation architecture separating public and authenticated experiences:
-
-**Public Pages** (landing, courses, institutions):
-- Use **PublicLayout** component wrapping **PublicHeader** for consistent navigation
-- **PublicHeader** features two-tier navigation:
-  - Blue utility bar (#4F5DBE) with TOP INSTITUTIONS, COURSES IN DEMAND, KNOWLEDGE BASE, BLOG, STUDENT LOGIN
-  - White main navigation with logo (home link), FIND INSTITUTES, FIND COURSES, SERVICES dropdown, ABOUT, FREE COUNSELING button
-- Mobile: Hamburger menu (Sheet component) with organized sections (QUICK LINKS, NAVIGATION, SERVICES)
-- Student login uses proper anchor links for accessibility (except landing page which has modal)
-- Breadcrumbs on list pages (Home > Current Page) provide additional navigation
-- **Smart Header System** (November 2025): PublicLayout conditionally renders PublicHeader only for unauthenticated users (`!isLoading && (!isAuthenticated || !user || !user.userType)`). This prevents double header rendering when authenticated users visit public pages - they see only TopNavBar from App.tsx while unauthenticated users see PublicHeader.
-
-**Authenticated Dashboard** (all user types):
-- **TopNavBar** (Desktop): Horizontal navigation with logo, menu items, notifications, and user menu. Sticky positioning with z-[9999].
-- **MobileBottomNav** (Mobile <768px): App-style bottom tabs with 6 navigation items, icons, labels, active indicators, and unread badges.
-- **Navigation Parity**: All user types have identical navigation items on both desktop and mobile:
-  - Students (6 items): Dashboard, Courses, Applications, Documents, Messages, Profile
-  - Universities (6 items): Dashboard, Institutions, Courses, Applications, Team, Messages
-  - Admins (5-6 items): Dashboard, Courses, Institutions, Messages, Profile, Manage (super_admin/support_manager only)
-
-The **backend** uses Node.js Express.js in TypeScript. Authentication is handled by OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage. The API is RESTful and organized by user type. Real-time chat uses WebSockets. AI integration leverages the OpenAI API (GPT-4o) for content generation. Shared Zod schemas ensure type-safe validation, and Multer/Sharp handle image processing.
-
-**Data storage** utilizes PostgreSQL via Neon's serverless driver and Drizzle ORM. The schema supports sessions, users (universities, students, admins), university profiles (including comprehensive `campusAddresses` JSONB and scholarship ranges), courses, applications, student profiles, and real-time chat data. GIN indexes optimize array and JSONB field filtering. Replit Object Storage is used for images.
-
-**Authentication & Authorization** relies on Replit's OIDC service. Express-session manages sessions with PostgreSQL storage. Role-based access control uses `userType` (`university`, `student`, `admin`) with a granular admin hierarchy. Backend middleware (`checkAdminAccess()`) enforces security. A **Central Login Portal** at `/admin/login` provides unified authentication for all user types, intelligently redirecting users to their respective dashboards post-login.
+-   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter (routing), TanStack Query (server state), React Hook Form, Zod.
+-   **Backend**: Node.js Express.js in TypeScript.
+-   **Authentication**: OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage.
+-   **API**: RESTful, organized by user type.
+-   **Real-time**: WebSockets for chat.
+-   **AI Integration**: OpenAI API (GPT-4o) for content generation.
+-   **Data Validation**: Shared Zod schemas for type-safe validation.
+-   **Image Processing**: Multer and Sharp.
+-   **Database**: PostgreSQL via Neon's serverless driver and Drizzle ORM. Schema supports sessions, users (universities, students, admins), university profiles (including `campusAddresses` JSONB and scholarship ranges), courses, applications, student profiles, and real-time chat. GIN indexes optimize JSONB/array filtering.
+-   **Object Storage**: Replit Object Storage for images.
+-   **Authorization**: Role-based access control (`userType`) with granular admin hierarchy enforced by backend middleware (`checkAdminAccess()`). A Central Login Portal at `/admin/login` redirects users post-authentication.
 
 ## External Dependencies
 
-**Authentication Service**: Replit Auth (OIDC provider).
-
-**AI Service**: OpenAI API (GPT-4o model).
-
-**Database**: PostgreSQL (e.g., Neon).
-
-**Object Storage**: Replit Object Storage.
-
-**CDN**: Google Fonts CDN.
-
-**Mapping/Location**: Google Places API (for address autocomplete in university campus addresses).
-
-**Key NPM Packages**:
-- **UI**: Radix UI, Shadcn/ui, Lucide React, Tailwind CSS
-- **Forms**: react-hook-form, zod
-- **Data**: @tanstack/react-query, drizzle-orm
-- **Auth**: openid-client, passport, express-session, bcrypt
-- **Image Processing**: Multer, Sharp
-- **Real-time**: ws (WebSocket)
-- **Google Maps**: @googlemaps/js-api-loader
-- **CSV Processing**: papaparse
-- **SEO**: react-helmet (dynamic meta tags), react-markdown + remark-gfm (blog content rendering)
-
-**Replit-Specific Integrations**:
-- `@replit/vite-plugin-runtime-error-modal`
-- `@replit/vite-plugin-cartographer`
-- `@replit/vite-plugin-dev-banner`
+-   **Authentication Service**: Replit Auth (OIDC provider).
+-   **AI Service**: OpenAI API (GPT-4o model).
+-   **Database**: PostgreSQL (e.g., Neon).
+-   **Object Storage**: Replit Object Storage.
+-   **CDN**: Google Fonts CDN.
+-   **Mapping/Location**: Google Places API.
+-   **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
+-   **Key NPM Packages**: Radix UI, Shadcn/ui, Lucide React, Tailwind CSS, react-hook-form, zod, @tanstack/react-query, drizzle-orm, openid-client, passport, express-session, bcrypt, Multer, Sharp, ws, @googlemaps/js-api-loader, papaparse, react-helmet, react-markdown, remark-gfm.
