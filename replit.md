@@ -82,6 +82,7 @@ The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York styl
 - Mobile: Hamburger menu (Sheet component) with organized sections (QUICK LINKS, NAVIGATION, SERVICES)
 - Student login uses proper anchor links for accessibility (except landing page which has modal)
 - Breadcrumbs on list pages (Home > Current Page) provide additional navigation
+- **Smart Header System** (November 2025): PublicLayout conditionally renders PublicHeader only for unauthenticated users (`!isLoading && (!isAuthenticated || !user || !user.userType)`). This prevents double header rendering when authenticated users visit public pages - they see only TopNavBar from App.tsx while unauthenticated users see PublicHeader.
 
 **Authenticated Dashboard** (all user types):
 - **TopNavBar** (Desktop): Horizontal navigation with logo, menu items, notifications, and user menu. Sticky positioning with z-[9999].
