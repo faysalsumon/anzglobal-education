@@ -1255,6 +1255,7 @@ export const blogs = pgTable("blogs", {
 
 export const insertBlogSchema = createInsertSchema(blogs).omit({
   id: true,
+  authorId: true,
   createdAt: true,
   updatedAt: true,
 }).extend({

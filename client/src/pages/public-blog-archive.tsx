@@ -17,9 +17,11 @@ export default function PublicBlogArchive() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch published blogs
-  const { data: blogs = [], isLoading } = useQuery<Blog[]>({
+  const { data: blogsData, isLoading } = useQuery<{ blogs: Blog[]; total: number }>({
     queryKey: ["/api/blogs"],
   });
+
+  const blogs = blogsData?.blogs || [];
 
   // Filter blogs based on search and category
   const filteredBlogs = blogs.filter((blog) => {

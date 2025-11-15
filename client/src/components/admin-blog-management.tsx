@@ -61,7 +61,7 @@ export function AdminBlogManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch all blogs
-  const { data: blogs = [], isLoading } = useQuery<Blog[]>({
+  const { data: blogsData, isLoading } = useQuery<{ blogs: Blog[]; total: number }>({
     queryKey: ["/api/admin/blogs", statusFilter],
     queryFn: async () => {
       const url = statusFilter !== "all" ? `/api/admin/blogs?status=${statusFilter}` : "/api/admin/blogs";
@@ -70,6 +70,8 @@ export function AdminBlogManagement() {
       return response.json();
     },
   });
+
+  const blogs = blogsData?.blogs || [];
 
   const form = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),

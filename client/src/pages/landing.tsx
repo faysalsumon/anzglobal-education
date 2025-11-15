@@ -40,9 +40,11 @@ export default function Landing() {
   });
 
   // Fetch latest blog posts
-  const { data: blogs = [] } = useQuery<Blog[]>({
+  const { data: blogsData } = useQuery<{ blogs: Blog[]; total: number }>({
     queryKey: ["/api/blogs"],
   });
+
+  const blogs = blogsData?.blogs || [];
 
   // Filter courses or institutions based on search query and type
   const courseSuggestions = searchQuery.trim().length > 0 && searchType === "courses"
