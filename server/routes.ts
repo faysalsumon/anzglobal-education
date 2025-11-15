@@ -22,6 +22,7 @@ import {
   insertMessageSchema,
   insertStudentLeadSchema,
   insertContactSubmissionSchema,
+  insertBlogSchema,
   users,
   universities,
   courses,
@@ -4685,6 +4686,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // ========================================
+  // BLOG ROUTES
+  // ========================================
+
+  // Get all blogs (admin only - includes drafts)
+  app.get("/api/admin/blogs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { status, category, authorId } = req.query;
+      const blogs = await storage.getAllBlogs({ 
+        status: status as string, 
+        category: category as string,
+        authorId: authorId as string 
+      });
+      
+      res.json(blogs);
+    } catch (error) {
+      console.error("Error fetching blogs:", error);
+      res.status(500).json({ message: "Failed to fetch blogs" });
+    }
+  });
+
+  // Get single blog by ID (admin only)
+  app.get("/api/admin/blogs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blog = await storage.getBlogById(req.params.id);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+      
+      res.json(blog);
+    } catch (error) {
+      console.error("Error fetching blog:", error);
+      res.status(500).json({ message: "Failed to fetch blog" });
+    }
+  });
+
+  // Create new blog post (admin only)
+  app.post("/api/admin/blogs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blogData = insertBlogSchema.parse(req.body);
+      
+      // Check if slug already exists
+      const existingBlog = await storage.getBlogBySlug(blogData.slug);
+      if (existingBlog) {
+        return res.status(400).json({ message: "A blog with this slug already exists" });
+      }
+
+      const newBlog = await storage.createBlog({
+        ...blogData,
+        authorId: userId,
+      });
+      
+      res.status(201).json(newBlog);
+    } catch (error) {
+      console.error("Error creating blog:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create blog" });
+    }
+  });
+
+  // Update blog post (admin only)
+  app.patch("/api/admin/blogs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blog = await storage.getBlogById(req.params.id);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+
+      // If slug is being changed, check for duplicates
+      if (req.body.slug && req.body.slug !== blog.slug) {
+        const existingBlog = await storage.getBlogBySlug(req.body.slug);
+        if (existingBlog) {
+          return res.status(400).json({ message: "A blog with this slug already exists" });
+        }
+      }
+
+      const updatedBlog = await storage.updateBlog(req.params.id, req.body);
+      res.json(updatedBlog);
+    } catch (error) {
+      console.error("Error updating blog:", error);
+      res.status(500).json({ message: "Failed to update blog" });
+    }
+  });
+
+  // Publish blog post (admin only)
+  app.post("/api/admin/blogs/:id/publish", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blog = await storage.getBlogById(req.params.id);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+
+      const publishedBlog = await storage.publishBlog(req.params.id);
+      res.json(publishedBlog);
+    } catch (error) {
+      console.error("Error publishing blog:", error);
+      res.status(500).json({ message: "Failed to publish blog" });
+    }
+  });
+
+  // Unpublish blog post (admin only)
+  app.post("/api/admin/blogs/:id/unpublish", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blog = await storage.getBlogById(req.params.id);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+
+      const unpublishedBlog = await storage.unpublishBlog(req.params.id);
+      res.json(unpublishedBlog);
+    } catch (error) {
+      console.error("Error unpublishing blog:", error);
+      res.status(500).json({ message: "Failed to unpublish blog" });
+    }
+  });
+
+  // Delete blog post (admin only)
+  app.delete("/api/admin/blogs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blog = await storage.getBlogById(req.params.id);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+
+      await storage.deleteBlog(req.params.id);
+      res.json({ message: "Blog deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting blog:", error);
+      res.status(500).json({ message: "Failed to delete blog" });
+    }
+  });
+
+  // Public routes for viewing published blogs
+  // Get published blogs with pagination
+  app.get("/api/blogs", async (req, res) => {
+    try {
+      const { category, tag, limit, offset } = req.query;
+      
+      const result = await storage.getPublishedBlogs({
+        category: category as string,
+        tag: tag as string,
+        limit: limit ? parseInt(limit as string) : 10,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching published blogs:", error);
+      res.status(500).json({ message: "Failed to fetch blogs" });
+    }
+  });
+
+  // Get single published blog by slug
+  app.get("/api/blogs/:slug", async (req, res) => {
+    try {
+      const blog = await storage.getBlogBySlug(req.params.slug);
+      
+      if (!blog || blog.status !== "published") {
+        return res.status(404).json({ message: "Blog not found" });
+      }
+      
+      res.json(blog);
+    } catch (error) {
+      console.error("Error fetching blog:", error);
+      res.status(500).json({ message: "Failed to fetch blog" });
     }
   });
 
