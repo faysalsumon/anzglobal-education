@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
+import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,8 +50,69 @@ export default function PublicCourseDetail() {
     );
   }
 
+  // Prepare SEO data
+  const siteUrl = window.location.origin;
+  const courseUrl = `${siteUrl}/courses/${courseId}`;
+  const metaTitle = `${course.title} - ${course.university?.name || 'University'} | ANZ Global Education`;
+  const metaDescription = course.description 
+    ? course.description.substring(0, 160)
+    : `Study ${course.title} at ${course.university?.name || 'a top university'}. ${course.level || 'Degree'} program in ${course.subject || 'your field'}. ${course.country ? `Location: ${course.country}.` : ''}`;
+  const ogImage = course.university?.logo || `${siteUrl}/og-image.png`;
+
+  // Create JSON-LD structured data for Course
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    "name": course.title,
+    "description": course.description || metaDescription,
+    "provider": course.university ? {
+      "@type": "Organization",
+      "name": course.university.name,
+      "url": course.university.website,
+      "logo": course.university.logo
+    } : undefined,
+    "teaches": course.subject || undefined,
+    "educationalLevel": course.level || undefined,
+    "availableLanguage": course.languageOfInstruction || "English",
+    "timeToComplete": course.duration || undefined,
+    "totalCost": course.tuitionFee ? `${course.tuitionCurrency || 'USD'} ${course.tuitionFee}` : undefined,
+    "offers": course.tuitionFee ? {
+      "@type": "Offer",
+      "price": course.tuitionFee,
+      "priceCurrency": course.tuitionCurrency || 'USD'
+    } : undefined
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{metaTitle}</title>
+        <meta name="title" content={metaTitle} />
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={courseUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={courseUrl} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={courseUrl} />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4">
