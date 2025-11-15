@@ -42,6 +42,14 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 **Course Pages**: Both student and public course detail pages display scholarship as a fixed value ("Up to X%") rather than a range, making it more student-friendly. Career pathways section shows potential career roles and detailed career progression when data is available. Institution pages display scholarship as a range to show the full scholarship opportunity.
 
+**Blog Infrastructure** (November 2025): Full-featured markdown-based blog system with:
+- **Admin Management**: Create, edit, publish/draft workflow with SEO metadata fields (metaTitle, metaDescription, keywords, ogImageUrl)
+- **Public Pages**: Archive page (/blog) with featured post hero and grid layout, individual post pages (/blog/[slug]) with markdown rendering
+- **SEO Implementation (Phase 1)**: React Helmet integration for dynamic meta tags, Open Graph/Twitter Cards for social sharing, JSON-LD Article schema for rich search results
+- **Dynamic Endpoints**: `/sitemap.xml` (auto-generates from published blogs with lastmod dates), `/robots.txt` (environment-aware, allows all crawlers including AI bots)
+- **Assets**: Logo and OG image files in client/public/ for social sharing previews
+- **Phase 1 Note**: Current implementation uses client-side meta tag injection (works with Google/Bing which execute JavaScript). Future Phase 2 would require SSR migration for full AI crawler compatibility (GPTBot, ClaudeBot).
+
 ### Technical Implementation
 
 The **frontend** is built with React, TypeScript, Vite, Shadcn/ui (New York style), Radix UI, and Tailwind CSS, using Wouter for routing and TanStack Query for server state. Forms are managed with React Hook Form and Zod.
@@ -94,6 +102,7 @@ The **backend** uses Node.js Express.js in TypeScript. Authentication is handled
 - **Real-time**: ws (WebSocket)
 - **Google Maps**: @googlemaps/js-api-loader
 - **CSV Processing**: papaparse
+- **SEO**: react-helmet (dynamic meta tags), react-markdown + remark-gfm (blog content rendering)
 
 **Replit-Specific Integrations**:
 - `@replit/vite-plugin-runtime-error-modal`
