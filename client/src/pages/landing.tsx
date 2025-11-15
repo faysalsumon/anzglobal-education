@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { Course, University, Blog } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
@@ -540,93 +539,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t bg-card py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div>
-              <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                Australia's leading platform connecting universities and international students.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-4 font-semibold text-foreground">For Students</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <button 
-                    onClick={() => setShowStudentAuthModal(true)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Student Portal
-                  </button>
-                </li>
-                <li>
-                  <a href="/courses" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Browse Courses
-                  </a>
-                </li>
-                <li>
-                  <a href="/institutions" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Browse Institutions
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 font-semibold text-foreground">For Institutions</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <button 
-                    onClick={() => setShowInstitutionAuthModal(true)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    data-testid="link-institution-portal"
-                  >
-                    Institution Portal
-                  </button>
-                </li>
-                <li>
-                  <button 
-                    onClick={() => setShowInstitutionAuthModal(true)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    List Your Institution
-                  </button>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Pricing
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 font-semibold text-foreground">Resources</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Knowledge Base
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="/contact" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-contact">
-                    Contact Us
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} ANZ Global Education. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
 
       {/* Student Auth Modal */}
       <StudentAuthModal 

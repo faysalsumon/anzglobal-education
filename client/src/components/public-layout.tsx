@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { PublicHeader } from "@/components/public-header";
+import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
 
 interface PublicLayoutProps {
@@ -17,11 +18,12 @@ export function PublicLayout({ children, onStudentLoginClick }: PublicLayoutProp
   const showPublicHeader = !isLoading && (!isAuthenticated || !user || !user.userType);
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {showPublicHeader && <PublicHeader onStudentLoginClick={onStudentLoginClick} />}
-      <main>
+      <main className="flex-1">
         {children}
       </main>
+      <Footer />
     </div>
   );
 }
