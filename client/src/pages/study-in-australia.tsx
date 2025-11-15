@@ -137,6 +137,9 @@ export default function StudyInAustralia() {
     }
   ];
 
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const pageUrl = `${siteUrl}/study-in-australia`;
+
   return (
     <PublicLayout>
       <Helmet>
@@ -145,14 +148,63 @@ export default function StudyInAustralia() {
           name="description" 
           content="Discover 22,000+ courses across 1,100+ Australian institutions. Built by international students who understand your journey. Get AI-powered course matching, expert guidance, and simplified applications." 
         />
+        
+        {/* Open Graph / Facebook */}
         <meta property="og:title" content="Study in Australia - Built by International Students for International Students" />
         <meta 
           property="og:description" 
           content="Your complete guide to studying in Australia. 22,000+ courses, 1,100+ institutions, AI-powered matching, and expert support from people who've been in your shoes." 
         />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content={heroImage} />
-        <meta name="keywords" content="study in Australia, international students Australia, Australian universities, study abroad Australia, courses in Australia, education Australia" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:image" content={`${siteUrl}${heroImage}`} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+        
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Study in Australia - Built by International Students for International Students" />
+        <meta name="twitter:description" content="Your complete guide to studying in Australia. 22,000+ courses, 1,100+ institutions, AI-powered matching, and expert support." />
+        <meta name="twitter:image" content={`${siteUrl}${heroImage}`} />
+        
+        <meta name="keywords" content="study in Australia, international students Australia, Australian universities, study abroad Australia, courses in Australia, education Australia, student visa Australia, international education" />
+        
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "Study in Australia",
+            "description": "Discover 22,000+ courses across 1,100+ Australian institutions. Built by international students who understand your journey.",
+            "url": pageUrl,
+            "provider": {
+              "@type": "EducationalOrganization",
+              "name": "ANZ Global Education",
+              "description": "Built by international students, for international students",
+              "url": siteUrl,
+              "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "AU"
+              }
+            },
+            "about": {
+              "@type": "EducationalOccupationalProgram",
+              "name": "Study in Australia Programs",
+              "description": "Access to 1,100+ institutions and 22,000+ courses across Australia",
+              "provider": {
+                "@type": "EducationalOrganization",
+                "name": "ANZ Global Education"
+              },
+              "educationalCredentialAwarded": "Various (Undergraduate, Postgraduate, Vocational)",
+              "numberOfCredits": "22000+ courses available"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "AUD",
+              "description": "100% free service for students"
+            }
+          })}
+        </script>
       </Helmet>
 
       {/* Hero Section with Background Image */}
