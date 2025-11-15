@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Helmet } from "react-helmet";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -325,8 +326,37 @@ export default function PublicCourses() {
     return true;
   });
 
+  // SEO data
+  const siteUrl = window.location.origin;
+  const pageUrl = `${siteUrl}/courses`;
+  const pageTitle = "Find Courses - ANZ Global Education";
+  const pageDescription = `Explore ${courses.length}+ international courses from top universities worldwide. Search by subject, level, country, and more. Compare courses and find your perfect academic path.`;
+  const ogImage = `${siteUrl}/og-image.png`;
+
   return (
     <PublicLayout>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{pageTitle}</title>
+        <meta name="title" content={pageTitle} />
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={pageUrl} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
 
       <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
         <div className="space-y-4 sm:space-y-6">
