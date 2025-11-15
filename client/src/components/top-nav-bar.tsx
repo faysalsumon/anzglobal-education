@@ -91,6 +91,22 @@ export function TopNavBar() {
     return user.email.substring(0, 2).toUpperCase();
   };
 
+  const getUserRoleDisplay = () => {
+    if (!user?.userType) return "User";
+    
+    // For admin users, show their specific admin role
+    if (user.userType === "admin") {
+      const adminRole = user.adminRole || user.role;
+      if (adminRole === "super_admin") return "Super Admin";
+      if (adminRole === "support_manager") return "Support Manager";
+      if (adminRole === "support_staff") return "Consultant";
+      return "Admin";
+    }
+    
+    // For other user types, display normally
+    return user.userType.replace('_', ' ');
+  };
+
   return (
     <header className="sticky top-0 z-[9999] border-b border-border/40 bg-background shadow-sm backdrop-blur-sm isolate">
       <div className="flex h-16 items-center justify-between px-4 md:px-6 gap-4">
@@ -153,8 +169,8 @@ export function TopNavBar() {
                       ? `${user.firstName} ${user.lastName}`
                       : user?.email}
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground capitalize">
-                    {user?.userType?.replace('_', ' ')}
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {getUserRoleDisplay()}
                   </p>
                 </div>
               </DropdownMenuLabel>
