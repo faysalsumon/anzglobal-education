@@ -104,6 +104,9 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
     }
   };
 
+  // Use larger button size on mobile for better touch targets (44px minimum)
+  const buttonSize = isMobile ? "lg" : "default";
+
   return (
     <Sidebar collapsible="icon" data-testid="admin-sidebar">
       <SidebarHeader className="border-b border-border/40 px-3 py-4">
@@ -131,6 +134,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
+                        size={buttonSize}
                         data-testid={`sidebar-${item.value}`}
                       >
                         <Icon className="h-4 w-4" />
@@ -158,6 +162,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
+                        size={buttonSize}
                         data-testid={`sidebar-${item.value}`}
                       >
                         <Icon className="h-4 w-4" />
@@ -185,6 +190,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
+                        size={buttonSize}
                         data-testid={`sidebar-${item.value}`}
                       >
                         <Icon className="h-4 w-4" />
