@@ -17,9 +17,10 @@ The platform features a modern AI-style branding with gradient backgrounds and a
 **Navigation Architecture:**
 - **Student & Public Pages**: Horizontal top navigation (desktop) and bottom tab navigation (mobile, Instagram/Twitter style)
 - **Admin Dashboard**: Modern 3-column layout with icon-first sidebar, central workspace, and quick actions panel
-  - **Desktop (≥1024px)**: Full 3-column layout - AdminSidebar (left, icon-only collapsible nav) + Main content (center, tabbed workspace) + Quick Actions (right, 20rem panel)
+  - **Desktop (≥1024px)**: Full 3-column layout - AdminSidebar (left, icon-only collapsible nav) + Main content (center, content area) + Quick Actions (right, 20rem panel)
   - **Mobile (<1024px)**: Single column with drawer-based sidebar (auto-closes on selection), hidden quick actions panel
-  - **AdminSidebar**: Icon-only navigation using Shadcn Sidebar with `collapsible="icon"`, includes useSidebar hook for mobile drawer state management
+  - **AdminSidebar**: Icon-only navigation using Shadcn Sidebar with `collapsible="icon"`, includes useSidebar hook for mobile drawer state management. Sidebar is the ONLY navigation method - no horizontal tabs in main content.
+  - **Main Content**: Displays active tab content directly without horizontal tab headers. Content switches via conditional rendering based on activeTab state.
   - **Quick Actions Panel**: Role-gated cards for Quick Actions (New User/Institution/Course), AI Tools (Institution/Course Extract), Overview Stats, and Pending Approvals
   - **Responsive Grid**: Uses `lg:grid-cols-[minmax(0,1fr)_20rem]` for desktop 3-column layout with proper mobile fallback
 

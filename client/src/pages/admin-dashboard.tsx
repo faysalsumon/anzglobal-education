@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed - navigation now in AdminSidebar only
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
@@ -1000,50 +1000,10 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList>
-          {/* Users and Institutions tabs - Only for full admins (super_admin & support_manager) */}
-          {hasFullAdminAccess && (
-            <>
-              <TabsTrigger value="users" data-testid="tab-users">
-                <Users className="h-4 w-4 mr-2" />
-                Users ({userStats.total})
-              </TabsTrigger>
-              <TabsTrigger value="institutions" data-testid="tab-institutions">
-                <Building2 className="h-4 w-4 mr-2" />
-                Institutions ({institutionStats.total})
-              </TabsTrigger>
-            </>
-          )}
-          {/* Courses - Available to all admins (view-only for consultants) */}
-          <TabsTrigger value="courses" data-testid="tab-courses">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Courses ({courseStats.total})
-          </TabsTrigger>
-          {/* Applications, Inquiry Leads, and Student Leads - Available to all admins */}
-          <TabsTrigger value="student-leads" data-testid="tab-student-leads">
-            <GraduationCap className="h-4 w-4 mr-2" />
-            Student Leads ({studentLeads?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="inquiry-leads" data-testid="tab-inquiry-leads">
-            <FileText className="h-4 w-4 mr-2" />
-            Inquiry Leads ({inquiryLeads?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="applications" data-testid="tab-applications">
-            <FileText className="h-4 w-4 mr-2" />
-            Applications ({applications?.length || 0})
-          </TabsTrigger>
-          {/* Data Import - Only for full admins (super_admin & support_manager) */}
-          {hasFullAdminAccess && (
-            <TabsTrigger value="data-import" data-testid="tab-data-import">
-              <Upload className="h-4 w-4 mr-2" />
-              Data Import
-            </TabsTrigger>
-          )}
-        </TabsList>
-
+                <div className="space-y-4">
         {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
+        {activeTab === "users" && (
+          <div className="space-y-4">
           {/* Stats */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -1240,10 +1200,12 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Institutions Tab */}
-        <TabsContent value="institutions" className="space-y-4">
+        {activeTab === "institutions" && (
+          <div className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1403,10 +1365,12 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Courses Tab */}
-        <TabsContent value="courses" className="space-y-4">
+        {activeTab === "courses" && (
+          <div className="space-y-4">
           {/* Stats */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Card>
@@ -1589,10 +1553,12 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Student Leads Tab */}
-        <TabsContent value="student-leads" className="space-y-4">
+        {activeTab === "student-leads" && (
+          <div className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1685,10 +1651,12 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Inquiry Leads Tab */}
-        <TabsContent value="inquiry-leads" className="space-y-4">
+        {activeTab === "inquiry-leads" && (
+          <div className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1773,10 +1741,12 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Applications Tab */}
-        <TabsContent value="applications" className="space-y-4">
+        {activeTab === "applications" && (
+          <div className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -1896,13 +1866,16 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
+        )}
 
         {/* Data Import Tab */}
-        <TabsContent value="data-import" className="space-y-4">
-          <AdminCsvImportPanel />
-        </TabsContent>
-      </Tabs>
+        {activeTab === "data-import" && (
+          <div className="space-y-4">
+            <AdminCsvImportPanel />
+          </div>
+        )}
+      </div>
               </main>
 
               {/* Right Rail - Quick Actions */}
