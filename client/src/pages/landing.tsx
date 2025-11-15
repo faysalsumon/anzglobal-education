@@ -374,20 +374,20 @@ export default function Landing() {
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 <CardTitle>For Universities</CardTitle>
-                <CardDescription>Showcase your institution and attract global talent</CardDescription>
+                <CardDescription>Streamline admissions and expand your global reach</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>AI-powered course descriptions</span>
+                  <span>AI-powered content generation for courses</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Manage applications effortlessly</span>
+                  <span>Centralized application management system</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Reach international students</span>
+                  <span>Connect with qualified international candidates</span>
                 </div>
               </CardContent>
             </Card>
