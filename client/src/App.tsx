@@ -35,6 +35,7 @@ import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
 import ChatPage from "@/pages/chat";
 
@@ -64,6 +65,7 @@ function Router() {
         <>
           <Route path="/dashboard" component={Home} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
+          <Route path="/admin/profile" component={AdminProfile} />
           <Route path="/admin/csv-import" component={AdminCSVImport} />
           <Route path="/university/profile" component={UniversityProfile} />
           <Route path="/university/institutions" component={UniversityInstitutions} />

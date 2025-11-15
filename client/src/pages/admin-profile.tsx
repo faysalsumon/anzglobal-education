@@ -77,10 +77,7 @@ export default function AdminProfile() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      return await apiRequest<AdminUser>("/api/admin/profile", {
-        method: "PUT",
-        body: data,
-      });
+      return await apiRequest("PUT", "/api/admin/profile", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
