@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
+import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,8 +57,67 @@ export default function PublicInstitutionDetail() {
     );
   }
 
+  // Prepare SEO data
+  const siteUrl = window.location.origin;
+  const institutionUrl = `${siteUrl}/institutions/${institutionId}`;
+  const metaTitle = `${institution.name} - ${institution.country || 'International University'} | ANZ Global Education`;
+  const metaDescription = institution.description 
+    ? institution.description.substring(0, 160)
+    : `Discover ${institution.name}, ${institution.providerType || 'a leading institution'} in ${institution.country || 'international education'}. ${institution.establishedYear ? `Established ${institution.establishedYear}.` : ''} ${institution.scholarshipPercentageMin !== null || institution.scholarshipPercentageMax !== null ? 'Scholarships available.' : ''}`;
+  const ogImage = institution.logo || `${siteUrl}/og-image.png`;
+
+  // Create JSON-LD structured data for Organization
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": institution.name,
+    "description": institution.description || metaDescription,
+    "url": institution.website,
+    "logo": institution.logo,
+    "address": institution.location ? {
+      "@type": "PostalAddress",
+      "addressLocality": institution.location,
+      "addressCountry": institution.country
+    } : undefined,
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": institution.contactPhone,
+      "email": institution.contactEmail,
+      "contactType": "Admissions"
+    },
+    "foundingDate": institution.establishedYear ? `${institution.establishedYear}-01-01` : undefined
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>{metaTitle}</title>
+        <meta name="title" content={metaTitle} />
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={institutionUrl} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={institutionUrl} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="ANZ Global Education" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={institutionUrl} />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
+
       {/* Header */}
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 py-6">
