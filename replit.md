@@ -28,6 +28,7 @@ Key user experiences include an **Institution Portal** for managing courses, app
 
 Core features include:
 -   **Landing Page** with prominent search.
+-   **Study in Australia Page**: Student-centric landing page targeting international students with value proposition "Built by international students, for international students". Features hero section with professional static imagery, stats showcase (1,100+ institutions, 22,000+ courses), benefits cards, 3-step process, popular study destinations, success stories, and multiple registration CTAs integrated with StudentAuthModal. Comprehensive SEO with meta tags, Open Graph/Twitter Cards, and JSON-LD structured data. Mobile-responsive design with Tailwind grid layouts. Route: `/study-in-australia`.
 -   **Student Authentication Modal** with social and email/password logins.
 -   Detailed **Public Course Detail Pages** and **Institution Pages**.
 -   **Lead generation forms** and a comprehensive **Contact Us Page**.
