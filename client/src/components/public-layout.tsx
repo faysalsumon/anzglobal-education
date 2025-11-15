@@ -8,11 +8,13 @@ interface PublicLayoutProps {
 }
 
 export function PublicLayout({ children, onStudentLoginClick }: PublicLayoutProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   
   // Only show PublicHeader for unauthenticated users
-  // Authenticated users get TopNavBar from App.tsx
-  const showPublicHeader = !isAuthenticated || !user?.userType;
+  // Authenticated users with userType get TopNavBar from App.tsx
+  // Don't show during loading to prevent header flash
+  // Show PublicHeader if: NOT loading AND (not authenticated OR no user OR no userType)
+  const showPublicHeader = !isLoading && (!isAuthenticated || !user || !user.userType);
   
   return (
     <div className="min-h-screen bg-background">
