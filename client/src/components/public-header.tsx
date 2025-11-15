@@ -28,7 +28,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
 
   const servicesMenuItems = [
     { title: "Services For Institutions", href: "/services/institutions" },
-    { title: "Services For Students", href: "/services/students" },
+    { title: "Study in Australia", href: "/study-in-australia" },
     { title: "Student Visa", href: "/services/visa" },
     { title: "Student Accommodation", href: "/services/accommodation" },
     { title: "Health Insurance", href: "/services/insurance" },

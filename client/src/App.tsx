@@ -32,6 +32,7 @@ import PublicBlogDetail from "@/pages/public-blog-detail";
 import CompareCourses from "@/pages/compare-courses";
 import Contact from "@/pages/contact";
 import PartnerWithUs from "@/pages/partner-with-us";
+import StudyInAustralia from "@/pages/study-in-australia";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/compare-courses" component={CompareCourses} />
       <Route path="/contact" component={Contact} />
       <Route path="/partner-with-us" component={PartnerWithUs} />
+      <Route path="/study-in-australia" component={StudyInAustralia} />
       <Route path="/courses/:id" component={PublicCourseDetail} />
       <Route path="/courses" component={PublicCourses} />
       <Route path="/institutions/:id" component={PublicInstitutionDetail} />
@@ -97,7 +99,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
