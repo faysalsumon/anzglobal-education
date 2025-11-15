@@ -20,17 +20,20 @@ export default function PublicBlogDetail() {
     enabled: !!slug,
   });
 
-  // Fetch related blogs (same category)
+  // Fetch related blogs (same category, excluding current post)
   const { data: relatedBlogs = [] } = useQuery<Blog[]>({
-    queryKey: ["/api/blogs/related", blog?.category],
+    queryKey: ["/api/blogs", { category: blog?.category, exclude: slug }],
     queryFn: async () => {
       if (!blog?.category) return [];
-      const response = await fetch("/api/blogs", { credentials: "include" });
+      const params = new URLSearchParams({
+        category: blog.category,
+        limit: "3",
+      });
+      const response = await fetch(`/api/blogs?${params}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch related blogs");
-      const allBlogs = await response.json();
-      return allBlogs
-        .filter((b: Blog) => b.category === blog.category && b.slug !== slug)
-        .slice(0, 3);
+      const blogs = await response.json();
+      // Filter out current blog slug client-side as a safety measure
+      return blogs.filter((b: Blog) => b.slug !== slug);
     },
     enabled: !!blog?.category,
   });

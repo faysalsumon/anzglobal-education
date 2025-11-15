@@ -401,12 +401,12 @@ export default function Landing() {
 
       {/* Recent Blog Posts Section */}
       {blogs.length > 0 && (
-        <section className="py-16 md:py-24 bg-card">
+        <section className="py-16 md:py-24 bg-card" data-testid="section-recent-blogs">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-12">
               <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-2">Latest Insights</h2>
-                <p className="text-muted-foreground">
+                <h2 className="text-3xl md:text-4xl font-bold mb-2" data-testid="heading-recent-blogs">Latest Insights</h2>
+                <p className="text-muted-foreground" data-testid="text-recent-blogs-description">
                   Stay updated with the latest news and guides in international education
                 </p>
               </div>
@@ -420,7 +420,7 @@ export default function Landing() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {blogs.slice(0, 3).map((blog) => (
-                <Link key={blog.id} href={`/blog/${blog.slug}`}>
+                <Link key={blog.id} href={`/blog/${blog.slug}`} data-testid={`link-blog-${blog.slug}`}>
                   <Card className="h-full hover-elevate group" data-testid={`landing-blog-card-${blog.slug}`}>
                     {blog.featuredImageUrl && (
                       <div className="aspect-video w-full overflow-hidden rounded-t-lg">
@@ -428,13 +428,14 @@ export default function Landing() {
                           src={blog.featuredImageUrl}
                           alt={blog.title}
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          data-testid={`img-blog-${blog.slug}`}
                         />
                       </div>
                     )}
                     <CardHeader>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Calendar className="h-3 w-3" />
-                        <span>
+                        <span data-testid={`text-blog-date-${blog.slug}`}>
                           {blog.publishedAt
                             ? new Date(blog.publishedAt).toLocaleDateString("en-US", {
                                 year: "numeric",
@@ -444,13 +445,13 @@ export default function Landing() {
                             : ""}
                         </span>
                       </div>
-                      <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
+                      <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors" data-testid={`text-blog-title-${blog.slug}`}>
                         {blog.title}
                       </CardTitle>
                     </CardHeader>
                     {blog.excerpt && (
                       <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                        <p className="text-sm text-muted-foreground line-clamp-3" data-testid={`text-blog-excerpt-${blog.slug}`}>
                           {blog.excerpt}
                         </p>
                       </CardContent>
