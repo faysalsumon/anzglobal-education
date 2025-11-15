@@ -27,6 +27,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,6 +41,7 @@ import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/go
 import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
 import { AICourseExtractor } from "@/components/ai-course-extractor";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
+import { AdminSidebar } from "@/components/admin-sidebar";
 
 interface User {
   id: string;
@@ -753,6 +755,7 @@ export default function AdminDashboard() {
     total: institutions?.length || 0,
     active: institutions?.filter(i => i.isActive).length || 0,
     inactive: institutions?.filter(i => !i.isActive).length || 0,
+    pending: institutions?.filter(i => i.approvalStatus === 'pending').length || 0,
   };
 
   // Course stats
@@ -925,50 +928,79 @@ export default function AdminDashboard() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <Breadcrumb data-testid="breadcrumb">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/admin/dashboard" data-testid="breadcrumb-home">
-                    <Home className="h-4 w-4" />
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Button variant="outline" size="sm" asChild data-testid="button-public-site">
-            <Link href="/">
-              <Home className="h-4 w-4 mr-2" />
-              Public Site
-            </Link>
-          </Button>
-        </div>
-        
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
-            {isConsultant 
-              ? "Consultant Dashboard" 
-              : isSuperAdmin 
-                ? "Super Admin Dashboard" 
-                : "Admin Dashboard"}
-          </h1>
-          <p className="text-muted-foreground">
-            {isConsultant 
-              ? "Manage student applications and leads" 
-              : "Manage all platform users, institutions, and courses"}
-          </p>
-        </div>
-      </div>
+  // Sidebar styling
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "4.5rem",
+  } as React.CSSProperties;
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+  // Handle tab change with scroll to top
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <SidebarProvider style={sidebarStyle}>
+      <div className="flex min-h-screen w-full">
+        {/* Left Sidebar */}
+        <AdminSidebar 
+          activeTab={activeTab} 
+          onTabChange={handleTabChange} 
+          hasFullAdminAccess={hasFullAdminAccess} 
+        />
+
+        {/* Main Content Area */}
+        <div className="flex flex-col flex-1">
+          {/* Top Header with Breadcrumb */}
+          <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 py-3 lg:px-6">
+            <SidebarTrigger className="lg:hidden" data-testid="button-sidebar-toggle" />
+            <div className="flex flex-1 items-center justify-between gap-4">
+              <Breadcrumb data-testid="breadcrumb">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/admin/dashboard" data-testid="breadcrumb-home">
+                        <Home className="h-4 w-4" />
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+              <Button variant="outline" size="sm" asChild data-testid="button-public-site" className="hidden md:flex">
+                <Link href="/">
+                  <Home className="h-4 w-4 mr-2" />
+                  Public Site
+                </Link>
+              </Button>
+            </div>
+          </header>
+
+          {/* Content Grid: Main + Right Rail */}
+          <div className="flex-1 p-4 lg:p-6">
+            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6">
+              {/* Main Column */}
+              <main className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
+                    {isConsultant 
+                      ? "Consultant Dashboard" 
+                      : isSuperAdmin 
+                        ? "Super Admin Dashboard" 
+                        : "Admin Dashboard"}
+                  </h1>
+                  <p className="text-muted-foreground">
+                    {isConsultant 
+                      ? "Manage student applications and leads" 
+                      : "Manage all platform users, institutions, and courses"}
+                  </p>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           {/* Users and Institutions tabs - Only for full admins (super_admin & support_manager) */}
           {hasFullAdminAccess && (
@@ -1871,6 +1903,149 @@ export default function AdminDashboard() {
           <AdminCsvImportPanel />
         </TabsContent>
       </Tabs>
+              </main>
+
+              {/* Right Rail - Quick Actions */}
+              <aside className="hidden lg:flex lg:flex-col gap-4" data-testid="admin-quick-actions">
+                {/* Quick Create Actions */}
+                {hasFullAdminAccess && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline"
+                        onClick={() => {
+                          setEditingUser(null);
+                          userForm.reset();
+                          setUserDialogOpen(true);
+                        }}
+                        data-testid="quick-action-new-user"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New User
+                      </Button>
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline"
+                        onClick={() => {
+                          setEditingInstitution(null);
+                          institutionForm.reset();
+                          setInstitutionDialogOpen(true);
+                        }}
+                        data-testid="quick-action-new-institution"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Institution
+                      </Button>
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline"
+                        onClick={() => {
+                          setEditingCourse(null);
+                          courseForm.reset();
+                          setCourseDialogOpen(true);
+                        }}
+                        data-testid="quick-action-new-course"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Course
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* AI Extractors */}
+                {hasFullAdminAccess && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        AI Tools
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline"
+                        onClick={() => setAiExtractorDialogOpen(true)}
+                        data-testid="quick-action-ai-institution"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        AI Institution Extract
+                      </Button>
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline"
+                        onClick={() => setAiCourseExtractorDialogOpen(true)}
+                        data-testid="quick-action-ai-course"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        AI Course Extract
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {hasFullAdminAccess && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Users</span>
+                          <span className="font-semibold">{userStats.total}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Institutions</span>
+                          <span className="font-semibold">{institutionStats.total}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Courses</span>
+                      <span className="font-semibold">{courseStats.total}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Applications</span>
+                      <span className="font-semibold">{applications?.length || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Student Leads</span>
+                      <span className="font-semibold">{studentLeads?.length || 0}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pending Approvals */}
+                {hasFullAdminAccess && institutionStats.pending > 0 && (
+                  <Card className="border-orange-500/50">
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2 text-orange-600">
+                        <Clock className="h-4 w-4" />
+                        Pending Approvals
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Institutions</span>
+                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+                          {institutionStats.pending}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* User Create/Edit Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
@@ -2754,6 +2929,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </SidebarProvider>
   );
 }
