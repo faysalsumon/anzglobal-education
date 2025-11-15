@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,20 +59,22 @@ export default function AdminProfile() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: profile?.firstName || "",
-      lastName: profile?.lastName || "",
-      profileImageUrl: profile?.profileImageUrl || "",
+      firstName: "",
+      lastName: "",
+      profileImageUrl: "",
     },
   });
 
   // Update form when profile loads
-  if (profile && !form.formState.isDirty) {
-    form.reset({
-      firstName: profile.firstName || "",
-      lastName: profile.lastName || "",
-      profileImageUrl: profile.profileImageUrl || "",
-    });
-  }
+  useEffect(() => {
+    if (profile) {
+      form.reset({
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        profileImageUrl: profile.profileImageUrl || "",
+      });
+    }
+  }, [profile, form]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({

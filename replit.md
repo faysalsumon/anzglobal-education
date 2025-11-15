@@ -40,6 +40,14 @@ For administration, a **Super Admin Dashboard** provides full CRUD operations. *
 
 **Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD operations. Students can add multiple education records (level, institution, field of study, GPA) and language test scores (IELTS, TOEFL, PTE, Duolingo) with intelligent validation. 100% profile completion (personal info + ≥1 education + ≥1 language score) is required for application submission.
 
+**Admin Profile Management** (November 2025): Complete profile editing system for all admin users (super_admin, support_manager, content_manager):
+- **Personal Information**: Admins can update firstName, lastName, and profile photo via /admin/profile page
+- **Profile Photo Upload**: Integrated file upload with automatic resizing to 200x200px, 5MB limit, JPEG optimization
+- **Security**: Backend enforces admin-only access, restricts updates to non-sensitive fields (email/role/userType are read-only), no privilege escalation possible
+- **UI/UX**: Follows 3-column admin dashboard layout with SidebarProvider, includes read-only account information display (email, role, account status, member since date)
+- **Real-time Updates**: TanStack Query mutations with cache invalidation for immediate UI synchronization
+- **Implementation**: GET/PUT /api/admin/profile endpoints with Zod validation, storage persistence via storage.updateUser, form validation with react-hook-form
+
 **Course Pages**: Both student and public course detail pages display scholarship as a fixed value ("Up to X%") rather than a range, making it more student-friendly. Career pathways section shows potential career roles and detailed career progression when data is available. Institution pages display scholarship as a range to show the full scholarship opportunity.
 
 **Blog Infrastructure** (November 2025): Full-featured markdown-based blog system with:
