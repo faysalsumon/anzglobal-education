@@ -23,6 +23,7 @@ import {
   insertStudentLeadSchema,
   insertContactSubmissionSchema,
   insertBlogSchema,
+  insertContactInquirySchema,
   rejectionSchema,
   users,
   universities,
@@ -5131,6 +5132,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching blog:", error);
       res.status(500).json({ message: "Failed to fetch blog" });
+    }
+  });
+
+  // ========================================
+  // CONTACT INQUIRY ROUTES
+  // ========================================
+
+  // Create contact inquiry (public)
+  app.post("/api/contact/inquiry", async (req, res) => {
+    try {
+      // Parse and validate the request body
+      const inquiryData = insertContactInquirySchema.parse(req.body);
+      
+      // Add tracking information
+      const fullInquiryData = {
+        ...inquiryData,
+        status: "new" as const,
+        ipAddress: req.ip || req.connection.remoteAddress || undefined,
+        userAgent: req.headers["user-agent"] || undefined,
+        referrer: req.headers["referer"] || undefined,
+      };
+      
+      // Create the inquiry
+      const inquiry = await storage.createContactInquiry(fullInquiryData);
+      
+      // TODO: Send email notifications to admin and confirmation to user
+      // This will be implemented in the next step
+      
+      res.json({ 
+        message: "Inquiry submitted successfully",
+        id: inquiry.id
+      });
+    } catch (error: any) {
+      console.error("Error submitting contact inquiry:", error);
+      
+      // Handle Zod validation errors
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to submit inquiry" });
+    }
+  });
+
+  // Get all contact inquiries (admin only)
+  app.get("/api/admin/contact/inquiries", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, type, assignedTo } = req.query;
+      const inquiries = await storage.getAllContactInquiries({
+        status: status as string,
+        type: type as string,
+        assignedTo: assignedTo as string,
+      });
+      
+      res.json(inquiries);
+    } catch (error) {
+      console.error("Error fetching contact inquiries:", error);
+      res.status(500).json({ message: "Failed to fetch inquiries" });
+    }
+  });
+
+  // Get single contact inquiry (admin only)
+  app.get("/api/admin/contact/inquiries/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const inquiry = await storage.getContactInquiryById(req.params.id);
+      if (!inquiry) {
+        return res.status(404).json({ message: "Inquiry not found" });
+      }
+      
+      res.json(inquiry);
+    } catch (error) {
+      console.error("Error fetching contact inquiry:", error);
+      res.status(500).json({ message: "Failed to fetch inquiry" });
+    }
+  });
+
+  // Update contact inquiry (admin only)
+  app.patch("/api/admin/contact/inquiries/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const inquiry = await storage.getContactInquiryById(req.params.id);
+      if (!inquiry) {
+        return res.status(404).json({ message: "Inquiry not found" });
+      }
+      
+      const updatedInquiry = await storage.updateContactInquiry(req.params.id, req.body);
+      res.json(updatedInquiry);
+    } catch (error) {
+      console.error("Error updating contact inquiry:", error);
+      res.status(500).json({ message: "Failed to update inquiry" });
+    }
+  });
+
+  // Update contact inquiry status (admin only)
+  app.patch("/api/admin/contact/inquiries/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status } = req.body;
+      if (!["new", "in_progress", "responded", "closed"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const inquiry = await storage.getContactInquiryById(req.params.id);
+      if (!inquiry) {
+        return res.status(404).json({ message: "Inquiry not found" });
+      }
+      
+      const updatedInquiry = await storage.updateContactInquiryStatus(req.params.id, status);
+      res.json(updatedInquiry);
+    } catch (error) {
+      console.error("Error updating contact inquiry status:", error);
+      res.status(500).json({ message: "Failed to update inquiry status" });
+    }
+  });
+
+  // Assign contact inquiry (admin only)
+  app.patch("/api/admin/contact/inquiries/:id/assign", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { assignedTo } = req.body;
+      if (!assignedTo) {
+        return res.status(400).json({ message: "Assigned user ID required" });
+      }
+      
+      const inquiry = await storage.getContactInquiryById(req.params.id);
+      if (!inquiry) {
+        return res.status(404).json({ message: "Inquiry not found" });
+      }
+      
+      const updatedInquiry = await storage.assignContactInquiry(req.params.id, assignedTo);
+      res.json(updatedInquiry);
+    } catch (error) {
+      console.error("Error assigning contact inquiry:", error);
+      res.status(500).json({ message: "Failed to assign inquiry" });
     }
   });
 
