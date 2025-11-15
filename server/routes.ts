@@ -1659,11 +1659,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Resize to 200x200 with cover
-      const resizedBuffer = await sharp(req.file.buffer)
-        .resize(200, 200, { fit: 'cover' })
-        .jpeg({ quality: 85 })
-        .toBuffer();
+      // Validate file type
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Please upload a JPEG, PNG, or GIF image." });
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024;
+      if (req.file.size > maxSize) {
+        return res.status(400).json({ message: "File too large. Maximum size is 5MB." });
+      }
+
+      let resizedBuffer: Buffer;
+      try {
+        // Validate that the buffer is actually a valid image by trying to get metadata
+        await sharp(req.file.buffer).metadata();
+        
+        // Resize to 200x200 with cover
+        resizedBuffer = await sharp(req.file.buffer)
+          .resize(200, 200, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+      } catch (sharpError: any) {
+        console.error("Sharp processing error:", sharpError);
+        return res.status(400).json({ 
+          message: "Invalid or corrupted image file. Please try a different image." 
+        });
+      }
 
       // Save to public directory
       const filename = `admin-profile-${user.id}-${Date.now()}.jpg`;
