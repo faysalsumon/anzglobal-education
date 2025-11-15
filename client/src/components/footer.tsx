@@ -25,7 +25,7 @@ const footerSections: FooterSection[] = [
       { label: "Find Institutions", href: "/institutions" },
       { label: "Find Courses", href: "/courses" },
       { label: "Partner with Us", href: "/partner-with-us" },
-      { label: "Services For Students", href: "/contact?topic=students" },
+      { label: "Study in Australia", href: "/study-in-australia" },
     ],
   },
   {
