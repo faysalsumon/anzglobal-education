@@ -243,17 +243,27 @@ export default function AdminProfile() {
                 <CardHeader>
                   <CardTitle>Profile Photo</CardTitle>
                   <CardDescription>
-                    Upload a profile photo to personalize your account
+                    Upload a profile photo to personalize your account. Photo updates automatically when selected.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-6">
-                    <Avatar className="h-24 w-24" data-testid="avatar-profile">
-                      <AvatarImage src={form.watch("profileImageUrl") || profile?.profileImageUrl || ""} />
-                      <AvatarFallback className="text-2xl">
-                        {getInitials()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-24 w-24" data-testid="avatar-profile">
+                        <AvatarImage 
+                          src={form.watch("profileImageUrl") || profile?.profileImageUrl || ""} 
+                          key={form.watch("profileImageUrl") || profile?.profileImageUrl}
+                        />
+                        <AvatarFallback className="text-2xl">
+                          {getInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {(isUploading || uploadPhotoMutation.isPending) && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <Input
@@ -280,14 +290,20 @@ export default function AdminProfile() {
                           ) : (
                             <>
                               <Upload className="h-4 w-4 mr-2" />
-                              Upload Photo
+                              Choose Photo
                             </>
                           )}
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        JPG, PNG or GIF. Max size 5MB.
+                        JPG, PNG or GIF. Max size 5MB. Photo saves automatically.
                       </p>
+                      {uploadPhotoMutation.isSuccess && (
+                        <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <Check className="h-4 w-4" />
+                          Photo uploaded successfully!
+                        </p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -315,7 +331,7 @@ export default function AdminProfile() {
                                 <Input 
                                   placeholder="John" 
                                   {...field} 
-                                  data-testid="input-first-name"
+                                  data-testid="input-firstName"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -332,7 +348,7 @@ export default function AdminProfile() {
                                 <Input 
                                   placeholder="Doe" 
                                   {...field} 
-                                  data-testid="input-last-name"
+                                  data-testid="input-lastName"
                                 />
                               </FormControl>
                               <FormMessage />
