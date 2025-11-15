@@ -77,6 +77,7 @@ import {
   notifyTeamMemberAdded,
   createNotification,
 } from "./notifications";
+import { sendContactInquiryEmails } from "./email-service";
 import express from "express";
 
 // Environment-aware rate limiting for AI extraction endpoint
@@ -5157,11 +5158,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the inquiry
       const inquiry = await storage.createContactInquiry(fullInquiryData);
       
-      // TODO: Send email notifications to admin and confirmation to user
-      // This will be implemented in the next step
+      // Send email notifications (don't wait for them to complete)
+      sendContactInquiryEmails({
+        id: inquiry.id,
+        inquiryType: inquiry.inquiryType,
+        // Student fields
+        studentName: inquiry.studentName,
+        // Institution fields
+        institutionName: inquiry.institutionName,
+        contactPerson: inquiry.contactPerson,
+        // Common fields
+        email: inquiry.email,
+        phone: inquiry.phone,
+        message: inquiry.message,
+        // Additional fields
+        country: inquiry.country,
+        courseInterest: inquiry.courseInterest,
+        studyLevel: inquiry.studyLevel,
+        visaStatus: inquiry.visaStatus,
+        website: inquiry.website,
+        partnershipType: inquiry.partnershipType,
+      }).catch(error => {
+        // Log error but don't fail the inquiry submission
+        console.error("Error sending email notifications:", error);
+      });
       
       res.json({ 
-        message: "Inquiry submitted successfully",
+        message: "Inquiry submitted successfully. You will receive a confirmation email shortly.",
         id: inquiry.id
       });
     } catch (error: any) {
