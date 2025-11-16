@@ -1,0 +1,151 @@
+import { useState, useRef, KeyboardEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Loader2 } from "lucide-react";
+import { useTypingAnimation } from "@/hooks/useTypingAnimation";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface NaturalLanguageSearchProps {
+  onSearchResults?: (results: any) => void;
+}
+
+const exampleQueries = [
+  "I want to study engineering in Melbourne under $30k",
+  "MBA programs in Sydney budget 20-25k",
+  "Computer science courses between $15000-$20000",
+  "Masters in business administration under 25 thousand",
+  "IT courses in Brisbane around $18000 per year",
+  "Engineering courses under 30k in Melbourne",
+];
+
+export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearchProps) {
+  const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const placeholderText = useTypingAnimation({
+    phrases: exampleQueries,
+    typingSpeed: 50,
+    deletingSpeed: 30,
+    pauseDuration: 2500,
+  });
+
+  const searchMutation = useMutation({
+    mutationFn: async (searchQuery: string) => {
+      return apiRequest("POST", "/api/courses/natural-search", { query: searchQuery });
+    },
+    onSuccess: (data) => {
+      if (onSearchResults) {
+        onSearchResults(data);
+      } else {
+        // Navigate to results page with the query
+        window.location.href = `/courses?nl=${encodeURIComponent(query)}`;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Search Error",
+        description: error.message || "Failed to process your search. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSearch = () => {
+    if (!query.trim()) {
+      toast({
+        title: "Empty Search",
+        description: "Please describe what you're looking for",
+        variant: "destructive",
+      });
+      return;
+    }
+    searchMutation.mutate(query.trim());
+  };
+
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const handleExampleClick = (example: string) => {
+    setQuery(example);
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto space-y-4">
+      {/* Main Search Bar */}
+      <div className="relative">
+        <div className="relative group">
+          <div className={`absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-lg blur-sm opacity-0 group-hover:opacity-30 transition duration-300 ${isFocused ? 'opacity-30' : ''}`}></div>
+          <div className="relative flex items-center bg-background rounded-lg border-2 border-border focus-within:border-primary transition-all duration-200">
+            <div className="flex-1 relative">
+              <Input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={query ? "" : placeholderText}
+                className="h-16 text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-4 bg-transparent"
+                disabled={searchMutation.isPending}
+                data-testid="input-natural-search"
+              />
+              {!query && (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <span className="text-lg text-muted-foreground/60">
+                    {placeholderText}
+                    <span className="animate-pulse">|</span>
+                  </span>
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={handleSearch}
+              disabled={searchMutation.isPending || !query.trim()}
+              size="lg"
+              className="h-14 px-8 m-1 bg-primary hover:bg-primary/90"
+              data-testid="button-search"
+            >
+              {searchMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-2" />
+                  Search
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Example Suggestions */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        <span className="text-sm text-muted-foreground self-center">Try:</span>
+        {exampleQueries.slice(0, 3).map((example, index) => (
+          <button
+            key={index}
+            onClick={() => handleExampleClick(example)}
+            className="text-sm text-primary hover:text-primary/80 hover-elevate active-elevate-2 px-3 py-1 rounded-md border border-border bg-background/50 transition-all duration-200"
+            data-testid={`button-example-${index}`}
+          >
+            "{example}"
+          </button>
+        ))}
+      </div>
+
+      {/* Search Tips */}
+      <div className="text-center text-sm text-muted-foreground">
+        <p>💡 Describe what you want in plain English - our AI will understand!</p>
+      </div>
+    </div>
+  );
+}

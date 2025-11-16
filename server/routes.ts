@@ -51,6 +51,7 @@ import {
   generateInstitutionGalleryImages,
   extractInstitutionDataFromWebsite,
   extractCourseDataFromWebsite,
+  parseNaturalLanguageQuery,
 } from "./ai";
 import multer from "multer";
 import sharp from "sharp";
@@ -1354,6 +1355,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching course:", error);
       res.status(500).json({ message: "Failed to fetch course" });
+    }
+  });
+
+  // Natural language course search endpoint
+  app.post("/api/courses/natural-search", async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      // Parse the natural language query using AI
+      const parsedParams = await parseNaturalLanguageQuery(query.trim());
+      
+      // Get all approved courses from approved institutions
+      const allCourses = await storage.getAllCourses();
+      const allUniversities = await storage.getAllUniversities();
+      
+      // Filter courses based on parsed parameters
+      let filteredCourses = allCourses.filter(course => {
+        const university = allUniversities.find(u => u.id === course.universityId);
+        
+        // Only include approved courses from approved institutions
+        if (course.approvalStatus !== 'approved' || !course.isActive) return false;
+        if (!university || university.approvalStatus !== 'approved' || !university.isActive) return false;
+        
+        // Apply filters from natural language query
+        
+        // Subject filter
+        if (parsedParams.subject) {
+          const subjectMatch = course.subject?.toLowerCase().includes(parsedParams.subject.toLowerCase()) ||
+                              course.title?.toLowerCase().includes(parsedParams.subject.toLowerCase());
+          if (!subjectMatch) return false;
+        }
+        
+        // Level filter
+        if (parsedParams.level) {
+          const levelMatch = course.level?.toLowerCase() === parsedParams.level.toLowerCase();
+          if (!levelMatch) return false;
+        }
+        
+        // Fees filter
+        if (parsedParams.minFees !== undefined || parsedParams.maxFees !== undefined) {
+          const courseFees = Number(course.fees) || 0;
+          if (parsedParams.minFees !== undefined && courseFees < parsedParams.minFees) return false;
+          if (parsedParams.maxFees !== undefined && courseFees > parsedParams.maxFees) return false;
+        }
+        
+        // Location filter (city/state)
+        if (parsedParams.location) {
+          const locationMatch = course.location?.toLowerCase().includes(parsedParams.location.toLowerCase()) ||
+                                university?.campusAddresses?.toString().toLowerCase().includes(parsedParams.location.toLowerCase());
+          if (!locationMatch) return false;
+        }
+        
+        // Country filter
+        if (parsedParams.country) {
+          const countryMatch = course.country?.toLowerCase().includes(parsedParams.country.toLowerCase()) ||
+                              university?.country?.toLowerCase().includes(parsedParams.country.toLowerCase());
+          if (!countryMatch) return false;
+        }
+        
+        return true;
+      });
+      
+      // Add university data to each course
+      const coursesWithUniversity = filteredCourses.map(course => ({
+        ...course,
+        university: allUniversities.find(u => u.id === course.universityId),
+      }));
+      
+      // Sort by relevance (for now, just by fees)
+      coursesWithUniversity.sort((a, b) => {
+        const aFees = Number(a.fees) || 0;
+        const bFees = Number(b.fees) || 0;
+        return aFees - bFees;
+      });
+      
+      res.json({
+        courses: coursesWithUniversity,
+        parsedParams,
+        totalResults: coursesWithUniversity.length,
+      });
+    } catch (error: any) {
+      console.error("Error in natural language search:", error);
+      
+      // Handle AI not configured error
+      if (error.code === 'ai_not_configured') {
+        return res.status(503).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Failed to process search query" });
     }
   });
 

@@ -784,3 +784,71 @@ Extract the following fields and return as JSON:
     throw new Error("Failed to parse extracted data from AI");
   }
 }
+
+/**
+ * Parsed search parameters from natural language query
+ */
+export interface ParsedSearchParams {
+  subject?: string;
+  level?: string;
+  minFees?: number;
+  maxFees?: number;
+  location?: string;
+  country?: string;
+  originalQuery: string;
+}
+
+/**
+ * Parse a natural language search query into structured search parameters
+ * @param query - Natural language query (e.g., "I want to study engineering in Melbourne under $30k")
+ * @returns Parsed search parameters
+ */
+export async function parseNaturalLanguageQuery(query: string): Promise<ParsedSearchParams> {
+  checkAIConfigured();
+  
+  const prompt = `You are a search query parser for an education platform. Parse the following natural language search query into structured search parameters.
+
+User Query: "${query}"
+
+Extract these parameters if present:
+- subject: field of study (e.g., "Computer Science", "Engineering", "Business", "MBA", "IT")
+- level: study level (e.g., "undergraduate", "postgraduate", "certificate", "diploma", "masters", "bachelor")
+- minFees: minimum tuition fees in USD (parse from expressions like "under 30k", "between 15-20k", "around 18000")
+- maxFees: maximum tuition fees in USD
+- location: city/state (e.g., "Melbourne", "Sydney", "Brisbane")
+- country: country (e.g., "Australia")
+
+Budget parsing examples:
+- "under $30k" → maxFees: 30000
+- "between $15-20k" → minFees: 15000, maxFees: 20000
+- "around $18000" → minFees: 15000, maxFees: 21000 (±15%)
+- "15-20 thousand" → minFees: 15000, maxFees: 20000
+- "budget 20-25k" → minFees: 20000, maxFees: 25000
+
+Level mapping:
+- "MBA", "Masters", "Master's" → "postgraduate"
+- "Bachelor", "Bachelor's", "undergraduate" → "undergraduate"
+
+Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 500,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      ...parsed,
+      originalQuery: query,
+    } as ParsedSearchParams;
+  } catch (error) {
+    console.error("Failed to parse natural language query:", error);
+    // Return just the original query if parsing fails
+    return { originalQuery: query };
+  }
+}
