@@ -799,6 +799,18 @@ export interface ParsedSearchParams {
 }
 
 /**
+ * Parsed institution search parameters from natural language query
+ */
+export interface ParsedInstitutionSearchParams {
+  providerType?: string;
+  country?: string;
+  location?: string;
+  searchTerm?: string;
+  topDisciplines?: string[];
+  originalQuery: string;
+}
+
+/**
  * Parse a natural language search query into structured search parameters
  * @param query - Natural language query (e.g., "I want to study engineering in Melbourne under $30k")
  * @returns Parsed search parameters
@@ -848,6 +860,55 @@ Return ONLY a JSON object with the extracted parameters. If a parameter cannot b
     } as ParsedSearchParams;
   } catch (error) {
     console.error("Failed to parse natural language query:", error);
+    // Return just the original query if parsing fails
+    return { originalQuery: query };
+  }
+}
+
+/**
+ * Parse a natural language institution search query into structured search parameters
+ * @param query - Natural language query (e.g., "universities in Melbourne offering engineering")
+ * @returns Parsed institution search parameters
+ */
+export async function parseNaturalLanguageInstitutionQuery(query: string): Promise<ParsedInstitutionSearchParams> {
+  checkAIConfigured();
+  
+  const prompt = `You are a search query parser for an education platform. Parse the following natural language search query into structured institution/university search parameters.
+
+User Query: "${query}"
+
+Extract these parameters if present:
+- searchTerm: main keyword or institution name (e.g., "Hilton", "engineering", "business school")
+- providerType: type of institution (e.g., "Public University", "Private University", "TAFE", "Private Institutions")
+- country: country (e.g., "Australia") - IMPORTANT: If a city is mentioned, also identify the country
+- location: city/state (e.g., "Melbourne", "Sydney", "Brisbane")
+- topDisciplines: array of disciplines/fields offered (e.g., ["Engineering", "Business", "IT"])
+
+Examples:
+- "universities in Melbourne" → country: "Australia", location: "Melbourne"
+- "TAFE in Sydney offering engineering" → providerType: "TAFE", location: "Sydney", country: "Australia", topDisciplines: ["Engineering"]
+- "business schools in Australia" → country: "Australia", topDisciplines: ["Business"]
+- "Hilton Academy" → searchTerm: "Hilton Academy"
+
+Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 500,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      ...parsed,
+      originalQuery: query,
+    } as ParsedInstitutionSearchParams;
+  } catch (error) {
+    console.error("Failed to parse natural language institution query:", error);
     // Return just the original query if parsing fails
     return { originalQuery: query };
   }

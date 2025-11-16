@@ -1,7 +1,7 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, GraduationCap, Building2 } from "lucide-react";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,20 +11,30 @@ interface NaturalLanguageSearchProps {
   onSearchResults?: (results: any) => void;
 }
 
-const exampleQueries = [
+const courseExamples = [
   "I want to study engineering in Melbourne under $30k",
   "MBA programs in Sydney budget 20-25k",
   "Computer science courses between $15000-$20000",
   "Masters in business administration under 25 thousand",
   "IT courses in Brisbane around $18000 per year",
-  "Engineering courses under 30k in Melbourne",
+];
+
+const institutionExamples = [
+  "universities in Melbourne",
+  "TAFE in Sydney offering engineering",
+  "business schools in Australia",
+  "public universities in Brisbane",
+  "Private institutions offering IT programs",
 ];
 
 export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearchProps) {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  const exampleQueries = searchType === "courses" ? courseExamples : institutionExamples;
 
   const placeholderText = useTypingAnimation({
     phrases: exampleQueries,
@@ -35,8 +45,12 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
 
   const searchMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
+      const endpoint = searchType === "courses" 
+        ? "/api/courses/natural-search" 
+        : "/api/institutions/natural-search";
+      
       // apiRequest throws if response is not OK (via throwIfResNotOk)
-      const response = await apiRequest("POST", "/api/courses/natural-search", { query: searchQuery });
+      const response = await apiRequest("POST", endpoint, { query: searchQuery });
       
       // Parse JSON response (apiRequest already validated response is OK)
       const data = await response.json();
@@ -46,53 +60,85 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
         throw new Error("Invalid response structure from server");
       }
       
-      return data;
+      return { ...data, searchType };
     },
-    onSuccess: (data: { parsedParams: any; courses?: any[]; totalResults?: number }) => {
+    onSuccess: (data: { parsedParams: any; courses?: any[]; institutions?: any[]; totalResults?: number; searchType: string }) => {
       if (onSearchResults) {
         onSearchResults(data);
       } else {
-        // Navigate to courses page with parsed parameters
-        const params = new URLSearchParams();
-        const { parsedParams } = data;
-        
-        // Combine subject and location into search term for full-text search
-        const searchTerms: string[] = [];
-        if (parsedParams.subject) {
-          searchTerms.push(parsedParams.subject);
-        }
-        if (parsedParams.location) {
-          searchTerms.push(parsedParams.location);
-        }
-        
-        if (searchTerms.length > 0) {
-          params.set("search", searchTerms.join(" "));
-        }
-        
-        // Also pass structured parameters for filter dropdowns
-        if (parsedParams.subject) {
-          params.set("subject", parsedParams.subject);
-        }
-        if (parsedParams.level) {
-          params.set("level", parsedParams.level);
-        }
-        // Always pass country if identified by AI
-        if (parsedParams.country) {
-          params.set("country", parsedParams.country);
-        }
-        if (parsedParams.minFees !== undefined || parsedParams.maxFees !== undefined) {
-          if (parsedParams.minFees !== undefined) {
-            params.set("minFees", String(parsedParams.minFees));
+        if (data.searchType === "courses") {
+          // Navigate to courses page with parsed parameters
+          const params = new URLSearchParams();
+          const { parsedParams } = data;
+          
+          // Combine subject and location into search term for full-text search
+          const searchTerms: string[] = [];
+          if (parsedParams.subject) {
+            searchTerms.push(parsedParams.subject);
           }
-          if (parsedParams.maxFees !== undefined) {
-            params.set("maxFees", String(parsedParams.maxFees));
+          if (parsedParams.location) {
+            searchTerms.push(parsedParams.location);
           }
+          
+          if (searchTerms.length > 0) {
+            params.set("search", searchTerms.join(" "));
+          }
+          
+          // Also pass structured parameters for filter dropdowns
+          if (parsedParams.subject) {
+            params.set("subject", parsedParams.subject);
+          }
+          if (parsedParams.level) {
+            params.set("level", parsedParams.level);
+          }
+          // Always pass country if identified by AI
+          if (parsedParams.country) {
+            params.set("country", parsedParams.country);
+          }
+          if (parsedParams.minFees !== undefined || parsedParams.maxFees !== undefined) {
+            if (parsedParams.minFees !== undefined) {
+              params.set("minFees", String(parsedParams.minFees));
+            }
+            if (parsedParams.maxFees !== undefined) {
+              params.set("maxFees", String(parsedParams.maxFees));
+            }
+          }
+          
+          // Add original query for display
+          params.set("nlQuery", parsedParams.originalQuery || query);
+          
+          window.location.href = `/courses?${params.toString()}`;
+        } else {
+          // Navigate to institutions page with parsed parameters
+          const params = new URLSearchParams();
+          const { parsedParams } = data;
+          
+          // Build search terms from parsed parameters
+          const searchTerms: string[] = [];
+          if (parsedParams.searchTerm) {
+            searchTerms.push(parsedParams.searchTerm);
+          }
+          if (parsedParams.location) {
+            searchTerms.push(parsedParams.location);
+          }
+          
+          if (searchTerms.length > 0) {
+            params.set("search", searchTerms.join(" "));
+          }
+          
+          // Pass structured parameters for filter dropdowns
+          if (parsedParams.providerType) {
+            params.set("providerType", parsedParams.providerType);
+          }
+          if (parsedParams.country) {
+            params.set("country", parsedParams.country);
+          }
+          
+          // Add original query for display
+          params.set("nlQuery", parsedParams.originalQuery || query);
+          
+          window.location.href = `/institutions?${params.toString()}`;
         }
-        
-        // Add original query for display
-        params.set("nlQuery", parsedParams.originalQuery || query);
-        
-        window.location.href = `/courses?${params.toString()}`;
       }
     },
     onError: (error: any) => {
@@ -129,6 +175,40 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
+      {/* Search Type Toggle */}
+      <div className="flex gap-2 justify-center">
+        <Button
+          variant={searchType === "courses" ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setSearchType("courses");
+            setQuery("");
+          }}
+          className={searchType === "courses" 
+            ? "bg-white text-primary hover:bg-white/90" 
+            : "bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"}
+          data-testid="button-search-type-courses"
+        >
+          <GraduationCap className="h-4 w-4 mr-2" />
+          Courses
+        </Button>
+        <Button
+          variant={searchType === "institutions" ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setSearchType("institutions");
+            setQuery("");
+          }}
+          className={searchType === "institutions" 
+            ? "bg-white text-primary hover:bg-white/90" 
+            : "bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"}
+          data-testid="button-search-type-institutions"
+        >
+          <Building2 className="h-4 w-4 mr-2" />
+          Institutions
+        </Button>
+      </div>
+
       {/* Main Search Bar */}
       <div className="relative">
         <div className="relative group">

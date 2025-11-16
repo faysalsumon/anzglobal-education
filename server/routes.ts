@@ -52,6 +52,7 @@ import {
   extractInstitutionDataFromWebsite,
   extractCourseDataFromWebsite,
   parseNaturalLanguageQuery,
+  parseNaturalLanguageInstitutionQuery,
 } from "./ai";
 import multer from "multer";
 import sharp from "sharp";
@@ -1452,6 +1453,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error in natural language search:", error);
+      
+      // Handle AI not configured error
+      if (error.code === 'ai_not_configured') {
+        return res.status(503).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: "Failed to process search query" });
+    }
+  });
+
+  // Natural language institution search endpoint
+  app.post("/api/institutions/natural-search", async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string' || !query.trim()) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      // Parse the natural language query using AI
+      let parsedParams = await parseNaturalLanguageInstitutionQuery(query.trim());
+      
+      // Ensure parsedParams has safe defaults
+      parsedParams = {
+        originalQuery: query.trim(),
+        searchTerm: parsedParams.searchTerm || undefined,
+        providerType: parsedParams.providerType || undefined,
+        location: parsedParams.location || undefined,
+        country: parsedParams.country || undefined,
+        topDisciplines: parsedParams.topDisciplines || undefined,
+      };
+      
+      // Get all approved institutions
+      const allInstitutions = await storage.getAllUniversities();
+      
+      // Filter institutions based on parsed parameters
+      let filteredInstitutions = allInstitutions.filter(institution => {
+        // Only include approved and active institutions
+        if (institution.approvalStatus !== 'approved' || !institution.isActive) return false;
+        
+        // Apply filters from natural language query
+        
+        // Search term filter (name, description)
+        if (parsedParams.searchTerm) {
+          const searchLower = parsedParams.searchTerm.toLowerCase();
+          const nameMatch = institution.name?.toLowerCase().includes(searchLower);
+          const descMatch = institution.description?.toLowerCase().includes(searchLower);
+          if (!nameMatch && !descMatch) return false;
+        }
+        
+        // Provider type filter
+        if (parsedParams.providerType) {
+          const typeMatch = institution.providerType?.toLowerCase().includes(parsedParams.providerType.toLowerCase());
+          if (!typeMatch) return false;
+        }
+        
+        // Country filter
+        if (parsedParams.country) {
+          const countryMatch = institution.country?.toLowerCase() === parsedParams.country.toLowerCase();
+          if (!countryMatch) return false;
+        }
+        
+        // Location filter (check in campusAddresses if available)
+        if (parsedParams.location) {
+          const locationLower = parsedParams.location.toLowerCase();
+          let locationMatch = false;
+          
+          // Check campusAddresses JSONB field
+          if (institution.campusAddresses && Array.isArray(institution.campusAddresses)) {
+            locationMatch = institution.campusAddresses.some((campus: any) => 
+              campus.city?.toLowerCase().includes(locationLower) ||
+              campus.state?.toLowerCase().includes(locationLower) ||
+              campus.address?.toLowerCase().includes(locationLower)
+            );
+          }
+          
+          if (!locationMatch) return false;
+        }
+        
+        // Top disciplines filter
+        if (parsedParams.topDisciplines && parsedParams.topDisciplines.length > 0) {
+          if (!institution.topDisciplines || institution.topDisciplines.length === 0) return false;
+          
+          const hasMatchingDiscipline = parsedParams.topDisciplines.some(searchDiscipline =>
+            institution.topDisciplines!.some(instDiscipline =>
+              instDiscipline.toLowerCase().includes(searchDiscipline.toLowerCase())
+            )
+          );
+          
+          if (!hasMatchingDiscipline) return false;
+        }
+        
+        return true;
+      });
+      
+      // Sort by name
+      filteredInstitutions.sort((a, b) => a.name.localeCompare(b.name));
+      
+      res.json({
+        institutions: filteredInstitutions,
+        parsedParams,
+        totalResults: filteredInstitutions.length,
+      });
+    } catch (error: any) {
+      console.error("Error in natural language institution search:", error);
       
       // Handle AI not configured error
       if (error.code === 'ai_not_configured') {
