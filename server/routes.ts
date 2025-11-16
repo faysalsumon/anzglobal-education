@@ -5142,6 +5142,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create contact inquiry (public)
   app.post("/api/contact/inquiry", async (req, res) => {
+    console.log("Contact inquiry endpoint hit");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    
     try {
       // Parse and validate the request body
       const inquiryData = insertContactInquirySchema.parse(req.body);
@@ -5163,21 +5166,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: inquiry.id,
         inquiryType: inquiry.inquiryType,
         // Student fields
-        studentName: inquiry.studentName,
+        studentName: inquiry.studentName || undefined,
         // Institution fields
-        institutionName: inquiry.institutionName,
-        contactPerson: inquiry.contactPerson,
+        institutionName: inquiry.institutionName || undefined,
+        contactPerson: inquiry.contactPerson || undefined,
         // Common fields
         email: inquiry.email,
-        phone: inquiry.phone,
+        phone: inquiry.phone || undefined,
         message: inquiry.message,
         // Additional fields
-        country: inquiry.country,
-        courseInterest: inquiry.courseInterest,
-        studyLevel: inquiry.studyLevel,
-        visaStatus: inquiry.visaStatus,
-        website: inquiry.website,
-        partnershipType: inquiry.partnershipType,
+        country: inquiry.country || undefined,
+        courseInterest: inquiry.courseInterest || undefined,
+        studyLevel: inquiry.studyLevel || undefined,
+        visaStatus: inquiry.visaStatus || undefined,
+        website: inquiry.website || undefined,
+        partnershipType: inquiry.partnershipType || undefined,
       }).catch(error => {
         // Log error but don't fail the inquiry submission
         console.error("Error sending email notifications:", error);

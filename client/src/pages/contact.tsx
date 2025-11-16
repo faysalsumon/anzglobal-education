@@ -108,7 +108,10 @@ export default function Contact() {
   });
 
   const submitContactMutation = useMutation({
-    mutationFn: (data: ContactData) => apiRequest("/api/contact/inquiry", "POST", data),
+    mutationFn: async (data: ContactData) => {
+      const res = await apiRequest("POST", "/api/contact/inquiry", data);
+      return res.json();
+    },
     onSuccess: () => {
       setIsSubmitted(true);
       if (contactType === "student") {
@@ -118,10 +121,11 @@ export default function Contact() {
       }
       queryClient.invalidateQueries({ queryKey: ["/api/contact/inquiries"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Contact form submission error:", error);
       toast({
         title: "Error",
-        description: "Failed to submit your inquiry. Please try again.",
+        description: error.message || "Failed to submit your inquiry. Please try again.",
         variant: "destructive",
       });
     },

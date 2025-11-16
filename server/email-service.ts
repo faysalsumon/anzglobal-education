@@ -1,9 +1,15 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with API key
+const apiKey = process.env.RESEND_API_KEY;
+if (!apiKey) {
+  console.error('WARNING: RESEND_API_KEY is not set. Email notifications will not be sent.');
+}
+
+const resend = apiKey ? new Resend(apiKey) : null;
 
 // Email configuration
-const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobaleducation.com>';
+const FROM_EMAIL = 'onboarding@resend.dev'; // Use Resend's default sender for testing
 const ADMIN_EMAIL = 'admin@anzglobaleducation.com'; // Change this to your actual admin email
 
 interface ContactInquiryEmailData {
@@ -311,43 +317,55 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
 
 // Send confirmation email to user
 export async function sendContactInquiryConfirmation(data: ContactInquiryEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping confirmation email');
+    return;
+  }
+  
   try {
     const name = data.inquiryType === 'student' ? data.studentName : data.contactPerson;
     const subject = data.inquiryType === 'student' 
       ? `Thank you for your study inquiry, ${name}!`
       : `Partnership Inquiry Received - ${data.institutionName}`;
     
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
       subject: subject,
       html: getUserConfirmationEmailHtml(data),
     });
     
-    console.log(`Confirmation email sent to ${data.email}`);
-  } catch (error) {
+    console.log(`Confirmation email sent to ${data.email}, ID: ${result.data?.id}`);
+  } catch (error: any) {
     console.error('Error sending confirmation email:', error);
+    console.error('Error details:', error.message);
     // Don't throw error to prevent blocking the inquiry submission
   }
 }
 
 // Send notification email to admin
 export async function sendAdminNotification(data: ContactInquiryEmailData & { id: string }): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping admin notification email');
+    return;
+  }
+  
   try {
     const subject = data.inquiryType === 'student'
       ? `New Student Inquiry - ${data.studentName} (${data.country || 'Unknown Country'})`
       : `New Institution Inquiry - ${data.institutionName}`;
     
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: subject,
       html: getAdminNotificationEmailHtml(data),
     });
     
-    console.log(`Admin notification email sent for inquiry ${data.id}`);
-  } catch (error) {
+    console.log(`Admin notification email sent for inquiry ${data.id}, ID: ${result.data?.id}`);
+  } catch (error: any) {
     console.error('Error sending admin notification email:', error);
+    console.error('Error details:', error.message);
     // Don't throw error to prevent blocking the inquiry submission
   }
 }
