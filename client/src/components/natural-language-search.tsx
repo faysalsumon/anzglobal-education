@@ -150,7 +150,7 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
               />
               {!query && (
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <span className="text-lg text-muted-foreground/60">
+                  <span className="text-lg text-primary/70">
                     {placeholderText}
                     <span className="animate-pulse">|</span>
                   </span>
