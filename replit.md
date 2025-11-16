@@ -1,7 +1,7 @@
 # ANZ Global Education Platform
 
 ## Overview
-ANZ Global Education is an AI-powered platform designed to connect universities with prospective students globally. Its primary purpose is to streamline international education by offering intelligent course discovery, AI-assisted student profile creation, and comprehensive application/course management tools for educational institutions. The platform aims to enhance global access to education, reduce administrative burdens for universities, and capitalize on the growing cross-border education market.
+ANZ Global Education is an AI-powered platform connecting universities with prospective international students. It aims to streamline global education through intelligent course discovery, AI-assisted student profile creation, and comprehensive application/course management tools for educational institutions. The platform seeks to enhance access to education, reduce university administrative burdens, and capitalize on the growing cross-border education market.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,67 +9,52 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX and Features
-The platform implements the official **ANZ Global Education brand identity** with precise color palette and typography standards. The design features a dual navigation system: horizontal top navigation for student/public pages (desktop) and bottom tab navigation (mobile), and a 3-column admin dashboard (desktop) with an icon-first sidebar. Navigation ensures full feature parity across desktop and mobile.
+The platform adheres to the official ANZ Global Education brand identity, utilizing a specific color palette (Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000, White/Light backgrounds) and typography (Nunito for headings, Open Sans for body text). Accessibility is a priority, with all color combinations meeting WCAG AA standards. The design features a dual navigation system (horizontal for public, bottom tab for mobile) and a 3-column admin dashboard with an icon-first sidebar. Full dark mode support is implemented.
 
-**Brand Identity Implementation**:
--   **Color Palette (60/20/15/5 distribution)**:
-    - Primary Blue (MYR #3465A5): Used strategically for primary CTAs, links, and focus states (5% usage)
-    - Secondary Dark Gray (#333333): Used for text, borders, and secondary elements (20% usage)
-    - Accent Orange (#FF5000): Used sparingly for highlights and special badges (15% usage)
-    - White/Light backgrounds: Dominant color for main surfaces, cards, and dashboards (60% usage)
--   **Typography**:
-    - Headings (h1-h6): Nunito font family (loaded via Google Fonts)
-    - Body text: Open Sans font family (loaded via Google Fonts)
-    - Clear hierarchical rhythm with consistent font weights
--   **Accessibility**: All color combinations meet WCAG AA standards with verified contrast ratios (6.2:1 for primary blue on white, 5.5:1 for accent orange on dark foreground, 4.8:1 for muted text on light surfaces)
--   **Implementation**: Brand colors and typography are centrally managed via CSS custom properties in `client/src/index.css`, with Tailwind CSS integration via `tailwind.config.ts`. Full dark mode support with adjusted color palettes.
-
-Key user experiences include an **Institution Portal** for managing courses, applications, and teams (with AI-powered content generation and DALL-E integration for images), and a **Student Experience** focused on intelligent course discovery, AI-assisted profile creation, and streamlined applications.
-
-Core features include:
+Key features include:
+-   **Institution Portal**: Manages courses, applications, and teams, incorporating AI-powered content generation and DALL-E integration.
+-   **Student Experience**: Focuses on intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 -   **Landing Page** with prominent search.
--   **Study in Australia Page**: Student-centric landing page targeting international students with value proposition "Built by international students, for international students". Features hero section with professional static imagery, stats showcase (1,100+ institutions, 22,000+ courses), benefits cards, 3-step process, popular study destinations, success stories, and multiple registration CTAs integrated with StudentAuthModal. Comprehensive SEO with meta tags, Open Graph/Twitter Cards, and JSON-LD structured data. Mobile-responsive design with Tailwind grid layouts. Route: `/study-in-australia`.
--   **Student Authentication Modal** with social and email/password logins.
--   Detailed **Public Course Detail Pages** and **Institution Pages**.
--   **Lead generation forms** and a comprehensive **Contact Us Page**.
--   **Super Admin Dashboard** for full CRUD operations.
+-   **"Study in Australia" Page**: SEO-optimized landing page targeting international students with specific value propositions.
+-   **Student Authentication Modal**: Supports social and email/password logins.
+-   **Public Course Detail Pages** and **Institution Pages**.
+-   **Lead Generation Forms** and a **Contact Us Page**.
+-   **Super Admin Dashboard** for CRUD operations.
 -   **Public Listings** for institutions and courses with dynamic filtering.
 -   Facebook-style **Notifications** and WhatsApp-style **Real-time Chat**.
--   **Student Document Management** with organized, color-coded folders and multi-format uploads.
--   **Enterprise CSV Bulk Import** for super admins/support managers to upload, validate, and approve large datasets.
--   **AI Data Extraction Features** (Super Admin only): Securely extracts institution and course data from website URLs using OpenAI GPT-4o, featuring stringent security measures, field-by-field approval, and comprehensive SSRF protection.
--   **Student Profile Management**: Comprehensive education history and language test score tracking with full CRUD, requiring 100% profile completion for application submission.
--   **Admin Profile Management**: Allows admins to update personal info and profile photos, with backend security enforcing role-based access and non-sensitive field restrictions.
--   **Student Dashboard Polish**: Comprehensive UI/UX improvements - max-w-7xl centered container, responsive spacing (space-y-6 md:space-y-8), fluid typography, mobile touch targets exceeding 44px standard (min-h-[60px] for cards, min-h-12 for buttons), responsive hero section, optimized quick actions, referral program, and application status with mobile-first stacked layouts.
--   **University Dashboard Polish**: Modern UI/UX matching student dashboard quality - max-w-7xl container, responsive spacing, fluid hero typography (text-3xl md:text-4xl lg:text-5xl), mobile-optimized stats grid (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4), large touch targets for quick actions (min-h-[80px] md:min-h-[120px]), mobile-first recent applications with stacked layout, all interactive elements min-h-[44px] for accessibility.
--   **Platform Admin Dashboard Polish** (Consultant, Support Manager, Content Manager): Mobile-first UI/UX improvements - max-w-7xl centered container with responsive padding (px-4 sm:px-6 lg:px-8), fluid typography scaling (text-2xl md:text-3xl lg:text-4xl for headers), responsive spacing patterns (space-y-6 md:space-y-8 for sections, gap-4 md:gap-6 for grids), mobile-responsive stats grids (grid-cols-1 sm:grid-cols-2/3 lg:grid-cols-4), horizontal scroll for tables (overflow-x-auto), 3-column layout (sidebar + main + right rail) that stacks on mobile, consistent touch targets (min-h-[44px]) across all tabs (Users, Institutions, Courses, Student Leads, Inquiry Leads, Applications, Data Import, Blogs).
--   **Profile Picture Display**: Top navigation bar avatar now displays user's uploaded profile picture (`profileImageUrl`) when available, falling back to initials when no picture is set. Works for all user types (students, universities, admins). User menu dropdown displays user's full name (firstName + lastName) instead of email for better personalization, with fallback to email if name fields are not available. Admin users see their specific role (Super Admin, Support Manager, or Consultant) instead of generic "Admin" label.
--   **Course Pages**: Scholarship display as fixed value "Up to X%" for students, while institution pages show ranges. Career pathways section details roles and progression.
--   **Blog Infrastructure**: Markdown-based blog with admin management (create, edit, publish/draft, SEO fields) and public archive/post pages. Includes dynamic `/sitemap.xml` and `/robots.txt`.
--   **SEO Implementation (Courses & Institutions)**: Comprehensive SEO for all public course and institution pages, including dynamic meta tags, Open Graph/Twitter Cards, and JSON-LD Course/EducationalOrganization schemas.
--   **Institution/Course Approval Workflow**: Quality control mechanism requiring platform admin approval before institutions and courses become publicly visible. New registrations default to "pending" status, remaining hidden from public endpoints (search, listings, stats) until approved by super admins or support managers. Admins can approve or reject with required rejection reasons. Rejection validation enforced via Zod schema. Comprehensive UI in admin dashboard shows approval status badges (Pending/Approved/Rejected) with approve/reject buttons for pending items. Public-facing endpoints (GET `/api/institutions`, `/api/courses`, `/api/platform/stats`) filter exclusively by `approvalStatus === 'approved' && isActive`. Approval API routes: PATCH `/api/admin/institutions/:id/approve|reject` and `/api/admin/courses/:id/approve|reject`.
--   **Institution Registration & Authentication**: Streamlined partner onboarding via `InstitutionAuthModal` component triggered from partnership CTAs. Modal design features building icon, "Institution Access" heading, and clear signup/login messaging. Authentication via Replit Auth OIDC providing social login (Google, GitHub) and email/password options through single "Continue with Replit" button. New institutions automatically provisioned with `userType: 'university'` and redirected to `/dashboard` (University Admin Dashboard). Existing users preserve their role/type. System supports both signup and login seamlessly. **Future Migration**: Planned transition to Google Firebase Authentication for direct social login buttons (Google, Facebook, Apple) while maintaining backward compatibility during migration phase.
+-   **Student Document Management**: Organized, color-coded folders with multi-format uploads.
+-   **Enterprise CSV Bulk Import**: For super admins to upload, validate, and approve datasets.
+-   **AI Data Extraction**: Securely extracts institution and course data from URLs using OpenAI GPT-4o, with stringent security and approval workflows.
+-   **Student Profile Management**: Comprehensive education history and language test score tracking.
+-   **Admin Profile Management**: Allows personal info and photo updates with role-based security.
+-   **Dashboard Polish**: Consistent modern UI/UX across Student, University, and Platform Admin dashboards, prioritizing responsiveness, accessibility, and fluid typography.
+-   **Profile Picture Display**: User avatars and full names in the navigation bar; admin roles displayed specifically.
+-   **Course Pages**: Display scholarships and career pathways.
+-   **Blog Infrastructure**: Markdown-based with admin management and dynamic SEO files.
+-   **SEO Implementation**: Comprehensive dynamic meta tags, Open Graph/Twitter Cards, and JSON-LD schemas for public pages.
+-   **Institution/Course Approval Workflow**: Requires platform admin approval for public visibility, with "pending" status for new registrations.
+-   **Institution Registration & Authentication**: Streamlined onboarding via `InstitutionAuthModal` using Replit Auth OIDC, with planned migration to Google Firebase Authentication.
 
 ### Technical Implementation
--   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter (routing), TanStack Query (server state), React Hook Form, Zod.
+-   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter (routing), TanStack Query, React Hook Form, Zod.
 -   **Backend**: Node.js Express.js in TypeScript.
 -   **Authentication**: OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage.
 -   **API**: RESTful, organized by user type.
 -   **Real-time**: WebSockets for chat.
 -   **AI Integration**: OpenAI API (GPT-4o) for content generation.
--   **Data Validation**: Shared Zod schemas for type-safe validation.
+-   **Data Validation**: Shared Zod schemas.
 -   **Image Processing**: Multer and Sharp.
--   **Database**: PostgreSQL via Neon's serverless driver and Drizzle ORM. Schema supports sessions, users (universities, students, admins), university profiles (including `campusAddresses` JSONB and scholarship ranges), courses, applications, student profiles, and real-time chat. GIN indexes optimize JSONB/array filtering.
+-   **Database**: PostgreSQL (Neon, Drizzle ORM) with GIN indexes for JSONB/array filtering.
 -   **Object Storage**: Replit Object Storage for images.
--   **Authorization**: Role-based access control (`userType`) with granular admin hierarchy enforced by backend middleware (`checkAdminAccess()`). A Central Login Portal at `/admin/login` redirects users post-authentication.
+-   **Authorization**: Role-based access control (`userType`) with granular admin hierarchy enforced by backend middleware.
 
-## External Dependencies
-
--   **Authentication Service**: Replit Auth (OIDC provider).
+### External Dependencies
+-   **Authentication Service**: Replit Auth.
 -   **AI Service**: OpenAI API (GPT-4o model).
--   **Database**: PostgreSQL (e.g., Neon).
+-   **Database**: PostgreSQL (Neon).
 -   **Object Storage**: Replit Object Storage.
 -   **CDN**: Google Fonts CDN.
 -   **Mapping/Location**: Google Places API.
 -   **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
--   **Key NPM Packages**: Radix UI, Shadcn/ui, Lucide React, Tailwind CSS, react-hook-form, zod, @tanstack/react-query, drizzle-orm, openid-client, passport, express-session, bcrypt, Multer, Sharp, ws, @googlemaps/js-api-loader, papaparse, react-helmet, react-markdown, remark-gfm.
+-   **Email Service**: Resend API.
+```
