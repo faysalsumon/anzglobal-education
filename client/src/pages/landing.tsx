@@ -11,6 +11,7 @@ import { StudentAuthModal } from "@/components/student-auth-modal";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
+import { NaturalLanguageSearch } from "@/components/natural-language-search";
 
 interface PlatformStats {
   institutionCount: number;
@@ -179,10 +180,21 @@ export default function Landing() {
                 <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
               </span>
             </h1>
-            <p className="mb-8 text-lg opacity-90 sm:text-xl max-w-2xl mx-auto">
-              Smart recommendations. Instant applications. Your Australian education journey starts here.
+            <p className="mb-12 text-lg opacity-90 sm:text-xl max-w-2xl mx-auto">
+              Just describe what you want - our AI understands! Try "Engineering in Melbourne under $30k"
             </p>
+            
+            {/* Natural Language Search */}
+            <div className="mx-auto max-w-4xl mb-8">
+              <NaturalLanguageSearch />
+            </div>
+
+            {/* Traditional Search Option */}
             <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
+              <div className="text-center mb-4">
+                <p className="text-sm opacity-75">Or use traditional search:</p>
+              </div>
+              
               {/* Search Type Toggle */}
               <div className="flex gap-2 mb-4 justify-center">
                 <Button
