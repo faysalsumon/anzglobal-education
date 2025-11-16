@@ -37,12 +37,30 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
     mutationFn: async (searchQuery: string) => {
       return apiRequest("POST", "/api/courses/natural-search", { query: searchQuery });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       if (onSearchResults) {
         onSearchResults(data);
       } else {
-        // Navigate to results page with the query
-        window.location.href = `/courses?nl=${encodeURIComponent(query)}`;
+        // Navigate to courses page with parsed parameters
+        const params = new URLSearchParams();
+        
+        if (data.parsedParams?.subject) {
+          params.set("search", data.parsedParams.subject);
+        }
+        if (data.parsedParams?.level) {
+          params.set("level", data.parsedParams.level);
+        }
+        if (data.parsedParams?.location) {
+          params.set("search", data.parsedParams.location);
+        }
+        if (data.parsedParams?.minFees || data.parsedParams?.maxFees) {
+          params.set("budget", `${data.parsedParams.minFees || 0}-${data.parsedParams.maxFees || 999999}`);
+        }
+        
+        // Add original query for display
+        params.set("nlQuery", data.parsedParams?.originalQuery || query);
+        
+        window.location.href = `/courses?${params.toString()}`;
       }
     },
     onError: (error: any) => {
