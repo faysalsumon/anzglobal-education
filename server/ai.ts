@@ -816,7 +816,7 @@ Extract these parameters if present:
 - minFees: minimum tuition fees in USD (parse from expressions like "under 30k", "between 15-20k", "around 18000")
 - maxFees: maximum tuition fees in USD
 - location: city/state (e.g., "Melbourne", "Sydney", "Brisbane")
-- country: country (e.g., "Australia")
+- country: country (e.g., "Australia") - IMPORTANT: If a city is mentioned, also identify the country. For example: "Melbourne" → country: "Australia", "Sydney" → country: "Australia"
 
 Budget parsing examples:
 - "under $30k" → maxFees: 30000

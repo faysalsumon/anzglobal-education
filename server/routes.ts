@@ -1363,12 +1363,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { query } = req.body;
       
-      if (!query || typeof query !== 'string') {
+      if (!query || typeof query !== 'string' || !query.trim()) {
         return res.status(400).json({ message: "Search query is required" });
       }
 
       // Parse the natural language query using AI
-      const parsedParams = await parseNaturalLanguageQuery(query.trim());
+      let parsedParams = await parseNaturalLanguageQuery(query.trim());
+      
+      // Ensure parsedParams has safe defaults
+      parsedParams = {
+        originalQuery: query.trim(),
+        subject: parsedParams.subject || undefined,
+        level: parsedParams.level || undefined,
+        location: parsedParams.location || undefined,
+        country: parsedParams.country || undefined,
+        minFees: parsedParams.minFees !== undefined ? Number(parsedParams.minFees) : undefined,
+        maxFees: parsedParams.maxFees !== undefined ? Number(parsedParams.maxFees) : undefined,
+      };
       
       // Get all approved courses from approved institutions
       const allCourses = await storage.getAllCourses();

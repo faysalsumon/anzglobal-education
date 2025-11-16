@@ -44,17 +44,37 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
         // Navigate to courses page with parsed parameters
         const params = new URLSearchParams();
         
+        // Combine subject and location into search term for full-text search
+        const searchTerms: string[] = [];
         if (data.parsedParams?.subject) {
-          params.set("search", data.parsedParams.subject);
+          searchTerms.push(data.parsedParams.subject);
+        }
+        if (data.parsedParams?.location) {
+          searchTerms.push(data.parsedParams.location);
+        }
+        
+        if (searchTerms.length > 0) {
+          params.set("search", searchTerms.join(" "));
+        }
+        
+        // Also pass structured parameters for filter dropdowns
+        if (data.parsedParams?.subject) {
+          params.set("subject", data.parsedParams.subject);
         }
         if (data.parsedParams?.level) {
           params.set("level", data.parsedParams.level);
         }
-        if (data.parsedParams?.location) {
-          params.set("search", data.parsedParams.location);
+        // Always pass country if identified by AI
+        if (data.parsedParams?.country) {
+          params.set("country", data.parsedParams.country);
         }
-        if (data.parsedParams?.minFees || data.parsedParams?.maxFees) {
-          params.set("budget", `${data.parsedParams.minFees || 0}-${data.parsedParams.maxFees || 999999}`);
+        if (data.parsedParams?.minFees !== undefined || data.parsedParams?.maxFees !== undefined) {
+          if (data.parsedParams.minFees !== undefined) {
+            params.set("minFees", String(data.parsedParams.minFees));
+          }
+          if (data.parsedParams.maxFees !== undefined) {
+            params.set("maxFees", String(data.parsedParams.maxFees));
+          }
         }
         
         // Add original query for display

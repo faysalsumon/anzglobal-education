@@ -44,6 +44,8 @@ export default function PublicCourses() {
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
+  const [minFees, setMinFees] = useState<number | null>(null);
+  const [maxFees, setMaxFees] = useState<number | null>(null);
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithUniversity | null>(null);
@@ -282,6 +284,11 @@ export default function PublicCourses() {
     const searchParam = urlParams.get('search');
     const highlightParam = urlParams.get('highlight');
     const universityParam = urlParams.get('university');
+    const levelParam = urlParams.get('level');
+    const countryParam = urlParams.get('country');
+    const subjectParam = urlParams.get('subject');
+    const minFeesParam = urlParams.get('minFees');
+    const maxFeesParam = urlParams.get('maxFees');
     
     if (searchParam) {
       setSearchTerm(searchParam);
@@ -293,6 +300,26 @@ export default function PublicCourses() {
 
     if (universityParam) {
       setUniversityFilter(universityParam);
+    }
+
+    if (levelParam) {
+      setLevel(levelParam);
+    }
+
+    if (countryParam) {
+      setCountry(countryParam);
+    }
+
+    if (subjectParam) {
+      setSubject(subjectParam);
+    }
+
+    if (minFeesParam) {
+      setMinFees(parseInt(minFeesParam));
+    }
+
+    if (maxFeesParam) {
+      setMaxFees(parseInt(maxFeesParam));
     }
     
     // Only clear the highlight parameter after using it
@@ -323,6 +350,14 @@ export default function PublicCourses() {
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
+    
+    // Budget filtering
+    if (minFees !== null || maxFees !== null) {
+      const courseFees = Number(course.fees) || 0;
+      if (minFees !== null && courseFees < minFees) return false;
+      if (maxFees !== null && courseFees > maxFees) return false;
+    }
+    
     return true;
   });
 
