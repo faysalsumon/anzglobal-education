@@ -144,7 +144,7 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder={query ? "" : placeholderText}
-                className="h-16 text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-4 bg-transparent"
+                className="h-16 text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-4 bg-transparent text-primary"
                 disabled={searchMutation.isPending}
                 data-testid="input-natural-search"
               />
