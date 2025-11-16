@@ -180,7 +180,7 @@ export default function Landing() {
                 <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
               </span>
             </h1>
-            <p className="mb-12 text-lg opacity-90 sm:text-xl max-w-2xl mx-auto">
+            <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
               Just describe what you want - our AI understands! Try "Engineering in Melbourne under $30k"
             </p>
             
@@ -192,7 +192,7 @@ export default function Landing() {
             {/* Traditional Search Option */}
             <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
               <div className="text-center mb-4">
-                <p className="text-sm opacity-75">Or use traditional search:</p>
+                <p className="text-sm text-white/90 font-medium">Or use traditional search:</p>
               </div>
               
               {/* Search Type Toggle */}

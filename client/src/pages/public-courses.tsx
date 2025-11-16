@@ -137,7 +137,7 @@ export default function PublicCourses() {
   };
 
   // Course comparison logic
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { data: comparisons = [] } = useQuery<CourseComparison[]>({
     queryKey: ["/api/student/comparisons"],
     enabled: isAuthenticated && isStudent,
@@ -290,36 +290,17 @@ export default function PublicCourses() {
     const minFeesParam = urlParams.get('minFees');
     const maxFeesParam = urlParams.get('maxFees');
     
-    if (searchParam) {
-      setSearchTerm(searchParam);
-    }
+    // Update state from URL params (or reset if not present)
+    setSearchTerm(searchParam || "");
+    setUniversityFilter(universityParam || "");
+    setLevel(levelParam || "");
+    setCountry(countryParam || "");
+    setSubject(subjectParam || "");
+    setMinFees(minFeesParam ? parseInt(minFeesParam) : null);
+    setMaxFees(maxFeesParam ? parseInt(maxFeesParam) : null);
     
     if (highlightParam) {
       setHighlightedCourseId(parseInt(highlightParam));
-    }
-
-    if (universityParam) {
-      setUniversityFilter(universityParam);
-    }
-
-    if (levelParam) {
-      setLevel(levelParam);
-    }
-
-    if (countryParam) {
-      setCountry(countryParam);
-    }
-
-    if (subjectParam) {
-      setSubject(subjectParam);
-    }
-
-    if (minFeesParam) {
-      setMinFees(parseInt(minFeesParam));
-    }
-
-    if (maxFeesParam) {
-      setMaxFees(parseInt(maxFeesParam));
     }
     
     // Only clear the highlight parameter after using it
@@ -329,7 +310,7 @@ export default function PublicCourses() {
       const newSearch = newParams.toString();
       window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
     }
-  }, []);
+  }, [location]); // Re-run whenever location changes to sync with natural language search navigation
 
   // Scroll to highlighted course
   useEffect(() => {

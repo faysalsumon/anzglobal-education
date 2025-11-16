@@ -35,22 +35,34 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
 
   const searchMutation = useMutation({
     mutationFn: async (searchQuery: string) => {
-      return apiRequest("POST", "/api/courses/natural-search", { query: searchQuery });
+      // apiRequest throws if response is not OK (via throwIfResNotOk)
+      const response = await apiRequest("POST", "/api/courses/natural-search", { query: searchQuery });
+      
+      // Parse JSON response (apiRequest already validated response is OK)
+      const data = await response.json();
+      
+      // Validate we got expected data structure
+      if (!data || typeof data !== 'object' || !data.parsedParams) {
+        throw new Error("Invalid response structure from server");
+      }
+      
+      return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { parsedParams: any; courses?: any[]; totalResults?: number }) => {
       if (onSearchResults) {
         onSearchResults(data);
       } else {
         // Navigate to courses page with parsed parameters
         const params = new URLSearchParams();
+        const { parsedParams } = data;
         
         // Combine subject and location into search term for full-text search
         const searchTerms: string[] = [];
-        if (data.parsedParams?.subject) {
-          searchTerms.push(data.parsedParams.subject);
+        if (parsedParams.subject) {
+          searchTerms.push(parsedParams.subject);
         }
-        if (data.parsedParams?.location) {
-          searchTerms.push(data.parsedParams.location);
+        if (parsedParams.location) {
+          searchTerms.push(parsedParams.location);
         }
         
         if (searchTerms.length > 0) {
@@ -58,27 +70,27 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
         }
         
         // Also pass structured parameters for filter dropdowns
-        if (data.parsedParams?.subject) {
-          params.set("subject", data.parsedParams.subject);
+        if (parsedParams.subject) {
+          params.set("subject", parsedParams.subject);
         }
-        if (data.parsedParams?.level) {
-          params.set("level", data.parsedParams.level);
+        if (parsedParams.level) {
+          params.set("level", parsedParams.level);
         }
         // Always pass country if identified by AI
-        if (data.parsedParams?.country) {
-          params.set("country", data.parsedParams.country);
+        if (parsedParams.country) {
+          params.set("country", parsedParams.country);
         }
-        if (data.parsedParams?.minFees !== undefined || data.parsedParams?.maxFees !== undefined) {
-          if (data.parsedParams.minFees !== undefined) {
-            params.set("minFees", String(data.parsedParams.minFees));
+        if (parsedParams.minFees !== undefined || parsedParams.maxFees !== undefined) {
+          if (parsedParams.minFees !== undefined) {
+            params.set("minFees", String(parsedParams.minFees));
           }
-          if (data.parsedParams.maxFees !== undefined) {
-            params.set("maxFees", String(data.parsedParams.maxFees));
+          if (parsedParams.maxFees !== undefined) {
+            params.set("maxFees", String(parsedParams.maxFees));
           }
         }
         
         // Add original query for display
-        params.set("nlQuery", data.parsedParams?.originalQuery || query);
+        params.set("nlQuery", parsedParams.originalQuery || query);
         
         window.location.href = `/courses?${params.toString()}`;
       }
@@ -167,12 +179,12 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
 
       {/* Example Suggestions */}
       <div className="flex flex-wrap gap-2 justify-center">
-        <span className="text-sm text-muted-foreground self-center">Try:</span>
+        <span className="text-sm text-white/80 self-center font-medium">Try:</span>
         {exampleQueries.slice(0, 3).map((example, index) => (
           <button
             key={index}
             onClick={() => handleExampleClick(example)}
-            className="text-sm text-primary hover:text-primary/80 hover-elevate active-elevate-2 px-3 py-1 rounded-md border border-border bg-background/50 transition-all duration-200"
+            className="text-sm text-white/90 hover:text-white hover-elevate active-elevate-2 px-3 py-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm transition-all duration-200 font-medium"
             data-testid={`button-example-${index}`}
           >
             "{example}"
@@ -181,8 +193,8 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
       </div>
 
       {/* Search Tips */}
-      <div className="text-center text-sm text-muted-foreground">
-        <p>💡 Describe what you want in plain English - our AI will understand!</p>
+      <div className="text-center text-sm text-white/90">
+        <p className="font-medium">💡 Describe what you want in plain English - our AI will understand!</p>
       </div>
     </div>
   );
