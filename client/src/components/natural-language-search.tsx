@@ -134,7 +134,7 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
         <div className="relative group">
           <div className={`absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-lg blur-sm opacity-0 group-hover:opacity-30 transition duration-300 ${isFocused ? 'opacity-30' : ''}`}></div>
           <div className="relative flex items-center bg-background rounded-lg border-2 border-border focus-within:border-primary transition-all duration-200">
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-w-0">
               <Input
                 ref={inputRef}
                 type="text"
@@ -143,14 +143,14 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
                 onKeyPress={handleKeyPress}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder={query ? "" : placeholderText}
-                className="h-16 text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-4 bg-transparent text-primary"
+                placeholder=""
+                className="h-14 sm:h-16 text-base sm:text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-2 sm:pr-4 bg-transparent text-primary"
                 disabled={searchMutation.isPending}
                 data-testid="input-natural-search"
               />
               {!query && (
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <span className="text-lg text-primary/70">
+                <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none right-2 overflow-hidden">
+                  <span className="text-base sm:text-lg text-primary/70 whitespace-nowrap block overflow-hidden text-ellipsis">
                     {placeholderText}
                     <span className="animate-pulse">|</span>
                   </span>
@@ -161,15 +161,15 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
               onClick={handleSearch}
               disabled={searchMutation.isPending || !query.trim()}
               size="lg"
-              className="h-14 px-8 m-1 bg-primary hover:bg-primary/90"
+              className="h-12 sm:h-14 px-4 sm:px-8 m-1 bg-primary hover:bg-primary/90 shrink-0"
               data-testid="button-search"
             >
               {searchMutation.isPending ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <Search className="w-5 h-5 mr-2" />
-                  Search
+                  <Search className="w-5 h-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Search</span>
                 </>
               )}
             </Button>
