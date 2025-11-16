@@ -180,33 +180,9 @@ export default function Landing() {
                 <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
               </span>
             </h1>
-            <p className="mb-8 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
-              Just describe what you want - our AI understands! Try "Engineering in Melbourne under $30k"
+            <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
+              Just describe what you want - our AI understands!
             </p>
-            
-            {/* Quick Navigation Buttons */}
-            <div className="flex gap-3 mb-8 justify-center flex-wrap">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => window.location.href = '/courses'}
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
-                data-testid="button-search-courses"
-              >
-                <GraduationCap className="h-5 w-5 mr-2" />
-                Search Courses
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => window.location.href = '/institutions'}
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
-                data-testid="button-search-institutions"
-              >
-                <Building2 className="h-5 w-5 mr-2" />
-                Search Institutions
-              </Button>
-            </div>
 
             {/* Natural Language Search */}
             <div className="mx-auto max-w-4xl">
