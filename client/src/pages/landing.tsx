@@ -180,119 +180,37 @@ export default function Landing() {
                 <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
               </span>
             </h1>
-            <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
+            <p className="mb-8 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
               Just describe what you want - our AI understands! Try "Engineering in Melbourne under $30k"
             </p>
             
-            {/* Natural Language Search */}
-            <div className="mx-auto max-w-4xl mb-8">
-              <NaturalLanguageSearch />
+            {/* Quick Navigation Buttons */}
+            <div className="flex gap-3 mb-8 justify-center flex-wrap">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => window.location.href = '/courses'}
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                data-testid="button-search-courses"
+              >
+                <GraduationCap className="h-5 w-5 mr-2" />
+                Search Courses
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => window.location.href = '/institutions'}
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
+                data-testid="button-search-institutions"
+              >
+                <Building2 className="h-5 w-5 mr-2" />
+                Search Institutions
+              </Button>
             </div>
 
-            {/* Traditional Search Option */}
-            <div className="mx-auto max-w-2xl relative" ref={searchContainerRef}>
-              <div className="text-center mb-4">
-                <p className="text-sm text-white/90 font-medium">Or use traditional search:</p>
-              </div>
-              
-              {/* Search Type Toggle */}
-              <div className="flex gap-2 mb-4 justify-center">
-                <Button
-                  variant={searchType === "courses" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSearchType("courses");
-                    setSearchQuery("");
-                    setShowSuggestions(false);
-                  }}
-                  data-testid="button-search-type-courses"
-                >
-                  <GraduationCap className="h-4 w-4 mr-2" />
-                  Search Courses
-                </Button>
-                <Button
-                  variant={searchType === "institutions" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSearchType("institutions");
-                    setSearchQuery("");
-                    setShowSuggestions(false);
-                  }}
-                  data-testid="button-search-type-institutions"
-                >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Search Institutions
-                </Button>
-              </div>
-
-              <div className="bg-white rounded-lg p-2 shadow-lg flex gap-2">
-                <Input 
-                  placeholder={searchType === "courses" ? "Search courses..." : "Search institutions..."} 
-                  className="flex-1 border-0 focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  onFocus={() => searchQuery.trim().length > 0 && setShowSuggestions(true)}
-                  onKeyPress={handleKeyPress}
-                  data-testid="input-search"
-                />
-                <Button 
-                  variant="default" 
-                  size="default" 
-                  onClick={() => handleSearch()}
-                  data-testid="button-search"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
-                </Button>
-              </div>
-              
-              {/* Autocomplete Suggestions */}
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-40">
-                  {searchType === "courses" ? (
-                    courseSuggestions.map((course) => (
-                      <button
-                        key={course.id}
-                        onClick={() => handleCourseSuggestionClick(course)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
-                        data-testid={`suggestion-course-${course.id}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Search className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{course.title}</p>
-                            <p className="text-sm text-gray-500 truncate">
-                              {course.subject} • {course.university?.name || 'University'}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    institutionSuggestions.map((institution) => (
-                      <button
-                        key={institution.id}
-                        onClick={() => handleInstitutionSuggestionClick(institution)}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
-                        data-testid={`suggestion-institution-${institution.id}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Building2 className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{institution.name}</p>
-                            <p className="text-sm text-gray-500 truncate">
-                              {institution.country}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+            {/* Natural Language Search */}
+            <div className="mx-auto max-w-4xl">
+              <NaturalLanguageSearch />
             </div>
           </div>
         </div>
