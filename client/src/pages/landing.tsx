@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University, Blog } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
@@ -116,6 +116,34 @@ export default function Landing() {
     setShowSuggestions(false);
     handleSearch(institution.name);
   };
+
+  // Featured student reviews
+  const featuredReviews = [
+    {
+      id: 1,
+      title: "Dreams Turned Into Reality",
+      content: "Studying abroad was always a dream of mine, but I didn't know how to make it a reality. ANZ Global Education made that dream come true. They guided me step-by-step—from career counseling and IELTS preparation to choosing a university and submitting my visa application.",
+      studentName: "MD Areen Chowdhury",
+      location: "Melbourne, Australia",
+      institution: "Swinburne University"
+    },
+    {
+      id: 2,
+      title: "Genuine and Supportive Team",
+      content: "ANZ Global Education really stands out because of their honesty and personal care. They didn't just treat me like another student—they listened, guided, and supported me like family. Whether it was choosing the right course, writing my SOP, or preparing for the visa interview, they were always one step ahead.",
+      studentName: "AKM ERADAT HOSSAIN NILOY",
+      location: "Melbourne, Australia",
+      institution: "Victoria University"
+    },
+    {
+      id: 3,
+      title: "Support That Feels Like Family",
+      content: "What really sets ANZ Global Education apart is how personal and supportive their team is. They treated me not just as a client, but as a member of their own family. I had doubts because my academic background wasn't perfect, but instead of discouraging me, they helped me present my story with honesty and strength.",
+      studentName: "Nosin Anjum Promity",
+      location: "Melbourne, Australia",
+      institution: "Victoria University"
+    }
+  ];
 
   // SEO data
   const siteUrl = window.location.origin;
@@ -469,6 +497,66 @@ export default function Landing() {
           </div>
         </section>
       )}
+
+      {/* Student Reviews Section */}
+      <section className="py-16 md:py-24 bg-card/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                <Quote className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Trusted by Students Worldwide
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Real stories from students who turned their Australian education dreams into reality
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {featuredReviews.map((review) => (
+                <Card 
+                  key={review.id} 
+                  className="hover-elevate h-full"
+                  data-testid={`landing-review-card-${review.id}`}
+                >
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <Quote className="h-8 w-8 text-primary/30 mb-4" />
+                    <h3 className="text-lg font-bold mb-3" data-testid={`text-review-title-${review.id}`}>
+                      {review.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-4 flex-1" data-testid={`text-review-content-${review.id}`}>
+                      {review.content}
+                    </p>
+                    <div className="border-t pt-4 space-y-2">
+                      <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
+                        {review.studentName}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>{review.location}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground" data-testid={`text-review-institution-${review.id}`}>
+                        {review.institution}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <Link href="/student-reviews">
+                <Button variant="outline" size="lg" data-testid="button-view-all-reviews">
+                  View All Student Reviews
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-16 md:py-24">
