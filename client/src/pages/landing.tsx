@@ -209,7 +209,7 @@ export default function Landing() {
               </span>
             </h1>
             <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
-              Connect with top universities or discover your ideal course — our AI makes it simple
+              Connect with top institutions or discover your ideal course — our AI makes it simple
             </p>
 
             {/* Natural Language Search */}
@@ -297,19 +297,129 @@ export default function Landing() {
             </Card>
           </div>
 
-          {/* CTA */}
+          {/* Dual CTA */}
+          <div className="text-center mt-12">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Button 
+                size="lg" 
+                onClick={() => setShowStudentAuthModal(true)}
+                className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
+                data-testid="button-student-get-started"
+              >
+                <GraduationCap className="mr-2 h-5 w-5" />
+                Start as a Student
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => setShowInstitutionAuthModal(true)}
+                className="px-8 py-6 text-lg"
+                data-testid="button-institution-get-started"
+              >
+                <Building2 className="mr-2 h-5 w-5" />
+                Join as an Institution
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Join students and institutions building their futures together
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* For Institutions Section */}
+      <section className="py-20 md:py-32 bg-gradient-to-b from-card/50 to-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              For Institutions: Expand Your Global Reach
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Connect with motivated students worldwide and streamline your admissions process
+            </p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
+            {/* Benefit 1 */}
+            <Card className="relative overflow-hidden border-primary/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    1
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Reach Quality Students</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Showcase your programs to thousands of motivated international students actively searching for their ideal institution. Our AI matches your courses with the right candidates.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Benefit 2 */}
+            <Card className="relative overflow-hidden border-secondary/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-secondary/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    2
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <FileCheck className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Streamline Operations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Manage all applications from a centralized dashboard. Use AI-powered tools to generate course content, review applications faster, and reduce administrative workload.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Benefit 3 */}
+            <Card className="relative overflow-hidden border-accent/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    3
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <TrendingUp className="h-6 w-6 text-accent" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Grow Your Enrollment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Increase international student enrollment with better visibility and targeted marketing. Track application trends and optimize your recruitment strategy with data insights.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Institution CTA */}
           <div className="text-center mt-12">
             <Button 
               size="lg" 
-              onClick={() => setShowStudentAuthModal(true)}
+              onClick={() => setShowInstitutionAuthModal(true)}
               className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
-              data-testid="button-get-started"
+              data-testid="button-institution-partner"
             >
-              Get Started Today
+              <Building2 className="mr-2 h-5 w-5" />
+              Partner with Us
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Join thousands of students already on their journey
+              Join leading institutions already growing their international presence
             </p>
           </div>
         </div>
@@ -355,7 +465,7 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose ANZ Global Education?</h2>
-            <p className="text-lg text-muted-foreground">Connecting ambitious students with world-class universities since 2017</p>
+            <p className="text-lg text-muted-foreground">Connecting ambitious students with world-class institutions since 2017</p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             <Card className="border-card-border hover-elevate">
@@ -363,7 +473,7 @@ export default function Landing() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>For Universities</CardTitle>
+                <CardTitle>For Institutions</CardTitle>
                 <CardDescription>Reach qualified students globally and simplify admissions</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -401,7 +511,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Apply to multiple universities and track everything in one place</span>
+                  <span>Apply to multiple institutions and track everything in one place</span>
                 </div>
               </CardContent>
             </Card>
@@ -564,7 +674,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl rounded-2xl bg-gradient-to-r from-primary to-secondary p-8 text-center text-white md:p-12">
             <h2 className="mb-4 text-3xl font-bold md:text-4xl">Ready to Get Started?</h2>
             <p className="mb-8 text-lg opacity-90">
-              Whether you're a student seeking your ideal course or a university looking to connect with qualified candidates, we're here to help
+              Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button 
@@ -581,10 +691,10 @@ export default function Landing() {
                 variant="outline" 
                 className="bg-white/10 hover:bg-white/20 border-white text-white" 
                 onClick={() => setShowInstitutionAuthModal(true)}
-                data-testid="button-university-cta"
+                data-testid="button-institution-cta"
               >
                 <Building2 className="h-5 w-5 mr-2" />
-                I'm a University
+                I'm an Institution
               </Button>
             </div>
           </div>
