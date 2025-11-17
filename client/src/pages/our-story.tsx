@@ -23,10 +23,10 @@ export default function OurStory() {
         <title>Our Story - ANZ Global Education</title>
         <meta 
           name="description" 
-          content="Learn about ANZ Global Education's mission to connect international students with world-class Australian universities. Discover our journey, values, and commitment to transforming global education." 
+          content="Founded in 2017 by former international students Golam Haque and Faysal Bahar, ANZ Global Education transforms the study abroad journey with AI-powered tools. From students who struggled, to a platform that makes studying in Australia simple and stress-free." 
         />
         <meta property="og:title" content="Our Story - ANZ Global Education" />
-        <meta property="og:description" content="Transforming global education by connecting ambitious students with world-class Australian universities through AI-powered technology and personalized support." />
+        <meta property="og:description" content="Founded by ex-international students in 2017, we built an AI platform that breaks down barriers to Australian education. From conventional agency to cutting-edge technology—helping students navigate their journey with clarity and confidence." />
         <meta property="og:type" content="website" />
       </Helmet>
 
@@ -43,7 +43,7 @@ export default function OurStory() {
                 Our Story
               </h1>
               <p className="text-xl md:text-2xl text-white/90 font-medium">
-                Bridging dreams and destinations through education
+                From students who struggled, to a platform that makes it simple
               </p>
             </div>
           </div>
@@ -64,9 +64,9 @@ export default function OurStory() {
                         Our Mission
                       </h2>
                       <p className="text-lg text-muted-foreground leading-relaxed">
-                        To democratize access to world-class Australian education by empowering international students 
-                        with intelligent tools, transparent information, and personalized support throughout their 
-                        educational journey.
+                        To break down the barriers in international education by giving students the tools, 
+                        transparency, and support they deserve—making their dream of studying in Australia 
+                        accessible, simple, and stress-free.
                       </p>
                     </div>
                   </div>
@@ -81,78 +81,135 @@ export default function OurStory() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                The Journey That Started It All
+                A Story Born from Experience
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Every great story begins with a vision and a commitment to make a difference
+                Because we've walked in your shoes—and we know the struggle is real
               </p>
             </div>
 
             <div className="max-w-5xl mx-auto space-y-12">
-              {/* Story Timeline */}
-              <div className="grid md:grid-cols-2 gap-8">
+              {/* Founders Story */}
+              <div className="bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-2xl p-8 md:p-12 border border-primary/10">
+                <div className="flex items-start gap-4 mb-8">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <Users className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                      Founded by Students, For Students
+                    </h3>
+                    <p className="text-muted-foreground text-lg">
+                      Golam Haque & Faysal Bahar • Est. 2017
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-6 text-muted-foreground leading-relaxed">
+                  <p className="text-lg">
+                    Back in 2017, two former international students—<strong className="text-foreground">Golam Haque</strong> and{" "}
+                    <strong className="text-foreground">Faysal Bahar</strong>—sat down with a shared frustration and a bold vision. 
+                    They had both navigated the maze of studying in Australia firsthand: the endless paperwork, the confusing requirements, 
+                    the sleepless nights wondering if they'd chosen the right course or the right university.
+                  </p>
+                  
+                  <p className="text-lg">
+                    They knew there had to be a better way. <em>Students shouldn't have to struggle this much</em>, they thought. 
+                    So they founded ANZ Global Education—not just as another education agency, but as a lifeline for students 
+                    who felt lost in the system.
+                  </p>
+                </div>
+              </div>
+
+              {/* Timeline Cards */}
+              <div className="grid md:grid-cols-3 gap-6">
                 <Card className="border-primary/20 hover-elevate">
                   <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                        <Sparkles className="h-6 w-6 text-white" />
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold">
+                        2017
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">
-                          The Vision
-                        </h3>
-                        <p className="text-muted-foreground">
-                          We saw talented students around the world facing barriers to accessing quality education. 
-                          Complex processes, information overload, and lack of personalized guidance were holding 
-                          dreams back.
-                        </p>
-                      </div>
+                      <h3 className="text-xl font-semibold text-foreground">The Beginning</h3>
                     </div>
+                    <p className="text-muted-foreground">
+                      Started as a conventional education agency, helping students one application at a time. 
+                      We learned what students really needed—clarity, speed, and someone who understood their journey.
+                    </p>
                   </CardContent>
                 </Card>
 
                 <Card className="border-secondary/20 hover-elevate">
                   <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center">
-                        <Globe className="h-6 w-6 text-white" />
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center text-white font-bold">
+                        2019
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">
-                          The Solution
-                        </h3>
-                        <p className="text-muted-foreground">
-                          ANZ Global Education was born to transform the international education experience. 
-                          We combined cutting-edge AI technology with human expertise to create a platform that 
-                          truly understands student needs.
-                        </p>
-                      </div>
+                      <h3 className="text-xl font-semibold text-foreground">The Turning Point</h3>
                     </div>
+                    <p className="text-muted-foreground">
+                      After two years of running a traditional agency, we saw the limitations. Students deserved better. 
+                      We asked ourselves: <em>What if technology could do the heavy lifting?</em>
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-accent/20 hover-elevate">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold">
+                        <Sparkles className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-foreground">The Platform</h3>
+                    </div>
+                    <p className="text-muted-foreground">
+                      We built an AI-powered platform that puts everything students need at their fingertips. 
+                      No more endless emails. No more confusion. Just smart, simple, and stress-free.
+                    </p>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Story Content */}
-              <div className="prose prose-lg max-w-none">
-                <div className="bg-card border border-card-border rounded-lg p-8">
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    Founded by education professionals and technology innovators, ANZ Global Education emerged from 
-                    a simple observation: the process of studying abroad shouldn't be complicated. Students deserve 
-                    transparency, personalized guidance, and access to comprehensive information—all in one place.
-                  </p>
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    We partnered with leading Australian universities to create a platform that benefits everyone. 
-                    Students gain AI-powered search capabilities that understand their unique needs. Universities 
-                    connect with qualified, motivated candidates from around the world. And education agents can 
-                    manage applications more efficiently than ever before.
-                  </p>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Today, we're proud to serve thousands of students across multiple regions, helping them discover 
-                    courses, compare options, and apply to their dream universities with confidence. But we're just 
-                    getting started—our mission is to make quality education accessible to aspiring students everywhere.
-                  </p>
-                </div>
-              </div>
+              {/* The Why */}
+              <Card className="border-primary/20">
+                <CardContent className="p-8 md:p-12">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Heart className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                        Why We Do What We Do
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4 text-muted-foreground leading-relaxed">
+                    <p className="text-lg">
+                      Here's the truth: navigating the Australian education system can feel overwhelming. The forms, the deadlines, 
+                      the visa requirements—it's a lot. And when you're doing it from thousands of miles away, in a different time zone, 
+                      sometimes in a different language? It can feel impossible.
+                    </p>
+                    
+                    <p className="text-lg">
+                      But it doesn't have to be. <strong className="text-foreground">We've been there.</strong> We know what it's like to dream big 
+                      and feel small. To want a better future but not know where to start. That's why we built this platform—to give you 
+                      the clarity, confidence, and support you need to take that leap.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Today, we partner with <strong className="text-foreground">22+ Australian universities</strong>, offering{" "}
+                      <strong className="text-foreground">AI-powered search</strong> that actually understands what you're looking for. 
+                      Whether you're searching for "affordable engineering in Melbourne" or "nursing courses with scholarships," 
+                      our platform gets it—and gets you results in seconds.
+                    </p>
+                    
+                    <p className="text-lg font-medium text-foreground">
+                      Your dream of studying in Australia shouldn't come with a headache. Let us handle the complexity, 
+                      so you can focus on what matters: your future.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
@@ -280,11 +337,11 @@ export default function OurStory() {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                Be Part of Our Story
+                Ready to Write Your Own Success Story?
               </h2>
               <p className="text-lg md:text-xl text-white/90 mb-8">
-                Join thousands of students who are already discovering their dream universities through 
-                ANZ Global Education
+                Join thousands of students who've turned their Australian education dreams into reality. 
+                Let's make your journey simple, transparent, and stress-free.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
@@ -294,7 +351,7 @@ export default function OurStory() {
                   data-testid="button-explore-courses"
                 >
                   <GraduationCap className="mr-2 h-5 w-5" />
-                  Explore Courses
+                  Find Your Course
                 </Button>
                 <Button 
                   size="lg"
@@ -303,7 +360,7 @@ export default function OurStory() {
                   className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm px-8"
                   data-testid="button-contact-us"
                 >
-                  Get in Touch
+                  Talk to an Advisor
                 </Button>
               </div>
             </div>
