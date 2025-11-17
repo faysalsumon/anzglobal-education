@@ -196,7 +196,7 @@ export default function Landing() {
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl min-h-[120px] sm:min-h-[140px] md:min-h-[160px]">
               Find Your{" "}
               <TypingText 
-                words={["Dream Course", "Perfect University", "Future Career"]}
+                words={["Dream Course", "Perfect Institution", "Future Career"]}
                 className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-200 to-pink-200"
               />
               <br />
@@ -358,7 +358,7 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Showcase your programs to thousands of motivated international students actively searching for their ideal institution. Our AI matches your courses with the right candidates.
+                  Showcase your programs to motivated international students actively searching for their ideal institution. Our AI matches your courses with qualified candidates worldwide.
                 </p>
               </CardContent>
             </Card>
@@ -479,7 +479,7 @@ export default function Landing() {
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Showcase your programs to thousands of motivated international students</span>
+                  <span>Showcase your programs to motivated international students worldwide</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
@@ -535,7 +535,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Automated workflows reduce manual work for universities and students</span>
+                  <span>Automated workflows reduce manual work for institutions and students</span>
                 </div>
               </CardContent>
             </Card>
