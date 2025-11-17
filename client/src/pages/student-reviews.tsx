@@ -1,6 +1,8 @@
 import { Helmet } from "react-helmet";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Quote, GraduationCap, MapPin, Building2 } from "lucide-react";
+import { useLocation } from "wouter";
 
 const reviews = [
   {
@@ -14,26 +16,26 @@ const reviews = [
   },
   {
     id: 2,
-    title: "At Least I Made the Right Decision",
+    title: "At least I mad decision.",
     content: "I was not vocal with my dream. But anyhow my cousin Redoan Karim understand me and suggest me to go for abroad. Though it was my dream too, but I couldn't speak my mind from the beginning. Any how my father understand my thought from my cousin. So, he also put trust on ANZ Global Education. And I start my dream journey. with a very short time I got my visa though I was late in decision making.",
     studentName: "Sajid Hasan",
     location: "Melbourne, Australia",
-    institution: "Swinburne University of Technology",
+    institution: "Swinburne University of Technology.",
     imageUrl: "/api/placeholder/100/100"
   },
   {
     id: 3,
-    title: "My Faith Got Trust",
-    content: "From my childhood it was my dream to study in abroad. As soon I was about to give my HSC, I start searching for believable agencies but with many hopes I stick with ANZ Global Education. Because they were very informative from the beginning. And they just grab my trust. within a very short time I got my visa. In those processing time I suggest my childhood friend who is also my cousin to apply for abroad and he should apply by this agency. now we both are flying together for Australia.",
+    title: "My faith got trust",
+    content: "From my childhood it was my dream to study in abroad. As soon I was about to give my HSC, I start searching for believable agencies but with many hopes I stick with ANZ Global Education. Because they were very informative from the biggening. And they just grab my trust. within a very short time I got my visa. In those processing time I suggest my childhood friend who is also my cousin to apply for abroad and he should apply by this agency. now we both are flying together for Australia. Thank you, ANZ Global Education.",
     studentName: "Redoan Karim",
     location: "Melbourne, Australia",
-    institution: "Swinburne University of Technology",
+    institution: "Swinburne University of Technology.",
     imageUrl: "/api/placeholder/100/100"
   },
   {
     id: 4,
     title: "Dreams Turned Into Reality",
-    content: "Studying abroad was always a dream of mine, but I didn't know how to make it a reality. ANZ Global Education made that dream come true. They guided me step-by-step—from career counseling and IELTS preparation to choosing a university and submitting my visa application. Every time I had a question, they answered it patiently and clearly. Their team was well-informed and deeply experienced in handling student visas. Today, I am studying at Swinburne University and thriving in a supportive academic environment.",
+    content: "Studying abroad was always a dream of mine, but I didn't know how to make it a reality. ANZ Global Education made that dream come true. They guided me step-by-step—from career counseling and IELTS preparation to choosing a university and submitting my visa application. Every time I had a question, they answered it patiently and clearly. Their team was well-informed and deeply experienced in handling student visas. Today, I am studying at Swinburne University and thriving in a new environment—all thanks to ANZ Global Education. I'll always be grateful for their help and recommend them to every student looking to study in Australia.",
     studentName: "MD Areen Chowdhury",
     location: "Melbourne, Australia",
     institution: "Swinburne University",
@@ -43,7 +45,7 @@ const reviews = [
     id: 5,
     title: "Genuine and Supportive Team",
     content: "ANZ Global Education really stands out because of their honesty and personal care. They didn't just treat me like another student—they listened, guided, and supported me like family. Whether it was choosing the right course, writing my SOP, or preparing for the visa interview, they were always one step ahead. Thanks to their help, I'm now studying in Australia with a clear plan for my future. I'm so grateful for their support and highly recommend them!",
-    studentName: "AKM Eradat Hossain Niloy",
+    studentName: "AKM ERADAT HOSSAIN NILOY",
     location: "Melbourne, Australia",
     institution: "Victoria University",
     imageUrl: "/api/placeholder/100/100"
@@ -51,7 +53,7 @@ const reviews = [
   {
     id: 6,
     title: "Support That Feels Like Family",
-    content: "What really sets ANZ Global Education apart is how personal and supportive their team is. They treated me not just as a client, but as a member of their own family. I had doubts because my academic background wasn't perfect, but instead of discouraging me, they helped me present my story with honesty and strength in my SOP. They guided me through every detail—from choosing the best intake to finding affordable accommodation in Sydney. Their visa documentation process was super organized, and they kept me updated at every stage. Even after my visa was granted, they helped me with travel arrangements and settling in. Now I'm studying Melbourne at Victoria University, and I feel confident about my future here in Australia. Without their help, I would have been lost in the system. Thank you, ANZ Global, for believing in me!",
+    content: "What really sets ANZ Global Education apart is how personal and supportive their team is. They treated me not just as a client, but as a member of their own family. I had doubts because my academic background wasn't perfect, but instead of discouraging me, they helped me present my story with honesty and strength in my SOP. They guided me through every detail—from choosing the best intake to finding affordable accommodation in Sydney.I consulted many agencies, but ANZ Global was different. They were transparent from the start—no hidden costs or false promises. They explained everything in detail and helped me at every stage, including health insurance and GTE documentation. I felt secure and confident with them. Their visa documentation process was super organized, and they kept me updated at every stage. Even after my visa was granted, they helped me with travel arrangements and settling in. Now I'm studying Melbourne at Victoria University, and I feel confident about my future here in Australia. Without their help, I would have been lost in the system. Thank you, ANZ Global, for believing in me!",
     studentName: "Nosin Anjum Promity",
     location: "Melbourne, Australia",
     institution: "Victoria University",
@@ -60,6 +62,8 @@ const reviews = [
 ];
 
 export default function StudentReviews() {
+  const [, setLocation] = useLocation();
+
   return (
     <>
       <Helmet>
@@ -71,6 +75,11 @@ export default function StudentReviews() {
         <meta property="og:title" content="Student Reviews - ANZ Global Education" />
         <meta property="og:description" content="100,000+ students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories and see why we have 100% visa success rate." />
         <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Student Reviews - ANZ Global Education" />
+        <meta name="twitter:description" content="100,000+ students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories." />
+        <meta name="twitter:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
       </Helmet>
 
       <div className="min-h-screen bg-background">
@@ -187,21 +196,24 @@ export default function StudentReviews() {
                 Experience our 100% visa success rate and personalized support every step of the way.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                  href="/contact"
-                  className="inline-flex items-center justify-center h-10 px-8 bg-white text-primary hover:bg-white/90 rounded-md font-medium transition-colors"
+                <Button 
+                  size="lg"
+                  onClick={() => setLocation('/contact')}
+                  className="bg-white text-primary hover:bg-white/90 px-8"
                   data-testid="button-start-journey"
                 >
                   <GraduationCap className="mr-2 h-5 w-5" />
                   Start Your Journey
-                </a>
-                <a 
-                  href="/courses"
-                  className="inline-flex items-center justify-center h-10 px-8 bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm rounded-md font-medium transition-colors"
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  onClick={() => setLocation('/courses')}
+                  className="bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm px-8"
                   data-testid="button-browse-courses"
                 >
                   Browse Courses
-                </a>
+                </Button>
               </div>
             </div>
           </div>
