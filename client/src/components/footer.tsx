@@ -40,7 +40,7 @@ const footerSections: FooterSection[] = [
   {
     title: "ABOUT ANZ",
     links: [
-      { label: "Our Story", href: "/contact?topic=about" },
+      { label: "Our Story", href: "/our-story" },
       { label: "Student Review", href: "/contact?topic=reviews" },
       { label: "Contact Us", href: "/contact" },
     ],
