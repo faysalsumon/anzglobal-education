@@ -8,7 +8,7 @@ const reviews = [
   {
     id: 1,
     title: "Trusted Visa Support You Can Count On",
-    content: "I have chosen ANZ Global Education from the reference of my relatives, who lives in Australia. so, it was believable for me. When we visited their agency, I got feelings of authentic services from them. As they have 100% visa success, so I started my processing with my legal documents. Within few months I got my Visa. Thanks to them for making my dream come true.",
+    content: "I have chosen ANZ Global Education from the reference of my relatives, who lives in Australia. so, it was believable for me. When we visited their agency, I got feelings of authentic services from them. As they have excellent visa success, so I started my processing with my legal documents. Within few months I got my Visa. Thanks to them for making my dream come true.",
     studentName: "Mustakin Mohammad",
     location: "Melbourne, Australia",
     institution: "Royal Melbourne Institute of Technology (RMIT)",
@@ -70,15 +70,15 @@ export default function StudentReviews() {
         <title>Student Reviews - ANZ Global Education</title>
         <meta 
           name="description" 
-          content="Read authentic testimonials from 100,000+ students who achieved their Australian education dreams with ANZ Global Education. Real stories, real success." 
+          content="Read authentic testimonials from students who achieved their Australian education dreams with ANZ Global Education. Real stories, proven success since 2017." 
         />
         <meta property="og:title" content="Student Reviews - ANZ Global Education" />
-        <meta property="og:description" content="100,000+ students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories and see why we have 100% visa success rate." />
+        <meta property="og:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories and discover our proven track record." />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Student Reviews - ANZ Global Education" />
-        <meta name="twitter:description" content="100,000+ students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories." />
+        <meta name="twitter:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories." />
         <meta name="twitter:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
       </Helmet>
 
@@ -95,7 +95,7 @@ export default function StudentReviews() {
                 Student Reviews
               </h1>
               <p className="text-xl md:text-2xl text-white/90 font-medium mb-4">
-                100,000+ Student Testimonials in Less Than 6 Years
+                Trusted by Students Worldwide Since 2017
               </p>
               <p className="text-lg text-white/80">
                 Real stories from real students who turned their Australian education dreams into reality
@@ -109,16 +109,16 @@ export default function StudentReviews() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
               <div>
-                <div className="text-4xl md:text-5xl font-bold text-primary mb-2">100,000+</div>
-                <div className="text-muted-foreground">Happy Students</div>
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">Thousands</div>
+                <div className="text-muted-foreground">of Students Helped</div>
               </div>
               <div>
-                <div className="text-4xl md:text-5xl font-bold text-primary mb-2">100%</div>
-                <div className="text-muted-foreground">Visa Success Rate</div>
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">Outstanding</div>
+                <div className="text-muted-foreground">Visa Success Record</div>
               </div>
               <div>
-                <div className="text-4xl md:text-5xl font-bold text-primary mb-2">6+</div>
-                <div className="text-muted-foreground">Years of Excellence</div>
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">Since 2017</div>
+                <div className="text-muted-foreground">Years of Proven Excellence</div>
               </div>
             </div>
           </div>
@@ -192,8 +192,8 @@ export default function StudentReviews() {
                 Ready to Write Your Success Story?
               </h2>
               <p className="text-lg md:text-xl text-white/90 mb-8">
-                Join 100,000+ students who trusted ANZ Global Education to make their Australian study dreams come true. 
-                Experience our 100% visa success rate and personalized support every step of the way.
+                Join thousands of students who trusted ANZ Global Education to make their Australian study dreams come true. 
+                Experience our proven track record and personalized support every step of the way.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
