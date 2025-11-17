@@ -209,7 +209,7 @@ export default function Landing() {
               </span>
             </h1>
             <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
-              Just describe what you want - our AI understands!
+              Connect with top universities or discover your ideal course — our AI makes it simple
             </p>
 
             {/* Natural Language Search */}
@@ -225,10 +225,10 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Your Journey Starts Here
+              For Students: Your Path to Success
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Three simple steps to discover your dream university and launch your international education
+              Three simple steps to find your perfect course and start your international education journey
             </p>
           </div>
           
@@ -249,7 +249,7 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Use our AI-powered search to find courses and universities that match your goals, budget, and preferences. Filter by location, fees, and more.
+                  Tell our AI what you're looking for in plain language. Get instant, personalized course recommendations that match your goals, budget, and career aspirations.
                 </p>
               </CardContent>
             </Card>
@@ -270,7 +270,7 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Compare programs side-by-side, explore campus facilities, scholarships, and career outcomes. Make an informed decision about your future.
+                  Review detailed course information, compare scholarships, explore career pathways, and read real student reviews. Make confident decisions about your education.
                 </p>
               </CardContent>
             </Card>
@@ -291,7 +291,7 @@ export default function Landing() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground leading-relaxed">
-                  Submit your applications directly through our platform. Track progress, communicate with universities, and get support every step of the way.
+                  Apply directly through our platform with expert guidance. Track your application status in real-time and get personalized support from our experienced counselors.
                 </p>
               </CardContent>
             </Card>
@@ -355,7 +355,7 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose ANZ Global Education?</h2>
-            <p className="text-lg text-muted-foreground">Transforming how universities and students connect</p>
+            <p className="text-lg text-muted-foreground">Connecting ambitious students with world-class universities since 2017</p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             <Card className="border-card-border hover-elevate">
@@ -364,20 +364,20 @@ export default function Landing() {
                   <Building2 className="h-6 w-6 text-primary" />
                 </div>
                 <CardTitle>For Universities</CardTitle>
-                <CardDescription>Streamline admissions and expand your global reach</CardDescription>
+                <CardDescription>Reach qualified students globally and simplify admissions</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>AI-powered content generation for courses</span>
+                  <span>Showcase your programs to thousands of motivated international students</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Centralized application management system</span>
+                  <span>Streamline application review with centralized dashboard and AI tools</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Connect with qualified international candidates</span>
+                  <span>Reduce administrative burden with automated content generation</span>
                 </div>
               </CardContent>
             </Card>
@@ -388,20 +388,20 @@ export default function Landing() {
                   <Users className="h-6 w-6 text-secondary" />
                 </div>
                 <CardTitle>For Students</CardTitle>
-                <CardDescription>Find and apply to your dream courses</CardDescription>
+                <CardDescription>Discover courses that match your goals and budget</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Smart course recommendations</span>
+                  <span>Get personalized course matches based on your career goals and preferences</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>AI profile builder assistance</span>
+                  <span>Build your profile with AI assistance and expert counselor support</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Track application status</span>
+                  <span>Apply to multiple universities and track everything in one place</span>
                 </div>
               </CardContent>
             </Card>
@@ -411,21 +411,21 @@ export default function Landing() {
                 <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
                   <Sparkles className="h-6 w-6 text-accent" />
                 </div>
-                <CardTitle>AI-Powered</CardTitle>
-                <CardDescription>Intelligent tools for better decisions</CardDescription>
+                <CardTitle>AI-Powered Platform</CardTitle>
+                <CardDescription>Smart technology that saves time and improves outcomes</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Advanced course filtering</span>
+                  <span>Natural language search understands what you're really looking for</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Automated profile generation</span>
+                  <span>Intelligent matching connects students with their best-fit programs</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <FileCheck className="h-4 w-4 mt-0.5 text-secondary" />
-                  <span>Personalized recommendations</span>
+                  <span>Automated workflows reduce manual work for universities and students</span>
                 </div>
               </CardContent>
             </Card>
@@ -564,7 +564,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl rounded-2xl bg-gradient-to-r from-primary to-secondary p-8 text-center text-white md:p-12">
             <h2 className="mb-4 text-3xl font-bold md:text-4xl">Ready to Get Started?</h2>
             <p className="mb-8 text-lg opacity-90">
-              Join thousands of students finding their perfect course or universities showcasing their programs
+              Whether you're a student seeking your ideal course or a university looking to connect with qualified candidates, we're here to help
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button 
