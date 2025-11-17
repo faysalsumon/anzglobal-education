@@ -41,6 +41,7 @@ import { LeadFormDialog } from "@/components/lead-form-dialog";
 export default function PublicCourses() {
   const [searchTerm, setSearchTerm] = useState("");
   const [subject, setSubject] = useState<string>("");
+  const [discipline, setDiscipline] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
@@ -53,6 +54,7 @@ export default function PublicCourses() {
 
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
+  
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
   });
@@ -257,12 +259,14 @@ export default function PublicCourses() {
   // Extract unique values from actual course data
   const availableFilters = useMemo(() => {
     const subjects = new Set<string>();
+    const disciplines = new Set<string>();
     const levels = new Set<string>();
     const countries = new Set<string>();
     const universities = new Map<string, string>();
 
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
+      if (course.discipline) disciplines.add(course.discipline);
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
       if (course.university && course.universityId) {
@@ -272,6 +276,7 @@ export default function PublicCourses() {
 
     return {
       subjects: Array.from(subjects).sort(),
+      disciplines: Array.from(disciplines).sort(),
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
@@ -287,6 +292,7 @@ export default function PublicCourses() {
     const levelParam = urlParams.get('level');
     const countryParam = urlParams.get('country');
     const subjectParam = urlParams.get('subject');
+    const disciplineParam = urlParams.get('discipline');
     const minFeesParam = urlParams.get('minFees');
     const maxFeesParam = urlParams.get('maxFees');
     
@@ -296,6 +302,7 @@ export default function PublicCourses() {
     setLevel(levelParam || "");
     setCountry(countryParam || "");
     setSubject(subjectParam || "");
+    setDiscipline(disciplineParam || "");
     setMinFees(minFeesParam ? parseInt(minFeesParam) : null);
     setMaxFees(maxFeesParam ? parseInt(maxFeesParam) : null);
     
@@ -310,7 +317,7 @@ export default function PublicCourses() {
       const newSearch = newParams.toString();
       window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
     }
-  }, [location]); // Re-run whenever location changes to sync with natural language search navigation
+  }, [location]); // Re-run whenever location changes
 
   // Scroll to highlighted course
   useEffect(() => {
@@ -321,6 +328,31 @@ export default function PublicCourses() {
     }
   }, [highlightedCourseId, courses]);
 
+  // Sync filter state to URL for sharing and back navigation
+  useEffect(() => {
+    const currentSearch = window.location.search;
+    
+    // Build new params from current state
+    const params = new URLSearchParams();
+    
+    if (searchTerm) params.set('search', searchTerm);
+    if (subject) params.set('subject', subject);
+    if (discipline) params.set('discipline', discipline);
+    if (level) params.set('level', level);
+    if (country) params.set('country', country);
+    if (universityFilter) params.set('university', universityFilter);
+    if (minFees !== null) params.set('minFees', minFees.toString());
+    if (maxFees !== null) params.set('maxFees', maxFees.toString());
+    
+    const newSearch = params.toString();
+    const newFullSearch = newSearch ? `?${newSearch}` : '';
+    
+    // Only update if search params actually changed to avoid infinite loops
+    if (currentSearch !== newFullSearch) {
+      window.history.replaceState({}, '', window.location.pathname + newFullSearch);
+    }
+  }, [searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees]);
+
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !course.description?.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -328,6 +360,7 @@ export default function PublicCourses() {
       return false;
     }
     if (subject && course.subject !== subject) return false;
+    if (discipline && course.discipline !== discipline) return false;
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
@@ -433,6 +466,20 @@ export default function PublicCourses() {
                   </SelectContent>
                 </Select>
 
+                <Select value={discipline || "all"} onValueChange={(val) => setDiscipline(val === "all" ? "" : val)}>
+                  <SelectTrigger data-testid="select-discipline">
+                    <SelectValue placeholder="All Disciplines" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Disciplines</SelectItem>
+                    {availableFilters.disciplines.map((disc) => (
+                      <SelectItem key={disc} value={disc}>
+                        {disc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={level || "all"} onValueChange={(val) => setLevel(val === "all" ? "" : val)}>
                   <SelectTrigger data-testid="select-level">
                     <SelectValue placeholder="All Levels" />
@@ -461,13 +508,14 @@ export default function PublicCourses() {
                   </SelectContent>
                 </Select>
               </div>
-              {(searchTerm || subject || level || country) && (
+              {(searchTerm || subject || discipline || level || country) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setSearchTerm("");
                     setSubject("");
+                    setDiscipline("");
                     setLevel("");
                     setCountry("");
                     setHighlightedCourseId(null);

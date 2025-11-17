@@ -34,6 +34,7 @@ Key features include:
 -   **SEO Implementation**: Comprehensive dynamic meta tags, Open Graph/Twitter Cards, and JSON-LD schemas for public pages.
 -   **Institution/Course Approval Workflow**: Requires platform admin approval for public visibility, with "pending" status for new registrations.
 -   **Institution Registration & Authentication**: Streamlined onboarding via `InstitutionAuthModal` using Replit Auth OIDC, with planned migration to Google Firebase Authentication.
+-   **Discipline-Based Course Filtering**: Comprehensive system with 15 main discipline categories (Accounting/Business/Finance, Agriculture/Forestry, Applied Sciences, Arts/Design/Architecture, Computer Science/IT, Education/Training, Engineering/Technology, Environmental Studies, Hospitality/Leisure/Sports, Humanities, Journalism/Media, Law, Medicine/Health, Short Courses, Trade Qualifications). Features interactive discipline cards on landing page, click-to-filter navigation, dropdown filter in course listings, and integration with natural language search.
 
 ### Technical Implementation
 -   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter (routing), TanStack Query, React Hook Form, Zod.

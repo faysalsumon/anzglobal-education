@@ -1309,19 +1309,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Course routes - only show approved and active courses from approved institutions
-  app.get("/api/courses", async (req, res) => {
+  // Get disciplines with course counts
+  app.get("/api/disciplines", async (req, res) => {
     try {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
-      // Filter to only show approved courses from approved institutions
-      const courses = allCourses.filter(course => {
+      // Count courses per discipline (only approved and active courses from approved institutions)
+      const disciplineCounts: Record<string, number> = {};
+      
+      allCourses.forEach(course => {
+        if (!course.discipline) return; // Skip courses without discipline
+        
         const university = allUniversities.find(u => u.id === course.universityId);
-        return course.approvalStatus === 'approved' && 
+        
+        // Only count approved courses from approved institutions
+        if (course.approvalStatus === 'approved' && 
+            course.isActive &&
+            university?.approvalStatus === 'approved' &&
+            university?.isActive) {
+          disciplineCounts[course.discipline] = (disciplineCounts[course.discipline] || 0) + 1;
+        }
+      });
+      
+      // Convert to array format with discipline name and count
+      const disciplines = Object.entries(disciplineCounts)
+        .map(([name, count]) => ({ name, count }))
+        .filter(d => d.count > 0) // Only return disciplines with at least one course
+        .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+      
+      res.json(disciplines);
+    } catch (error) {
+      console.error("Error fetching disciplines:", error);
+      res.status(500).json({ message: "Failed to fetch disciplines" });
+    }
+  });
+
+  // Course routes - only show approved and active courses from approved institutions
+  app.get("/api/courses", async (req, res) => {
+    try {
+      const { discipline } = req.query;
+      const allCourses = await storage.getAllCourses();
+      const allUniversities = await storage.getAllUniversities();
+      
+      // Filter to only show approved courses from approved institutions
+      let courses = allCourses.filter(course => {
+        const university = allUniversities.find(u => u.id === course.universityId);
+        const isApprovedAndActive = course.approvalStatus === 'approved' && 
                course.isActive &&
                university?.approvalStatus === 'approved' &&
                university?.isActive;
+        
+        if (!isApprovedAndActive) return false;
+        
+        // Apply discipline filter if provided
+        if (discipline && typeof discipline === 'string') {
+          return course.discipline === discipline;
+        }
+        
+        return true;
       });
       
       res.json(courses);

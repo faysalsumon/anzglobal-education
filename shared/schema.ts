@@ -17,6 +17,25 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Discipline enum for course categorization
+export const disciplineEnum = pgEnum('discipline', [
+  'Accounting, Business & Finance',
+  'Agriculture & Forestry',
+  'Applied Sciences & Professions',
+  'Arts, Design & Architecture',
+  'Computer Science & IT',
+  'Education & Training',
+  'Engineering & Technology',
+  'Environmental Studies & Earth Sciences',
+  'Hospitality, Leisure & Sports',
+  'Humanities',
+  'Journalism & Media',
+  'Law',
+  'Medicine & Health',
+  'Short Courses',
+  'Trade Qualifications',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -139,6 +158,7 @@ export const courses = pgTable("courses", {
   title: text("title").notNull(),
   description: text("description"),
   subject: text("subject").notNull(),
+  discipline: disciplineEnum("discipline"), // Main discipline category for filtering
   level: text("level").notNull(), // 'undergraduate', 'postgraduate', 'certificate', 'diploma'
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
@@ -200,12 +220,14 @@ export const courses = pgTable("courses", {
   careerOutcomesIdx: index("courses_career_outcomes_gin_idx").using("gin", table.careerOutcomes),
   pathwaysIdx: index("courses_pathways_gin_idx").using("gin", table.pathways),
   englishReqsIdx: index("courses_english_reqs_gin_idx").using("gin", table.englishRequirementsStructured),
-  // Btree index for duration filtering
+  // Btree index for duration and discipline filtering
   durationWeeksIdx: index("courses_duration_weeks_idx").on(table.durationWeeks),
+  disciplineIdx: index("courses_discipline_idx").on(table.discipline),
   // Composite indexes for common query patterns
   universityActiveIdx: index("courses_university_active_idx").on(table.universityId, table.isActive),
   subjectLevelIdx: index("courses_subject_level_idx").on(table.subject, table.level),
   activeApprovedIdx: index("courses_active_approved_idx").on(table.isActive, table.approvalStatus),
+  disciplineActiveIdx: index("courses_discipline_active_idx").on(table.discipline, table.isActive, table.approvalStatus),
 }));
 
 // Student profiles table
@@ -945,6 +967,25 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   approvedAt: true, // Set by admins
   approvedBy: true, // Set by admins
 }).extend({
+  // Validate discipline
+  discipline: z.enum([
+    'Accounting, Business & Finance',
+    'Agriculture & Forestry',
+    'Applied Sciences & Professions',
+    'Arts, Design & Architecture',
+    'Computer Science & IT',
+    'Education & Training',
+    'Engineering & Technology',
+    'Environmental Studies & Earth Sciences',
+    'Hospitality, Leisure & Sports',
+    'Humanities',
+    'Journalism & Media',
+    'Law',
+    'Medicine & Health',
+    'Short Courses',
+    'Trade Qualifications',
+  ]).optional(),
+  
   // Validate array fields - ensure they're arrays and contain valid data
   intakes: z.array(z.string()).optional().default([]),
   studyAreas: z.array(z.string()).optional().default([]),

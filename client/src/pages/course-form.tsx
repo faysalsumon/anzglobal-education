@@ -51,6 +51,7 @@ export default function CourseForm() {
       title: "",
       description: "",
       subject: "",
+      discipline: undefined,
       level: "",
       duration: "",
       durationMonths: undefined,
@@ -101,6 +102,7 @@ export default function CourseForm() {
         title: course.title,
         description: course.description ?? "",
         subject: course.subject,
+        discipline: course.discipline ?? undefined,
         level: course.level,
         duration: course.duration ?? "",
         durationMonths: course.durationMonths ?? undefined,
@@ -325,6 +327,44 @@ export default function CourseForm() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="discipline"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Discipline</FormLabel>
+                    <FormDescription>
+                      Main discipline category for this course
+                    </FormDescription>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-discipline">
+                          <SelectValue placeholder="Select discipline" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Accounting, Business & Finance">Accounting, Business & Finance</SelectItem>
+                        <SelectItem value="Agriculture & Forestry">Agriculture & Forestry</SelectItem>
+                        <SelectItem value="Applied Sciences & Professions">Applied Sciences & Professions</SelectItem>
+                        <SelectItem value="Arts, Design & Architecture">Arts, Design & Architecture</SelectItem>
+                        <SelectItem value="Computer Science & IT">Computer Science & IT</SelectItem>
+                        <SelectItem value="Education & Training">Education & Training</SelectItem>
+                        <SelectItem value="Engineering & Technology">Engineering & Technology</SelectItem>
+                        <SelectItem value="Environmental Studies & Earth Sciences">Environmental Studies & Earth Sciences</SelectItem>
+                        <SelectItem value="Hospitality, Leisure & Sports">Hospitality, Leisure & Sports</SelectItem>
+                        <SelectItem value="Humanities">Humanities</SelectItem>
+                        <SelectItem value="Journalism & Media">Journalism & Media</SelectItem>
+                        <SelectItem value="Law">Law</SelectItem>
+                        <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
+                        <SelectItem value="Short Courses">Short Courses</SelectItem>
+                        <SelectItem value="Trade Qualifications">Trade Qualifications</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

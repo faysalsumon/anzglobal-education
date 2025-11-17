@@ -12,6 +12,7 @@ import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
+import { DisciplineCards } from "@/components/discipline-cards";
 
 interface PlatformStats {
   institutionCount: number;
@@ -217,6 +218,22 @@ export default function Landing() {
               <NaturalLanguageSearch />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Browse by Discipline Section */}
+      <section className="py-20 md:py-32 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Browse Courses by Discipline
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Explore our wide range of programs across different disciplines
+            </p>
+          </div>
+          
+          <DisciplineCards />
         </div>
       </section>
 
