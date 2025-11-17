@@ -64,9 +64,9 @@ export default function OurStory() {
                         Our Mission
                       </h2>
                       <p className="text-lg text-muted-foreground leading-relaxed">
-                        To break down the barriers in international education by giving students the tools, 
-                        transparency, and support they deserve—making their dream of studying in Australia 
-                        accessible, simple, and stress-free.
+                        To break down the barriers in international education by connecting the right students with the right courses. 
+                        We give students the tools, transparency, and support they deserve—while helping universities reach motivated, 
+                        qualified students who'll thrive in their programs. Simple, smart, and stress-free for everyone.
                       </p>
                     </div>
                   </div>
@@ -114,9 +114,16 @@ export default function OurStory() {
                   </p>
                   
                   <p className="text-lg">
-                    They knew there had to be a better way. <em>Students shouldn't have to struggle this much</em>, they thought. 
-                    So they founded ANZ Global Education—not just as another education agency, but as a lifeline for students 
-                    who felt lost in the system.
+                    But as they started working with universities as education consultants, they discovered another side of the problem. 
+                    <strong className="text-foreground"> Institutions were struggling too</strong>—drowning in applications, unable to effectively 
+                    reach the <em>right students</em> for their programs. Quality courses were going unnoticed while talented students were 
+                    ending up in programs that didn't match their goals.
+                  </p>
+                  
+                  <p className="text-lg">
+                    They realized: <em>this isn't just a student problem—it's a matching problem</em>. Students need the right course. 
+                    Universities need the right students. Both were struggling, and nobody was winning. That's when ANZ Global Education 
+                    was born—a platform designed to solve <strong className="text-foreground">both sides</strong> of the equation.
                   </p>
                 </div>
               </div>
@@ -197,15 +204,23 @@ export default function OurStory() {
                     </p>
                     
                     <p className="text-lg">
+                      And for our university partners, we saw how daunting it was to promote courses and reach the right students. 
+                      Quality programs were invisible to the students who'd thrive in them. That's why our platform doesn't just help students 
+                      find courses—<strong className="text-foreground">it helps universities find the right students</strong>. Smart matching. 
+                      Better outcomes. Everyone wins.
+                    </p>
+                    
+                    <p className="text-lg">
                       Today, we partner with <strong className="text-foreground">22+ Australian universities</strong>, offering{" "}
                       <strong className="text-foreground">AI-powered search</strong> that actually understands what you're looking for. 
                       Whether you're searching for "affordable engineering in Melbourne" or "nursing courses with scholarships," 
-                      our platform gets it—and gets you results in seconds.
+                      our platform gets it—and gets you results in seconds. And universities get qualified, motivated students who are 
+                      genuinely interested in their programs.
                     </p>
                     
                     <p className="text-lg font-medium text-foreground">
-                      Your dream of studying in Australia shouldn't come with a headache. Let us handle the complexity, 
-                      so you can focus on what matters: your future.
+                      Your dream of studying in Australia shouldn't come with a headache. And universities shouldn't struggle to reach 
+                      their ideal students. Let us handle the complexity, so everyone can focus on what matters: education and future success.
                     </p>
                   </div>
                 </CardContent>
@@ -335,15 +350,19 @@ export default function OurStory() {
         {/* CTA Section */}
         <section className="py-16 md:py-24 bg-gradient-to-br from-primary via-primary/95 to-secondary">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                Ready to Write Your Own Success Story?
+                Ready to Be Part of the Solution?
               </h2>
               <p className="text-lg md:text-xl text-white/90 mb-8">
-                Join thousands of students who've turned their Australian education dreams into reality. 
+                <strong className="text-white">Students:</strong> Join thousands who've turned their Australian education dreams into reality. 
                 Let's make your journey simple, transparent, and stress-free.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <p className="text-base md:text-lg text-white/80 mb-8">
+                <strong className="text-white">Universities:</strong> Connect with motivated, qualified students who are genuinely interested in your programs. 
+                Smart matching means better outcomes for everyone.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
                 <Button 
                   size="lg"
                   onClick={() => setLocation('/courses')}
@@ -363,6 +382,16 @@ export default function OurStory() {
                   Talk to an Advisor
                 </Button>
               </div>
+              <p className="text-sm text-white/70">
+                Universities interested in partnering?{" "}
+                <button 
+                  onClick={() => setLocation('/contact')}
+                  className="underline hover:text-white transition-colors font-medium"
+                  data-testid="link-partner-inquiry"
+                >
+                  Get in touch
+                </button>
+              </p>
             </div>
           </div>
         </section>
