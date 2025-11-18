@@ -1,0 +1,449 @@
+import { Pinecone, PineconeRecord } from '@pinecone-database/pinecone';
+import OpenAI from 'openai';
+import { db } from './db';
+import { courses, universities, campuses, courseCampuses } from '@shared/schema';
+import type { Campus } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+const PINECONE_INDEX_NAME = 'anz-global-education';
+
+// Initialize OpenAI for embeddings
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Initialize Pinecone client
+export async function initializePinecone() {
+  const apiKey = process.env.PINECONE_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('PINECONE_API_KEY environment variable is required');
+  }
+
+  const pc = new Pinecone({
+    apiKey: apiKey,
+  });
+
+  return pc;
+}
+
+// Get or create Pinecone index
+export async function getOrCreatePineconeIndex() {
+  const pc = await initializePinecone();
+  
+  const indexList = await pc.listIndexes();
+  const indexExists = indexList.indexes?.some(index => index.name === PINECONE_INDEX_NAME);
+
+  if (!indexExists) {
+    console.log(`Creating Pinecone index: ${PINECONE_INDEX_NAME}`);
+    await pc.createIndex({
+      name: PINECONE_INDEX_NAME,
+      dimension: 1536, // OpenAI text-embedding-3-small dimension
+      metric: 'cosine',
+      spec: {
+        serverless: {
+          cloud: 'aws',
+          region: 'us-east-1'
+        }
+      }
+    });
+    
+    // Wait for index to be ready
+    console.log('Waiting for index to be ready...');
+    await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+  }
+
+  return pc.index(PINECONE_INDEX_NAME);
+}
+
+// Create text embeddings using OpenAI
+async function createEmbedding(text: string): Promise<number[]> {
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: text,
+  });
+
+  return response.data[0].embedding;
+}
+
+// Split text into chunks
+function chunkText(text: string, chunkSize = 1000, overlap = 200): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    const end = Math.min(start + chunkSize, text.length);
+    chunks.push(text.slice(start, end));
+    start += chunkSize - overlap;
+  }
+
+  return chunks;
+}
+
+interface KnowledgeDocument {
+  id: string;
+  content: string;
+  metadata: Record<string, any>;
+}
+
+// Extract and format course data for knowledge base
+async function extractCourseDocuments(): Promise<KnowledgeDocument[]> {
+  const coursesWithUniversities = await db
+    .select({
+      course: courses,
+      university: universities,
+    })
+    .from(courses)
+    .leftJoin(universities, eq(courses.universityId, universities.id))
+    .where(eq(courses.approvalStatus, 'approved'));
+
+  const documents: KnowledgeDocument[] = [];
+
+  for (const { course, university } of coursesWithUniversities) {
+    if (!university) continue;
+
+    // Get campuses for this course
+    const coursesCampusesData = await db
+      .select({
+        campus: campuses,
+      })
+      .from(courseCampuses)
+      .leftJoin(campuses, eq(courseCampuses.campusId, campuses.id))
+      .where(eq(courseCampuses.courseId, course.id));
+
+    const campusLocations = coursesCampusesData
+      .map((cc: { campus: Campus | null }) => cc.campus?.city)
+      .filter(Boolean)
+      .join(', ');
+
+    const content = `
+Course: ${course.name}
+Institution: ${university.name}
+Provider Type: ${university.providerType}
+Discipline: ${course.discipline || 'Not specified'}
+Sub-discipline: ${course.subDiscipline || 'Not specified'}
+Level: ${course.level || 'Not specified'}
+Country: ${course.country || 'Not specified'}
+Campus Locations: ${campusLocations || 'Not specified'}
+Duration: ${course.duration || 'Not specified'}
+Fees: ${course.fees ? `$${course.fees} AUD` : 'Not specified'}
+CRICOS Code: ${course.cricosCode || 'Not specified'}
+Description: ${course.description || 'No description available'}
+Career Pathways: ${course.careerPathways || 'Not specified'}
+Scholarships: ${course.scholarships || 'Not specified'}
+Entry Requirements: ${course.entryRequirements || 'Not specified'}
+English Requirements: ${course.englishRequirements ? JSON.stringify(course.englishRequirements) : 'Not specified'}
+`.trim();
+
+    documents.push({
+      id: `course-${course.id}`,
+      content,
+      metadata: {
+        type: 'course',
+        courseId: course.id,
+        courseName: course.name,
+        universityId: university.id,
+        universityName: university.name,
+        discipline: course.discipline || '',
+        level: course.level || '',
+        country: course.country || '',
+        fees: course.fees ? String(course.fees) : '',
+      }
+    });
+  }
+
+  console.log(`Extracted ${documents.length} course documents`);
+  return documents;
+}
+
+// Extract and format institution data
+async function extractInstitutionDocuments(): Promise<KnowledgeDocument[]> {
+  const allUniversities = await db
+    .select()
+    .from(universities);
+
+  const documents: KnowledgeDocument[] = [];
+
+  for (const university of allUniversities) {
+    // Get campuses for this institution
+    const institutionCampuses = await db
+      .select()
+      .from(campuses)
+      .where(eq(campuses.institutionId, university.id));
+
+    const campusLocations = institutionCampuses
+      .map((c: Campus) => c.city)
+      .filter(Boolean)
+      .join(', ');
+
+    const content = `
+Institution: ${university.name}
+Provider Type: ${university.providerType}
+Country: ${university.country || 'Not specified'}
+Campus Locations: ${campusLocations || 'Not specified'}
+Description: ${university.description || 'No description available'}
+Ranking: ${university.ranking || 'Not specified'}
+Accreditation: ${university.accreditation || 'Not specified'}
+Contact Email: ${university.contactEmail || 'Not specified'}
+Phone: ${university.phone || 'Not specified'}
+Website: ${university.website || 'Not specified'}
+`.trim();
+
+    documents.push({
+      id: `institution-${university.id}`,
+      content,
+      metadata: {
+        type: 'institution',
+        institutionId: university.id,
+        institutionName: university.name,
+        providerType: university.providerType,
+        country: university.country || '',
+      }
+    });
+  }
+
+  console.log(`Extracted ${documents.length} institution documents`);
+  return documents;
+}
+
+// Extract platform guide documents
+function extractPlatformGuides(): KnowledgeDocument[] {
+  const guides = [
+    {
+      id: 'guide-applications',
+      title: 'How to Apply for Courses',
+      content: `
+To apply for courses on ANZ Global Education:
+
+1. Create a student account or log in
+2. Browse courses using the search and filters
+3. Click on a course to view details
+4. Click "Apply Now" on the course page
+5. Fill in the application form with your details
+6. Upload required documents (transcripts, English test scores, passport)
+7. Submit your application
+8. Track your application status in your dashboard
+9. Universities will review and respond to your application
+
+Required documents typically include:
+- Academic transcripts
+- English language test scores (IELTS, TOEFL, PTE)
+- Copy of passport
+- Statement of purpose
+- Letters of recommendation (for postgraduate programs)
+      `.trim(),
+      metadata: { type: 'guide', topic: 'applications' }
+    },
+    {
+      id: 'guide-course-levels',
+      title: 'Understanding Course Levels',
+      content: `
+ANZ Global Education offers courses at various qualification levels:
+
+- VCE (11-12): Victorian Certificate of Education (high school)
+- Certificate II-IV: Vocational training certificates
+- Diploma: 1-2 year vocational qualification
+- Advanced Diploma: Higher vocational qualification
+- Graduate Certificate: Short postgraduate program
+- Graduate Diploma: Postgraduate diploma
+- Bachelor Degree: Undergraduate degree (3-4 years)
+- Professional Year: Post-study work program
+- Masters Degree: Postgraduate degree (1-2 years)
+- Doctoral Degree: PhD programs
+- ELICOS: English language courses
+
+Each level has different entry requirements and career outcomes.
+      `.trim(),
+      metadata: { type: 'guide', topic: 'course-levels' }
+    },
+    {
+      id: 'guide-english-requirements',
+      title: 'English Language Requirements',
+      content: `
+Most Australian universities require proof of English proficiency:
+
+Common tests accepted:
+- IELTS (International English Language Testing System)
+- TOEFL (Test of English as a Foreign Language)
+- PTE (Pearson Test of English)
+- Duolingo English Test
+
+Typical requirements:
+- Undergraduate: IELTS 6.0-6.5 overall
+- Postgraduate: IELTS 6.5-7.0 overall
+- Some courses may have higher requirements
+
+You can also complete ELICOS (English Language Intensive Courses) in Australia if you don't meet the requirements initially.
+      `.trim(),
+      metadata: { type: 'guide', topic: 'english-requirements' }
+    },
+    {
+      id: 'guide-studying-australia',
+      title: 'Studying in Australia',
+      content: `
+Australia is a popular destination for international students:
+
+Why study in Australia:
+- World-class education system
+- Globally recognized qualifications
+- Safe and welcoming environment
+- Post-study work opportunities
+- Diverse and multicultural society
+
+Student visa requirements:
+- Confirmation of Enrolment (CoE) from institution
+- Genuine Temporary Entrant (GTE) statement
+- Financial capacity proof
+- Health insurance (OSHC)
+- English proficiency proof
+- Health and character requirements
+
+Post-study work rights:
+- Temporary Graduate visa (subclass 485)
+- Work rights depend on qualification level
+- Bachelor/Masters: 2-4 years work rights
+      `.trim(),
+      metadata: { type: 'guide', topic: 'studying-in-australia' }
+    },
+    {
+      id: 'guide-platform-features',
+      title: 'Platform Features',
+      content: `
+ANZ Global Education platform features:
+
+For Students:
+- Search and filter courses by discipline, level, location, fees
+- View detailed course and institution information
+- Apply to multiple courses
+- Track application status
+- Upload and manage documents
+- Receive notifications about applications
+- Chat with AI assistant for instant help
+
+For Institutions:
+- Manage course listings
+- Review and respond to applications
+- Manage team members and roles
+- Upload institution information and images
+- Track student inquiries
+
+Search Tips:
+- Use natural language: "Computer Science courses in Melbourne under $25000"
+- Filter by discipline, level, country, city, fees
+- Click on campus badges to filter by location
+- Save favorite courses for later
+      `.trim(),
+      metadata: { type: 'guide', topic: 'platform-features' }
+    }
+  ];
+
+  return guides.map(guide => ({
+    id: guide.id,
+    content: `${guide.title}\n\n${guide.content}`,
+    metadata: guide.metadata
+  }));
+}
+
+// Build and upload knowledge base to Pinecone
+export async function buildKnowledgeBase() {
+  console.log('Starting knowledge base build...');
+
+  try {
+    // Extract all documents
+    const [coursesDocs, institutionsDocs, guidesDocs] = await Promise.all([
+      extractCourseDocuments(),
+      extractInstitutionDocuments(),
+      Promise.resolve(extractPlatformGuides()),
+    ]);
+
+    const allDocuments = [
+      ...coursesDocs,
+      ...institutionsDocs,
+      ...guidesDocs,
+    ];
+
+    console.log(`Total documents extracted: ${allDocuments.length}`);
+
+    if (allDocuments.length === 0) {
+      console.log('No documents to upload');
+      return { success: true, documentsProcessed: 0, vectorsCreated: 0 };
+    }
+
+    // Get Pinecone index
+    const index = await getOrCreatePineconeIndex();
+
+    // Create vectors for each document
+    const vectors: PineconeRecord[] = [];
+    for (const doc of allDocuments) {
+      const chunks = chunkText(doc.content);
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const embedding = await createEmbedding(chunks[i]);
+        vectors.push({
+          id: `${doc.id}-chunk-${i}`,
+          values: embedding,
+          metadata: {
+            ...doc.metadata,
+            content: chunks[i],
+            chunkIndex: i,
+            totalChunks: chunks.length,
+          }
+        });
+      }
+    }
+
+    console.log(`Created ${vectors.length} vectors from ${allDocuments.length} documents`);
+
+    // Upload to Pinecone in batches
+    const batchSize = 100;
+    for (let i = 0; i < vectors.length; i += batchSize) {
+      const batch = vectors.slice(i, i + batchSize);
+      await index.upsert(batch);
+      console.log(`Uploaded batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(vectors.length / batchSize)}`);
+    }
+
+    console.log('Knowledge base build completed successfully!');
+    return {
+      success: true,
+      documentsProcessed: allDocuments.length,
+      vectorsCreated: vectors.length,
+    };
+  } catch (error) {
+    console.error('Error building knowledge base:', error);
+    throw error;
+  }
+}
+
+// Query knowledge base
+export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
+  try {
+    const index = await getOrCreatePineconeIndex();
+
+    // Create embedding for query
+    const queryEmbedding = await createEmbedding(query);
+
+    // Search Pinecone
+    const queryResponse = await index.query({
+      vector: queryEmbedding,
+      topK,
+      includeMetadata: true,
+    });
+
+    return (queryResponse.matches || []).map((match) => {
+      // Extract the stored text content from metadata
+      const storedContent = match.metadata?.content as string;
+      
+      // Remove the content field from metadata before returning
+      const { content, ...restMetadata } = match.metadata || {};
+      
+      return {
+        content: storedContent || '',
+        metadata: restMetadata,
+        score: match.score || 0,
+      };
+    });
+  } catch (error) {
+    console.error('Error querying knowledge base:', error);
+    throw error;
+  }
+}

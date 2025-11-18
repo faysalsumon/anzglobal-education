@@ -1589,3 +1589,49 @@ export const insertContactInquirySchema = createInsertSchema(contactInquiries).o
 
 export type ContactInquiry = typeof contactInquiries.$inferSelect;
 export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
+
+// Chat conversations table
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id"), // For anonymous users
+  title: varchar("title", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("chat_conversations_user_id_idx").on(table.userId),
+  sessionIdIdx: index("chat_conversations_session_id_idx").on(table.sessionId),
+  createdAtIdx: index("chat_conversations_created_at_idx").on(table.createdAt),
+}));
+
+// Chat messages table
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").references(() => chatConversations.id, { onDelete: "cascade" }).notNull(),
+  role: varchar("role", { length: 20 }).notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  sources: jsonb("sources"), // Array of source documents used
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  conversationIdIdx: index("chat_messages_conversation_id_idx").on(table.conversationId),
+  createdAtIdx: index("chat_messages_created_at_idx").on(table.createdAt),
+}));
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  content: z.string().min(1).max(5000),
+  role: z.enum(['user', 'assistant']),
+});
+
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;

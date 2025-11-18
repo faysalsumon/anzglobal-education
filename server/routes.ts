@@ -6887,5 +6887,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   
   console.log('WebSocket server initialized on path /ws with session-based authentication');
   
+  // Register chat routes
+  const { registerChatRoutes } = await import('./chat-routes');
+  registerChatRoutes(app);
+  console.log('Chat routes registered with RAG-powered AI assistant');
+  
   return httpServer;
 }
