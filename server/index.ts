@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializePineconeIndex } from "./knowledge-base";
 
 const app = express();
 
@@ -48,6 +49,12 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Initialize Pinecone index in background (non-blocking)
+  initializePineconeIndex().catch((error) => {
+    console.error('[Pinecone] Failed to initialize index:', error);
+    console.error('[Pinecone] Chat agent will not function until index is ready');
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -12,6 +12,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Cache for Pinecone index to avoid repeated initialization
+let cachedPineconeIndex: any = null;
+let indexInitializationPromise: Promise<any> | null = null;
+
 // Initialize Pinecone client
 export async function initializePinecone() {
   const apiKey = process.env.PINECONE_API_KEY;
@@ -27,33 +31,75 @@ export async function initializePinecone() {
   return pc;
 }
 
-// Get or create Pinecone index
-export async function getOrCreatePineconeIndex() {
-  const pc = await initializePinecone();
-  
-  const indexList = await pc.listIndexes();
-  const indexExists = indexList.indexes?.some(index => index.name === PINECONE_INDEX_NAME);
-
-  if (!indexExists) {
-    console.log(`Creating Pinecone index: ${PINECONE_INDEX_NAME}`);
-    await pc.createIndex({
-      name: PINECONE_INDEX_NAME,
-      dimension: 1536, // OpenAI text-embedding-3-small dimension
-      metric: 'cosine',
-      spec: {
-        serverless: {
-          cloud: 'aws',
-          region: 'us-east-1'
-        }
-      }
-    });
-    
-    // Wait for index to be ready
-    console.log('Waiting for index to be ready...');
-    await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+// Initialize Pinecone index (call at server startup)
+export async function initializePineconeIndex() {
+  // If index is already cached, return it
+  if (cachedPineconeIndex) {
+    return cachedPineconeIndex;
   }
 
-  return pc.index(PINECONE_INDEX_NAME);
+  // If initialization is in progress, wait for it
+  if (indexInitializationPromise) {
+    return indexInitializationPromise;
+  }
+
+  // Start initialization
+  indexInitializationPromise = (async () => {
+    try {
+      const pc = await initializePinecone();
+      
+      const indexList = await pc.listIndexes();
+      const indexExists = indexList.indexes?.some(index => index.name === PINECONE_INDEX_NAME);
+
+      if (!indexExists) {
+        console.log(`[Pinecone] Creating index: ${PINECONE_INDEX_NAME}`);
+        await pc.createIndex({
+          name: PINECONE_INDEX_NAME,
+          dimension: 1536, // OpenAI text-embedding-3-small dimension
+          metric: 'cosine',
+          spec: {
+            serverless: {
+              cloud: 'aws',
+              region: 'us-east-1'
+            }
+          }
+        });
+        
+        // Wait for index to be ready (poll instead of fixed wait)
+        console.log('[Pinecone] Waiting for index to be ready...');
+        let retries = 0;
+        while (retries < 30) { // Max 2 minutes (30 * 4s)
+          await new Promise(resolve => setTimeout(resolve, 4000));
+          const indexes = await pc.listIndexes();
+          const targetIndex = indexes.indexes?.find(idx => idx.name === PINECONE_INDEX_NAME);
+          if (targetIndex && targetIndex.status?.ready) {
+            console.log('[Pinecone] Index is ready!');
+            break;
+          }
+          retries++;
+        }
+      } else {
+        console.log('[Pinecone] Using existing index');
+      }
+
+      const index = pc.index(PINECONE_INDEX_NAME);
+      cachedPineconeIndex = index;
+      return index;
+    } catch (error) {
+      indexInitializationPromise = null; // Reset on error
+      throw error;
+    }
+  })();
+
+  return indexInitializationPromise;
+}
+
+// Get Pinecone index (returns cached or throws if not initialized)
+export function getPineconeIndex() {
+  if (!cachedPineconeIndex) {
+    throw new Error('Pinecone index not initialized. Call initializePineconeIndex() at server startup.');
+  }
+  return cachedPineconeIndex;
 }
 
 // Create text embeddings using OpenAI
@@ -117,22 +163,22 @@ async function extractCourseDocuments(): Promise<KnowledgeDocument[]> {
       .join(', ');
 
     const content = `
-Course: ${course.name}
+Course: ${course.title}
 Institution: ${university.name}
 Provider Type: ${university.providerType}
 Discipline: ${course.discipline || 'Not specified'}
-Sub-discipline: ${course.subDiscipline || 'Not specified'}
 Level: ${course.level || 'Not specified'}
 Country: ${course.country || 'Not specified'}
 Campus Locations: ${campusLocations || 'Not specified'}
 Duration: ${course.duration || 'Not specified'}
 Fees: ${course.fees ? `$${course.fees} AUD` : 'Not specified'}
-CRICOS Code: ${course.cricosCode || 'Not specified'}
+Course Code: ${course.courseCode || 'Not specified'}
 Description: ${course.description || 'No description available'}
-Career Pathways: ${course.careerPathways || 'Not specified'}
-Scholarships: ${course.scholarships || 'Not specified'}
-Entry Requirements: ${course.entryRequirements || 'Not specified'}
-English Requirements: ${course.englishRequirements ? JSON.stringify(course.englishRequirements) : 'Not specified'}
+Career Path: ${course.careerPath || 'Not specified'}
+Academic Requirements: ${course.academicRequirements || 'Not specified'}
+English Requirements: ${course.englishRequirements || 'Not specified'}
+Delivery Mode: ${course.deliveryMode || 'Not specified'}
+PR Pathway: ${course.prPathway ? 'Yes' : 'No'}
 `.trim();
 
     documents.push({
@@ -141,7 +187,7 @@ English Requirements: ${course.englishRequirements ? JSON.stringify(course.engli
       metadata: {
         type: 'course',
         courseId: course.id,
-        courseName: course.name,
+        courseName: course.title,
         universityId: university.id,
         universityName: university.name,
         discipline: course.discipline || '',
@@ -182,11 +228,13 @@ Provider Type: ${university.providerType}
 Country: ${university.country || 'Not specified'}
 Campus Locations: ${campusLocations || 'Not specified'}
 Description: ${university.description || 'No description available'}
-Ranking: ${university.ranking || 'Not specified'}
-Accreditation: ${university.accreditation || 'Not specified'}
+Ranking: ${university.rankingBand || 'Not specified'}
+Accreditation: ${university.accreditationStatus || 'Not specified'}
 Contact Email: ${university.contactEmail || 'Not specified'}
-Phone: ${university.phone || 'Not specified'}
+Phone: ${university.contactPhone || 'Not specified'}
 Website: ${university.website || 'Not specified'}
+Established: ${university.establishedYear || 'Not specified'}
+International Support: ${university.internationalStudentSupport ? 'Yes' : 'Not specified'}
 `.trim();
 
     documents.push({
@@ -346,7 +394,7 @@ Search Tips:
 
 // Build and upload knowledge base to Pinecone
 export async function buildKnowledgeBase() {
-  console.log('Starting knowledge base build...');
+  console.log('[KnowledgeBase] Starting build...');
 
   try {
     // Extract all documents
@@ -362,15 +410,15 @@ export async function buildKnowledgeBase() {
       ...guidesDocs,
     ];
 
-    console.log(`Total documents extracted: ${allDocuments.length}`);
+    console.log(`[KnowledgeBase] Total documents extracted: ${allDocuments.length}`);
 
     if (allDocuments.length === 0) {
-      console.log('No documents to upload');
+      console.log('[KnowledgeBase] No documents to upload');
       return { success: true, documentsProcessed: 0, vectorsCreated: 0 };
     }
 
-    // Get Pinecone index
-    const index = await getOrCreatePineconeIndex();
+    // Get cached Pinecone index
+    const index = getPineconeIndex();
 
     // Create vectors for each document
     const vectors: PineconeRecord[] = [];
@@ -417,7 +465,8 @@ export async function buildKnowledgeBase() {
 // Query knowledge base
 export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
   try {
-    const index = await getOrCreatePineconeIndex();
+    // Get cached Pinecone index
+    const index = getPineconeIndex();
 
     // Create embedding for query
     const queryEmbedding = await createEmbedding(query);
@@ -429,7 +478,7 @@ export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array
       includeMetadata: true,
     });
 
-    return (queryResponse.matches || []).map((match) => {
+    return (queryResponse.matches || []).map((match: any) => {
       // Extract the stored text content from metadata
       const storedContent = match.metadata?.content as string;
       

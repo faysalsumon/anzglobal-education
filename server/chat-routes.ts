@@ -1,7 +1,7 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { db } from "./db";
 import { chatConversations, chatMessages, insertChatMessageSchema } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, and } from "drizzle-orm";
 import { z } from "zod";
 import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
@@ -32,6 +32,44 @@ When answering:
 - Include specific course/institution names from the context
 - Mention relevant fees, locations, or requirements if available
 - Suggest next steps (apply, view course details, etc.)`;
+
+// Middleware to verify conversation ownership
+async function verifyConversationOwnership(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const userId = (req.user as any)?.id || null;
+    const sessionId = req.session?.id;
+
+    // Fetch the conversation
+    const conversation = await db.query.chatConversations.findFirst({
+      where: eq(chatConversations.id, id),
+    });
+
+    if (!conversation) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+
+    // Check ownership: conversation must belong to either the authenticated user or the session
+    const ownsConversation = 
+      (userId && conversation.userId === userId) ||
+      (sessionId && conversation.sessionId === sessionId);
+
+    if (!ownsConversation) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Error verifying conversation ownership:", error);
+    res.status(500).json({ error: "Failed to verify access" });
+  }
+}
 
 export function registerChatRoutes(app: Express) {
   // Get or create conversation
@@ -74,8 +112,8 @@ export function registerChatRoutes(app: Express) {
     }
   });
 
-  // Get conversation history
-  app.get("/api/chat/conversations/:id/messages", async (req: Request, res: Response) => {
+  // Get conversation history (with authorization)
+  app.get("/api/chat/conversations/:id/messages", verifyConversationOwnership, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
 
@@ -91,8 +129,8 @@ export function registerChatRoutes(app: Express) {
     }
   });
 
-  // Send message and get AI response
-  app.post("/api/chat/conversations/:id/messages", async (req: Request, res: Response) => {
+  // Send message and get AI response (with authorization)
+  app.post("/api/chat/conversations/:id/messages", verifyConversationOwnership, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -170,6 +208,26 @@ export function registerChatRoutes(app: Express) {
 
       const assistantContent = completion.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
 
+      // Format sources for frontend display
+      const formattedSources = relevantDocs.map(doc => {
+        let title = 'Unknown Source';
+        let id = doc.metadata.id || '';
+        
+        if (doc.metadata.type === 'course') {
+          title = doc.metadata.courseName || 'Course';
+        } else if (doc.metadata.type === 'institution') {
+          title = doc.metadata.institutionName || 'Institution';
+        } else if (doc.metadata.type === 'guide') {
+          title = doc.metadata.topic ? `Guide: ${doc.metadata.topic}` : 'Guide';
+        }
+        
+        return {
+          type: doc.metadata.type || 'unknown',
+          id,
+          title,
+        };
+      });
+
       // Save assistant message with sources
       const [assistantMessage] = await db
         .insert(chatMessages)
@@ -177,12 +235,7 @@ export function registerChatRoutes(app: Express) {
           conversationId: id,
           role: "assistant",
           content: assistantContent,
-          sources: relevantDocs.map(doc => ({
-            type: doc.metadata.type,
-            content: doc.content.substring(0, 200) + '...',
-            metadata: doc.metadata,
-            score: doc.score,
-          })),
+          sources: formattedSources,
         })
         .returning();
 
