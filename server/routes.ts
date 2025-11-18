@@ -1472,6 +1472,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
+      // Load sub-disciplines for filtering
+      const allSubDisciplines = await storage.getSubDisciplines();
+      
+      // Map parsed sub-discipline name to ID if provided
+      let subDisciplineId: string | undefined;
+      if (parsedParams.subDiscipline) {
+        const matchedSubDiscipline = allSubDisciplines.find(sd => 
+          sd.name.toLowerCase().includes(parsedParams.subDiscipline!.toLowerCase()) ||
+          parsedParams.subDiscipline!.toLowerCase().includes(sd.name.toLowerCase())
+        );
+        subDisciplineId = matchedSubDiscipline?.id;
+      }
+      
       // Filter courses based on parsed parameters
       let filteredCourses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
@@ -1495,10 +1508,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!disciplineMatch) return false;
         }
         
-        // Sub-discipline filter (needs to match by ID)
-        if (parsedParams.subDiscipline && course.subDisciplineId) {
-          // For now, we'll skip sub-discipline filtering in AI search since we need to lookup the ID
-          // This can be enhanced later by joining with sub_disciplines table
+        // Sub-discipline filter (match by ID after looking up from name)
+        if (subDisciplineId && course.subDisciplineId !== subDisciplineId) {
+          return false;
         }
         
         // Level filter
@@ -1772,6 +1784,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const course = await storage.createCourse(data);
+      
+      // Increment sub-discipline usage count if a sub-discipline was assigned
+      if (course.subDisciplineId) {
+        await storage.incrementSubDisciplineUsage(course.subDisciplineId);
+      }
+      
       res.json(course);
     } catch (error: any) {
       console.error("Error creating course:", error);
@@ -1799,6 +1817,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const updated = await storage.updateCourse(req.params.id, data);
+      
+      // Increment sub-discipline usage count if a new sub-discipline was assigned
+      if (updated.subDisciplineId && updated.subDisciplineId !== course.subDisciplineId) {
+        await storage.incrementSubDisciplineUsage(updated.subDisciplineId);
+      }
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating course:", error);

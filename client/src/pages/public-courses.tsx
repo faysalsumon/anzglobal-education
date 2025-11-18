@@ -414,6 +414,13 @@ export default function PublicCourses() {
     }
   }, [highlightedCourseId, courses]);
 
+  // Clear sub-discipline when discipline is cleared
+  useEffect(() => {
+    if (!discipline && subDiscipline) {
+      setSubDiscipline('');
+    }
+  }, [discipline, subDiscipline]);
+
   // Sync state to URL (only after hydration complete or for user-initiated changes)
   useEffect(() => {
     // Create snapshot of current state
