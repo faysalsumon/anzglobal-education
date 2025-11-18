@@ -316,10 +316,20 @@ export default function CourseForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="undergraduate">Undergraduate</SelectItem>
-                          <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                          <SelectItem value="certificate">Certificate</SelectItem>
-                          <SelectItem value="diploma">Diploma</SelectItem>
+                          <SelectItem value="VCE (11-12)">VCE (11-12)</SelectItem>
+                          <SelectItem value="Certificate II">Certificate II</SelectItem>
+                          <SelectItem value="Certificate III">Certificate III</SelectItem>
+                          <SelectItem value="Certificate IV">Certificate IV</SelectItem>
+                          <SelectItem value="Diploma">Diploma</SelectItem>
+                          <SelectItem value="Advanced Diploma">Advanced Diploma</SelectItem>
+                          <SelectItem value="Graduate Certificate">Graduate Certificate</SelectItem>
+                          <SelectItem value="Graduate Diploma">Graduate Diploma</SelectItem>
+                          <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
+                          <SelectItem value="Professional Year">Professional Year</SelectItem>
+                          <SelectItem value="Masters Degree">Masters Degree</SelectItem>
+                          <SelectItem value="Doctoral Degree">Doctoral Degree</SelectItem>
+                          <SelectItem value="Higher Doctoral Degree">Higher Doctoral Degree</SelectItem>
+                          <SelectItem value="ELICOS">ELICOS</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

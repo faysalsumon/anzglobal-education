@@ -36,6 +36,24 @@ export const disciplineEnum = pgEnum('discipline', [
   'Trade Qualifications',
 ]);
 
+// Course level enum for standardized qualification levels
+export const courseLevelEnum = pgEnum('course_level', [
+  'VCE (11-12)',
+  'Certificate II',
+  'Certificate III',
+  'Certificate IV',
+  'Diploma',
+  'Advanced Diploma',
+  'Graduate Certificate',
+  'Graduate Diploma',
+  'Bachelor Degree',
+  'Professional Year',
+  'Masters Degree',
+  'Doctoral Degree',
+  'Higher Doctoral Degree',
+  'ELICOS',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -159,7 +177,7 @@ export const courses = pgTable("courses", {
   description: text("description"),
   subject: text("subject").notNull(),
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
-  level: text("level").notNull(), // 'undergraduate', 'postgraduate', 'certificate', 'diploma'
+  level: text("level").notNull(), // Course qualification level (see courseLevelEnum for standard values)
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
   durationWeeks: integer("duration_weeks"), // For precise duration tracking
