@@ -3932,6 +3932,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete users
+  app.post("/api/super-admin/users/bulk-delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { userIds } = req.body;
+
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: "userIds must be a non-empty array" });
+      }
+
+      // Prevent deleting self
+      if (userIds.includes(userId)) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      // Delete users
+      const result = await db.delete(users).where(
+        or(...userIds.map(id => eq(users.id, id)))
+      );
+
+      res.json({ 
+        message: `Successfully deleted ${userIds.length} user(s)`,
+        count: userIds.length 
+      });
+    } catch (error) {
+      console.error("Error bulk deleting users:", error);
+      res.status(500).json({ message: "Failed to delete users" });
+    }
+  });
+
+  // Bulk delete institutions
+  app.post("/api/super-admin/institutions/bulk-delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { institutionIds } = req.body;
+
+      if (!Array.isArray(institutionIds) || institutionIds.length === 0) {
+        return res.status(400).json({ message: "institutionIds must be a non-empty array" });
+      }
+
+      // Delete institutions
+      await db.delete(universities).where(
+        or(...institutionIds.map(id => eq(universities.id, id)))
+      );
+
+      res.json({ 
+        message: `Successfully deleted ${institutionIds.length} institution(s)`,
+        count: institutionIds.length 
+      });
+    } catch (error) {
+      console.error("Error bulk deleting institutions:", error);
+      res.status(500).json({ message: "Failed to delete institutions" });
+    }
+  });
+
+  // Bulk update institution status
+  app.post("/api/super-admin/institutions/bulk-update-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { institutionIds, status } = req.body;
+
+      if (!Array.isArray(institutionIds) || institutionIds.length === 0) {
+        return res.status(400).json({ message: "institutionIds must be a non-empty array" });
+      }
+
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      // Update institutions
+      await db.update(universities)
+        .set({ status, updatedAt: new Date() })
+        .where(or(...institutionIds.map(id => eq(universities.id, id))));
+
+      res.json({ 
+        message: `Successfully updated ${institutionIds.length} institution(s) to ${status}`,
+        count: institutionIds.length 
+      });
+    } catch (error) {
+      console.error("Error bulk updating institutions:", error);
+      res.status(500).json({ message: "Failed to update institutions" });
+    }
+  });
+
+  // Bulk delete courses
+  app.post("/api/super-admin/courses/bulk-delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { courseIds } = req.body;
+
+      if (!Array.isArray(courseIds) || courseIds.length === 0) {
+        return res.status(400).json({ message: "courseIds must be a non-empty array" });
+      }
+
+      // Delete courses
+      await db.delete(courses).where(
+        or(...courseIds.map(id => eq(courses.id, id)))
+      );
+
+      res.json({ 
+        message: `Successfully deleted ${courseIds.length} course(s)`,
+        count: courseIds.length 
+      });
+    } catch (error) {
+      console.error("Error bulk deleting courses:", error);
+      res.status(500).json({ message: "Failed to delete courses" });
+    }
+  });
+
+  // Bulk update course status
+  app.post("/api/super-admin/courses/bulk-update-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { courseIds, status } = req.body;
+
+      if (!Array.isArray(courseIds) || courseIds.length === 0) {
+        return res.status(400).json({ message: "courseIds must be a non-empty array" });
+      }
+
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      // Update courses
+      await db.update(courses)
+        .set({ status, updatedAt: new Date() })
+        .where(or(...courseIds.map(id => eq(courses.id, id))));
+
+      res.json({ 
+        message: `Successfully updated ${courseIds.length} course(s) to ${status}`,
+        count: courseIds.length 
+      });
+    } catch (error) {
+      console.error("Error bulk updating courses:", error);
+      res.status(500).json({ message: "Failed to update courses" });
+    }
+  });
+
   // Get all institutions (for super admin)
   app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
