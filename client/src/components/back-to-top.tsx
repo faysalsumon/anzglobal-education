@@ -6,7 +6,6 @@ export function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    console.log('🚀 BackToTop component mounted!');
     const toggleVisibility = () => {
       if (window.scrollY > 300) {
         setIsVisible(true);
@@ -23,41 +22,22 @@ export function BackToTop() {
   }, []);
 
   const scrollToTop = () => {
-    console.log('🔝 Back to top button clicked!');
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
 
-  console.log('✅ BackToTop rendering...');
-
-  // TEMPORARILY ALWAYS VISIBLE FOR TESTING - SUPER OBVIOUS STYLING
   return (
-    <button
+    <Button
       onClick={scrollToTop}
-      className="fixed z-[99999]"
-      style={{ 
-        bottom: '32px',
-        right: '32px',
-        width: '56px',
-        height: '56px',
-        borderRadius: '50%',
-        backgroundColor: '#FF0000',
-        color: '#FFFFFF',
-        border: '4px solid #000000',
-        boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px',
-        fontWeight: 'bold'
-      }}
+      size="icon"
+      className="fixed bottom-8 right-8 z-50 shadow-lg transition-opacity duration-300"
+      style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none' }}
       aria-label="Back to top"
       data-testid="button-back-to-top"
     >
-      ↑
-    </button>
+      <ArrowUp className="h-5 w-5" />
+    </Button>
   );
 }
