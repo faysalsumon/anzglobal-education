@@ -32,17 +32,32 @@ export function BackToTop() {
 
   console.log('✅ BackToTop rendering...');
 
-  // TEMPORARILY ALWAYS VISIBLE FOR TESTING
+  // TEMPORARILY ALWAYS VISIBLE FOR TESTING - SUPER OBVIOUS STYLING
   return (
-    <Button
+    <button
       onClick={scrollToTop}
-      size="icon"
-      className="fixed bottom-8 right-8 z-[9999] shadow-lg transition-opacity duration-300 bg-primary"
-      style={{ opacity: 1, pointerEvents: 'auto' }}
+      className="fixed z-[99999]"
+      style={{ 
+        bottom: '32px',
+        right: '32px',
+        width: '56px',
+        height: '56px',
+        borderRadius: '50%',
+        backgroundColor: '#FF0000',
+        color: '#FFFFFF',
+        border: '4px solid #000000',
+        boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '24px',
+        fontWeight: 'bold'
+      }}
       aria-label="Back to top"
       data-testid="button-back-to-top"
     >
-      <ArrowUp className="h-5 w-5" />
-    </Button>
+      ↑
+    </button>
   );
 }
