@@ -338,7 +338,7 @@ export default function PublicInstitutionDetail() {
                           : 'border-2 border-transparent'
                       }`}
                       data-testid={`campus-${index}`}
-                      onClick={() => setSelectedCampusIndex(index)}
+                      onClick={() => setSelectedCampusIndex(selectedCampusIndex === index ? null : index)}
                     >
                       {(institution.campusAddresses as CampusAddress[]).length > 1 && (
                         <p className={`text-sm font-medium ${

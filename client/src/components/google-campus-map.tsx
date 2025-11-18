@@ -130,6 +130,7 @@ export function GoogleCampusMap({
               marker.addListener("click", () => {
                 infoWindow.open(mapInstance, marker);
                 if (onMarkerClick) {
+                  // Toggle selection - click again to deselect
                   onMarkerClick(campusIndex);
                 }
               });
