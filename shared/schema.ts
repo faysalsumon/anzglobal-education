@@ -55,6 +55,14 @@ export const courseLevelEnum = pgEnum('course_level', [
   'ELICOS',
 ]);
 
+// Provider type enum for institution categorization
+export const providerTypeEnum = pgEnum('provider_type', [
+  'University',
+  'Institution',
+  'Tafe',
+  'School',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -121,7 +129,7 @@ export const universities = pgTable("universities", {
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
   numberOfCampuses: integer("number_of_campuses"),
-  providerType: text("provider_type"), // Private Institutions, TAFE, Private University, Public University
+  providerType: providerTypeEnum("provider_type"), // University, Institution, Tafe, School
   scholarshipPercentageMin: integer("scholarship_percentage_min"),
   scholarshipPercentageMax: integer("scholarship_percentage_max"),
   topDisciplines: text("top_disciplines").array(),
