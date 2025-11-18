@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,28 +31,24 @@ export function GalleryImageManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Upload mutation
+  const [uploadProgress, setUploadProgress] = useState<{ total: number; completed: number; failed: number }>({ total: 0, completed: 0, failed: 0 });
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Ref to track the latest value to avoid stale closures
+  const valueRef = useRef<string[]>(value);
+  
+  // Keep ref in sync with latest value
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  // Upload mutation for single file
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('image', file);
       const response = await apiRequest("POST", "/api/university/upload-gallery-image", formData);
       return await response.json();
-    },
-    onSuccess: (data: any) => {
-      onChange([...value, data.imagePath]);
-      toast({
-        title: "Image uploaded",
-        description: "Gallery image has been uploaded successfully",
-      });
-      setDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
     },
   });
 
@@ -63,7 +59,14 @@ export function GalleryImageManager({
       return await response.json();
     },
     onSuccess: (data: any) => {
-      onChange([...value, data.imagePath]);
+      // Use ref to get latest value instead of stale closure
+      const currentGalleryValue = valueRef.current;
+      
+      // Check if image already exists (handle concurrent additions)
+      if (!currentGalleryValue.includes(data.imagePath)) {
+        onChange([...currentGalleryValue, data.imagePath]);
+      }
+      
       toast({
         title: "Image generated",
         description: "AI-generated gallery image has been created successfully",
@@ -80,31 +83,134 @@ export function GalleryImageManager({
     },
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Validate file count (max 6 files at once)
+    if (files.length > 6) {
       toast({
-        title: "Invalid file",
-        description: "Please select an image file",
+        title: "Too many files",
+        description: "Please select a maximum of 6 images at once",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate total gallery size
+    if (value.length + files.length > 12) {
       toast({
-        title: "File too large",
-        description: "Please select an image under 10MB",
+        title: "Gallery limit reached",
+        description: `You can have a maximum of 12 gallery images. You currently have ${value.length} images.`,
         variant: "destructive",
       });
       return;
     }
 
-    uploadMutation.mutate(file);
+    // Validate each file
+    const invalidFiles = files.filter(file => {
+      if (!file.type.startsWith('image/')) return true;
+      if (file.size > 10 * 1024 * 1024) return true;
+      return false;
+    });
+
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "Invalid files",
+        description: "All files must be images under 10MB each",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Capture initial value for safety check using ref
+    const initialGalleryValue = [...valueRef.current];
+
+    // Upload files in parallel
+    setIsUploading(true);
+    setUploadProgress({ total: files.length, completed: 0, failed: 0 });
+
+    // Track uploads
+    let successCount = 0;
+    let failedCount = 0;
+    const newImagePaths: string[] = [];
+
+    // Upload in parallel and collect results
+    const uploadPromises = files.map(async (file) => {
+      try {
+        const data = await uploadMutation.mutateAsync(file);
+        newImagePaths.push(data.imagePath);
+        successCount++;
+        setUploadProgress(prev => ({ ...prev, completed: prev.completed + 1 }));
+        return { success: true, path: data.imagePath };
+      } catch (error) {
+        failedCount++;
+        setUploadProgress(prev => ({ ...prev, failed: prev.failed + 1 }));
+        console.error('Upload error:', error);
+        return { success: false, path: null };
+      }
+    });
+
+    await Promise.all(uploadPromises);
+
+    setIsUploading(false);
+
+    // Update gallery with all successful uploads at once
+    if (newImagePaths.length > 0) {
+      // Get the latest gallery value using ref (not stale closure)
+      const currentGalleryValue = valueRef.current;
+      
+      // Safety check: verify gallery hasn't been modified during upload
+      // This prevents overwriting concurrent modifications
+      const galleryModified = currentGalleryValue.length !== initialGalleryValue.length ||
+        !currentGalleryValue.every((img, idx) => img === initialGalleryValue[idx]);
+
+      if (galleryModified) {
+        // Gallery was modified during upload - merge cautiously
+        // Only add images that don't already exist
+        const currentImages = new Set(currentGalleryValue);
+        const uniqueNewImages = newImagePaths.filter(path => !currentImages.has(path));
+        if (uniqueNewImages.length > 0) {
+          onChange([...currentGalleryValue, ...uniqueNewImages]);
+        }
+        toast({
+          title: "Upload complete",
+          description: `Uploaded ${uniqueNewImages.length} new images. Gallery was modified during upload.`,
+        });
+      } else {
+        // Safe to append - gallery unchanged during upload
+        onChange([...currentGalleryValue, ...newImagePaths]);
+        
+        // Show success toast
+        if (successCount === files.length) {
+          toast({
+            title: "Upload complete",
+            description: `Successfully uploaded ${successCount} image${successCount > 1 ? 's' : ''}`,
+          });
+        } else if (successCount > 0) {
+          toast({
+            title: "Partial upload",
+            description: `Uploaded ${successCount} of ${files.length} images. ${failedCount} failed.`,
+            variant: "destructive",
+          });
+        }
+      }
+    } else if (failedCount > 0) {
+      // All uploads failed
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    }
+
+    setDialogOpen(false);
+    setUploadProgress({ total: 0, completed: 0, failed: 0 });
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleAddUrl = () => {
@@ -120,7 +226,16 @@ export function GalleryImageManager({
     // Basic URL validation
     try {
       new URL(urlInput);
-      onChange([...value, urlInput.trim()]);
+      
+      // Use ref to get latest value instead of stale closure
+      const currentGalleryValue = valueRef.current;
+      const trimmedUrl = urlInput.trim();
+      
+      // Check if URL already exists (handle concurrent additions)
+      if (!currentGalleryValue.includes(trimmedUrl)) {
+        onChange([...currentGalleryValue, trimmedUrl]);
+      }
+      
       setUrlInput("");
       setDialogOpen(false);
       toast({
@@ -147,7 +262,9 @@ export function GalleryImageManager({
   };
 
   const handleRemoveImage = (index: number) => {
-    const newValue = value.filter((_, i) => i !== index);
+    // Use ref to get latest value instead of stale closure
+    const currentGalleryValue = valueRef.current;
+    const newValue = currentGalleryValue.filter((_, i) => i !== index);
     onChange(newValue);
     toast({
       title: "Image removed",
@@ -252,14 +369,15 @@ export function GalleryImageManager({
 
             <TabsContent value="upload" className="space-y-4">
               <div className="space-y-2">
-                <Label>Upload Image File</Label>
+                <Label>Upload Image Files</Label>
                 <p className="text-sm text-muted-foreground">
-                  Select an image file (max 10MB). Will be resized to 600x400px.
+                  Select up to 6 images at once (max 10MB each). Images will be resized to 600x400px.
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleFileSelect}
                   className="hidden"
                   data-testid="input-gallery-file"
@@ -268,22 +386,40 @@ export function GalleryImageManager({
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadMutation.isPending}
+                  disabled={isUploading}
                   className="w-full"
                   data-testid="button-select-file"
                 >
-                  {uploadMutation.isPending ? (
+                  {isUploading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
+                      Uploading {uploadProgress.completed}/{uploadProgress.total}...
                     </>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Select Image File
+                      Select Images (up to 6)
                     </>
                   )}
                 </Button>
+                {isUploading && uploadProgress.total > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Progress</span>
+                      <span className="text-muted-foreground">
+                        {uploadProgress.completed + uploadProgress.failed}/{uploadProgress.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-full transition-all duration-300"
+                        style={{
+                          width: `${((uploadProgress.completed + uploadProgress.failed) / uploadProgress.total) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
