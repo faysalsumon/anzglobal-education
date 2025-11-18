@@ -6,6 +6,7 @@ export function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    console.log('🚀 BackToTop component mounted!');
     const toggleVisibility = () => {
       if (window.scrollY > 300) {
         setIsVisible(true);
@@ -22,18 +23,21 @@ export function BackToTop() {
   }, []);
 
   const scrollToTop = () => {
+    console.log('🔝 Back to top button clicked!');
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
 
+  console.log('✅ BackToTop rendering...');
+
   // TEMPORARILY ALWAYS VISIBLE FOR TESTING
   return (
     <Button
       onClick={scrollToTop}
       size="icon"
-      className="fixed bottom-8 right-8 z-50 shadow-lg transition-opacity duration-300"
+      className="fixed bottom-8 right-8 z-[9999] shadow-lg transition-opacity duration-300 bg-primary"
       style={{ opacity: 1, pointerEvents: 'auto' }}
       aria-label="Back to top"
       data-testid="button-back-to-top"
