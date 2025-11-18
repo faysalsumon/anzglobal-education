@@ -15,6 +15,7 @@ import {
 import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home } from "lucide-react";
 import type { University } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
+import { GoogleCampusMap } from "@/components/google-campus-map";
 
 interface CampusAddress {
   address?: string;
@@ -309,11 +310,19 @@ export default function PublicInstitutionDetail() {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
-            {/* Campus Locations */}
-            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 && (
+            {/* Google Map for Campus Locations */}
+            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 ? (
+              <GoogleCampusMap
+                campusAddresses={institution.campusAddresses as CampusAddress[]}
+                institutionName={institution.name}
+              />
+            ) : null}
+
+            {/* Campus Locations Text */}
+            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Campus Locations</CardTitle>
+                  <CardTitle>Campus Addresses</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {(institution.campusAddresses as CampusAddress[]).map((campus, index) => (
@@ -338,7 +347,7 @@ export default function PublicInstitutionDetail() {
                   ))}
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             <Card>
               <CardHeader>

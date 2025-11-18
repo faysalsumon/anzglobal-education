@@ -41,6 +41,7 @@ Key features include:
 -   **Footer with Social Media Icons**: Professional footer with social media links (Facebook, Instagram, LinkedIn, YouTube, Twitter) featuring circular icons with hover effects and accessibility support.
 -   **Dynamic Animated Typing**: Natural language search features database-driven animated typing that displays actual course and institution recommendations from the system. Typing suggestions automatically update as courses/institutions are added, removed, or modified in the database. Course suggestions include disciplines, levels, and fee ranges. Institution suggestions include provider types (University, Institution, Tafe, School) and general search patterns. Provider types are enforced at the database level using PostgreSQL enums for data integrity.
 -   **Back to Top Button**: Smooth-scrolling floating button positioned at bottom-right corner that appears when users scroll down 300px or more, enabling quick navigation back to the top of the page. Features smooth fade transitions (300ms), proper accessibility with aria-label, brand-consistent styling using primary color scheme, and z-index positioning to appear above all content. Automatically integrated across all public pages via PublicLayout component.
+-   **Google Maps Campus Locations**: Interactive Google Maps integration on institution detail pages displaying all campus addresses with custom markers. Features automatic geocoding of campus addresses, intelligent map bounds adjustment for single/multiple locations, custom branded markers with institution info windows, and fallback to address text list. Utilizes Google Maps JavaScript API with `@googlemaps/js-api-loader` for optimal performance.
 
 ### Technical Implementation
 -   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter (routing), TanStack Query, React Hook Form, Zod.
@@ -61,7 +62,7 @@ Key features include:
 -   **Database**: PostgreSQL (Neon).
 -   **Object Storage**: Replit Object Storage.
 -   **CDN**: Google Fonts CDN.
--   **Mapping/Location**: Google Places API.
+-   **Mapping/Location**: Google Maps JavaScript API and Google Places API via `@googlemaps/js-api-loader`.
 -   **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
 -   **Email Service**: Resend API.
 ```
