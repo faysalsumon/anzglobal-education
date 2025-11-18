@@ -76,7 +76,12 @@ export function registerChatRoutes(app: Express) {
   app.post("/api/chat/conversations", async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any)?.id || null;
-      const { sessionId } = req.body;
+      const sessionId = req.session?.id; // Use Express session ID
+
+      // Ensure session exists for anonymous users
+      if (!userId && !sessionId) {
+        return res.status(401).json({ error: "No session available" });
+      }
 
       // Check if conversation exists for user or session
       let conversation;
