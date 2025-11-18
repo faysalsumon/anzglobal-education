@@ -1002,7 +1002,7 @@ export default function AdminDashboard() {
         {/* Main Content Area */}
         <div className="flex flex-col flex-1">
           {/* Top Header with Breadcrumb */}
-          <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 py-3 lg:px-6">
+          <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
             <SidebarTrigger className="lg:hidden" data-testid="button-sidebar-toggle" />
             <div className="flex flex-1 items-center justify-between gap-4">
               <Breadcrumb data-testid="breadcrumb">
@@ -1029,12 +1029,13 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          {/* Content Grid: Main + Right Rail */}
+          {/* Main Content */}
           <div className="flex-1">
-            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 md:gap-8">
+            <div className="mx-auto w-full max-w-7xl px-4 md:px-6 py-4 md:py-6">
+              {/* Responsive Grid: Stacked on mobile, 2-column on xl+ */}
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] gap-6 md:gap-8">
                 {/* Main Column */}
-                <main className="space-y-6 md:space-y-8 min-w-0">
+                <main className="space-y-4 md:space-y-6 min-w-0">
                   <div>
                     <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" data-testid="text-dashboard-title">
                       {isConsultant 
@@ -1151,7 +1152,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Users Table */}
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1289,7 +1290,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Institutions Table */}
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1510,7 +1511,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Courses Table */}
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1676,7 +1677,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Table */}
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1761,7 +1762,7 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1878,7 +1879,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Table */}
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1978,8 +1979,8 @@ export default function AdminDashboard() {
       </div>
               </main>
 
-              {/* Right Rail - Quick Actions */}
-              <aside className="hidden lg:flex lg:flex-col gap-4" data-testid="admin-quick-actions">
+              {/* Right Rail - Quick Actions (Stacks below on mobile, sidebar on xl+) */}
+              <aside className="flex flex-col gap-4" data-testid="admin-quick-actions">
                 {/* Quick Create Actions */}
                 {hasFullAdminAccess && (
                   <Card>
@@ -2115,11 +2116,10 @@ export default function AdminDashboard() {
                   </Card>
                 )}
               </aside>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      </div>
 
       {/* User Create/Edit Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
@@ -3062,6 +3062,7 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </SidebarProvider>
   );
 }
