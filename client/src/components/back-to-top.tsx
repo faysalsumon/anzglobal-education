@@ -5,7 +5,6 @@ export function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    console.log('🎯 BackToTop mounted!');
     const toggleVisibility = () => {
       if (window.scrollY > 300) {
         setIsVisible(true);
@@ -25,14 +24,11 @@ export function BackToTop() {
   }, []);
 
   const scrollToTop = () => {
-    console.log('🔝 Scrolling to top!');
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
-
-  console.log('🔄 BackToTop rendering, isVisible:', isVisible);
 
   return (
     <button
