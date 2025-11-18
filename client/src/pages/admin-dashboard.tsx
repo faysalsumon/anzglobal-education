@@ -2535,7 +2535,21 @@ export default function AdminDashboard() {
 
       {/* Institution Create/Edit Dialog */}
       <Dialog open={institutionDialogOpen} onOpenChange={setInstitutionDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            // Prevent dialog from closing when clicking on Google Places autocomplete dropdown
+            // Google renders .pac-container outside React tree at document.body level
+            // Radix wraps the event in CustomEvent - must access detail.originalEvent.target
+            const originalEvent = (e as any).detail?.originalEvent;
+            if (originalEvent && !e.defaultPrevented) {
+              const target = originalEvent.target as HTMLElement;
+              if (target?.closest('.pac-container')) {
+                e.preventDefault();
+              }
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{editingInstitution ? "Edit Institution" : "Create Institution"}</DialogTitle>
             <DialogDescription>
