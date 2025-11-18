@@ -181,7 +181,7 @@ export function GoogleCampusMap({
       marker.setIcon({
         path: google.maps.SymbolPath.CIRCLE,
         scale: isSelected ? 14 : 10,
-        fillColor: isSelected ? "#FF5000" : "#3465A5",
+        fillColor: isSelected ? "#FFB380" : "#3465A5",
         fillOpacity: 1,
         strokeColor: "#ffffff",
         strokeWeight: isSelected ? 3 : 2,
