@@ -291,7 +291,7 @@ export default function Landing() {
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
                       <Award className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="text-3xl font-bold text-foreground mb-1">95%</div>
+                    <div className="text-3xl font-bold text-foreground mb-1">98%</div>
                     <p className="text-sm text-muted-foreground">Success Rate</p>
                   </CardContent>
                 </Card>
