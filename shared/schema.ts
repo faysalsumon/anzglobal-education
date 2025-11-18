@@ -34,6 +34,7 @@ export const disciplineEnum = pgEnum('discipline', [
   'Law',
   'Medicine & Health',
   'Short Courses',
+  'Trade',
   'Trade Qualifications',
 ]);
 

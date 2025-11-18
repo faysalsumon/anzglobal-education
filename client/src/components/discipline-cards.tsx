@@ -35,6 +35,7 @@ const disciplineIcons: Record<string, any> = {
   "Law": Scale,
   "Medicine & Health": Stethoscope,
   "Short Courses": Clock,
+  "Trade": Wrench,
   "Trade Qualifications": Hammer,
 };
 
