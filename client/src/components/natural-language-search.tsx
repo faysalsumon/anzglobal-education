@@ -1,23 +1,18 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, GraduationCap, Building2 } from "lucide-react";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { Course, University } from "@shared/schema";
 
 interface NaturalLanguageSearchProps {
   onSearchResults?: (results: any) => void;
 }
 
-const courseExamples = [
-  "I want to study engineering in Melbourne under $30k",
-  "MBA programs in Sydney budget 20-25k",
-  "Computer science courses between $15000-$20000",
-  "Masters in business administration under 25 thousand",
-  "IT courses in Brisbane around $18000 per year",
-];
+type CourseWithUniversity = Course & { university?: University };
 
 const institutionExamples = [
   "universities in Melbourne",
@@ -33,6 +28,58 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Fetch actual courses from database
+  const { data: courses = [] } = useQuery<CourseWithUniversity[]>({
+    queryKey: ["/api/courses"],
+  });
+
+  // Generate dynamic course examples from database
+  const courseExamples = useMemo(() => {
+    if (courses.length === 0) {
+      return [
+        "Show me engineering courses",
+        "Find business programs",
+        "Search IT courses",
+      ];
+    }
+
+    const examples: string[] = [];
+    const uniqueDisciplines = new Set<string>();
+    const uniqueLevels = new Set<string>();
+
+    // Collect unique disciplines and levels
+    courses.forEach(course => {
+      if (course.discipline) uniqueDisciplines.add(course.discipline);
+      if (course.level) uniqueLevels.add(course.level);
+    });
+
+    // Generate examples from actual course data
+    const disciplines = Array.from(uniqueDisciplines).slice(0, 5);
+    const levels = Array.from(uniqueLevels).slice(0, 3);
+
+    // Create diverse examples
+    disciplines.forEach((discipline, index) => {
+      if (index === 0 && courses[0]?.fees) {
+        const fees = typeof courses[0].fees === 'string' ? parseFloat(courses[0].fees) : courses[0].fees;
+        examples.push(`${discipline} courses under $${Math.ceil(fees / 1000) * 1000}`);
+      } else if (index === 1) {
+        examples.push(`Find ${discipline} programs`);
+      } else if (index === 2 && levels[0]) {
+        examples.push(`${levels[0]} in ${discipline}`);
+      } else {
+        examples.push(`Show me ${discipline} courses`);
+      }
+    });
+
+    // Add level-based examples
+    if (levels.length > 0) {
+      examples.push(`${levels[0]} programs in Australia`);
+    }
+
+    // Shuffle and return top 5
+    return examples.sort(() => Math.random() - 0.5).slice(0, 5);
+  }, [courses]);
   
   const exampleQueries = searchType === "courses" ? courseExamples : institutionExamples;
 
