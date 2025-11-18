@@ -28,15 +28,12 @@ export function BackToTop() {
     });
   };
 
-  if (!isVisible) {
-    return null;
-  }
-
   return (
     <Button
       onClick={scrollToTop}
       size="icon"
-      className="fixed bottom-8 right-8 z-50 shadow-lg"
+      className="fixed bottom-8 right-8 z-50 shadow-lg transition-opacity duration-300"
+      style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none' }}
       aria-label="Back to top"
       data-testid="button-back-to-top"
     >
