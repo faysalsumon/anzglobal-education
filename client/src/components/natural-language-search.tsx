@@ -14,14 +14,6 @@ interface NaturalLanguageSearchProps {
 
 type CourseWithUniversity = Course & { university?: University };
 
-const institutionExamples = [
-  "universities in Melbourne",
-  "TAFE in Sydney offering engineering",
-  "business schools in Australia",
-  "public universities in Brisbane",
-  "Private institutions offering IT programs",
-];
-
 export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearchProps) {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -32,6 +24,11 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
   // Fetch actual courses from database
   const { data: courses = [] } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
+  });
+
+  // Fetch actual institutions from database
+  const { data: institutions = [] } = useQuery<University[]>({
+    queryKey: ["/api/institutions"],
   });
 
   // Generate dynamic course examples from database
@@ -80,6 +77,53 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
     // Shuffle and return top 5
     return examples.sort(() => Math.random() - 0.5).slice(0, 5);
   }, [courses]);
+
+  // Generate dynamic institution examples from database
+  const institutionExamples = useMemo(() => {
+    if (institutions.length === 0) {
+      return [
+        "Find universities in Australia",
+        "Show me TAFE institutions",
+        "Search for business schools",
+      ];
+    }
+
+    const examples: string[] = [];
+    const uniqueTypes = new Set<string>();
+    const institutionNames: string[] = [];
+
+    // Collect unique provider types and institution names
+    institutions.forEach(institution => {
+      if (institution.providerType) uniqueTypes.add(institution.providerType);
+      if (institution.name) institutionNames.push(institution.name);
+    });
+
+    const types = Array.from(uniqueTypes).slice(0, 3);
+    const names = institutionNames.slice(0, 2);
+
+    // Generate type-based examples
+    types.forEach((type, index) => {
+      if (index === 0) {
+        examples.push(`Find ${type} in Australia`);
+      } else if (index === 1) {
+        examples.push(`Show me ${type} institutions`);
+      } else {
+        examples.push(`${type} programs`);
+      }
+    });
+
+    // Add general search examples
+    if (names.length > 0) {
+      examples.push(`Universities in Australia`);
+    }
+    
+    if (institutions.length > 5) {
+      examples.push(`Find top institutions for international students`);
+    }
+
+    // Shuffle and return top 5
+    return examples.sort(() => Math.random() - 0.5).slice(0, 5);
+  }, [institutions]);
   
   const exampleQueries = searchType === "courses" ? courseExamples : institutionExamples;
 
