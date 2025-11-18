@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { PublicHeader } from "@/components/public-header";
 import { Footer } from "@/components/footer";
 import { BackToTop } from "@/components/back-to-top";
+import { ChatWidget } from "@/components/chat-widget";
 import { useAuth } from "@/hooks/useAuth";
 
 interface PublicLayoutProps {
@@ -26,6 +27,7 @@ export function PublicLayout({ children, onStudentLoginClick }: PublicLayoutProp
       </main>
       <Footer />
       <BackToTop />
+      <ChatWidget />
     </div>
   );
 }

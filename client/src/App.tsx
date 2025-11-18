@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { ChatWidget } from "@/components/chat-widget";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -122,6 +123,7 @@ function AppContent() {
         <Router />
       </main>
       <MobileBottomNav />
+      <ChatWidget />
     </div>
   );
 }
