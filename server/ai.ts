@@ -790,6 +790,8 @@ Extract the following fields and return as JSON:
  */
 export interface ParsedSearchParams {
   subject?: string;
+  discipline?: string;
+  subDiscipline?: string;
   level?: string;
   minFees?: number;
   maxFees?: number;
@@ -824,6 +826,8 @@ User Query: "${query}"
 
 Extract these parameters if present:
 - subject: field of study (e.g., "Computer Science", "Engineering", "Business", "MBA", "IT")
+- discipline: main discipline category (e.g., "Computer Science & IT", "Engineering & Technology", "Medicine & Health", "Accounting, Business & Finance")
+- subDiscipline: specific area within discipline (e.g., "Software Engineering", "Data Science", "Artificial Intelligence", "Cyber Security")
 - level: study level (e.g., "undergraduate", "postgraduate", "certificate", "diploma", "masters", "bachelor")
 - minFees: minimum tuition fees in USD (parse from expressions like "under 30k", "between 15-20k", "around 18000")
 - maxFees: maximum tuition fees in USD
@@ -840,6 +844,18 @@ Budget parsing examples:
 Level mapping:
 - "MBA", "Masters", "Master's" → "postgraduate"
 - "Bachelor", "Bachelor's", "undergraduate" → "undergraduate"
+
+Discipline categories available:
+- "Accounting, Business & Finance"
+- "Computer Science & IT"
+- "Engineering & Technology"
+- "Medicine & Health"
+- "Arts, Design & Architecture"
+- "Education & Training"
+- "Law"
+- "Journalism & Media"
+- "Humanities"
+- And more...
 
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 

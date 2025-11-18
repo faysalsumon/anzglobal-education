@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { CourseWithUniversity, University, Favorite, CourseComparison } from "@shared/schema";
+import type { CourseWithUniversity, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,6 +44,7 @@ type FilterSnapshot = {
   searchTerm: string;
   subject: string;
   discipline: string;
+  subDiscipline: string;
   level: string;
   country: string;
   universityFilter: string;
@@ -56,6 +57,7 @@ const createStateSnapshot = (
   searchTerm: string,
   subject: string,
   discipline: string,
+  subDiscipline: string,
   level: string,
   country: string,
   universityFilter: string,
@@ -65,6 +67,7 @@ const createStateSnapshot = (
   searchTerm,
   subject,
   discipline,
+  subDiscipline,
   level,
   country,
   universityFilter,
@@ -77,6 +80,7 @@ const createParamsSnapshot = (params: URLSearchParams): FilterSnapshot => ({
   searchTerm: params.get('search') || "",
   subject: params.get('subject') || "",
   discipline: params.get('discipline') || "",
+  subDiscipline: params.get('subDiscipline') || "",
   level: params.get('level') || "",
   country: params.get('country') || "",
   universityFilter: params.get('university') || "",
@@ -90,6 +94,7 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
     a.searchTerm === b.searchTerm &&
     a.subject === b.subject &&
     a.discipline === b.discipline &&
+    a.subDiscipline === b.subDiscipline &&
     a.level === b.level &&
     a.country === b.country &&
     a.universityFilter === b.universityFilter &&
@@ -104,6 +109,7 @@ export default function PublicCourses() {
   const [searchTerm, setSearchTerm] = useState("");
   const [subject, setSubject] = useState<string>("");
   const [discipline, setDiscipline] = useState<string>("");
+  const [subDiscipline, setSubDiscipline] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
@@ -123,6 +129,11 @@ export default function PublicCourses() {
   
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
+  });
+
+  const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({
+    queryKey: ["/api/sub-disciplines", discipline],
+    enabled: !!discipline,
   });
 
   const { data: favorites = [] } = useQuery<Favorite[]>({
@@ -365,7 +376,7 @@ export default function PublicCourses() {
     
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees
     );
     
     // If they don't match, hydrate state from URL
@@ -374,6 +385,7 @@ export default function PublicCourses() {
       if (urlSnapshot.searchTerm !== searchTerm) setSearchTerm(urlSnapshot.searchTerm);
       if (urlSnapshot.subject !== subject) setSubject(urlSnapshot.subject);
       if (urlSnapshot.discipline !== discipline) setDiscipline(urlSnapshot.discipline);
+      if (urlSnapshot.subDiscipline !== subDiscipline) setSubDiscipline(urlSnapshot.subDiscipline);
       if (urlSnapshot.level !== level) setLevel(urlSnapshot.level);
       if (urlSnapshot.country !== country) setCountry(urlSnapshot.country);
       if (urlSnapshot.universityFilter !== universityFilter) setUniversityFilter(urlSnapshot.universityFilter);
@@ -406,7 +418,7 @@ export default function PublicCourses() {
   useEffect(() => {
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees
     );
     
     // If we're pending hydration
@@ -426,13 +438,14 @@ export default function PublicCourses() {
       search: searchTerm || undefined,
       subject: subject || undefined,
       discipline: discipline || undefined,
+      subDiscipline: subDiscipline || undefined,
       level: level || undefined,
       country: country || undefined,
       university: universityFilter || undefined,
       minFees: minFees !== null ? minFees.toString() : undefined,
       maxFees: maxFees !== null ? maxFees.toString() : undefined,
     });
-  }, [searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees, setParams]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees, setParams]);
 
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -442,6 +455,15 @@ export default function PublicCourses() {
     }
     if (subject && course.subject !== subject) return false;
     if (discipline && course.discipline !== discipline) return false;
+    
+    // Sub-discipline filtering
+    if (subDiscipline) {
+      const selectedSubDiscipline = subDisciplines.find(sd => sd.name === subDiscipline);
+      if (selectedSubDiscipline && course.subDisciplineId !== selectedSubDiscipline.id) {
+        return false;
+      }
+    }
+    
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
@@ -547,7 +569,13 @@ export default function PublicCourses() {
                   </SelectContent>
                 </Select>
 
-                <Select value={discipline || "all"} onValueChange={(val) => setDiscipline(val === "all" ? "" : val)}>
+                <Select value={discipline || "all"} onValueChange={(val) => {
+                  const newDiscipline = val === "all" ? "" : val;
+                  setDiscipline(newDiscipline);
+                  if (!newDiscipline) {
+                    setSubDiscipline(""); // Clear sub-discipline when discipline is cleared
+                  }
+                }}>
                   <SelectTrigger data-testid="select-discipline">
                     <SelectValue placeholder="All Disciplines" />
                   </SelectTrigger>
@@ -556,6 +584,24 @@ export default function PublicCourses() {
                     {availableFilters.disciplines.map((disc) => (
                       <SelectItem key={disc} value={disc}>
                         {disc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select 
+                  value={subDiscipline || "all"} 
+                  onValueChange={(val) => setSubDiscipline(val === "all" ? "" : val)}
+                  disabled={!discipline}
+                >
+                  <SelectTrigger data-testid="select-sub-discipline">
+                    <SelectValue placeholder={discipline ? "All Sub-disciplines" : "Select discipline first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sub-disciplines</SelectItem>
+                    {subDisciplines.map((sd) => (
+                      <SelectItem key={sd.id} value={sd.name}>
+                        {sd.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -589,7 +635,7 @@ export default function PublicCourses() {
                   </SelectContent>
                 </Select>
               </div>
-              {(searchTerm || subject || discipline || level || country) && (
+              {(searchTerm || subject || discipline || subDiscipline || level || country) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -597,6 +643,7 @@ export default function PublicCourses() {
                     setSearchTerm("");
                     setSubject("");
                     setDiscipline("");
+                    setSubDiscipline("");
                     setLevel("");
                     setCountry("");
                     setHighlightedCourseId(null);

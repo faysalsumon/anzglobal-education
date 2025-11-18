@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, ArrowLeft, Plus, X } from "lucide-react";
 import { Link } from "wouter";
-import { baseCourseSchema, type InsertCourse, type Course } from "@shared/schema";
+import { baseCourseSchema, type InsertCourse, type Course, type SubDiscipline } from "@shared/schema";
 import { z } from "zod";
 
 const formSchema = baseCourseSchema.extend({
@@ -31,6 +31,7 @@ export default function CourseForm() {
   const courseId = params?.id;
   const isEditing = !!courseId;
   const [aiLoading, setAiLoading] = useState(false);
+  const [subDisciplineInput, setSubDisciplineInput] = useState("");
   
   // Array field states
   const [intakeInput, setIntakeInput] = useState("");
@@ -157,16 +158,75 @@ export default function CourseForm() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Watch discipline to fetch sub-disciplines
+  const selectedDiscipline = form.watch("discipline");
+  
+  const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({
+    queryKey: ["/api/sub-disciplines", selectedDiscipline],
+    enabled: !!selectedDiscipline,
+  });
+  
+  // Reset sub-discipline when discipline changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'discipline') {
+        // Clear sub-discipline input and form value when discipline changes
+        setSubDisciplineInput('');
+        form.setValue('subDisciplineId', undefined);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+  
+  // Load sub-discipline name when editing
+  useEffect(() => {
+    if (course?.subDisciplineId && subDisciplines.length > 0) {
+      const currentSubDiscipline = subDisciplines.find(sd => sd.id === course.subDisciplineId);
+      if (currentSubDiscipline) {
+        setSubDisciplineInput(currentSubDiscipline.name);
+      }
+    }
+  }, [course?.subDisciplineId, subDisciplines]);
+
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       console.log("Form data before submission:", data);
       console.log("Fees type:", typeof data.fees, "Value:", data.fees);
+      
+      // Handle sub-discipline creation if needed
+      let finalData = { ...data };
+      if (subDisciplineInput && data.discipline) {
+        // Create slug from input
+        const slug = subDisciplineInput.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+        
+        // Check if this sub-discipline already exists
+        const existing = subDisciplines.find(sd => sd.slug === slug && sd.discipline === data.discipline);
+        
+        if (existing) {
+          finalData.subDisciplineId = existing.id;
+        } else {
+          // Create new sub-discipline
+          try {
+            const response = await apiRequest("POST", "/api/sub-disciplines", {
+              discipline: data.discipline,
+              name: subDisciplineInput,
+              slug: slug,
+            });
+            const newSubDiscipline = await response.json() as SubDiscipline;
+            finalData.subDisciplineId = newSubDiscipline.id;
+          } catch (error) {
+            console.error("Failed to create sub-discipline:", error);
+          }
+        }
+      }
+      
       const url = isEditing ? `/api/courses/${courseId}` : "/api/courses";
-      return await apiRequest(isEditing ? "PUT" : "POST", url, data);
+      return await apiRequest(isEditing ? "PUT" : "POST", url, finalData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/university/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sub-disciplines"] });
       toast({
         title: isEditing ? "Course updated" : "Course created",
         description: `Your course has been ${isEditing ? "updated" : "created"} successfully.`,
@@ -374,6 +434,34 @@ export default function CourseForm() {
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <FormLabel htmlFor="sub-discipline-input">
+                  Sub-Discipline {!selectedDiscipline && <span className="text-muted-foreground text-sm">(select discipline first)</span>}
+                </FormLabel>
+                <FormDescription>
+                  Specific area within the discipline (e.g., "Software Engineering", "Data Science")
+                </FormDescription>
+                <Input
+                  id="sub-discipline-input"
+                  value={subDisciplineInput}
+                  onChange={(e) => setSubDisciplineInput(e.target.value)}
+                  placeholder={selectedDiscipline ? "Type to search or create..." : "Select a discipline first"}
+                  disabled={!selectedDiscipline}
+                  list="sub-disciplines-datalist"
+                  data-testid="input-sub-discipline"
+                />
+                <datalist id="sub-disciplines-datalist">
+                  {subDisciplines.map((sd) => (
+                    <option key={sd.id} value={sd.name} />
+                  ))}
+                </datalist>
+                {subDisciplineInput && !subDisciplines.find(sd => sd.name.toLowerCase() === subDisciplineInput.toLowerCase()) && (
+                  <p className="text-sm text-muted-foreground">
+                    Will create new sub-discipline: "{subDisciplineInput}"
+                  </p>
+                )}
+              </div>
 
               <FormField
                 control={form.control}

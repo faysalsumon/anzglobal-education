@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import {
   index,
+  unique,
   uniqueIndex,
   jsonb,
   pgTable,
@@ -180,7 +181,7 @@ export const subDisciplines = pgTable("sub_disciplines", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Composite unique constraint to prevent duplicate sub-disciplines within same discipline
-  disciplineSlugIdx: index("sub_disciplines_discipline_slug_unique_idx").on(table.discipline, table.slug),
+  disciplineSlugUnique: unique("sub_disciplines_discipline_slug_unique").on(table.discipline, table.slug),
   // Index for looking up sub-disciplines by parent discipline
   disciplineIdx: index("sub_disciplines_discipline_idx").on(table.discipline),
   // Index for sorting by usage
@@ -1113,6 +1114,21 @@ export const insertCourseSchema = baseCourseSchema.refine((data) => {
 
 // Export base schema for frontend forms that need to extend it
 export { baseCourseSchema };
+
+// Sub-discipline schemas
+export const insertSubDisciplineSchema = createInsertSchema(subDisciplines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+}).extend({
+  discipline: z.string().min(1, "Discipline is required"),
+  name: z.string().min(1, "Sub-discipline name is required"),
+  slug: z.string().min(1, "Slug is required"),
+});
+
+export type InsertSubDiscipline = z.infer<typeof insertSubDisciplineSchema>;
+export type SubDiscipline = typeof subDisciplines.$inferSelect;
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
   id: true,

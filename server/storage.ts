@@ -2,6 +2,7 @@ import {
   users,
   universities,
   courses,
+  subDisciplines,
   studentProfiles,
   applications,
   universityTeamMembers,
@@ -16,6 +17,8 @@ import {
   type Course,
   type InsertCourse,
   type CourseWithUniversity,
+  type SubDiscipline,
+  type InsertSubDiscipline,
   type StudentProfile,
   type InsertStudentProfile,
   type Application,
@@ -56,7 +59,7 @@ import {
   type InsertContactInquiry,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc, isNull } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -80,6 +83,12 @@ export interface IStorage {
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
+  
+  // Sub-discipline operations
+  getSubDisciplines(discipline?: string): Promise<SubDiscipline[]>;
+  getSubDisciplineById(id: string): Promise<SubDiscipline | undefined>;
+  createSubDiscipline(subDiscipline: InsertSubDiscipline): Promise<SubDiscipline>;
+  incrementSubDisciplineUsage(id: string): Promise<void>;
   
   // Student profile operations
   getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
@@ -351,6 +360,63 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCourse(id: string): Promise<void> {
     await db.delete(courses).where(eq(courses.id, id));
+  }
+
+  // Sub-discipline operations
+  async getSubDisciplines(discipline?: string): Promise<SubDiscipline[]> {
+    if (discipline) {
+      return await db
+        .select()
+        .from(subDisciplines)
+        .where(eq(subDisciplines.discipline, discipline))
+        .orderBy(desc(subDisciplines.usageCount));
+    }
+    return await db
+      .select()
+      .from(subDisciplines)
+      .orderBy(desc(subDisciplines.usageCount));
+  }
+
+  async getSubDisciplineById(id: string): Promise<SubDiscipline | undefined> {
+    const [subDiscipline] = await db
+      .select()
+      .from(subDisciplines)
+      .where(eq(subDisciplines.id, id));
+    return subDiscipline;
+  }
+
+  async createSubDiscipline(subDisciplineData: InsertSubDiscipline): Promise<SubDiscipline> {
+    // Check if sub-discipline with same slug already exists for this discipline
+    const existing = await db
+      .select()
+      .from(subDisciplines)
+      .where(
+        and(
+          eq(subDisciplines.discipline, subDisciplineData.discipline),
+          eq(subDisciplines.slug, subDisciplineData.slug)
+        )
+      )
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    const [subDiscipline] = await db
+      .insert(subDisciplines)
+      .values(subDisciplineData)
+      .returning();
+    return subDiscipline;
+  }
+
+  async incrementSubDisciplineUsage(id: string): Promise<void> {
+    await db
+      .update(subDisciplines)
+      .set({ 
+        usageCount: sql`${subDisciplines.usageCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(subDisciplines.id, id));
   }
 
   // Student profile operations

@@ -10,6 +10,7 @@ import passport from "passport";
 import {
   insertUniversitySchema,
   insertCourseSchema,
+  insertSubDisciplineSchema,
   insertStudentProfileSchema,
   insertApplicationSchema,
   insertAdminTeamMemberSchema,
@@ -1345,6 +1346,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sub-discipline routes
+  app.get("/api/sub-disciplines", async (req, res) => {
+    try {
+      const { discipline } = req.query;
+      
+      if (discipline && typeof discipline === 'string') {
+        const subDisciplines = await storage.getSubDisciplines(discipline);
+        res.json(subDisciplines);
+      } else {
+        const subDisciplines = await storage.getSubDisciplines();
+        res.json(subDisciplines);
+      }
+    } catch (error) {
+      console.error("Error fetching sub-disciplines:", error);
+      res.status(500).json({ message: "Failed to fetch sub-disciplines" });
+    }
+  });
+
+  app.post("/api/sub-disciplines", isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body
+      const validated = insertSubDisciplineSchema.parse(req.body);
+      
+      // Create sub-discipline with optimistic slug deduplication
+      const subDiscipline = await storage.createSubDiscipline(validated);
+      
+      res.status(201).json(subDiscipline);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid sub-discipline data", errors: error.errors });
+        return;
+      }
+      console.error("Error creating sub-discipline:", error);
+      res.status(500).json({ message: "Failed to create sub-discipline" });
+    }
+  });
+
   // Course routes - only show approved and active courses from approved institutions
   app.get("/api/courses", async (req, res) => {
     try {
@@ -1421,6 +1459,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       parsedParams = {
         originalQuery: query.trim(),
         subject: parsedParams.subject || undefined,
+        discipline: parsedParams.discipline || undefined,
+        subDiscipline: parsedParams.subDiscipline || undefined,
         level: parsedParams.level || undefined,
         location: parsedParams.location || undefined,
         country: parsedParams.country || undefined,
@@ -1447,6 +1487,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const subjectMatch = course.subject?.toLowerCase().includes(parsedParams.subject.toLowerCase()) ||
                               course.title?.toLowerCase().includes(parsedParams.subject.toLowerCase());
           if (!subjectMatch) return false;
+        }
+        
+        // Discipline filter
+        if (parsedParams.discipline) {
+          const disciplineMatch = course.discipline?.toLowerCase().includes(parsedParams.discipline.toLowerCase());
+          if (!disciplineMatch) return false;
+        }
+        
+        // Sub-discipline filter (needs to match by ID)
+        if (parsedParams.subDiscipline && course.subDisciplineId) {
+          // For now, we'll skip sub-discipline filtering in AI search since we need to lookup the ID
+          // This can be enhanced later by joining with sub_disciplines table
         }
         
         // Level filter
