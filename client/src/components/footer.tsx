@@ -115,7 +115,7 @@ export function Footer() {
           <div className="mt-12 pt-8 border-t border-border">
             <div className="flex items-center justify-center gap-4">
               <a
-                href="https://www.facebook.com/anzglobaledu"
+                href="https://www.facebook.com/anzglobal"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -125,7 +125,7 @@ export function Footer() {
                 <Facebook className="h-5 w-5" />
               </a>
               <a
-                href="https://www.instagram.com/anzglobaledu"
+                href="https://www.instagram.com/anzglobal/#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -135,7 +135,7 @@ export function Footer() {
                 <Instagram className="h-5 w-5" />
               </a>
               <a
-                href="https://www.linkedin.com/company/anzglobaledu"
+                href="https://www.linkedin.com/company/anzglobal"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -145,7 +145,7 @@ export function Footer() {
                 <Linkedin className="h-5 w-5" />
               </a>
               <a
-                href="https://www.youtube.com/@anzglobaledu"
+                href="https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -155,12 +155,12 @@ export function Footer() {
                 <Youtube className="h-5 w-5" />
               </a>
               <a
-                href="https://twitter.com/anzglobaledu"
+                href="https://x.com/anz_global"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
                 data-testid="social-twitter"
-                aria-label="Follow us on Twitter"
+                aria-label="Follow us on X"
               >
                 <Twitter className="h-5 w-5" />
               </a>
@@ -213,7 +213,7 @@ export function Footer() {
           <div className="mt-8 pt-8 border-t border-border">
             <div className="flex items-center justify-center gap-4">
               <a
-                href="https://www.facebook.com/anzglobaledu"
+                href="https://www.facebook.com/anzglobal"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -223,7 +223,7 @@ export function Footer() {
                 <Facebook className="h-5 w-5" />
               </a>
               <a
-                href="https://www.instagram.com/anzglobaledu"
+                href="https://www.instagram.com/anzglobal/#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -233,7 +233,7 @@ export function Footer() {
                 <Instagram className="h-5 w-5" />
               </a>
               <a
-                href="https://www.linkedin.com/company/anzglobaledu"
+                href="https://www.linkedin.com/company/anzglobal"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -243,7 +243,7 @@ export function Footer() {
                 <Linkedin className="h-5 w-5" />
               </a>
               <a
-                href="https://www.youtube.com/@anzglobaledu"
+                href="https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
@@ -253,12 +253,12 @@ export function Footer() {
                 <Youtube className="h-5 w-5" />
               </a>
               <a
-                href="https://twitter.com/anzglobaledu"
+                href="https://x.com/anz_global"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
                 data-testid="social-twitter-mobile"
-                aria-label="Follow us on Twitter"
+                aria-label="Follow us on X"
               >
                 <Twitter className="h-5 w-5" />
               </a>
