@@ -11,6 +11,8 @@ import {
   insertUniversitySchema,
   insertCourseSchema,
   insertSubDisciplineSchema,
+  insertCampusSchema,
+  insertCourseCampusSchema,
   insertStudentProfileSchema,
   insertApplicationSchema,
   insertAdminTeamMemberSchema,
@@ -1433,6 +1435,186 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating sub-discipline:", error);
       res.status(500).json({ message: "Failed to create sub-discipline" });
+    }
+  });
+
+  // Campus routes
+  app.get("/api/institutions/:id/campuses", async (req, res) => {
+    try {
+      const campuses = await storage.getCampusesByInstitutionId(req.params.id);
+      res.json(campuses);
+    } catch (error) {
+      console.error("Error fetching campuses:", error);
+      res.status(500).json({ message: "Failed to fetch campuses" });
+    }
+  });
+
+  app.post("/api/institutions/:id/campuses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const institutionId = req.params.id;
+      
+      // Check if user has access to this institution
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to add campuses to this institution" });
+      }
+      
+      const validated = insertCampusSchema.parse({ ...req.body, institutionId });
+      const campus = await storage.createCampus(validated);
+      
+      res.status(201).json(campus);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid campus data", errors: error.errors });
+        return;
+      }
+      console.error("Error creating campus:", error);
+      res.status(500).json({ message: "Failed to create campus" });
+    }
+  });
+
+  app.put("/api/campuses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campusId = req.params.id;
+      
+      // Check if campus exists and get institution
+      const campus = await storage.getCampusById(campusId);
+      if (!campus) {
+        return res.status(404).json({ message: "Campus not found" });
+      }
+      
+      const institution = await storage.getUniversityById(campus.institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to update this campus" });
+      }
+      
+      const validated = insertCampusSchema.partial().parse(req.body);
+      const updated = await storage.updateCampus(campusId, validated);
+      
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid campus data", errors: error.errors });
+        return;
+      }
+      console.error("Error updating campus:", error);
+      res.status(500).json({ message: "Failed to update campus" });
+    }
+  });
+
+  app.delete("/api/campuses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const campusId = req.params.id;
+      
+      // Check if campus exists and get institution
+      const campus = await storage.getCampusById(campusId);
+      if (!campus) {
+        return res.status(404).json({ message: "Campus not found" });
+      }
+      
+      const institution = await storage.getUniversityById(campus.institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to delete this campus" });
+      }
+      
+      await storage.deleteCampus(campusId);
+      res.json({ message: "Campus deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting campus:", error);
+      res.status(500).json({ message: "Failed to delete campus" });
+    }
+  });
+
+  // Course-Campus routes
+  app.get("/api/courses/:id/campuses", async (req, res) => {
+    try {
+      const campuses = await storage.getCourseCampuses(req.params.id);
+      res.json(campuses);
+    } catch (error) {
+      console.error("Error fetching course campuses:", error);
+      res.status(500).json({ message: "Failed to fetch course campuses" });
+    }
+  });
+
+  app.post("/api/courses/:id/campuses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const courseId = req.params.id;
+      
+      // Check if course exists and user has access
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const institution = await storage.getUniversityById(course.universityId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to modify this course" });
+      }
+      
+      const validated = insertCourseCampusSchema.parse({ courseId, ...req.body });
+      const courseCampus = await storage.addCourseCampus(validated);
+      
+      res.status(201).json(courseCampus);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid course-campus data", errors: error.errors });
+        return;
+      }
+      console.error("Error adding campus to course:", error);
+      res.status(500).json({ message: "Failed to add campus to course" });
+    }
+  });
+
+  app.delete("/api/courses/:courseId/campuses/:campusId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId, campusId } = req.params;
+      
+      // Check if course exists and user has access
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const institution = await storage.getUniversityById(course.universityId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to modify this course" });
+      }
+      
+      await storage.removeCourseCampus(courseId, campusId);
+      res.json({ message: "Campus removed from course successfully" });
+    } catch (error) {
+      console.error("Error removing campus from course:", error);
+      res.status(500).json({ message: "Failed to remove campus from course" });
     }
   });
 
