@@ -36,11 +36,7 @@ export function GalleryImageManager({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('image', file);
-      const response = await apiRequest("POST", "/api/university/upload-gallery-image", formData, {
-        headers: {
-          // Let browser set Content-Type with boundary for multipart/form-data
-        },
-      });
+      const response = await apiRequest("POST", "/api/university/upload-gallery-image", formData);
       return await response.json();
     },
     onSuccess: (data: any) => {
