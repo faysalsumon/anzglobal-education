@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -263,6 +264,7 @@ export default function AdminDashboard() {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
   // Institution state
   const [institutionSearchQuery, setInstitutionSearchQuery] = useState("");
@@ -272,10 +274,12 @@ export default function AdminDashboard() {
   const [deletingInstitution, setDeletingInstitution] = useState<Institution | null>(null);
   const [rejectingInstitution, setRejectingInstitution] = useState<Institution | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [selectedInstitutions, setSelectedInstitutions] = useState<Set<string>>(new Set());
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
   const [courseStatusFilter, setCourseStatusFilter] = useState<string>("all");
+  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const [courseDialogOpen, setCourseDialogOpen] = useState(false);
   const [aiCourseExtractorDialogOpen, setAiCourseExtractorDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -644,6 +648,112 @@ export default function AdminDashboard() {
     },
   });
 
+  // Bulk action mutations
+  const bulkDeleteUsersMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      return await apiRequest("POST", "/api/super-admin/users/bulk-delete", { userIds });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      setSelectedUsers(new Set());
+      toast({
+        title: "Users deleted",
+        description: data.message || `Successfully deleted ${data.count} user(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkDeleteInstitutionsMutation = useMutation({
+    mutationFn: async (institutionIds: string[]) => {
+      return await apiRequest("POST", "/api/super-admin/institutions/bulk-delete", { institutionIds });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      setSelectedInstitutions(new Set());
+      toast({
+        title: "Institutions deleted",
+        description: data.message || `Successfully deleted ${data.count} institution(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkUpdateInstitutionStatusMutation = useMutation({
+    mutationFn: async ({ institutionIds, status }: { institutionIds: string[]; status: string }) => {
+      return await apiRequest("POST", "/api/super-admin/institutions/bulk-update-status", { institutionIds, status });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      setSelectedInstitutions(new Set());
+      toast({
+        title: "Status updated",
+        description: data.message || `Successfully updated ${data.count} institution(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkDeleteCoursesMutation = useMutation({
+    mutationFn: async (courseIds: string[]) => {
+      return await apiRequest("POST", "/api/super-admin/courses/bulk-delete", { courseIds });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setSelectedCourses(new Set());
+      toast({
+        title: "Courses deleted",
+        description: data.message || `Successfully deleted ${data.count} course(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkUpdateCourseStatusMutation = useMutation({
+    mutationFn: async ({ courseIds, status }: { courseIds: string[]; status: string }) => {
+      return await apiRequest("POST", "/api/super-admin/courses/bulk-update-status", { courseIds, status });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      setSelectedCourses(new Set());
+      toast({
+        title: "Status updated",
+        description: data.message || `Successfully updated ${data.count} course(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleCourseStatusMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       return await apiRequest("PATCH", `/api/super-admin/courses/${id}/status`, { isActive });
@@ -812,6 +922,61 @@ export default function AdminDashboard() {
     total: courses?.length || 0,
     active: courses?.filter(c => c.isActive).length || 0,
     inactive: courses?.filter(c => !c.isActive).length || 0,
+  };
+
+  // Bulk action handlers
+  const toggleSelectUser = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
+
+  const toggleSelectAllUsers = (users: User[]) => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map(u => u.id)));
+    }
+  };
+
+  const toggleSelectInstitution = (institutionId: string) => {
+    const newSelected = new Set(selectedInstitutions);
+    if (newSelected.has(institutionId)) {
+      newSelected.delete(institutionId);
+    } else {
+      newSelected.add(institutionId);
+    }
+    setSelectedInstitutions(newSelected);
+  };
+
+  const toggleSelectAllInstitutions = (institutions: Institution[]) => {
+    if (selectedInstitutions.size === institutions.length) {
+      setSelectedInstitutions(new Set());
+    } else {
+      setSelectedInstitutions(new Set(institutions.map(i => i.id)));
+    }
+  };
+
+  const toggleSelectCourse = (courseId: string) => {
+    const newSelected = new Set(selectedCourses);
+    if (newSelected.has(courseId)) {
+      newSelected.delete(courseId);
+    } else {
+      newSelected.add(courseId);
+    }
+    setSelectedCourses(newSelected);
+  };
+
+  const toggleSelectAllCourses = (courses: Course[]) => {
+    if (selectedCourses.size === courses.length) {
+      setSelectedCourses(new Set());
+    } else {
+      setSelectedCourses(new Set(courses.map(c => c.id)));
+    }
   };
 
   // User handlers
@@ -1116,6 +1281,41 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Bulk Actions Toolbar */}
+              {selectedUsers.size > 0 && (
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {selectedUsers.size} user(s) selected
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Delete ${selectedUsers.size} selected user(s)?`)) {
+                          bulkDeleteUsersMutation.mutate(Array.from(selectedUsers));
+                        }
+                      }}
+                      disabled={bulkDeleteUsersMutation.isPending}
+                      data-testid="button-bulk-delete-users"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedUsers(new Set())}
+                      data-testid="button-clear-selection-users"
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Search and Filters */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
@@ -1156,6 +1356,13 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredUsers && filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
+                          onCheckedChange={() => filteredUsers && toggleSelectAllUsers(filteredUsers)}
+                          data-testid="checkbox-select-all-users"
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Type</TableHead>
@@ -1167,11 +1374,18 @@ export default function AdminDashboard() {
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredUsers && filteredUsers.length > 0 ? (
                       filteredUsers.map((user) => (
                         <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedUsers.has(user.id)}
+                              onCheckedChange={() => toggleSelectUser(user.id)}
+                              data-testid={`checkbox-user-${user.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">
                             {user.firstName} {user.lastName}
                           </TableCell>
@@ -1243,7 +1457,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">No users found</TableCell>
+                        <TableCell colSpan={7} className="text-center">No users found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
