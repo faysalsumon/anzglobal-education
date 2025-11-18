@@ -74,7 +74,7 @@ interface Institution {
   topDisciplines: string[] | null;
   logo: string | null;
   topCourses: string[] | null;
-  galleryImages: string[] | null;
+  institutionGallery: string[] | null;
   campusAddresses: Array<{
     address: string;
     city: string;
@@ -201,7 +201,7 @@ const institutionSchema = z.object({
   logo: z.string().optional(),
   topDisciplines: z.string().optional(),
   topCourses: z.string().optional(),
-  galleryImages: z.array(z.string()).optional(),
+  institutionGallery: z.array(z.string()).optional(),
   campusAddresses: z.array(z.object({
     address: z.string(),
     city: z.string(),
@@ -324,7 +324,7 @@ export default function AdminDashboard() {
       logo: "",
       topDisciplines: "",
       topCourses: "",
-      galleryImages: [],
+      institutionGallery: [],
       campusAddresses: [],
       hasScholarship: false,
       scholarshipPercentageMin: "" as any,
@@ -1047,7 +1047,7 @@ export default function AdminDashboard() {
       logo: institution.logo || "",
       topDisciplines: institution.topDisciplines?.join(", ") || "",
       topCourses: institution.topCourses?.join(", ") || "",
-      galleryImages: institution.galleryImages || [],
+      institutionGallery: institution.institutionGallery || [],
       campusAddresses: institution.campusAddresses || [],
       hasScholarship,
     });
@@ -2778,8 +2778,8 @@ export default function AdminDashboard() {
 
               {/* Gallery Images - Upload, AI Generate, or URL */}
               <GalleryImageManager
-                value={institutionForm.watch("galleryImages") || []}
-                onChange={(urls) => institutionForm.setValue("galleryImages", urls)}
+                value={institutionForm.watch("institutionGallery") || []}
+                onChange={(urls) => institutionForm.setValue("institutionGallery", urls)}
                 institutionName={institutionForm.watch("name")}
                 institutionLocation={institutionForm.watch("country")}
                 institutionProviderType={institutionForm.watch("providerType")}
@@ -3004,7 +3004,7 @@ export default function AdminDashboard() {
                 scholarshipPercentageMax: approvedData.scholarshipPercentageMax || undefined,
                 campusAddresses: approvedData.campusAddresses || [],
                 logo: "",
-                galleryImages: [],
+                institutionGallery: [],
               });
 
               // Close AI extractor and open institution form

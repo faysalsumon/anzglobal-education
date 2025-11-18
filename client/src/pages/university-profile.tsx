@@ -270,12 +270,12 @@ export default function UniversityProfile() {
         name,
         country,
         providerType,
-      }) as any as { galleryImages: string[] };
-      form.setValue("institutionGallery", response.galleryImages);
-      setGalleryPreviews(response.galleryImages);
+      }) as any as { institutionGallery: string[] };
+      form.setValue("institutionGallery", response.institutionGallery);
+      setGalleryPreviews(response.institutionGallery);
       toast({
         title: "Gallery generated",
-        description: `AI has created ${response.galleryImages.length} images for your institution gallery.`,
+        description: `AI has created ${response.institutionGallery.length} images for your institution gallery.`,
       });
     } catch (error: any) {
       toast({

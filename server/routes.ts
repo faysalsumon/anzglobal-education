@@ -923,7 +923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ galleryImages: galleryPaths });
+      res.json({ institutionGallery: galleryPaths });
     } catch (error: any) {
       console.error("Error generating gallery:", error);
       
