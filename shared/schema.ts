@@ -169,6 +169,24 @@ export const universities = pgTable("universities", {
   activeApprovedIdx: index("universities_active_approved_idx").on(table.isActive, table.approvalStatus),
 }));
 
+// Sub-disciplines table (for categorizing courses within main disciplines)
+export const subDisciplines = pgTable("sub_disciplines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  discipline: text("discipline").notNull(), // Parent discipline (must match one of the main disciplines)
+  name: text("name").notNull(), // Display name (e.g., "Accounting", "Business and Management")
+  slug: text("slug").notNull(), // URL-friendly version for deduplication
+  usageCount: integer("usage_count").notNull().default(0), // Track how many courses use this sub-discipline
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Composite unique constraint to prevent duplicate sub-disciplines within same discipline
+  disciplineSlugIdx: index("sub_disciplines_discipline_slug_unique_idx").on(table.discipline, table.slug),
+  // Index for looking up sub-disciplines by parent discipline
+  disciplineIdx: index("sub_disciplines_discipline_idx").on(table.discipline),
+  // Index for sorting by usage
+  usageIdx: index("sub_disciplines_usage_idx").on(table.usageCount),
+}));
+
 // Courses table
 export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -177,6 +195,7 @@ export const courses = pgTable("courses", {
   description: text("description"),
   subject: text("subject").notNull(),
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
+  subDisciplineId: varchar("sub_discipline_id").references(() => subDisciplines.id, { onDelete: "set null" }), // Optional sub-category within main discipline
   level: text("level").notNull(), // Course qualification level (see courseLevelEnum for standard values)
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
@@ -241,7 +260,9 @@ export const courses = pgTable("courses", {
   // Btree index for duration and discipline filtering
   durationWeeksIdx: index("courses_duration_weeks_idx").on(table.durationWeeks),
   disciplineIdx: index("courses_discipline_idx").on(table.discipline),
+  subDisciplineIdx: index("courses_sub_discipline_idx").on(table.subDisciplineId),
   // Composite indexes for common query patterns
+  disciplineSubDisciplineIdx: index("courses_discipline_sub_discipline_idx").on(table.discipline, table.subDisciplineId),
   universityActiveIdx: index("courses_university_active_idx").on(table.universityId, table.isActive),
   subjectLevelIdx: index("courses_subject_level_idx").on(table.subject, table.level),
   activeApprovedIdx: index("courses_active_approved_idx").on(table.isActive, table.approvalStatus),
