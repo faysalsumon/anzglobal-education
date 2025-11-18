@@ -283,41 +283,28 @@ export default function PublicCourses() {
     };
   }, [courses]);
 
-  // Check for search query and highlight parameters in URL
+  // Parse URL params on mount and location changes
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const searchParam = urlParams.get('search');
+    
+    setSearchTerm(urlParams.get('search') || "");
+    setUniversityFilter(urlParams.get('university') || "");
+    setLevel(urlParams.get('level') || "");
+    setCountry(urlParams.get('country') || "");
+    setSubject(urlParams.get('subject') || "");
+    setDiscipline(urlParams.get('discipline') || "");
+    setMinFees(urlParams.get('minFees') ? parseInt(urlParams.get('minFees')!) : null);
+    setMaxFees(urlParams.get('maxFees') ? parseInt(urlParams.get('maxFees')!) : null);
+    
     const highlightParam = urlParams.get('highlight');
-    const universityParam = urlParams.get('university');
-    const levelParam = urlParams.get('level');
-    const countryParam = urlParams.get('country');
-    const subjectParam = urlParams.get('subject');
-    const disciplineParam = urlParams.get('discipline');
-    const minFeesParam = urlParams.get('minFees');
-    const maxFeesParam = urlParams.get('maxFees');
-    
-    // Update state from URL params (or reset if not present)
-    setSearchTerm(searchParam || "");
-    setUniversityFilter(universityParam || "");
-    setLevel(levelParam || "");
-    setCountry(countryParam || "");
-    setSubject(subjectParam || "");
-    setDiscipline(disciplineParam || "");
-    setMinFees(minFeesParam ? parseInt(minFeesParam) : null);
-    setMaxFees(maxFeesParam ? parseInt(maxFeesParam) : null);
-    
     if (highlightParam) {
       setHighlightedCourseId(parseInt(highlightParam));
-    }
-    
-    // Only clear the highlight parameter after using it
-    if (highlightParam) {
-      const newParams = new URLSearchParams(window.location.search);
-      newParams.delete('highlight');
-      const newSearch = newParams.toString();
+      // Clear highlight from URL after using it
+      urlParams.delete('highlight');
+      const newSearch = urlParams.toString();
       window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
     }
-  }, [location]); // Re-run whenever location changes
+  }, [location]);
 
   // Scroll to highlighted course
   useEffect(() => {
@@ -328,13 +315,16 @@ export default function PublicCourses() {
     }
   }, [highlightedCourseId, courses]);
 
-  // Sync filter state to URL for sharing and back navigation
+  // Update URL when filters change (but not on initial load from URL)
+  const lastUrlRef = useRef<string>('');
   useEffect(() => {
-    const currentSearch = window.location.search;
-    
-    // Build new params from current state
+    // Skip on first render to avoid overwriting URL params
+    if (lastUrlRef.current === '') {
+      lastUrlRef.current = window.location.search;
+      return;
+    }
+
     const params = new URLSearchParams();
-    
     if (searchTerm) params.set('search', searchTerm);
     if (subject) params.set('subject', subject);
     if (discipline) params.set('discipline', discipline);
@@ -347,8 +337,8 @@ export default function PublicCourses() {
     const newSearch = params.toString();
     const newFullSearch = newSearch ? `?${newSearch}` : '';
     
-    // Only update if search params actually changed to avoid infinite loops
-    if (currentSearch !== newFullSearch) {
+    if (lastUrlRef.current !== newFullSearch) {
+      lastUrlRef.current = newFullSearch;
       window.history.replaceState({}, '', window.location.pathname + newFullSearch);
     }
   }, [searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees]);
