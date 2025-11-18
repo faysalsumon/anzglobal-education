@@ -95,7 +95,13 @@ export function registerChatRoutes(app: Express) {
   app.post("/api/chat/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const validation = insertChatMessageSchema.safeParse(req.body);
+      
+      // Validate only the content field from request body
+      const messageContentSchema = z.object({
+        content: z.string().min(1).max(5000),
+      });
+      
+      const validation = messageContentSchema.safeParse(req.body);
 
       if (!validation.success) {
         return res.status(400).json({ error: validation.error });
