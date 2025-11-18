@@ -37,8 +37,70 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
+import { useQueryParams } from "@/hooks/useQueryParams";
+
+// Filter snapshot type for state/URL comparison
+type FilterSnapshot = {
+  searchTerm: string;
+  subject: string;
+  discipline: string;
+  level: string;
+  country: string;
+  universityFilter: string;
+  minFees: number | null;
+  maxFees: number | null;
+};
+
+// Create snapshot from current state
+const createStateSnapshot = (
+  searchTerm: string,
+  subject: string,
+  discipline: string,
+  level: string,
+  country: string,
+  universityFilter: string,
+  minFees: number | null,
+  maxFees: number | null
+): FilterSnapshot => ({
+  searchTerm,
+  subject,
+  discipline,
+  level,
+  country,
+  universityFilter,
+  minFees,
+  maxFees,
+});
+
+// Create snapshot from URL params
+const createParamsSnapshot = (params: URLSearchParams): FilterSnapshot => ({
+  searchTerm: params.get('search') || "",
+  subject: params.get('subject') || "",
+  discipline: params.get('discipline') || "",
+  level: params.get('level') || "",
+  country: params.get('country') || "",
+  universityFilter: params.get('university') || "",
+  minFees: params.get('minFees') ? parseInt(params.get('minFees')!) : null,
+  maxFees: params.get('maxFees') ? parseInt(params.get('maxFees')!) : null,
+});
+
+// Compare two snapshots
+const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
+  return (
+    a.searchTerm === b.searchTerm &&
+    a.subject === b.subject &&
+    a.discipline === b.discipline &&
+    a.level === b.level &&
+    a.country === b.country &&
+    a.universityFilter === b.universityFilter &&
+    a.minFees === b.minFees &&
+    a.maxFees === b.maxFees
+  );
+};
 
 export default function PublicCourses() {
+  const { params, setParams } = useQueryParams();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [subject, setSubject] = useState<string>("");
   const [discipline, setDiscipline] = useState<string>("");
@@ -51,6 +113,10 @@ export default function PublicCourses() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithUniversity | null>(null);
   const highlightedRef = useRef<HTMLDivElement>(null);
+  
+  // Track pending URL hydration and previous URL snapshot
+  const pendingUrlHydrationRef = useRef<FilterSnapshot | null>(null);
+  const previousUrlSnapshotRef = useRef<FilterSnapshot | null>(null);
 
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
@@ -283,28 +349,49 @@ export default function PublicCourses() {
     };
   }, [courses]);
 
-  // Parse URL params on mount and location changes
+  // Parse URL params into state ONLY when URL actually changes
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    // Create snapshot of what the URL wants
+    const urlSnapshot = createParamsSnapshot(params);
     
-    setSearchTerm(urlParams.get('search') || "");
-    setUniversityFilter(urlParams.get('university') || "");
-    setLevel(urlParams.get('level') || "");
-    setCountry(urlParams.get('country') || "");
-    setSubject(urlParams.get('subject') || "");
-    setDiscipline(urlParams.get('discipline') || "");
-    setMinFees(urlParams.get('minFees') ? parseInt(urlParams.get('minFees')!) : null);
-    setMaxFees(urlParams.get('maxFees') ? parseInt(urlParams.get('maxFees')!) : null);
+    // Check if URL snapshot changed from previous
+    if (previousUrlSnapshotRef.current && snapshotsEqual(urlSnapshot, previousUrlSnapshotRef.current)) {
+      // URL hasn't changed, don't parse
+      return;
+    }
     
-    const highlightParam = urlParams.get('highlight');
+    // URL changed! Update previous snapshot
+    previousUrlSnapshotRef.current = urlSnapshot;
+    
+    // Create snapshot of current state
+    const currentSnapshot = createStateSnapshot(
+      searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees
+    );
+    
+    // If they don't match, hydrate state from URL
+    if (!snapshotsEqual(urlSnapshot, currentSnapshot)) {
+      // Update state to match URL
+      if (urlSnapshot.searchTerm !== searchTerm) setSearchTerm(urlSnapshot.searchTerm);
+      if (urlSnapshot.subject !== subject) setSubject(urlSnapshot.subject);
+      if (urlSnapshot.discipline !== discipline) setDiscipline(urlSnapshot.discipline);
+      if (urlSnapshot.level !== level) setLevel(urlSnapshot.level);
+      if (urlSnapshot.country !== country) setCountry(urlSnapshot.country);
+      if (urlSnapshot.universityFilter !== universityFilter) setUniversityFilter(urlSnapshot.universityFilter);
+      if (urlSnapshot.minFees !== minFees) setMinFees(urlSnapshot.minFees);
+      if (urlSnapshot.maxFees !== maxFees) setMaxFees(urlSnapshot.maxFees);
+      
+      // Mark that we're pending hydration of this snapshot
+      pendingUrlHydrationRef.current = urlSnapshot;
+    }
+    
+    // Handle highlight parameter
+    const highlightParam = params.get('highlight');
     if (highlightParam) {
       setHighlightedCourseId(parseInt(highlightParam));
-      // Clear highlight from URL after using it
-      urlParams.delete('highlight');
-      const newSearch = urlParams.toString();
-      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+      // Remove highlight from URL after using it
+      setParams({ highlight: undefined });
     }
-  }, [location]);
+  }, [params]);
 
   // Scroll to highlighted course
   useEffect(() => {
@@ -315,33 +402,37 @@ export default function PublicCourses() {
     }
   }, [highlightedCourseId, courses]);
 
-  // Update URL when filters change (but not on initial load from URL)
-  const lastUrlRef = useRef<string>('');
+  // Sync state to URL (only after hydration complete or for user-initiated changes)
   useEffect(() => {
-    // Skip on first render to avoid overwriting URL params
-    if (lastUrlRef.current === '') {
-      lastUrlRef.current = window.location.search;
+    // Create snapshot of current state
+    const currentSnapshot = createStateSnapshot(
+      searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees
+    );
+    
+    // If we're pending hydration
+    if (pendingUrlHydrationRef.current) {
+      // Check if state now matches the pending snapshot
+      if (snapshotsEqual(currentSnapshot, pendingUrlHydrationRef.current)) {
+        // Hydration complete! Clear the pending flag
+        pendingUrlHydrationRef.current = null;
+      }
+      // Don't sync to URL while hydration is pending
       return;
     }
-
-    const params = new URLSearchParams();
-    if (searchTerm) params.set('search', searchTerm);
-    if (subject) params.set('subject', subject);
-    if (discipline) params.set('discipline', discipline);
-    if (level) params.set('level', level);
-    if (country) params.set('country', country);
-    if (universityFilter) params.set('university', universityFilter);
-    if (minFees !== null) params.set('minFees', minFees.toString());
-    if (maxFees !== null) params.set('maxFees', maxFees.toString());
     
-    const newSearch = params.toString();
-    const newFullSearch = newSearch ? `?${newSearch}` : '';
-    
-    if (lastUrlRef.current !== newFullSearch) {
-      lastUrlRef.current = newFullSearch;
-      window.history.replaceState({}, '', window.location.pathname + newFullSearch);
-    }
-  }, [searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees]);
+    // No pending hydration - this is a user-initiated change
+    // Sync state to URL
+    setParams({
+      search: searchTerm || undefined,
+      subject: subject || undefined,
+      discipline: discipline || undefined,
+      level: level || undefined,
+      country: country || undefined,
+      university: universityFilter || undefined,
+      minFees: minFees !== null ? minFees.toString() : undefined,
+      maxFees: maxFees !== null ? maxFees.toString() : undefined,
+    });
+  }, [searchTerm, subject, discipline, level, country, universityFilter, minFees, maxFees, setParams]);
 
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
