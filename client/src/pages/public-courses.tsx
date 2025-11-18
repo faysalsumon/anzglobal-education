@@ -844,6 +844,48 @@ export default function PublicCourses() {
                       <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
                         {course.description || "No description available"}
                       </p>
+                      
+                      {/* Campus Availability Badges */}
+                      {(() => {
+                        const campusesWithCity = course.campuses?.filter(campus => campus.city) || [];
+                        if (campusesWithCity.length === 0) return null;
+                        
+                        return (
+                          <div className="mb-3 sm:mb-4">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Available at:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {campusesWithCity.slice(0, 3).map((campus, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs px-2 gap-1"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCampusCity(campus.city);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }}
+                                  aria-label={`Filter courses available in ${campus.city}`}
+                                  data-testid={`badge-campus-${course.id}-${idx}`}
+                                >
+                                  <MapPin className="h-3 w-3" />
+                                  {campus.city}
+                                </Button>
+                              ))}
+                              {campusesWithCity.length > 3 && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="text-xs px-2 py-0.5"
+                                  data-testid={`badge-more-campuses-${course.id}`}
+                                >
+                                  +{campusesWithCity.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      
                       <div className="space-y-2 text-sm">
                         {course.location && (
                           <div className="flex items-center gap-2 text-muted-foreground">
