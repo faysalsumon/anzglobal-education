@@ -10,6 +10,25 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Helper to ensure anonymous users have a persisted session
+async function ensureAnonymousSession(req: Request): Promise<void> {
+  // Only needed for anonymous users
+  if (req.user) return;
+  
+  // Generate or retrieve stable anonymous identifier
+  if (!req.session.chatAnonId) {
+    req.session.chatAnonId = `anon-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    // Explicitly save session to persist cookie
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+}
+
 // System prompt for the chat agent
 const SYSTEM_PROMPT = `You are an AI assistant for ANZ Global Education, a platform connecting international students with Australian universities and institutions.
 
@@ -42,24 +61,34 @@ async function verifyConversationOwnership(
   try {
     const { id } = req.params;
     const userId = (req.user as any)?.id || null;
-    const sessionId = req.session?.id;
+    const sessionId = req.sessionID;
 
-    // Fetch the conversation
-    const conversation = await db.query.chatConversations.findFirst({
-      where: eq(chatConversations.id, id),
-    });
+    // Build ownership conditions - only include defined predicates
+    const ownershipPredicates: any[] = [];
+    if (userId) {
+      ownershipPredicates.push(eq(chatConversations.userId, userId));
+    }
+    if (sessionId) {
+      ownershipPredicates.push(eq(chatConversations.sessionId, sessionId));
+    }
 
-    if (!conversation) {
-      res.status(404).json({ error: "Conversation not found" });
+    // If no valid ownership criteria, deny access
+    if (ownershipPredicates.length === 0) {
+      res.status(403).json({ error: "Access denied" });
       return;
     }
 
-    // Check ownership: conversation must belong to either the authenticated user or the session
-    const ownsConversation = 
-      (userId && conversation.userId === userId) ||
-      (sessionId && conversation.sessionId === sessionId);
+    // Query with ownership criteria (using OR for multi-predicate, direct predicate for single)
+    const whereClause = ownershipPredicates.length === 1
+      ? and(eq(chatConversations.id, id), ownershipPredicates[0])
+      : and(eq(chatConversations.id, id), or(...ownershipPredicates));
 
-    if (!ownsConversation) {
+    const conversation = await db.query.chatConversations.findFirst({
+      where: whereClause,
+    });
+
+    // If no conversation found with ownership criteria, return 403 (prevents enumeration)
+    if (!conversation) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
@@ -75,13 +104,11 @@ export function registerChatRoutes(app: Express) {
   // Get or create conversation
   app.post("/api/chat/conversations", async (req: Request, res: Response) => {
     try {
+      // Ensure anonymous users have persisted session
+      await ensureAnonymousSession(req);
+      
       const userId = (req.user as any)?.id || null;
-      const sessionId = req.session?.id; // Use Express session ID
-
-      // Ensure session exists for anonymous users
-      if (!userId && !sessionId) {
-        return res.status(401).json({ error: "No session available" });
-      }
+      const sessionId = userId ? null : req.sessionID;
 
       // Check if conversation exists for user or session
       let conversation;
@@ -103,7 +130,7 @@ export function registerChatRoutes(app: Express) {
           .insert(chatConversations)
           .values({
             userId,
-            sessionId: sessionId || null,
+            sessionId,
             title: "New Conversation",
           })
           .returning();
@@ -118,7 +145,10 @@ export function registerChatRoutes(app: Express) {
   });
 
   // Get conversation history (with authorization)
-  app.get("/api/chat/conversations/:id/messages", verifyConversationOwnership, async (req: Request, res: Response) => {
+  app.get("/api/chat/conversations/:id/messages", async (req: Request, res: Response, next: NextFunction) => {
+    await ensureAnonymousSession(req);
+    return verifyConversationOwnership(req, res, next);
+  }, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
 
@@ -135,7 +165,10 @@ export function registerChatRoutes(app: Express) {
   });
 
   // Send message and get AI response (with authorization)
-  app.post("/api/chat/conversations/:id/messages", verifyConversationOwnership, async (req: Request, res: Response) => {
+  app.post("/api/chat/conversations/:id/messages", async (req: Request, res: Response, next: NextFunction) => {
+    await ensureAnonymousSession(req);
+    return verifyConversationOwnership(req, res, next);
+  }, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       

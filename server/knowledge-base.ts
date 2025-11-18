@@ -15,6 +15,8 @@ const openai = new OpenAI({
 // Cache for Pinecone index to avoid repeated initialization
 let cachedPineconeIndex: any = null;
 let indexInitializationPromise: Promise<any> | null = null;
+let initializationAttempts = 0;
+const MAX_INIT_ATTEMPTS = 3;
 
 // Initialize Pinecone client
 export async function initializePinecone() {
@@ -38,68 +40,101 @@ export async function initializePineconeIndex() {
     return cachedPineconeIndex;
   }
 
-  // If initialization is in progress, wait for it
+  // If initialization is in progress, wait for it (don't spawn duplicate attempts)
   if (indexInitializationPromise) {
     return indexInitializationPromise;
   }
 
-  // Start initialization
+  // Start initialization with bounded retry loop inside cached promise
   indexInitializationPromise = (async () => {
-    try {
-      const pc = await initializePinecone();
-      
-      const indexList = await pc.listIndexes();
-      const indexExists = indexList.indexes?.some(index => index.name === PINECONE_INDEX_NAME);
-
-      if (!indexExists) {
-        console.log(`[Pinecone] Creating index: ${PINECONE_INDEX_NAME}`);
-        await pc.createIndex({
-          name: PINECONE_INDEX_NAME,
-          dimension: 1536, // OpenAI text-embedding-3-small dimension
-          metric: 'cosine',
-          spec: {
-            serverless: {
-              cloud: 'aws',
-              region: 'us-east-1'
-            }
-          }
-        });
+    for (let attempt = 1; attempt <= MAX_INIT_ATTEMPTS; attempt++) {
+      try {
+        console.log(`[Pinecone] Initialization attempt ${attempt}/${MAX_INIT_ATTEMPTS}`);
         
-        // Wait for index to be ready (poll instead of fixed wait)
-        console.log('[Pinecone] Waiting for index to be ready...');
-        let retries = 0;
-        while (retries < 30) { // Max 2 minutes (30 * 4s)
-          await new Promise(resolve => setTimeout(resolve, 4000));
-          const indexes = await pc.listIndexes();
-          const targetIndex = indexes.indexes?.find(idx => idx.name === PINECONE_INDEX_NAME);
-          if (targetIndex && targetIndex.status?.ready) {
-            console.log('[Pinecone] Index is ready!');
-            break;
-          }
-          retries++;
-        }
-      } else {
-        console.log('[Pinecone] Using existing index');
-      }
+        const pc = await initializePinecone();
+        
+        const indexList = await pc.listIndexes();
+        const indexExists = indexList.indexes?.some(index => index.name === PINECONE_INDEX_NAME);
 
-      const index = pc.index(PINECONE_INDEX_NAME);
-      cachedPineconeIndex = index;
-      return index;
-    } catch (error) {
-      indexInitializationPromise = null; // Reset on error
-      throw error;
+        if (!indexExists) {
+          console.log(`[Pinecone] Creating index: ${PINECONE_INDEX_NAME}`);
+          await pc.createIndex({
+            name: PINECONE_INDEX_NAME,
+            dimension: 1536, // OpenAI text-embedding-3-small dimension
+            metric: 'cosine',
+            spec: {
+              serverless: {
+                cloud: 'aws',
+                region: 'us-east-1'
+              }
+            }
+          });
+          
+          // Wait for index to be ready (poll instead of fixed wait)
+          console.log('[Pinecone] Waiting for index to be ready...');
+          let retries = 0;
+          while (retries < 30) { // Max 2 minutes (30 * 4s)
+            await new Promise(resolve => setTimeout(resolve, 4000));
+            const indexes = await pc.listIndexes();
+            const targetIndex = indexes.indexes?.find(idx => idx.name === PINECONE_INDEX_NAME);
+            if (targetIndex && targetIndex.status?.ready) {
+              console.log('[Pinecone] Index is ready!');
+              break;
+            }
+            retries++;
+          }
+        } else {
+          console.log('[Pinecone] Using existing index');
+        }
+
+        const index = pc.index(PINECONE_INDEX_NAME);
+        cachedPineconeIndex = index;
+        return index;
+      } catch (error) {
+        console.error(`[Pinecone] Initialization failed (attempt ${attempt}/${MAX_INIT_ATTEMPTS}):`, error);
+        
+        if (attempt === MAX_INIT_ATTEMPTS) {
+          // Max attempts reached, throw wrapped error
+          throw new Error(`[Pinecone] Failed to initialize after ${MAX_INIT_ATTEMPTS} attempts. Last error: ${error}`);
+        }
+        
+        // Exponential backoff before next retry
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+        console.log(`[Pinecone] Retrying in ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
     }
-  })();
+    
+    throw new Error('[Pinecone] Initialization loop completed without success');
+  })().finally(() => {
+    // Only clear promise if initialization definitively failed
+    if (!cachedPineconeIndex) {
+      indexInitializationPromise = null;
+    }
+  });
 
   return indexInitializationPromise;
 }
 
-// Get Pinecone index (returns cached or throws if not initialized)
-export function getPineconeIndex() {
-  if (!cachedPineconeIndex) {
-    throw new Error('Pinecone index not initialized. Call initializePineconeIndex() at server startup.');
+// Get Pinecone index (returns cached or waits for initialization to complete)
+export async function getPineconeIndex() {
+  // If index is already cached, return it
+  if (cachedPineconeIndex) {
+    return cachedPineconeIndex;
   }
-  return cachedPineconeIndex;
+  
+  // If initialization is in progress, wait for it
+  if (indexInitializationPromise) {
+    try {
+      return await indexInitializationPromise;
+    } catch (error) {
+      throw new Error('Pinecone index initialization failed. Please try again later.');
+    }
+  }
+  
+  // Index not initialized yet, start initialization now
+  console.log('[Pinecone] Index not initialized, starting initialization now...');
+  return await initializePineconeIndex();
 }
 
 // Create text embeddings using OpenAI
@@ -417,8 +452,8 @@ export async function buildKnowledgeBase() {
       return { success: true, documentsProcessed: 0, vectorsCreated: 0 };
     }
 
-    // Get cached Pinecone index
-    const index = getPineconeIndex();
+    // Get Pinecone index (await in case initialization is still in progress)
+    const index = await getPineconeIndex();
 
     // Create vectors for each document
     const vectors: PineconeRecord[] = [];
@@ -465,8 +500,8 @@ export async function buildKnowledgeBase() {
 // Query knowledge base
 export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
   try {
-    // Get cached Pinecone index
-    const index = getPineconeIndex();
+    // Get Pinecone index (await in case initialization is still in progress)
+    const index = await getPineconeIndex();
 
     // Create embedding for query
     const queryEmbedding = await createEmbedding(query);
