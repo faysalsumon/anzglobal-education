@@ -238,6 +238,47 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Promotional Video Section */}
+      <section className="py-20 md:py-32 bg-gradient-to-b from-background via-card/20 to-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Transform Your Study Experience
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Discover how ANZ Global Education helps international students achieve their dreams of studying in Australia
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <div className="relative rounded-xl overflow-hidden shadow-2xl bg-card border border-border">
+              <div className="aspect-video">
+                <iframe
+                  src="https://www.youtube.com/embed/pJSJAu4Piws"
+                  title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full"
+                  data-testid="video-promotional"
+                ></iframe>
+              </div>
+            </div>
+            
+            <div className="mt-12 text-center">
+              <p className="text-muted-foreground mb-6 max-w-3xl mx-auto">
+                Join thousands of students who have successfully started their educational journey in Australia with our expert guidance and support
+              </p>
+              <Link href="/courses" data-testid="link-explore-courses-video">
+                <Button size="lg" className="gap-2" data-testid="button-explore-courses-video">
+                  <Search className="h-5 w-5" />
+                  Explore Courses
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Browse by Course Level Section */}
       <section className="py-20 md:py-32 bg-card/30">
         <div className="container mx-auto px-4">
