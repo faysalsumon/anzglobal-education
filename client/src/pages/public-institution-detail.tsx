@@ -334,7 +334,7 @@ export default function PublicInstitutionDetail() {
                       key={index} 
                       className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
                         selectedCampusIndex === index 
-                          ? 'bg-accent border-2 border-primary' 
+                          ? 'bg-blue-50 dark:bg-blue-950/30 border-2 border-primary' 
                           : 'border-2 border-transparent'
                       }`}
                       data-testid={`campus-${index}`}
