@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -109,6 +110,62 @@ export function Footer() {
               </div>
             ))}
           </div>
+          
+          {/* Social Media Icons - Desktop */}
+          <div className="mt-12 pt-8 border-t border-border">
+            <div className="flex items-center justify-center gap-4">
+              <a
+                href="https://www.facebook.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-facebook"
+                aria-label="Follow us on Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-instagram"
+                aria-label="Follow us on Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-linkedin"
+                aria-label="Follow us on LinkedIn"
+              >
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.youtube.com/@anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-youtube"
+                aria-label="Subscribe on YouTube"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
+              <a
+                href="https://twitter.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-twitter"
+                aria-label="Follow us on Twitter"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -151,6 +208,62 @@ export function Footer() {
               </AccordionItem>
             ))}
           </Accordion>
+          
+          {/* Social Media Icons - Mobile */}
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="flex items-center justify-center gap-4">
+              <a
+                href="https://www.facebook.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-facebook-mobile"
+                aria-label="Follow us on Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-instagram-mobile"
+                aria-label="Follow us on Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-linkedin-mobile"
+                aria-label="Follow us on LinkedIn"
+              >
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.youtube.com/@anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-youtube-mobile"
+                aria-label="Subscribe on YouTube"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
+              <a
+                href="https://twitter.com/anzglobaledu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
+                data-testid="social-twitter-mobile"
+                aria-label="Follow us on Twitter"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
