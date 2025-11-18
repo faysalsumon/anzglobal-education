@@ -27,7 +27,7 @@ Key features include:
 -   **AI Data Extraction**: Securely extracts institution and course data from URLs using OpenAI GPT-4o, with stringent security and approval workflows.
 -   **Student Profile Management**: Comprehensive education history and language test score tracking.
 -   **Admin Profile Management**: Allows personal info and photo updates with role-based security.
--   **Dashboard Polish**: Consistent modern UI/UX across Student, University, and Platform Admin dashboards, prioritizing responsiveness, accessibility, and fluid typography.
+-   **Dashboard Polish**: Consistent modern UI/UX across Student, University, and Platform Admin dashboards, prioritizing responsiveness, accessibility, and fluid typography. Platform Admin Dashboard features fully responsive layout with xl breakpoint (1280px) for two-column grid, stacked single-column layout on mobile/tablet, visible right sidebar on all breakpoints, and horizontally scrollable tables with consistent `overflow-x-auto` containers across all 6 data tables (Users, Institutions, Courses, Applications, Student Leads, Course Inquiries).
 -   **Profile Picture Display**: User avatars and full names in the navigation bar; admin roles displayed specifically.
 -   **Course Pages**: Display scholarships and career pathways.
 -   **Blog Infrastructure**: Markdown-based with admin management and dynamic SEO files.
