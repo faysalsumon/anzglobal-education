@@ -16,7 +16,7 @@ Key features include:
 -   **Student Experience**: Focuses on intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 -   **Landing Page** with prominent search.
 -   **"Study in Australia" Page**: SEO-optimized landing page targeting international students with specific value propositions.
--   **Student Authentication Modal**: Supports social and email/password logins.
+-   **Student Authentication Modal**: Redesigned with competitor-style aesthetics (StudyPortals reference). Features brand-colored social login buttons (Google red #DB4437, Facebook blue #1877F2 with white text), professional hierarchy with social options first, clean "OR" divider, responsive mobile-first design, and email/password fallback. Supports Replit Auth (active) with Google and Facebook placeholders ready for Firebase integration.
 -   **Public Course Detail Pages** and **Institution Pages**.
 -   **Lead Generation Forms** and a **Contact Us Page**.
 -   **Super Admin Dashboard** for CRUD operations.
