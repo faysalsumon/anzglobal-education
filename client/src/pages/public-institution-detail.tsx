@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -28,6 +29,7 @@ interface CampusAddress {
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
+  const [selectedCampusIndex, setSelectedCampusIndex] = useState<number | null>(null);
 
   const { data: institution, isLoading } = useQuery<University>({
     queryKey: [`/api/institutions/${institutionId}`],
@@ -315,6 +317,8 @@ export default function PublicInstitutionDetail() {
               <GoogleCampusMap
                 campusAddresses={institution.campusAddresses as CampusAddress[]}
                 institutionName={institution.name}
+                selectedCampusIndex={selectedCampusIndex}
+                onMarkerClick={(index) => setSelectedCampusIndex(index)}
               />
             ) : null}
 
@@ -326,12 +330,27 @@ export default function PublicInstitutionDetail() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {(institution.campusAddresses as CampusAddress[]).map((campus, index) => (
-                    <div key={index} className="space-y-1" data-testid={`campus-${index}`}>
+                    <div 
+                      key={index} 
+                      className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
+                        selectedCampusIndex === index 
+                          ? 'bg-accent border-2 border-primary' 
+                          : 'border-2 border-transparent'
+                      }`}
+                      data-testid={`campus-${index}`}
+                      onClick={() => setSelectedCampusIndex(index)}
+                    >
                       {(institution.campusAddresses as CampusAddress[]).length > 1 && (
-                        <p className="text-sm font-medium">Campus {index + 1}</p>
+                        <p className={`text-sm font-medium ${
+                          selectedCampusIndex === index ? 'text-primary' : ''
+                        }`}>
+                          Campus {index + 1}
+                        </p>
                       )}
                       <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <MapPin className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                          selectedCampusIndex === index ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
                         <div className="text-sm text-muted-foreground">
                           {campus.address && <p>{campus.address}</p>}
                           <p>

@@ -14,13 +14,21 @@ interface CampusAddress {
 interface GoogleCampusMapProps {
   campusAddresses: CampusAddress[];
   institutionName: string;
+  selectedCampusIndex?: number | null;
+  onMarkerClick?: (index: number) => void;
 }
 
-export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCampusMapProps) {
+export function GoogleCampusMap({ 
+  campusAddresses, 
+  institutionName,
+  selectedCampusIndex = null,
+  onMarkerClick
+}: GoogleCampusMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -61,6 +69,7 @@ export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCamp
         // Geocode each campus address and add markers
         const bounds = new google.maps.LatLngBounds();
         let markersAdded = 0;
+        const markers: google.maps.Marker[] = [];
 
         for (let i = 0; i < campusAddresses.length; i++) {
           const campus = campusAddresses[i];
@@ -98,6 +107,9 @@ export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCamp
                 },
               });
 
+              // Store marker with its index
+              markers[i] = marker;
+
               // Create info window
               const infoWindow = new google.maps.InfoWindow({
                 content: `
@@ -113,9 +125,13 @@ export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCamp
                 `,
               });
 
-              // Add click listener to open info window
+              // Add click listener
+              const campusIndex = i;
               marker.addListener("click", () => {
                 infoWindow.open(mapInstance, marker);
+                if (onMarkerClick) {
+                  onMarkerClick(campusIndex);
+                }
               });
 
               markersAdded++;
@@ -124,6 +140,9 @@ export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCamp
             console.error(`Failed to geocode address ${i + 1}:`, geocodeError);
           }
         }
+
+        // Store markers in ref for later access
+        markersRef.current = markers;
 
         // Fit map to show all markers
         if (markersAdded > 0) {
@@ -148,6 +167,46 @@ export function GoogleCampusMap({ campusAddresses, institutionName }: GoogleCamp
 
     initMap();
   }, [campusAddresses, institutionName]);
+
+  // Update marker appearance when selectedCampusIndex changes
+  useEffect(() => {
+    if (!markersRef.current.length || !map) return;
+
+    markersRef.current.forEach((marker, index) => {
+      if (!marker) return;
+
+      const isSelected = selectedCampusIndex === index;
+      
+      marker.setIcon({
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: isSelected ? 14 : 10,
+        fillColor: isSelected ? "#FF5000" : "#3465A5",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: isSelected ? 3 : 2,
+      });
+
+      // Add bounce animation and pan to selected marker
+      if (isSelected) {
+        marker.setAnimation(google.maps.Animation.BOUNCE);
+        // Pan map to center on selected marker
+        const position = marker.getPosition();
+        if (position) {
+          map.panTo(position);
+          // Zoom in slightly if needed
+          if (map.getZoom() && map.getZoom()! < 14) {
+            map.setZoom(14);
+          }
+        }
+        // Stop bouncing after 2 seconds
+        setTimeout(() => {
+          marker.setAnimation(null);
+        }, 2000);
+      } else {
+        marker.setAnimation(null);
+      }
+    });
+  }, [selectedCampusIndex, map]);
 
   if (!campusAddresses || campusAddresses.length === 0) {
     return null;
