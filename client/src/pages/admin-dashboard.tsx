@@ -1491,6 +1491,41 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Bulk Actions Toolbar */}
+              {selectedInstitutions.size > 0 && (
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {selectedInstitutions.size} institution(s) selected
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Delete ${selectedInstitutions.size} selected institution(s)?`)) {
+                          bulkDeleteInstitutionsMutation.mutate(Array.from(selectedInstitutions));
+                        }
+                      }}
+                      disabled={bulkDeleteInstitutionsMutation.isPending}
+                      data-testid="button-bulk-delete-institutions"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedInstitutions(new Set())}
+                      data-testid="button-clear-selection-institutions"
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -1508,6 +1543,13 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredInstitutions && filteredInstitutions.length > 0 && selectedInstitutions.size === filteredInstitutions.length}
+                          onCheckedChange={() => filteredInstitutions && toggleSelectAllInstitutions(filteredInstitutions)}
+                          data-testid="checkbox-select-all-institutions"
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Provider Type</TableHead>
@@ -1519,11 +1561,18 @@ export default function AdminDashboard() {
                   <TableBody>
                     {institutionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
                         <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedInstitutions.has(institution.id)}
+                              onCheckedChange={() => toggleSelectInstitution(institution.id)}
+                              data-testid={`checkbox-institution-${institution.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{institution.name}</TableCell>
                           <TableCell>{institution.country}</TableCell>
                           <TableCell>{institution.providerType || "N/A"}</TableCell>
@@ -1622,7 +1671,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">No institutions found</TableCell>
+                        <TableCell colSpan={7} className="text-center">No institutions found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -1700,6 +1749,41 @@ export default function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Bulk Actions Toolbar */}
+              {selectedCourses.size > 0 && (
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {selectedCourses.size} course(s) selected
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Delete ${selectedCourses.size} selected course(s)?`)) {
+                          bulkDeleteCoursesMutation.mutate(Array.from(selectedCourses));
+                        }
+                      }}
+                      disabled={bulkDeleteCoursesMutation.isPending}
+                      data-testid="button-bulk-delete-courses"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedCourses(new Set())}
+                      data-testid="button-clear-selection-courses"
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Search and Filters */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
@@ -1729,6 +1813,13 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredCourses && filteredCourses.length > 0 && selectedCourses.size === filteredCourses.length}
+                          onCheckedChange={() => filteredCourses && toggleSelectAllCourses(filteredCourses)}
+                          data-testid="checkbox-select-all-courses"
+                        />
+                      </TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Institution</TableHead>
                       <TableHead>Level</TableHead>
@@ -1742,11 +1833,18 @@ export default function AdminDashboard() {
                   <TableBody>
                     {coursesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                       </TableRow>
                     ) : filteredCourses && filteredCourses.length > 0 ? (
                       filteredCourses.map((course) => (
                         <TableRow key={course.id} data-testid={`row-course-${course.id}`}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedCourses.has(course.id)}
+                              onCheckedChange={() => toggleSelectCourse(course.id)}
+                              data-testid={`checkbox-course-${course.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{course.title}</TableCell>
                           <TableCell>{course.institutionName}</TableCell>
                           <TableCell>{course.level || "-"}</TableCell>
@@ -1854,7 +1952,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center">No courses found</TableCell>
+                        <TableCell colSpan={9} className="text-center">No courses found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
