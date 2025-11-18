@@ -107,6 +107,7 @@ export interface IStorage {
   getCourseCampuses(courseId: string): Promise<Campus[]>;
   addCourseCampus(data: InsertCourseCampus): Promise<CourseCampus>;
   removeCourseCampus(courseId: string, campusId: string): Promise<void>;
+  replaceCourseCampuses(courseId: string, campusIds: string[]): Promise<void>;
   
   // Student profile operations
   getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
@@ -510,6 +511,23 @@ export class DatabaseStorage implements IStorage {
         eq(courseCampuses.courseId, courseId),
         eq(courseCampuses.campusId, campusId)
       ));
+  }
+
+  async replaceCourseCampuses(courseId: string, campusIds: string[]): Promise<void> {
+    // Use a transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Delete all existing campus associations
+      await tx
+        .delete(courseCampuses)
+        .where(eq(courseCampuses.courseId, courseId));
+      
+      // Insert new campus associations
+      if (campusIds.length > 0) {
+        await tx
+          .insert(courseCampuses)
+          .values(campusIds.map(campusId => ({ courseId, campusId })));
+      }
+    });
   }
 
   // Student profile operations

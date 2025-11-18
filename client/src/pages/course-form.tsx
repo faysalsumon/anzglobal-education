@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Sparkles, Loader2, ArrowLeft, Plus, X } from "lucide-react";
 import { Link } from "wouter";
-import { baseCourseSchema, type InsertCourse, type Course, type SubDiscipline } from "@shared/schema";
+import { baseCourseSchema, type InsertCourse, type Course, type SubDiscipline, type Campus } from "@shared/schema";
 import { z } from "zod";
 
 const formSchema = baseCourseSchema.extend({
@@ -32,6 +32,7 @@ export default function CourseForm() {
   const isEditing = !!courseId;
   const [aiLoading, setAiLoading] = useState(false);
   const [subDisciplineInput, setSubDisciplineInput] = useState("");
+  const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
   
   // Array field states
   const [intakeInput, setIntakeInput] = useState("");
@@ -43,6 +44,17 @@ export default function CourseForm() {
   const { data: course } = useQuery<Course>({
     queryKey: ["/api/courses", courseId],
     enabled: isEditing,
+  });
+
+  // Fetch institution campuses
+  const { data: institutionCampuses = [] } = useQuery<Campus[]>({
+    queryKey: ["/api/university/campuses"],
+  });
+
+  // Fetch currently assigned campuses when editing
+  const { data: courseCampuses = [] } = useQuery<Campus[]>({
+    queryKey: ["/api/courses", courseId, "campuses"],
+    enabled: isEditing && !!courseId,
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -188,6 +200,15 @@ export default function CourseForm() {
     }
   }, [course?.subDisciplineId, subDisciplines]);
 
+  // Load selected campuses when editing
+  useEffect(() => {
+    // Always update selectedCampusIds, even if list is empty
+    // This ensures removing all campuses clears the selection
+    if (isEditing && courseCampuses !== undefined) {
+      setSelectedCampusIds(courseCampuses.map(c => c.id));
+    }
+  }, [courseCampuses, isEditing]);
+
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       console.log("Form data before submission:", data);
@@ -220,13 +241,24 @@ export default function CourseForm() {
         }
       }
       
+      // Create or update the course
       const url = isEditing ? `/api/courses/${courseId}` : "/api/courses";
-      return await apiRequest(isEditing ? "PUT" : "POST", url, finalData);
+      const courseResponse = await apiRequest(isEditing ? "PUT" : "POST", url, finalData);
+      const savedCourse = await courseResponse.json() as Course;
+      
+      // Update campus associations
+      await apiRequest("PUT", `/api/courses/${savedCourse.id}/campuses`, {
+        campusIds: selectedCampusIds
+      });
+      
+      return savedCourse;
     },
-    onSuccess: () => {
+    onSuccess: (savedCourse) => {
       queryClient.invalidateQueries({ queryKey: ["/api/university/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sub-disciplines"] });
+      // Invalidate course campuses cache to keep components synchronized
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", savedCourse.id, "campuses"] });
       toast({
         title: isEditing ? "Course updated" : "Course created",
         description: `Your course has been ${isEditing ? "updated" : "created"} successfully.`,
@@ -627,51 +659,52 @@ export default function CourseForm() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="campusLocations"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Campus Locations</FormLabel>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        value={campusLocationInput}
-                        onChange={(e) => setCampusLocationInput(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addArrayItem("campusLocations", campusLocationInput, setCampusLocationInput);
-                          }
-                        }}
-                        placeholder="e.g., Main Campus - Sydney, City Campus"
-                        data-testid="input-campus-location"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => addArrayItem("campusLocations", campusLocationInput, setCampusLocationInput)}
-                        data-testid="button-add-campus"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(field.value || []).map((campus, idx) => (
-                        <Badge key={idx} variant="secondary" className="gap-1" data-testid={`badge-campus-${idx}`}>
-                          {campus}
-                          <button
-                            type="button"
-                            onClick={() => removeArrayItem("campusLocations", idx)}
-                            className="hover:bg-destructive/20 rounded-full p-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-3">
+                <FormLabel>Campus Locations</FormLabel>
+                <FormDescription>
+                  Select which campuses offer this course
+                </FormDescription>
+                {institutionCampuses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No campuses configured. Please add campuses to your institution first.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {institutionCampuses.map((campus) => (
+                      <div key={campus.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`campus-${campus.id}`}
+                          checked={selectedCampusIds.includes(campus.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedCampusIds(prev =>
+                              checked
+                                ? [...prev, campus.id]
+                                : prev.filter(id => id !== campus.id)
+                            );
+                          }}
+                          data-testid={`checkbox-campus-${campus.id}`}
+                        />
+                        <label
+                          htmlFor={`campus-${campus.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {campus.name}
+                          {campus.city && campus.state && (
+                            <span className="text-muted-foreground ml-2">
+                              ({campus.city}, {campus.state})
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              />
+                {selectedCampusIds.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedCampusIds.length} campus{selectedCampusIds.length === 1 ? '' : 'es'} selected
+                  </p>
+                )}
+              </div>
 
               <FormField
                 control={form.control}

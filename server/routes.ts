@@ -1618,6 +1618,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch update course campuses
+  app.put("/api/courses/:id/campuses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const courseId = req.params.id;
+      const { campusIds } = req.body;
+      
+      // Validate input
+      if (!Array.isArray(campusIds)) {
+        return res.status(400).json({ message: "campusIds must be an array" });
+      }
+      
+      // Check if course exists and user has access
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const institution = await storage.getUniversityById(course.universityId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Check if user owns the institution or is an admin
+      if (institution.userId !== userId && req.user.userType !== 'admin') {
+        return res.status(403).json({ message: "Not authorized to modify this course" });
+      }
+      
+      // Get all campuses for this institution to validate campus IDs
+      const institutionCampuses = await storage.getCampusesByInstitutionId(institution.id);
+      const validCampusIds = institutionCampuses.map(c => c.id);
+      
+      // Validate that all provided campus IDs belong to this institution
+      const invalidIds = campusIds.filter(id => !validCampusIds.includes(id));
+      if (invalidIds.length > 0) {
+        return res.status(400).json({ 
+          message: "Invalid campus IDs", 
+          invalidIds 
+        });
+      }
+      
+      // Atomically replace all campus associations
+      await storage.replaceCourseCampuses(courseId, campusIds);
+      
+      // Fetch and return updated list
+      const updated = await storage.getCourseCampuses(courseId);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating course campuses:", error);
+      res.status(500).json({ message: "Failed to update course campuses" });
+    }
+  });
+
   // Course routes - only show approved and active courses from approved institutions
   app.get("/api/courses", async (req, res) => {
     try {
