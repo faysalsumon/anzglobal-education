@@ -797,6 +797,7 @@ export interface ParsedSearchParams {
   maxFees?: number;
   location?: string;
   country?: string;
+  campusCity?: string;
   originalQuery: string;
 }
 
@@ -831,8 +832,9 @@ Extract these parameters if present:
 - level: study level (e.g., "undergraduate", "postgraduate", "certificate", "diploma", "masters", "bachelor")
 - minFees: minimum tuition fees in USD (parse from expressions like "under 30k", "between 15-20k", "around 18000")
 - maxFees: maximum tuition fees in USD
-- location: city/state (e.g., "Melbourne", "Sydney", "Brisbane")
+- location: general location description (e.g., "Melbourne", "Sydney", "Brisbane")
 - country: country (e.g., "Australia") - IMPORTANT: If a city is mentioned, also identify the country. For example: "Melbourne" → country: "Australia", "Sydney" → country: "Australia"
+- campusCity: specific city where course is offered at a campus location (e.g., "Melbourne", "Sydney", "Brisbane", "Perth"). Extract this when the user asks for courses "in [city]" or "at [city]" or "available in [city]"
 
 Budget parsing examples:
 - "under $30k" → maxFees: 30000

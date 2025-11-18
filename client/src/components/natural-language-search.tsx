@@ -186,6 +186,10 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
           if (parsedParams.country) {
             params.set("country", parsedParams.country);
           }
+          // Pass campus city if identified by AI
+          if (parsedParams.campusCity) {
+            params.set("city", parsedParams.campusCity);
+          }
           if (parsedParams.minFees !== undefined || parsedParams.maxFees !== undefined) {
             if (parsedParams.minFees !== undefined) {
               params.set("minFees", String(parsedParams.minFees));

@@ -1752,12 +1752,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         level: parsedParams.level || undefined,
         location: parsedParams.location || undefined,
         country: parsedParams.country || undefined,
+        campusCity: parsedParams.campusCity || undefined,
         minFees: parsedParams.minFees !== undefined ? Number(parsedParams.minFees) : undefined,
         maxFees: parsedParams.maxFees !== undefined ? Number(parsedParams.maxFees) : undefined,
       };
       
-      // Get all approved courses from approved institutions
-      const allCourses = await storage.getAllCourses();
+      // Get all approved courses with campus data
+      const allCourses = await storage.getAllCoursesWithCampuses();
       const allUniversities = await storage.getAllUniversities();
       
       // Load sub-disciplines for filtering
@@ -1826,6 +1827,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const countryMatch = course.country?.toLowerCase().includes(parsedParams.country.toLowerCase()) ||
                               university?.country?.toLowerCase().includes(parsedParams.country.toLowerCase());
           if (!countryMatch) return false;
+        }
+        
+        // Campus city filter (using normalized campus data with flexible matching)
+        if (parsedParams.campusCity) {
+          const searchCity = parsedParams.campusCity.toLowerCase().trim();
+          const hasCampusInCity = course.campuses?.some(campus => {
+            if (!campus.city) return false;
+            const campusCity = campus.city.toLowerCase().trim();
+            // Flexible matching: either exact match or city name is contained in campus city
+            // This handles cases like "Melbourne" matching "Melbourne CBD, VIC" or "MELBOURNE"
+            return campusCity === searchCity || 
+                   campusCity.includes(searchCity) ||
+                   searchCity.includes(campusCity);
+          });
+          if (!hasCampusInCity) return false;
         }
         
         return true;
