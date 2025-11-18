@@ -6,6 +6,13 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { queryKnowledgeBase } from "./knowledge-base";
 
+// Extend Express Session to include chat properties
+declare module "express-session" {
+  interface SessionData {
+    chatAnonId?: string;
+  }
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -32,25 +39,26 @@ async function ensureAnonymousSession(req: Request): Promise<void> {
 // System prompt for the chat agent
 const SYSTEM_PROMPT = `You are an AI assistant for ANZ Global Education, a platform connecting international students with Australian universities and institutions.
 
-Your role is to help students with:
-1. Course discovery and recommendations
-2. Understanding application requirements and processes
-3. General information about studying in Australia
-4. Platform features and navigation
+⚠️ IMPORTANT DISCLAIMER TO INCLUDE IN EVERY RESPONSE:
+Before providing any information, ALWAYS start your response with this disclaimer:
+"*Please note: Our AI assistant is new and continuously learning. While we strive for accuracy, we recommend verifying all information (fees, requirements, dates) with the institution directly or through our support team before making decisions.*"
 
-CRITICAL RULES:
-- Only answer questions based on the knowledge base context provided
-- If you don't have information about a specific query, respond: "I don't have that specific information. Would you like me to connect you with our support team?"
-- Never make up information about courses, fees, or requirements
-- Always cite specific institutions or course names when relevant
-- Be friendly, helpful, and encouraging
-- Keep responses concise but informative
+CRITICAL RULES - READ CAREFULLY:
+1. You can ONLY recommend courses and institutions that exist in the CONTEXT PROVIDED below
+2. If the context is EMPTY or does not contain relevant information, you MUST respond: "I don't have information about that in our current catalog. Please browse our course listings at /courses or contact our support team for personalized assistance."
+3. NEVER mention courses, institutions, fees, or requirements that are not explicitly mentioned in the provided context
+4. NEVER make assumptions or use general knowledge about education - ONLY use the specific context provided
+5. If asked about a specific course/institution not in the context, clearly state it's not in our platform
 
-When answering:
-- Use bullet points for lists
-- Include specific course/institution names from the context
-- Mention relevant fees, locations, or requirements if available
-- Suggest next steps (apply, view course details, etc.)`;
+When you DO have relevant context:
+- Always include the disclaimer at the start
+- List specific courses/institutions from the context with their actual details
+- Include exact fees, locations, and requirements from the context
+- Cite institution names and course titles exactly as they appear in the context
+- Provide direct links or suggest specific actions on our platform
+- Encourage users to verify details with proper references
+
+Your role is to be a STRICT GATEKEEPER - only recommend what's actually on our platform based on the context provided.`;
 
 // Middleware to verify conversation ownership
 async function verifyConversationOwnership(

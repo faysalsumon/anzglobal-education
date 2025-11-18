@@ -497,9 +497,43 @@ export async function buildKnowledgeBase() {
   }
 }
 
+// Track if knowledge base has been auto-initialized
+let autoInitializationAttempted = false;
+
+// Check if knowledge base is empty
+async function isKnowledgeBaseEmpty(): Promise<boolean> {
+  try {
+    const index = await getPineconeIndex();
+    const stats = await index.describeIndexStats();
+    const totalVectors = stats.totalRecordCount || 0;
+    console.log(`[Knowledge Base] Current vector count: ${totalVectors}`);
+    return totalVectors === 0;
+  } catch (error) {
+    console.error('[Knowledge Base] Error checking if empty:', error);
+    return true; // Assume empty on error
+  }
+}
+
 // Query knowledge base
 export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
   try {
+    // Auto-initialize knowledge base if empty (one-time check)
+    if (!autoInitializationAttempted) {
+      autoInitializationAttempted = true;
+      const isEmpty = await isKnowledgeBaseEmpty();
+      
+      if (isEmpty) {
+        console.log('[Knowledge Base] Empty knowledge base detected, auto-initializing with platform data...');
+        try {
+          await buildKnowledgeBase();
+          console.log('[Knowledge Base] Auto-initialization completed successfully');
+        } catch (error) {
+          console.error('[Knowledge Base] Auto-initialization failed:', error);
+          // Continue anyway - the query will return empty results
+        }
+      }
+    }
+
     // Get Pinecone index (await in case initialization is still in progress)
     const index = await getPineconeIndex();
 
