@@ -197,7 +197,7 @@ export const courses = pgTable("courses", {
   subject: text("subject").notNull(),
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
   subDisciplineId: varchar("sub_discipline_id").references(() => subDisciplines.id, { onDelete: "set null" }), // Optional sub-category within main discipline
-  level: text("level").notNull(), // Course qualification level (see courseLevelEnum for standard values)
+  level: courseLevelEnum("level").notNull(), // Course qualification level (enforced by database enum)
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
   durationWeeks: integer("duration_weeks"), // For precise duration tracking
@@ -1025,6 +1025,24 @@ const baseCourseSchema = createInsertSchema(courses).omit({
     'Short Courses',
     'Trade Qualifications',
   ]).optional(),
+  
+  // Validate course level - enforce enum values
+  level: z.enum([
+    'VCE (11-12)',
+    'Certificate II',
+    'Certificate III',
+    'Certificate IV',
+    'Diploma',
+    'Advanced Diploma',
+    'Graduate Certificate',
+    'Graduate Diploma',
+    'Bachelor Degree',
+    'Professional Year',
+    'Masters Degree',
+    'Doctoral Degree',
+    'Higher Doctoral Degree',
+    'ELICOS',
+  ]),
   
   // Validate array fields - ensure they're arrays and contain valid data
   intakes: z.array(z.string()).optional().default([]),
