@@ -321,12 +321,11 @@ export default function CourseForm() {
                           <SelectItem value="Certificate III">Certificate III</SelectItem>
                           <SelectItem value="Certificate IV">Certificate IV</SelectItem>
                           <SelectItem value="Diploma">Diploma</SelectItem>
-                          <SelectItem value="Advanced Diploma">Advanced Diploma</SelectItem>
                           <SelectItem value="Graduate Certificate">Graduate Certificate</SelectItem>
                           <SelectItem value="Graduate Diploma">Graduate Diploma</SelectItem>
                           <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
                           <SelectItem value="Professional Year">Professional Year</SelectItem>
-                          <SelectItem value="Masters Degree">Masters Degree</SelectItem>
+                          <SelectItem value="Masters degree">Masters degree</SelectItem>
                           <SelectItem value="Doctoral Degree">Doctoral Degree</SelectItem>
                           <SelectItem value="Higher Doctoral Degree">Higher Doctoral Degree</SelectItem>
                           <SelectItem value="ELICOS">ELICOS</SelectItem>
