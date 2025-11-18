@@ -36,30 +36,30 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Create or get conversation
-  const { data: conversation } = useQuery<Conversation>({
-    queryKey: ["/api/chat/conversations"],
-    enabled: isOpen && !conversationId,
-    queryFn: async () => {
+  // Create or get conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: async () => {
       const response = await apiRequest("POST", "/api/chat/conversations", {});
       return response.json();
     },
+    onSuccess: (data: Conversation) => {
+      setConversationId(data.id);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create conversation",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
   });
-
-  // Set conversation ID when received
-  useEffect(() => {
-    if (conversation?.id) {
-      setConversationId(conversation.id);
-    }
-  }, [conversation]);
 
   // Get messages for conversation
   const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ["/api/chat/conversations", conversationId, "messages"],
     enabled: !!conversationId,
     queryFn: async () => {
-      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`);
-      if (!response.ok) throw new Error("Failed to fetch messages");
+      const response = await apiRequest("GET", `/api/chat/conversations/${conversationId}/messages`);
       return response.json();
     },
   });
@@ -117,10 +117,16 @@ export function ChatWidget() {
   };
 
   const toggleOpen = () => {
-    setIsOpen(!isOpen);
+    const willBeOpen = !isOpen;
+    setIsOpen(willBeOpen);
     setIsMinimized(false);
-    if (!isOpen) {
+    
+    if (willBeOpen) {
       setUnreadCount(0);
+      // Create conversation if we don't have one
+      if (!conversationId && !createConversationMutation.isPending) {
+        createConversationMutation.mutate();
+      }
     }
   };
 
