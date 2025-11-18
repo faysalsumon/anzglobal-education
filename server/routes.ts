@@ -1831,12 +1831,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Campus city filter (using normalized campus data with flexible matching)
         if (parsedParams.campusCity) {
-          const searchCity = parsedParams.campusCity.toLowerCase().trim();
+          const normalizeCity = (city: string) => {
+            return city
+              .toLowerCase()
+              .trim()
+              // Remove state/country suffixes like ", VIC", ", NSW", ", Australia"
+              .replace(/,\s*(vic|nsw|qld|sa|wa|tas|nt|act|australia|bangladesh)\b.*$/i, '')
+              // Remove common suburb indicators like "CBD"
+              .replace(/\s+(cbd|city|metro|central)\b/i, '')
+              .trim();
+          };
+
+          const searchCity = normalizeCity(parsedParams.campusCity);
           const hasCampusInCity = course.campuses?.some(campus => {
             if (!campus.city) return false;
-            const campusCity = campus.city.toLowerCase().trim();
-            // Flexible matching: either exact match or city name is contained in campus city
-            // This handles cases like "Melbourne" matching "Melbourne CBD, VIC" or "MELBOURNE"
+            const campusCity = normalizeCity(campus.city);
+            // Flexible matching after normalization
             return campusCity === searchCity || 
                    campusCity.includes(searchCity) ||
                    searchCity.includes(campusCity);

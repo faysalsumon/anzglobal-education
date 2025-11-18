@@ -39,6 +39,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
 
+// Utility function to normalize city names for consistent matching
+const normalizeCity = (city: string): string => {
+  return city
+    .toLowerCase()
+    .trim()
+    // Remove state/country suffixes like ", VIC", ", NSW", ", Australia"
+    .replace(/,\s*(vic|nsw|qld|sa|wa|tas|nt|act|australia|bangladesh)\b.*$/i, '')
+    // Remove common suburb indicators like "CBD"
+    .replace(/\s+(cbd|city|metro|central)\b/i, '')
+    .trim();
+};
+
 // Filter snapshot type for state/URL comparison
 type FilterSnapshot = {
   searchTerm: string;
@@ -535,9 +547,17 @@ export default function PublicCourses() {
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
     
-    // Campus city filtering
+    // Campus city filtering with normalization
     if (campusCity) {
-      const hasCampusInCity = course.campuses?.some(campus => campus.city === campusCity);
+      const normalizedSearchCity = normalizeCity(campusCity);
+      const hasCampusInCity = course.campuses?.some(campus => {
+        if (!campus.city) return false;
+        const normalizedCampusCity = normalizeCity(campus.city);
+        // Flexible matching after normalization
+        return normalizedCampusCity === normalizedSearchCity ||
+               normalizedCampusCity.includes(normalizedSearchCity) ||
+               normalizedSearchCity.includes(normalizedCampusCity);
+      });
       if (!hasCampusInCity) return false;
     }
     
@@ -862,6 +882,7 @@ export default function PublicCourses() {
                                   className="h-6 text-xs px-2 gap-1"
                                   onClick={(e) => {
                                     e.preventDefault();
+                                    // Store raw city value (normalization happens in filtering logic)
                                     setCampusCity(campus.city);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                   }}
