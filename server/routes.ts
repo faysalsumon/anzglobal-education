@@ -1346,6 +1346,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get course levels with counts
+  app.get("/api/course-levels", async (req, res) => {
+    try {
+      const allCourses = await storage.getAllCourses();
+      const allUniversities = await storage.getAllUniversities();
+      
+      // Count courses per level (only approved and active courses from approved institutions)
+      const levelCounts: Record<string, number> = {};
+      
+      allCourses.forEach(course => {
+        if (!course.level) return; // Skip courses without level
+        
+        const university = allUniversities.find(u => u.id === course.universityId);
+        
+        // Only count approved courses from approved institutions
+        if (course.approvalStatus === 'approved' && 
+            course.isActive &&
+            university?.approvalStatus === 'approved' &&
+            university?.isActive) {
+          levelCounts[course.level] = (levelCounts[course.level] || 0) + 1;
+        }
+      });
+      
+      // Define the order of levels
+      const levelOrder = [
+        'VCE (11-12)',
+        'Certificate II',
+        'Certificate III',
+        'Certificate IV',
+        'Diploma',
+        'Advanced Diploma',
+        'Graduate Certificate',
+        'Graduate Diploma',
+        'Bachelor Degree',
+        'Professional Year',
+        'Masters Degree',
+        'Doctoral Degree',
+        'Higher Doctoral Degree',
+        'ELICOS',
+      ];
+      
+      // Convert to array format with level name and count, ordered by educational progression
+      const levels = levelOrder
+        .map(name => ({ name, count: levelCounts[name] || 0 }))
+        .filter(l => l.count > 0); // Only return levels with at least one course
+      
+      res.json(levels);
+    } catch (error) {
+      console.error("Error fetching course levels:", error);
+      res.status(500).json({ message: "Failed to fetch course levels" });
+    }
+  });
+
   // Sub-discipline routes
   app.get("/api/sub-disciplines", async (req, res) => {
     try {
