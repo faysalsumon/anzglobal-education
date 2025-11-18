@@ -19,6 +19,7 @@ import {
   type Course,
   type InsertCourse,
   type CourseWithUniversity,
+  type CourseWithDetails,
   type SubDiscipline,
   type InsertSubDiscipline,
   type Campus,
@@ -86,6 +87,7 @@ export interface IStorage {
   getCourseById(id: string): Promise<CourseWithUniversity | undefined>;
   getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]>;
   getAllCourses(): Promise<CourseWithUniversity[]>;
+  getAllCoursesWithCampuses(): Promise<CourseWithDetails[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
@@ -358,6 +360,44 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(universities, eq(courses.universityId, universities.id));
     
     return rows.map(({ course, university }) => ({ ...course, university }));
+  }
+
+  async getAllCoursesWithCampuses(): Promise<CourseWithDetails[]> {
+    // Get all courses with universities
+    const courseRows = await db
+      .select({
+        course: courses,
+        university: universities,
+      })
+      .from(courses)
+      .leftJoin(universities, eq(courses.universityId, universities.id));
+    
+    // Get all course-campus mappings with campus details
+    const campusRows = await db
+      .select({
+        courseId: courseCampuses.courseId,
+        campus: campuses,
+      })
+      .from(courseCampuses)
+      .innerJoin(campuses, eq(courseCampuses.campusId, campuses.id))
+      .where(eq(campuses.isActive, true))
+      .orderBy(campuses.displayOrder);
+    
+    // Group campuses by course ID
+    const campusesByCourse: Record<string, Campus[]> = {};
+    campusRows.forEach(({ courseId, campus }) => {
+      if (!campusesByCourse[courseId]) {
+        campusesByCourse[courseId] = [];
+      }
+      campusesByCourse[courseId].push(campus);
+    });
+    
+    // Combine courses with their campuses
+    return courseRows.map(({ course, university }) => ({
+      ...course,
+      university,
+      campuses: campusesByCourse[course.id] || [],
+    }));
   }
 
   async createCourse(courseData: InsertCourse): Promise<Course> {

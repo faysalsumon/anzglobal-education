@@ -1675,7 +1675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/courses", async (req, res) => {
     try {
       const { discipline } = req.query;
-      const allCourses = await storage.getAllCourses();
+      const allCourses = await storage.getAllCoursesWithCampuses();
       const allUniversities = await storage.getAllUniversities();
       
       // Filter to only show approved courses from approved institutions

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { CourseWithUniversity, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
+import type { CourseWithDetails, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,6 +48,7 @@ type FilterSnapshot = {
   level: string;
   country: string;
   universityFilter: string;
+  campusCity: string;
   minFees: number | null;
   maxFees: number | null;
 };
@@ -61,6 +62,7 @@ const createStateSnapshot = (
   level: string,
   country: string,
   universityFilter: string,
+  campusCity: string,
   minFees: number | null,
   maxFees: number | null
 ): FilterSnapshot => ({
@@ -71,6 +73,7 @@ const createStateSnapshot = (
   level,
   country,
   universityFilter,
+  campusCity,
   minFees,
   maxFees,
 });
@@ -84,6 +87,7 @@ const createParamsSnapshot = (params: URLSearchParams): FilterSnapshot => ({
   level: params.get('level') || "",
   country: params.get('country') || "",
   universityFilter: params.get('university') || "",
+  campusCity: params.get('city') || "",
   minFees: params.get('minFees') ? parseInt(params.get('minFees')!) : null,
   maxFees: params.get('maxFees') ? parseInt(params.get('maxFees')!) : null,
 });
@@ -98,6 +102,7 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
     a.level === b.level &&
     a.country === b.country &&
     a.universityFilter === b.universityFilter &&
+    a.campusCity === b.campusCity &&
     a.minFees === b.minFees &&
     a.maxFees === b.maxFees
   );
@@ -113,11 +118,12 @@ export default function PublicCourses() {
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
+  const [campusCity, setCampusCity] = useState<string>("");
   const [minFees, setMinFees] = useState<number | null>(null);
   const [maxFees, setMaxFees] = useState<number | null>(null);
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithUniversity | null>(null);
+  const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithDetails | null>(null);
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   // Track pending URL hydration and previous URL snapshot
@@ -127,7 +133,7 @@ export default function PublicCourses() {
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
   
-  const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
+  const { data: courses = [], isLoading } = useQuery<CourseWithDetails[]>({
     queryKey: ["/api/courses"],
   });
 
@@ -340,6 +346,7 @@ export default function PublicCourses() {
     const levels = new Set<string>();
     const countries = new Set<string>();
     const universities = new Map<string, string>();
+    const cities = new Set<string>();
 
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
@@ -349,6 +356,12 @@ export default function PublicCourses() {
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
+      // Extract cities from campuses
+      if (course.campuses) {
+        course.campuses.forEach(campus => {
+          if (campus.city) cities.add(campus.city);
+        });
+      }
     });
 
     return {
@@ -357,6 +370,7 @@ export default function PublicCourses() {
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      cities: Array.from(cities).sort(),
     };
   }, [courses]);
 
@@ -376,7 +390,7 @@ export default function PublicCourses() {
     
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees
     );
     
     // If they don't match, hydrate state from URL
@@ -389,6 +403,7 @@ export default function PublicCourses() {
       if (urlSnapshot.level !== level) setLevel(urlSnapshot.level);
       if (urlSnapshot.country !== country) setCountry(urlSnapshot.country);
       if (urlSnapshot.universityFilter !== universityFilter) setUniversityFilter(urlSnapshot.universityFilter);
+      if (urlSnapshot.campusCity !== campusCity) setCampusCity(urlSnapshot.campusCity);
       if (urlSnapshot.minFees !== minFees) setMinFees(urlSnapshot.minFees);
       if (urlSnapshot.maxFees !== maxFees) setMaxFees(urlSnapshot.maxFees);
       
@@ -421,11 +436,55 @@ export default function PublicCourses() {
     }
   }, [discipline, subDiscipline]);
 
+  // Clear campus city when any other filter changes and makes the selected city invalid
+  useEffect(() => {
+    // Only run clearing logic after data has loaded to prevent clearing during initial load/URL hydration
+    if (!campusCity || courses.length === 0) return;
+    
+    // Check if there are any courses matching ALL current filters (except city) that have the selected city
+    const hasCoursesWithCity = courses.some(course => {
+      // Apply all filters except campusCity (matching filteredCourses logic)
+      if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !course.description?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !course.subject?.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      if (subject && course.subject !== subject) return false;
+      if (discipline && course.discipline !== discipline) return false;
+      
+      // Sub-discipline filtering
+      if (subDiscipline) {
+        const selectedSubDiscipline = subDisciplines.find(sd => sd.name === subDiscipline);
+        if (selectedSubDiscipline && course.subDisciplineId !== selectedSubDiscipline.id) {
+          return false;
+        }
+      }
+      
+      if (level && course.level !== level) return false;
+      if (country && course.country !== country) return false;
+      if (universityFilter && course.universityId !== universityFilter) return false;
+      
+      // Budget filtering
+      if (minFees !== null || maxFees !== null) {
+        const courseFees = Number(course.fees) || 0;
+        if (minFees !== null && courseFees < minFees) return false;
+        if (maxFees !== null && courseFees > maxFees) return false;
+      }
+      
+      // Check if this course has a campus in the selected city
+      return course.campuses?.some(campus => campus.city === campusCity);
+    });
+    
+    if (!hasCoursesWithCity) {
+      setCampusCity('');
+    }
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees, campusCity, courses, subDisciplines]);
+
   // Sync state to URL (only after hydration complete or for user-initiated changes)
   useEffect(() => {
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees
     );
     
     // If we're pending hydration
@@ -449,10 +508,11 @@ export default function PublicCourses() {
       level: level || undefined,
       country: country || undefined,
       university: universityFilter || undefined,
+      city: campusCity || undefined,
       minFees: minFees !== null ? minFees.toString() : undefined,
       maxFees: maxFees !== null ? maxFees.toString() : undefined,
     });
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees, setParams]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees, setParams]);
 
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -474,6 +534,12 @@ export default function PublicCourses() {
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
+    
+    // Campus city filtering
+    if (campusCity) {
+      const hasCampusInCity = course.campuses?.some(campus => campus.city === campusCity);
+      if (!hasCampusInCity) return false;
+    }
     
     // Budget filtering
     if (minFees !== null || maxFees !== null) {
@@ -641,8 +707,25 @@ export default function PublicCourses() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
+                  <SelectTrigger data-testid="select-city">
+                    <SelectValue placeholder="All Cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {availableFilters.cities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3" />
+                          {city}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {(searchTerm || subject || discipline || subDiscipline || level || country) && (
+              {(searchTerm || subject || discipline || subDiscipline || level || country || campusCity) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -653,6 +736,7 @@ export default function PublicCourses() {
                     setSubDiscipline("");
                     setLevel("");
                     setCountry("");
+                    setCampusCity("");
                     setHighlightedCourseId(null);
                   }}
                   data-testid="button-clear-filters"
