@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University, Blog } from "@shared/schema";
 import { StudentAuthModal } from "@/components/student-auth-modal";
@@ -239,41 +239,129 @@ export default function Landing() {
       </section>
 
       {/* Promotional Video Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background via-card/20 to-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Transform Your Study Experience
+      <section className="relative py-20 md:py-32 overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+        
+        <div className="container mx-auto px-4 relative">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+              <span className="text-sm font-semibold">Watch Our Story</span>
+            </div>
+            <h2 className="mb-6 text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
+              Your Journey to{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-accent">
+                Australia Starts Here
+              </span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Discover how ANZ Global Education helps international students achieve their dreams of studying in Australia
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              See how we've helped thousands of students transform their dreams into reality
             </p>
           </div>
-          
-          <div className="max-w-5xl mx-auto">
-            <div className="relative rounded-xl overflow-hidden shadow-2xl bg-card border border-border">
-              <div className="aspect-video">
-                <iframe
-                  src="https://www.youtube.com/embed/pJSJAu4Piws"
-                  title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="w-full h-full"
-                  data-testid="video-promotional"
-                ></iframe>
+
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-3 gap-8 items-start">
+              {/* Stats Column */}
+              <div className="lg:col-span-1 space-y-4">
+                <Card className="border-primary/20 bg-card/50 backdrop-blur-sm hover-elevate">
+                  <CardContent className="p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl font-bold text-foreground mb-1">5,000+</div>
+                    <p className="text-sm text-muted-foreground">Students Guided</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-accent/20 bg-card/50 backdrop-blur-sm hover-elevate">
+                  <CardContent className="p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/10 mb-4">
+                      <GraduationCap className="h-6 w-6 text-accent" />
+                    </div>
+                    <div className="text-3xl font-bold text-foreground mb-1">40+</div>
+                    <p className="text-sm text-muted-foreground">Partner Institutions</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-primary/20 bg-card/50 backdrop-blur-sm hover-elevate">
+                  <CardContent className="p-6 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+                      <Award className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl font-bold text-foreground mb-1">95%</div>
+                    <p className="text-sm text-muted-foreground">Success Rate</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Video Column */}
+              <div className="lg:col-span-2">
+                <div className="relative group">
+                  {/* Glow Effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-primary rounded-2xl opacity-20 group-hover:opacity-30 blur-xl transition-opacity"></div>
+                  
+                  {/* Video Container */}
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-card border border-border/50">
+                    <div className="aspect-video">
+                      <iframe
+                        src="https://www.youtube.com/embed/pJSJAu4Piws"
+                        title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        className="w-full h-full"
+                        data-testid="video-promotional"
+                      ></iframe>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Benefits List */}
+                <div className="mt-8 grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Expert Guidance</h4>
+                      <p className="text-sm text-muted-foreground">Personalized support every step</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Visa Assistance</h4>
+                      <p className="text-sm text-muted-foreground">Streamlined application process</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            
+
+            {/* CTA Section */}
             <div className="mt-12 text-center">
-              <p className="text-muted-foreground mb-6 max-w-3xl mx-auto">
-                Join thousands of students who have successfully started their educational journey in Australia with our expert guidance and support
+              <p className="text-muted-foreground mb-6 text-lg max-w-2xl mx-auto">
+                Ready to begin your Australian education adventure?
               </p>
-              <Link href="/courses" data-testid="link-explore-courses-video">
-                <Button size="lg" className="gap-2" data-testid="button-explore-courses-video">
-                  <Search className="h-5 w-5" />
-                  Explore Courses
-                </Button>
-              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <Link href="/courses" data-testid="link-explore-courses-video">
+                  <Button size="lg" className="gap-2 shadow-lg" data-testid="button-explore-courses-video">
+                    <Search className="h-5 w-5" />
+                    Explore Courses
+                  </Button>
+                </Link>
+                <Link href="/contact" data-testid="link-contact-video">
+                  <Button size="lg" variant="outline" className="gap-2" data-testid="button-contact-video">
+                    <MessageCircle className="h-5 w-5" />
+                    Talk to an Advisor
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
