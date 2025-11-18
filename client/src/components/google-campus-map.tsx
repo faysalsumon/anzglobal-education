@@ -2,24 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { Loader2, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface CampusAddress {
-  address?: string;
-  city?: string;
-  state?: string;
-  postcode?: string;
-  country?: string;
-}
+import type { Campus } from "@shared/schema";
 
 interface GoogleCampusMapProps {
-  campusAddresses: CampusAddress[];
+  campuses: Campus[];
   institutionName: string;
   selectedCampusIndex?: number | null;
   onMarkerClick?: (index: number) => void;
 }
 
 export function GoogleCampusMap({ 
-  campusAddresses, 
+  campuses, 
   institutionName,
   selectedCampusIndex = null,
   onMarkerClick
@@ -71,10 +64,10 @@ export function GoogleCampusMap({
         let markersAdded = 0;
         const markers: google.maps.Marker[] = [];
 
-        for (let i = 0; i < campusAddresses.length; i++) {
-          const campus = campusAddresses[i];
+        for (let i = 0; i < campuses.length; i++) {
+          const campus = campuses[i];
           const addressString = [
-            campus.address,
+            campus.street,
             campus.city,
             campus.state,
             campus.postcode,
@@ -86,57 +79,71 @@ export function GoogleCampusMap({
           if (!addressString) continue;
 
           try {
-            const result = await geocoder.geocode({ address: addressString });
-            
-            if (result.results[0]) {
-              const position = result.results[0].geometry.location;
+            let position: google.maps.LatLng;
+
+            // Prefer stored lat/lng coordinates if available to avoid geocoding
+            if (campus.latitude && campus.longitude) {
+              position = new google.maps.LatLng(
+                parseFloat(campus.latitude),
+                parseFloat(campus.longitude)
+              );
               bounds.extend(position);
-
-              // Create marker
-              const marker = new google.maps.Marker({
-                map: mapInstance,
-                position: position,
-                title: `${institutionName} - Campus ${i + 1}`,
-                icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: "#3465A5",
-                  fillOpacity: 1,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 2,
-                },
-              });
-
-              // Store marker with its index
-              markers[i] = marker;
-
-              // Create info window
-              const infoWindow = new google.maps.InfoWindow({
-                content: `
-                  <div style="padding: 12px; min-width: 200px;">
-                    <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">
-                      ${institutionName}
-                    </h3>
-                    ${campusAddresses.length > 1 ? `<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 500; color: #666;">Campus ${i + 1}</p>` : ''}
-                    <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.5;">
-                      ${addressString}
-                    </p>
-                  </div>
-                `,
-              });
-
-              // Add click listener
-              const campusIndex = i;
-              marker.addListener("click", () => {
-                infoWindow.open(mapInstance, marker);
-                if (onMarkerClick) {
-                  // Toggle selection - click again to deselect
-                  onMarkerClick(campusIndex);
-                }
-              });
-
-              markersAdded++;
+            } else {
+              // Fallback to geocoding if coordinates not stored
+              const result = await geocoder.geocode({ address: addressString });
+              
+              if (result.results[0]) {
+                position = result.results[0].geometry.location;
+                bounds.extend(position);
+              } else {
+                continue;
+              }
             }
+
+            // Create marker
+            const marker = new google.maps.Marker({
+              map: mapInstance,
+              position: position,
+              title: `${institutionName} - ${campus.name}`,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: "#3465A5",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 2,
+              },
+            });
+
+            // Store marker with its index
+            markers[i] = marker;
+
+            // Create info window
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div style="padding: 12px; min-width: 200px;">
+                  <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">
+                    ${institutionName}
+                  </h3>
+                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 500; color: #666;">${campus.name}</p>
+                  <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.5;">
+                    ${addressString}
+                  </p>
+                </div>
+              `,
+            });
+
+            // Add click listener
+            const campusIndex = i;
+            marker.addListener("click", () => {
+              infoWindow.open(mapInstance, marker);
+              if (onMarkerClick) {
+                // Toggle selection - click again to deselect
+                onMarkerClick(campusIndex);
+              }
+            });
+
+            markersAdded++;
           } catch (geocodeError) {
             console.error(`Failed to geocode address ${i + 1}:`, geocodeError);
           }
@@ -167,7 +174,7 @@ export function GoogleCampusMap({
     };
 
     initMap();
-  }, [campusAddresses, institutionName]);
+  }, [campuses, institutionName]);
 
   // Update marker appearance when selectedCampusIndex changes
   useEffect(() => {
@@ -209,7 +216,7 @@ export function GoogleCampusMap({
     });
   }, [selectedCampusIndex, map]);
 
-  if (!campusAddresses || campusAddresses.length === 0) {
+  if (!campuses || campuses.length === 0) {
     return null;
   }
 
@@ -218,12 +225,12 @@ export function GoogleCampusMap({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Campus Location{campusAddresses.length > 1 ? 's' : ''}
+          Campus Location{campuses.length > 1 ? 's' : ''}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {campusAddresses.length === 1
+          {campuses.length === 1
             ? 'Find us on the map'
-            : `Explore our ${campusAddresses.length} campus locations`}
+            : `Explore our ${campuses.length} campus locations`}
         </p>
       </CardHeader>
       <CardContent>

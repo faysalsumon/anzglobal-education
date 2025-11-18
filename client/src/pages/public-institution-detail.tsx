@@ -14,17 +14,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home } from "lucide-react";
-import type { University } from "@shared/schema";
+import type { University, Campus } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
-
-interface CampusAddress {
-  address?: string;
-  city?: string;
-  state?: string;
-  postcode?: string;
-  country?: string;
-}
 
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
@@ -33,6 +25,12 @@ export default function PublicInstitutionDetail() {
 
   const { data: institution, isLoading } = useQuery<University>({
     queryKey: [`/api/institutions/${institutionId}`],
+    enabled: !!institutionId,
+  });
+
+  // Fetch campus data for this institution
+  const { data: campuses = [] } = useQuery<Campus[]>({
+    queryKey: [`/api/campuses/institution/${institutionId}`],
     enabled: !!institutionId,
   });
 
@@ -313,9 +311,9 @@ export default function PublicInstitutionDetail() {
           {/* Sidebar Info */}
           <div className="space-y-6">
             {/* Google Map for Campus Locations */}
-            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 ? (
+            {campuses.length > 0 ? (
               <GoogleCampusMap
-                campusAddresses={institution.campusAddresses as CampusAddress[]}
+                campuses={campuses}
                 institutionName={institution.name}
                 selectedCampusIndex={selectedCampusIndex}
                 onMarkerClick={(index) => setSelectedCampusIndex(index)}
@@ -323,15 +321,15 @@ export default function PublicInstitutionDetail() {
             ) : null}
 
             {/* Campus Locations Text */}
-            {institution.campusAddresses && Array.isArray(institution.campusAddresses) && institution.campusAddresses.length > 0 ? (
+            {campuses.length > 0 ? (
               <Card>
                 <CardHeader>
                   <CardTitle>Campus Addresses</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(institution.campusAddresses as CampusAddress[]).map((campus, index) => (
+                  {campuses.map((campus, index) => (
                     <div 
-                      key={index} 
+                      key={campus.id} 
                       className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
                         selectedCampusIndex === index 
                           ? 'bg-blue-50 dark:bg-blue-950/30 border-2 border-primary' 
@@ -340,26 +338,24 @@ export default function PublicInstitutionDetail() {
                       data-testid={`campus-${index}`}
                       onClick={() => setSelectedCampusIndex(selectedCampusIndex === index ? null : index)}
                     >
-                      {(institution.campusAddresses as CampusAddress[]).length > 1 && (
-                        <p className={`text-sm font-medium ${
-                          selectedCampusIndex === index ? 'text-primary' : ''
-                        }`}>
-                          Campus {index + 1}
-                        </p>
-                      )}
+                      <p className={`text-sm font-medium ${
+                        selectedCampusIndex === index ? 'text-primary' : ''
+                      }`}>
+                        {campus.name}
+                      </p>
                       <div className="flex items-start gap-2">
                         <MapPin className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
                           selectedCampusIndex === index ? 'text-primary' : 'text-muted-foreground'
                         }`} />
                         <div className="text-sm text-muted-foreground">
-                          {campus.address && <p>{campus.address}</p>}
+                          {campus.street && <p>{campus.street}</p>}
                           <p>
                             {[campus.city, campus.state, campus.postcode].filter(Boolean).join(', ')}
                           </p>
                           {campus.country && <p>{campus.country}</p>}
                         </div>
                       </div>
-                      {index < (institution.campusAddresses as CampusAddress[]).length - 1 && (
+                      {index < campuses.length - 1 && (
                         <div className="border-t pt-4 mt-4" />
                       )}
                     </div>
