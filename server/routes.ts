@@ -53,6 +53,7 @@ import {
   generateInstitutionFullDescription,
   generateInstitutionGalleryImages,
   extractInstitutionDataFromWebsite,
+  buildKnowledgeBase,
   extractCourseDataFromWebsite,
   parseNaturalLanguageQuery,
   parseNaturalLanguageInstitutionQuery,
@@ -145,6 +146,20 @@ function checkAIExtractionRateLimit(userId: string, isSuperAdmin: boolean = fals
     resetTime: userLimit.resetTime,
     limit,
   };
+}
+
+// Helper function to rebuild AI knowledge base asynchronously
+// This is called after course/institution approval, edit, or delete operations
+async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
+  // Fire-and-forget async rebuild - don't await, don't block the response
+  buildKnowledgeBase()
+    .then(() => {
+      console.log(`✅ Knowledge base rebuilt successfully after ${operation}`);
+    })
+    .catch((error) => {
+      // Log error but don't fail the main operation
+      console.error(`❌ Failed to rebuild knowledge base after ${operation}:`, error);
+    });
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
