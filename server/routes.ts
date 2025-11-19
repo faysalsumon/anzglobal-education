@@ -6944,6 +6944,16 @@ Sitemap: ${baseUrl}/sitemap.xml
   const { registerChatRoutes } = await import('./chat-routes');
   registerChatRoutes(app);
   console.log('Chat routes registered with RAG-powered AI assistant');
+
+  // Register scraping routes
+  const scrapingRouter = await import('./scraping-routes');
+  app.use('/api/admin/scraping', scrapingRouter.default);
+  console.log('Scraping routes registered for AI-powered course extraction');
+
+  // Start scraping worker
+  const { startScrapingWorker } = await import('./scraping-worker');
+  startScrapingWorker();
+  console.log('Scraping worker started for background job processing');
   
   return httpServer;
 }

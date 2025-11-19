@@ -1635,3 +1635,120 @@ export type ChatConversation = typeof chatConversations.$inferSelect;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+// Scraping job status enum
+export const scrapingJobStatusEnum = pgEnum('scraping_job_status', [
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'cancelled',
+]);
+
+// Scraping jobs table - tracks automated web scraping jobs
+export const scrapingJobs = pgTable("scraping_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").references(() => universities.id, { onDelete: "cascade" }),
+  institutionUrl: text("institution_url").notNull(),
+  institutionName: text("institution_name"),
+  status: scrapingJobStatusEnum("status").notNull().default("pending"),
+  progress: integer("progress").default(0), // Percentage 0-100
+  totalPages: integer("total_pages").default(0),
+  scrapedPages: integer("scraped_pages").default(0),
+  coursesFound: integer("courses_found").default(0),
+  coursesExtracted: integer("courses_extracted").default(0),
+  errorMessage: text("error_message"),
+  errorDetails: jsonb("error_details"), // Detailed error information
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id), // Admin who triggered the job
+}, (table) => ({
+  institutionIdIdx: index("scraping_jobs_institution_id_idx").on(table.institutionId),
+  statusIdx: index("scraping_jobs_status_idx").on(table.status),
+  createdAtIdx: index("scraping_jobs_created_at_idx").on(table.createdAt),
+}));
+
+// Scraped courses table - staging area for scraped course data before approval
+export const scrapedCourses = pgTable("scraped_courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").references(() => scrapingJobs.id, { onDelete: "cascade" }).notNull(),
+  institutionId: varchar("institution_id").references(() => universities.id, { onDelete: "cascade" }),
+  
+  // Provenance tracking
+  sourceUrl: text("source_url").notNull(),
+  extractedAt: timestamp("extracted_at").defaultNow(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // AI confidence score 0.00-1.00
+  warnings: text("warnings").array(), // Extraction warnings
+  
+  // All course fields (mirrors courses table but in staging)
+  title: text("title"),
+  description: text("description"),
+  subject: text("subject"),
+  discipline: text("discipline"),
+  subDiscipline: text("sub_discipline"), // Will be mapped to subDisciplineId on approval
+  level: text("level"),
+  duration: text("duration"),
+  durationMonths: integer("duration_months"),
+  durationWeeks: integer("duration_weeks"),
+  fees: decimal("fees", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }),
+  location: text("location"),
+  country: text("country"),
+  startDate: text("start_date"),
+  applicationDeadline: text("application_deadline"),
+  prerequisites: text("prerequisites"),
+  thumbnailUrl: text("thumbnail_url"),
+  courseCode: text("course_code"),
+  prPathway: boolean("pr_pathway"),
+  scholarshipPercentageMin: integer("scholarship_percentage_min"),
+  scholarshipPercentageMax: integer("scholarship_percentage_max"),
+  eligibilityRequirements: text("eligibility_requirements"),
+  englishRequirements: text("english_requirements"),
+  curriculumUrl: text("curriculum_url"),
+  costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
+  applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
+  images: text("images").array(),
+  intakes: text("intakes").array(),
+  studyAreas: text("study_areas").array(),
+  careerOutcomes: text("career_outcomes").array(),
+  careerPath: text("career_path"),
+  pathways: text("pathways").array(),
+  minimumAge: integer("minimum_age"),
+  academicRequirements: text("academic_requirements"),
+  englishRequirementsStructured: jsonb("english_requirements_structured"),
+  deliveryMode: text("delivery_mode"),
+  campusLocations: text("campus_locations").array(),
+  workRights: boolean("work_rights"),
+  internshipAvailable: boolean("internship_available"),
+  internshipDetails: text("internship_details"),
+  
+  // Review status
+  reviewStatus: varchar("review_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected', 'merged'
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  approvedCourseId: varchar("approved_course_id").references(() => courses.id), // If approved and merged
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  jobIdIdx: index("scraped_courses_job_id_idx").on(table.jobId),
+  institutionIdIdx: index("scraped_courses_institution_id_idx").on(table.institutionId),
+  reviewStatusIdx: index("scraped_courses_review_status_idx").on(table.reviewStatus),
+  confidenceIdx: index("scraped_courses_confidence_idx").on(table.confidence),
+}));
+
+export const insertScrapingJobSchema = createInsertSchema(scrapingJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertScrapedCourseSchema = createInsertSchema(scrapedCourses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ScrapingJob = typeof scrapingJobs.$inferSelect;
+export type InsertScrapingJob = z.infer<typeof insertScrapingJobSchema>;
+export type ScrapedCourse = typeof scrapedCourses.$inferSelect;
+export type InsertScrapedCourse = z.infer<typeof insertScrapedCourseSchema>;
