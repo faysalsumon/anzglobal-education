@@ -9,6 +9,17 @@ const connection = new Redis({
   host: process.env.REDIS_HOST || "localhost",
   port: parseInt(process.env.REDIS_PORT || "6379"),
   maxRetriesPerRequest: null, // Required for BullMQ
+  retryStrategy: () => null, // Don't retry in dev (suppress errors)
+  lazyConnect: true, // Don't connect immediately
+});
+
+// Suppress Redis connection errors in development
+connection.on("error", (err: any) => {
+  if (process.env.NODE_ENV === "development" && err.code === "ECONNREFUSED") {
+    // Silent - Redis not available in dev, use direct scraping instead
+  } else {
+    console.error("Redis connection error:", err.message);
+  }
 });
 
 /**

@@ -19,6 +19,17 @@ const connection = new Redis({
   host: process.env.REDIS_HOST || "localhost",
   port: parseInt(process.env.REDIS_PORT || "6379"),
   maxRetriesPerRequest: null,
+  retryStrategy: () => null, // Don't retry in dev
+  lazyConnect: true,
+});
+
+// Suppress Redis connection errors in development
+connection.on("error", (err: any) => {
+  if (process.env.NODE_ENV === "development" && err.code === "ECONNREFUSED") {
+    // Silent - use direct scraping endpoint instead
+  } else {
+    console.error("Worker Redis error:", err.message);
+  }
 });
 
 /**
@@ -219,8 +230,12 @@ export function startScrapingWorker(): Worker {
     console.error(`Worker failed job ${job?.id}:`, err);
   });
 
-  worker.on("error", (err) => {
-    console.error("Worker error:", err);
+  worker.on("error", (err: any) => {
+    if (process.env.NODE_ENV === "development" && err.code === "ECONNREFUSED") {
+      // Silent - Redis not available
+    } else {
+      console.error("Worker error:", err.message);
+    }
   });
 
   console.log("Scraping worker started");

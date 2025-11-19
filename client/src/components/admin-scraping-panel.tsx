@@ -185,12 +185,14 @@ export function AdminScrapingPanel() {
     mutationFn: async (data: { institutionUrl: string; institutionName?: string; useBrowser?: boolean }) => {
       return await apiRequest("POST", "/api/admin/scraping/test", data);
     },
-    onSuccess: (response: any) => {
+    onSuccess: async (response: any) => {
       toast({
         title: "Test scraping completed!",
         description: `Extracted course with ${(response.extractionResult.confidence * 100).toFixed(0)}% confidence. Check Pending Review tab.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
+      // Invalidate and refetch to show new data immediately
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
       setTriggerDialogOpen(false);
       setInstitutionUrl("");
       setInstitutionName("");
