@@ -138,18 +138,18 @@ export function ChatWidget() {
   // Floating chat button
   if (!isOpen) {
     return (
-      <div className="fixed bottom-28 right-6 z-50">
+      <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 z-50">
         <Button
           size="icon"
           onClick={toggleOpen}
-          className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+          className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90"
           data-testid="button-open-chat"
         >
           <AnimatedBooksIcon className="text-primary-foreground" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center"
+              className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
               data-testid="badge-unread-count"
             >
               {unreadCount}
@@ -162,11 +162,9 @@ export function ChatWidget() {
 
   // Chat window
   return (
-    <div className="fixed bottom-28 right-6 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl"
+    <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl w-[calc(100vw-2rem)] max-w-[380px] md:w-full"
       style={{ 
-        width: isMinimized ? "320px" : "380px", 
-        height: isMinimized ? "60px" : "600px",
-        maxHeight: "calc(100vh - 140px)",
+        height: isMinimized ? "60px" : "min(600px, calc(100vh - 100px))",
       }}
       data-testid="chat-widget"
     >

@@ -1,12 +1,17 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
   <rect width="64" height="64" rx="12" fill="#3465A5"/>
   
-  <!-- Top book -->
-  <rect x="14" y="16" width="36" height="6" rx="2" fill="white" opacity="0.95"/>
+  <!-- Top ribbon/book with notch -->
+  <path d="M 12 14 L 52 14 L 52 22 L 34 22 L 32 26 L 30 22 L 12 22 Z" fill="white" opacity="0.95"/>
   
-  <!-- Middle book -->
-  <rect x="14" y="29" width="36" height="6" rx="2" fill="white" opacity="0.85"/>
+  <!-- Middle diagonal pencil -->
+  <g transform="rotate(-45 32 32)">
+    <rect x="24" y="30" width="16" height="4" rx="1" fill="white" opacity="0.9"/>
+    <!-- Pencil tip -->
+    <path d="M 24 32 L 21 30 L 21 34 Z" fill="#FFD700" opacity="0.9"/>
+  </g>
   
-  <!-- Bottom book -->
-  <rect x="14" y="42" width="36" height="6" rx="2" fill="white" opacity="0.95"/>
+  <!-- Bottom ribbon/book -->
+  <rect x="12" y="42" width="40" height="8" rx="2" fill="white" opacity="0.95"/>
 </svg>
