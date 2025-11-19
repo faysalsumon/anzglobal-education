@@ -9,6 +9,9 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<UserWithAdminRole>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0, // Always consider data stale so it refetches after login
   });
 
   // Fallback to user.role if adminRole is not set (for compatibility with backend)

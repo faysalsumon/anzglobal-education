@@ -47,6 +47,16 @@ import ChatPage from "@/pages/chat";
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
 
+  // Debug logging for routing issues
+  console.log('[Router Debug]', {
+    isLoading,
+    isAuthenticated,
+    userType: user?.userType,
+    userEmail: user?.email,
+    userRole: user?.role,
+    shouldRenderAuthRoutes: !isLoading && isAuthenticated && !!user?.userType
+  });
+
   return (
     <Switch>
       {/* Public routes accessible to everyone */}
