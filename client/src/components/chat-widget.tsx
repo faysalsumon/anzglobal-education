@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AnimatedBooksIcon } from "./animated-books-icon";
 
 type Message = {
   id: number;
@@ -144,7 +145,7 @@ export function ChatWidget() {
           className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
           data-testid="button-open-chat"
         >
-          <MessageCircle className="h-6 w-6" />
+          <AnimatedBooksIcon className="text-primary-foreground" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
