@@ -24,7 +24,7 @@ Key features include:
 -   **Workflows**: Institution/Course approval workflow by platform admin.
 -   **Filtering & Search**: Discipline-based course filtering with 15 categories and sub-disciplines, course level filtering with 14 standardized levels, dynamic animated typing for natural language search, and location-based course filtering with interactive campus badges on cards.
 -   **Maps & Location**: Google Maps integration for campus locations with custom markers, and normalized campus data for precise location-based course search.
--   **AI Chat Agent**: RAG-powered AI assistant with a Replit-style animated icon, using Pinecone vector database for platform-specific knowledge and OpenAI GPT-4o-mini. It includes event-driven auto-updates for the knowledge base and supports both authenticated and anonymous users.
+-   **AI Chat Agent**: RAG-powered AI assistant with a compact, Replit-style animated icon (ribbons/bookmarks with diagonal pencil). Positioned at bottom-20 right-3 (mobile) and bottom-24 right-4 (desktop) to prevent header overlap. Button sizes: 48px mobile, 56px desktop. Chat window: max-w-[340px] mobile, max-w-[360px] desktop, height min(480px, calc(100vh - 180px)). Compact header with small avatar (28px) and reduced text sizes. Uses Pinecone vector database for platform-specific knowledge and OpenAI GPT-4o-mini. Includes event-driven auto-updates for knowledge base, close/minimize buttons, and supports both authenticated and anonymous users.
 
 ### Technical Implementation
 -   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.

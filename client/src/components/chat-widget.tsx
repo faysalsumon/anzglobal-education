@@ -138,18 +138,18 @@ export function ChatWidget() {
   // Floating chat button
   if (!isOpen) {
     return (
-      <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 z-50">
+      <div className="fixed bottom-20 right-3 md:bottom-24 md:right-4 z-40">
         <Button
           size="icon"
           onClick={toggleOpen}
-          className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+          className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
           data-testid="button-open-chat"
         >
           <AnimatedBooksIcon className="text-primary-foreground" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs"
+              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
               data-testid="badge-unread-count"
             >
               {unreadCount}
@@ -162,22 +162,22 @@ export function ChatWidget() {
 
   // Chat window
   return (
-    <div className="fixed bottom-4 right-4 md:bottom-28 md:right-6 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl w-[calc(100vw-2rem)] max-w-[380px] md:w-full"
+    <div className="fixed bottom-20 right-3 md:bottom-24 md:right-4 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[360px]"
       style={{ 
-        height: isMinimized ? "60px" : "min(600px, calc(100vh - 100px))",
+        height: isMinimized ? "52px" : "min(480px, calc(100vh - 180px))",
       }}
       data-testid="chat-widget"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-7 w-7">
             <AvatarImage src="/chat-bot-avatar.png" alt="Chat Assistant" />
-            <AvatarFallback className="bg-primary-foreground text-primary">AI</AvatarFallback>
+            <AvatarFallback className="bg-primary-foreground text-primary text-xs">AI</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold text-sm">ANZ Education Assistant</h3>
-            <p className="text-xs opacity-90">Ask me anything about courses</p>
+            <h3 className="font-semibold text-xs leading-tight">ANZ Education Assistant</h3>
+            <p className="text-[10px] opacity-80 leading-tight">Ask about courses</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -205,7 +205,7 @@ export function ChatWidget() {
       {/* Messages */}
       {!isMinimized && (
         <>
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-3">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground text-sm">Loading messages...</p>
