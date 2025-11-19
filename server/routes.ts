@@ -53,11 +53,11 @@ import {
   generateInstitutionFullDescription,
   generateInstitutionGalleryImages,
   extractInstitutionDataFromWebsite,
-  buildKnowledgeBase,
   extractCourseDataFromWebsite,
   parseNaturalLanguageQuery,
   parseNaturalLanguageInstitutionQuery,
 } from "./ai";
+import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -3846,6 +3846,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: userId,
       });
 
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('institution approval');
+
       res.json(updated);
     } catch (error: any) {
       console.error("Error approving institution:", error);
@@ -3874,6 +3877,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvalStatus: 'rejected',
         rejectionReason: reason,
       });
+
+      // Trigger async knowledge base rebuild (remove rejected institution from AI)
+      triggerKnowledgeBaseRebuild('institution rejection');
 
       res.json(updated);
     } catch (error: any) {
@@ -4711,6 +4717,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
+      
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('super-admin institution update');
+      
       res.json(updatedInstitution);
     } catch (error) {
       console.error("Error updating institution:", error);
@@ -4739,6 +4749,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete institution (this will cascade delete related courses based on schema constraints)
       await db.delete(universities).where(eq(universities.id, institutionId));
 
+      // Trigger async knowledge base rebuild (remove deleted institution and its courses from AI)
+      triggerKnowledgeBaseRebuild('institution deletion');
+
       res.json({ message: "Institution deleted successfully" });
     } catch (error) {
       console.error("Error deleting institution:", error);
@@ -4764,6 +4777,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedInstitution = await storage.updateUniversity(institutionId, { isActive });
+      
+      // Trigger async knowledge base rebuild (active/inactive affects AI visibility)
+      triggerKnowledgeBaseRebuild('institution status toggle');
+      
       res.json(updatedInstitution);
     } catch (error) {
       console.error("Error updating institution status:", error);
