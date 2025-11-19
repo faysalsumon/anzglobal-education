@@ -137,7 +137,7 @@ export function ChatWidget() {
   // Floating chat button
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-28 right-6 z-50">
         <Button
           size="icon"
           onClick={toggleOpen}
@@ -161,11 +161,11 @@ export function ChatWidget() {
 
   // Chat window
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl"
+    <div className="fixed bottom-28 right-6 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl"
       style={{ 
         width: isMinimized ? "320px" : "380px", 
         height: isMinimized ? "60px" : "600px",
-        maxHeight: "calc(100vh - 100px)",
+        maxHeight: "calc(100vh - 140px)",
       }}
       data-testid="chat-widget"
     >
