@@ -67,14 +67,20 @@ router.post("/trigger", async (req, res) => {
       })
       .returning();
 
-    // Add to queue for processing
-    await addScrapingJob({
-      jobId: job.id,
-      institutionId: institutionId || undefined,
-      institutionUrl,
-      institutionName: institutionName || undefined,
-      useBrowser: useBrowser || false,
-    });
+    // Add to queue for processing (gracefully handle Redis unavailability)
+    try {
+      await addScrapingJob({
+        jobId: job.id,
+        institutionId: institutionId || undefined,
+        institutionUrl,
+        institutionName: institutionName || undefined,
+        useBrowser: useBrowser || false,
+      });
+      console.log(`Scraping job ${job.id} queued successfully`);
+    } catch (queueError: any) {
+      console.warn(`Could not queue job ${job.id} (Redis unavailable):`, queueError.message);
+      console.log("Job persisted to database and will be processed when queue is available");
+    }
 
     res.json({
       message: "Scraping job created successfully",
@@ -83,6 +89,117 @@ router.post("/trigger", async (req, res) => {
   } catch (error: any) {
     console.error("Error creating scraping job:", error);
     res.status(500).json({ error: "Failed to create scraping job" });
+  }
+});
+
+/**
+ * Direct scraping endpoint (bypass queue for testing)
+ * POST /api/admin/scraping/test
+ * Use this when Redis is unavailable to test scraping functionality
+ */
+router.post("/test", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { institutionUrl, institutionName, useBrowser } = req.body;
+
+    if (!institutionUrl) {
+      return res.status(400).json({ error: "institutionUrl is required" });
+    }
+
+    console.log(`[Direct Scraping] Starting scrape for ${institutionUrl}`);
+
+    // Import scraping services
+    const { scrapeWebsite } = await import("./web-scraper-service");
+    const { extractCourseData } = await import("./ai-extractor-service");
+
+    // Scrape the website
+    console.log("[Direct Scraping] Fetching HTML...");
+    const scrapeResult = await scrapeWebsite({
+      url: institutionUrl,
+      useBrowser: useBrowser || false,
+      timeout: 30000,
+    });
+
+    console.log(`[Direct Scraping] HTML fetched (${scrapeResult.html.length} chars)`);
+
+    // Extract course data using AI
+    console.log("[Direct Scraping] Extracting courses with AI...");
+    const extractionResult = await extractCourseData(
+      scrapeResult.html,
+      institutionUrl,
+      institutionName
+    );
+
+    console.log(`[Direct Scraping] Extraction complete - Confidence: ${extractionResult.confidence}`);
+    console.log(`[Direct Scraping] Warnings: ${extractionResult.warnings.join(", ") || "None"}`);
+
+    // Create a job record for tracking (jobId is required for scrapedCourses)
+    const [tempJob] = await db
+      .insert(scrapingJobs)
+      .values({
+        institutionUrl,
+        institutionName: institutionName || null,
+        status: "completed",
+        createdBy: userId,
+      })
+      .returning();
+
+    // Save to scraped_courses table
+    const [scrapedCourse] = await db
+      .insert(scrapedCourses)
+      .values({
+        jobId: tempJob.id,
+        title: extractionResult.data.title || "Unknown Course",
+        subject: extractionResult.data.subject,
+        level: extractionResult.data.level,
+        duration: extractionResult.data.duration,
+        description: extractionResult.data.description,
+        fees: extractionResult.data.fees,
+        applicationFees: extractionResult.data.applicationFees,
+        englishRequirements: extractionResult.data.englishRequirements,
+        academicRequirements: extractionResult.data.academicRequirements,
+        intakes: extractionResult.data.intakes,
+        campusLocations: extractionResult.data.campusLocations,
+        deliveryMode: extractionResult.data.deliveryMode,
+        sourceUrl: institutionUrl,
+        confidence: extractionResult.confidence.toString(),
+        warnings: extractionResult.warnings,
+        reviewStatus: "pending",
+      })
+      .returning();
+
+    console.log(`[Direct Scraping] Saved to database with ID: ${scrapedCourse.id}`);
+
+    res.json({
+      message: "Direct scraping completed successfully",
+      scrapedCourse,
+      extractionResult: {
+        confidence: extractionResult.confidence,
+        warnings: extractionResult.warnings,
+        extractedFields: Object.keys(extractionResult.data).filter(
+          key => extractionResult.data[key] !== null && extractionResult.data[key] !== undefined
+        ),
+      },
+    });
+  } catch (error: any) {
+    console.error("[Direct Scraping] Error:", error);
+    res.status(500).json({
+      error: "Direct scraping failed",
+      details: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
   }
 });
 
@@ -316,7 +433,7 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
 
     // Validate edited data if provided
     if (editedData) {
-      const validation = insertCourseSchema.partial().safeParse(editedData);
+      const validation = insertCourseSchema.safeParse(editedData);
       if (!validation.success) {
         return res.status(400).json({ 
           error: "Invalid edited data", 

@@ -78,6 +78,42 @@ ${htmlContent.substring(0, 15000)} ${htmlContent.length > 15000 ? "\n\n[Content 
 
 Return the extracted course data as JSON.`;
 
+  // For strict JSON schema, ALL properties must be required
+  // Convert optional fields to allow null values instead
+  const strictProperties: any = {};
+  const allPropertyNames: string[] = [];
+  
+  for (const [key, value] of Object.entries(jsonSchema.properties)) {
+    const prop: any = value && typeof value === 'object' ? { ...value } : {};
+    // If field is optional, allow null
+    if (!jsonSchema.required.includes(key)) {
+      // Build the non-null schema preserving all properties (items, enum, etc.)
+      const nonNullSchema: any = {};
+      for (const [propKey, propValue] of Object.entries(prop)) {
+        nonNullSchema[propKey] = propValue;
+      }
+      
+      prop.anyOf = [
+        nonNullSchema,
+        { type: "null" },
+      ];
+      
+      // Remove properties that are now in anyOf
+      delete prop.type;
+      delete prop.items;
+      delete prop.enum;
+      delete prop.description; // description stays at top level
+      
+      // Keep description at top level
+      if (nonNullSchema.description) {
+        prop.description = nonNullSchema.description;
+        delete nonNullSchema.description;
+      }
+    }
+    strictProperties[key] = prop;
+    allPropertyNames.push(key);
+  }
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -93,7 +129,7 @@ Return the extracted course data as JSON.`;
           schema: {
             type: "object",
             properties: {
-              ...jsonSchema.properties,
+              ...strictProperties,
               confidence: {
                 type: "number",
                 description: "Confidence score 0-1",
@@ -104,7 +140,7 @@ Return the extracted course data as JSON.`;
                 description: "Any extraction warnings or issues",
               },
             },
-            required: ["confidence", "warnings", ...jsonSchema.required],
+            required: ["confidence", "warnings", ...allPropertyNames],
             additionalProperties: false,
           },
         },

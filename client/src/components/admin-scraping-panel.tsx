@@ -180,6 +180,31 @@ export function AdminScrapingPanel() {
     },
   });
 
+  // Test scraping mutation (direct, bypasses queue)
+  const testScrapeMutation = useMutation({
+    mutationFn: async (data: { institutionUrl: string; institutionName?: string; useBrowser?: boolean }) => {
+      return await apiRequest("POST", "/api/admin/scraping/test", data);
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Test scraping completed!",
+        description: `Extracted course with ${(response.extractionResult.confidence * 100).toFixed(0)}% confidence. Check Pending Review tab.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
+      setTriggerDialogOpen(false);
+      setInstitutionUrl("");
+      setInstitutionName("");
+      setUseBrowser(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Test scraping failed",
+        description: error.message || "Failed to scrape and extract course data",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleTriggerScrape = () => {
     if (!institutionUrl.trim()) {
       toast({
@@ -191,6 +216,23 @@ export function AdminScrapingPanel() {
     }
 
     triggerScrapeMutation.mutate({
+      institutionUrl: institutionUrl.trim(),
+      institutionName: institutionName.trim() || undefined,
+      useBrowser,
+    });
+  };
+
+  const handleTestScrape = () => {
+    if (!institutionUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Institution URL is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    testScrapeMutation.mutate({
       institutionUrl: institutionUrl.trim(),
       institutionName: institutionName.trim() || undefined,
       useBrowser,
@@ -274,7 +316,16 @@ export function AdminScrapingPanel() {
             Automatically extract course data from institution websites
           </p>
         </div>
-        <Button onClick={() => setTriggerDialogOpen(true)} data-testid="button-trigger-scrape">
+        <Button 
+          onClick={() => {
+            // Reset form when opening dialog
+            setInstitutionUrl("");
+            setInstitutionName("");
+            setUseBrowser(false);
+            setTriggerDialogOpen(true);
+          }} 
+          data-testid="button-new-job"
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Scraping Job
         </Button>
@@ -579,21 +630,33 @@ export function AdminScrapingPanel() {
               </AlertDescription>
             </Alert>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={() => setTriggerDialogOpen(false)}
               data-testid="button-cancel-trigger"
+              className="sm:flex-1"
             >
               Cancel
             </Button>
             <Button 
+              variant="secondary"
+              onClick={handleTestScrape}
+              disabled={testScrapeMutation.isPending || !institutionUrl.trim()}
+              data-testid="button-test-scraping"
+              className="sm:flex-1"
+            >
+              {testScrapeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {testScrapeMutation.isPending ? "Testing..." : "Test Scraping"}
+            </Button>
+            <Button 
               onClick={handleTriggerScrape}
-              disabled={triggerScrapeMutation.isPending}
+              disabled={triggerScrapeMutation.isPending || !institutionUrl.trim()}
               data-testid="button-start-scraping"
+              className="sm:flex-1"
             >
               {triggerScrapeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Start Scraping
+              Queue Job
             </Button>
           </DialogFooter>
         </DialogContent>
