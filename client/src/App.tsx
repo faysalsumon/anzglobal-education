@@ -73,6 +73,7 @@ function Router() {
       {!isLoading && isAuthenticated && user?.userType && (
         <>
           <Route path="/dashboard" component={Home} />
+          <Route path="/admin" component={AdminDashboard} />
           <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/admin/profile" component={AdminProfile} />
           <Route path="/admin/csv-import" component={AdminCSVImport} />
