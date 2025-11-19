@@ -2152,6 +2152,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.incrementSubDisciplineUsage(updated.subDisciplineId);
       }
       
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('course update');
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating course:", error);
@@ -3899,6 +3902,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: userId,
       });
 
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('course approval');
+
       res.json(updated);
     } catch (error: any) {
       console.error("Error approving course:", error);
@@ -3927,6 +3933,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvalStatus: 'rejected',
         rejectionReason: reason,
       });
+
+      // Trigger async knowledge base rebuild (remove rejected course from AI)
+      triggerKnowledgeBaseRebuild('course rejection');
 
       res.json(updated);
     } catch (error: any) {
@@ -4947,6 +4956,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedCourse = await storage.updateCourse(courseId, updateData);
+      
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('super-admin course update');
+      
       res.json(updatedCourse);
     } catch (error) {
       console.error("Error updating course:", error);
@@ -4973,6 +4986,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteCourse(courseId);
+      
+      // Trigger async knowledge base rebuild (remove deleted course from AI)
+      triggerKnowledgeBaseRebuild('course deletion');
+      
       res.json({ message: "Course deleted successfully" });
     } catch (error) {
       console.error("Error deleting course:", error);
@@ -4998,6 +5015,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedCourse = await storage.updateCourse(courseId, { isActive });
+      
+      // Trigger async knowledge base rebuild (active/inactive affects AI visibility)
+      triggerKnowledgeBaseRebuild('course status toggle');
+      
       res.json(updatedCourse);
     } catch (error) {
       console.error("Error updating course status:", error);
