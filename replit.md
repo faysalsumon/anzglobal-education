@@ -6,6 +6,17 @@ ANZ Global Education is an AI-powered platform designed to connect international
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### 2025-11-19: Web Scraping Authentication Fix
+- **Fixed 403 "Admin access required" error** when creating scraping jobs via email/password authentication
+- Added `isAuthenticated` middleware to scraping routes registration  
+- Updated all 8 scraping route handlers to use `checkAdminAccess` pattern compatible with email/password sessions
+- Exported `checkAdminAccess` function from routes.ts for use by scraping routes
+- Fixed user ID extraction from `req.user.claims.sub` instead of direct `req.user.userType` check
+- Fixed button data-testid mismatch (`button-start-scraping`)
+- **Status**: ✅ Authentication working, jobs can be created successfully for institutions like Albright Institute
+
 ## System Architecture
 
 ### UI/UX and Features

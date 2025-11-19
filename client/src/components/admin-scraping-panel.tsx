@@ -590,7 +590,7 @@ export function AdminScrapingPanel() {
             <Button 
               onClick={handleTriggerScrape}
               disabled={triggerScrapeMutation.isPending}
-              data-testid="button-start-scrape"
+              data-testid="button-start-scraping"
             >
               {triggerScrapeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Start Scraping
