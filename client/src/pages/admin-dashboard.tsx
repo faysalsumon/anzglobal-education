@@ -44,6 +44,7 @@ import { AICourseExtractor } from "@/components/ai-course-extractor";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminBlogManagement } from "@/components/admin-blog-management";
+import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
 
 interface User {
   id: string;
@@ -234,8 +235,8 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import'];
-    const fullAdminOnlyTabs = ['users', 'institutions', 'data-import'];
+    const validTabs = ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import', 'web-scraping'];
+    const fullAdminOnlyTabs = ['users', 'institutions', 'data-import', 'web-scraping'];
     
     if (hash && validTabs.includes(hash)) {
       // Check access for full-admin-only tabs
@@ -2286,6 +2287,12 @@ export default function AdminDashboard() {
         {activeTab === "data-import" && (
           <div className="space-y-6 md:space-y-8">
             <AdminCsvImportPanel />
+          </div>
+        )}
+
+        {activeTab === "web-scraping" && (
+          <div className="space-y-6 md:space-y-8">
+            <AdminScrapingPanel />
           </div>
         )}
       </div>

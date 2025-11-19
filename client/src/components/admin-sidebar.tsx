@@ -20,6 +20,7 @@ import {
   Upload,
   Settings,
   Newspaper,
+  Globe,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -88,6 +89,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: Upload,
       label: "Data Import",
       value: "data-import",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: Globe,
+      label: "Web Scraping",
+      value: "web-scraping",
       show: hasFullAdminAccess,
     },
   ];
