@@ -201,7 +201,7 @@ async function checkUniversityAccess(
   return { university: universityData, role: teamMember.role as UniversityRole };
 }
 
-async function checkAdminAccess(
+export async function checkAdminAccess(
   userId: string,
   requiredRoles?: AdminRole[]
 ): Promise<{ role: AdminRole } | null> {
@@ -6945,9 +6945,9 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerChatRoutes(app);
   console.log('Chat routes registered with RAG-powered AI assistant');
 
-  // Register scraping routes
+  // Register scraping routes (protected with authentication)
   const scrapingRouter = await import('./scraping-routes');
-  app.use('/api/admin/scraping', scrapingRouter.default);
+  app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
   console.log('Scraping routes registered for AI-powered course extraction');
 
   // Start scraping worker

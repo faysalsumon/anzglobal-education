@@ -1,11 +1,24 @@
 import { Router } from "express";
 import { db } from "./db";
-import { scrapingJobs, scrapedCourses, courses, universities, type User } from "../shared/schema";
+import { scrapingJobs, scrapedCourses, courses, universities, type User, insertCourseSchema } from "../shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs } from "./scraping-queue";
 import { insertScrapingJobSchema, insertScrapedCourseSchema } from "../shared/schema";
 
 const router = Router();
+
+// Import checkAdminAccess from routes.ts
+import type { checkAdminAccess as CheckAdminAccessType } from "./routes";
+
+// Get checkAdminAccess dynamically to avoid circular dependency
+let checkAdminAccess: typeof CheckAdminAccessType;
+async function getCheckAdminAccess() {
+  if (!checkAdminAccess) {
+    const routes = await import("./routes");
+    checkAdminAccess = routes.checkAdminAccess;
+  }
+  return checkAdminAccess;
+}
 
 /**
  * Trigger a new scraping job for an institution
@@ -13,8 +26,16 @@ const router = Router();
  */
 router.post("/trigger", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -23,7 +44,7 @@ router.post("/trigger", async (req, res) => {
       institutionUrl: req.body.institutionUrl,
       institutionId: req.body.institutionId,
       institutionName: req.body.institutionName,
-      createdBy: user.id,
+      createdBy: userId,
       status: "pending",
     });
 
@@ -42,16 +63,16 @@ router.post("/trigger", async (req, res) => {
         institutionUrl,
         institutionName: institutionName || null,
         status: "pending",
-        createdBy: user.id,
+        createdBy: userId,
       })
       .returning();
 
     // Add to queue for processing
     await addScrapingJob({
       jobId: job.id,
-      institutionId,
+      institutionId: institutionId || undefined,
       institutionUrl,
-      institutionName,
+      institutionName: institutionName || undefined,
       useBrowser: useBrowser || false,
     });
 
@@ -71,8 +92,16 @@ router.post("/trigger", async (req, res) => {
  */
 router.get("/jobs", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -106,8 +135,16 @@ router.get("/jobs", async (req, res) => {
  */
 router.get("/jobs/:id", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -138,8 +175,16 @@ router.get("/jobs/:id", async (req, res) => {
  */
 router.delete("/jobs/:id", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -170,8 +215,16 @@ router.delete("/jobs/:id", async (req, res) => {
  */
 router.get("/scraped-courses", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -208,8 +261,16 @@ router.get("/scraped-courses", async (req, res) => {
  */
 router.get("/scraped-courses/:id", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -237,8 +298,16 @@ router.get("/scraped-courses/:id", async (req, res) => {
  */
 router.put("/scraped-courses/:id/approve", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -323,7 +392,7 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
       .set({
         reviewStatus: "approved",
         reviewedAt: new Date(),
-        reviewedBy: user.id,
+        reviewedBy: userId,
         reviewNotes,
         approvedCourseId: newCourse.id,
       })
@@ -345,8 +414,16 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
  */
 router.put("/scraped-courses/:id/reject", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -359,7 +436,7 @@ router.put("/scraped-courses/:id/reject", async (req, res) => {
       .set({
         reviewStatus: "rejected",
         reviewedAt: new Date(),
-        reviewedBy: user.id,
+        reviewedBy: userId,
         reviewNotes: reviewNotes || "Rejected by admin",
       })
       .where(eq(scrapedCourses.id, id));
@@ -377,8 +454,16 @@ router.put("/scraped-courses/:id/reject", async (req, res) => {
  */
 router.get("/queue-status", async (req, res) => {
   try {
-    const user = req.user as User | undefined;
-    if (!user || user.userType !== "admin") {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
