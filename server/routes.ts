@@ -85,6 +85,7 @@ import {
   createNotification,
 } from "./notifications";
 import { sendContactInquiryEmails } from "./email-service";
+import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
 
 // Environment-aware rate limiting for AI extraction endpoint
@@ -3847,6 +3848,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: userId,
       });
 
+      // Log activity
+      await logApprove({
+        req,
+        entityType: 'institution',
+        entityId: req.params.id,
+        entityName: institution.name,
+      });
+
       // Trigger async knowledge base rebuild
       triggerKnowledgeBaseRebuild('institution approval');
 
@@ -3879,6 +3888,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rejectionReason: reason,
       });
 
+      // Log activity
+      await logReject({
+        req,
+        entityType: 'institution',
+        entityId: req.params.id,
+        entityName: institution.name,
+        reason,
+      });
+
       // Trigger async knowledge base rebuild (remove rejected institution from AI)
       triggerKnowledgeBaseRebuild('institution rejection');
 
@@ -3907,6 +3925,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvalStatus: 'approved',
         approvedAt: new Date(),
         approvedBy: userId,
+      });
+
+      // Log activity
+      await logApprove({
+        req,
+        entityType: 'course',
+        entityId: req.params.id,
+        entityName: course.title,
       });
 
       // Trigger async knowledge base rebuild
@@ -3939,6 +3965,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateCourse(req.params.id, {
         approvalStatus: 'rejected',
         rejectionReason: reason,
+      });
+
+      // Log activity
+      await logReject({
+        req,
+        entityType: 'course',
+        entityId: req.params.id,
+        entityName: course.title,
+        reason,
       });
 
       // Trigger async knowledge base rebuild (remove rejected course from AI)

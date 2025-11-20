@@ -21,6 +21,7 @@ import {
   Settings,
   Newspaper,
   Globe,
+  Activity,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -95,6 +96,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: Globe,
       label: "Web Scraping",
       value: "web-scraping",
+      show: hasFullAdminAccess,
+    },
+    {
+      icon: Activity,
+      label: "Activity Logs",
+      value: "activity-logs",
       show: hasFullAdminAccess,
     },
   ];

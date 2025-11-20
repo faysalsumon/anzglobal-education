@@ -4,6 +4,7 @@ import { scrapingJobs, scrapedCourses, courses, universities, type User, insertC
 import { eq, desc, and } from "drizzle-orm";
 import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs } from "./scraping-queue";
 import { insertScrapingJobSchema, insertScrapedCourseSchema } from "../shared/schema";
+import { logApprove, logReject } from "./activity-logger";
 
 const router = Router();
 
@@ -515,6 +516,15 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
       })
       .where(eq(scrapedCourses.id, id));
 
+    // Log activity
+    await logApprove({
+      req,
+      entityType: 'scraped_course',
+      entityId: id,
+      entityName: scrapedCourse.title || 'Unknown',
+      metadata: { approvedCourseId: newCourse.id },
+    });
+
     res.json({
       message: "Course approved and created successfully",
       course: newCourse,
@@ -547,6 +557,16 @@ router.put("/scraped-courses/:id/reject", async (req, res) => {
     const { id } = req.params;
     const { reviewNotes } = req.body;
 
+    // Get scraped course first for logging
+    const [scrapedCourse] = await db
+      .select()
+      .from(scrapedCourses)
+      .where(eq(scrapedCourses.id, id));
+
+    if (!scrapedCourse) {
+      return res.status(404).json({ error: "Scraped course not found" });
+    }
+
     // Update scraped course status
     await db
       .update(scrapedCourses)
@@ -557,6 +577,15 @@ router.put("/scraped-courses/:id/reject", async (req, res) => {
         reviewNotes: reviewNotes || "Rejected by admin",
       })
       .where(eq(scrapedCourses.id, id));
+
+    // Log activity
+    await logReject({
+      req,
+      entityType: 'scraped_course',
+      entityId: id,
+      entityName: scrapedCourse.title || 'Unknown',
+      reason: reviewNotes || 'Rejected by admin',
+    });
 
     res.json({ message: "Course rejected successfully" });
   } catch (error: any) {
