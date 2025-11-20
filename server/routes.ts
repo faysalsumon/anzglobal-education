@@ -41,8 +41,9 @@ import {
   sessions,
   importBatches,
   insertImportBatchSchema,
+  activityLogs,
 } from "@shared/schema";
-import { eq, and, or, desc, not } from "drizzle-orm";
+import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
 import {
   generateUniversityDescription,
@@ -6949,6 +6950,152 @@ Sitemap: ${baseUrl}/sitemap.xml
   const scrapingRouter = await import('./scraping-routes');
   app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
   console.log('Scraping routes registered for AI-powered course extraction');
+
+  // ========== Activity Logs API ==========
+  
+  // Get all activity logs (admin only) with optional filtering
+  app.get("/api/admin/activity-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id || user.claims?.sub;
+      
+      // Check admin access
+      const adminAccess = await checkAdminAccess(userId);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      // Parse query parameters for filtering
+      const {
+        entityType,
+        action,
+        actorUserId,
+        limit = '50',
+        offset = '0',
+      } = req.query;
+      
+      // Build where conditions
+      const conditions: any[] = [];
+      
+      if (entityType) {
+        conditions.push(eq(activityLogs.entityType, entityType as string));
+      }
+      
+      if (action) {
+        conditions.push(eq(activityLogs.action, action as string));
+      }
+      
+      if (actorUserId) {
+        conditions.push(eq(activityLogs.userId, actorUserId as string));
+      }
+      
+      // Fetch activity logs with filters
+      const logs = await db.select()
+        .from(activityLogs)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(parseInt(offset as string));
+      
+      // Get total count for pagination
+      const countResult = await db.select({ count: dsql<number>`count(*)` })
+        .from(activityLogs)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+      
+      const totalCount = Number(countResult[0]?.count || 0);
+      
+      res.json({
+        logs,
+        pagination: {
+          total: totalCount,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string),
+          hasMore: parseInt(offset as string) + parseInt(limit as string) < totalCount,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+  
+  // Get activity logs for a specific entity
+  app.get("/api/admin/activity-logs/entity/:entityType/:entityId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id || user.claims?.sub;
+      
+      // Check admin access
+      const adminAccess = await checkAdminAccess(userId);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { entityType, entityId } = req.params;
+      const { limit = '50', offset = '0' } = req.query;
+      
+      // Fetch entity-specific activity logs
+      const logs = await db.select()
+        .from(activityLogs)
+        .where(and(
+          eq(activityLogs.entityType, entityType),
+          eq(activityLogs.entityId, entityId)
+        ))
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(parseInt(limit as string))
+        .offset(parseInt(offset as string));
+      
+      // Get total count
+      const countResult = await db.select({ count: dsql<number>`count(*)` })
+        .from(activityLogs)
+        .where(and(
+          eq(activityLogs.entityType, entityType),
+          eq(activityLogs.entityId, entityId)
+        ));
+      
+      const totalCount = Number(countResult[0]?.count || 0);
+      
+      res.json({
+        logs,
+        pagination: {
+          total: totalCount,
+          limit: parseInt(limit as string),
+          offset: parseInt(offset as string),
+          hasMore: parseInt(offset as string) + parseInt(limit as string) < totalCount,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching entity activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch entity activity logs" });
+    }
+  });
+  
+  // Get recent activity logs (authenticated users - see their own related activity)
+  app.get("/api/activity-logs/recent", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.id || user.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { limit = '20' } = req.query;
+      
+      // Fetch recent activity logs related to this user
+      // This includes actions they performed or actions on their entities
+      const logs = await db.select()
+        .from(activityLogs)
+        .where(eq(activityLogs.userId, userId))
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(parseInt(limit as string));
+      
+      res.json({ logs });
+    } catch (error: any) {
+      console.error("Error fetching recent activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity logs" });
+    }
+  });
 
   // Start scraping worker
   const { startScrapingWorker } = await import('./scraping-worker');

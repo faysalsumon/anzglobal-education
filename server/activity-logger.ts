@@ -1,5 +1,5 @@
-import { db } from "../db";
-import { activityLogs, type ActivityLog, type InsertActivityLog } from "../shared/schema";
+import { db } from "./db";
+import { activityLogs, type ActivityLog, type InsertActivityLog } from "@shared/schema";
 import type { Request } from "express";
 
 // Type for field-level change tracking
