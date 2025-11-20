@@ -927,14 +927,14 @@ export function AdminScrapingPanel() {
             <div className="space-y-2">
               <Label htmlFor="template">Scraping Template</Label>
               <Select
-                value={selectedTemplateId}
-                onValueChange={setSelectedTemplateId}
+                value={selectedTemplateId || "none"}
+                onValueChange={(value) => setSelectedTemplateId(value === "none" ? "" : value)}
               >
                 <SelectTrigger id="template" data-testid="select-template">
                   <SelectValue placeholder="Select a template (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Template (AI Only)</SelectItem>
+                  <SelectItem value="none">No Template (AI Only)</SelectItem>
                   {templatesData?.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name}
