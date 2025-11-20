@@ -14,6 +14,7 @@ import {
   decimal,
   date,
   pgEnum,
+  real,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -1728,6 +1729,22 @@ export const scrapingJobStatusEnum = pgEnum('scraping_job_status', [
   'cancelled',
 ]);
 
+// Scraping templates - pre-configured scraping strategies for common platforms
+export const scrapingTemplates = pgTable("scraping_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "WordPress University", "Custom CMS"
+  description: text("description"),
+  platformType: text("platform_type"), // e.g., "wordpress", "custom", "wix"
+  selectors: jsonb("selectors"), // JSON with CSS selectors for common elements
+  useBrowser: boolean("use_browser").default(false), // Whether to use Playwright
+  waitForSelector: text("wait_for_selector"), // Selector to wait for before scraping
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  platformTypeIdx: index("scraping_templates_platform_type_idx").on(table.platformType),
+}));
+
 // Scraping jobs table - tracks automated web scraping jobs
 export const scrapingJobs = pgTable("scraping_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1735,13 +1752,28 @@ export const scrapingJobs = pgTable("scraping_jobs", {
   institutionUrl: text("institution_url").notNull(),
   institutionName: text("institution_name"),
   status: scrapingJobStatusEnum("status").notNull().default("pending"),
+  
+  // Auto-discovery settings
+  useAutoDiscovery: boolean("use_auto_discovery").default(false), // Automatically find course listing page
+  discoveredCourseListingUrl: text("discovered_course_listing_url"), // Found course listing URL
+  discoveryMethod: text("discovery_method"), // "ai", "regex", or "manual"
+  discoveryConfidence: real("discovery_confidence"), // 0.0-1.0 confidence score
+  
+  // Template settings
+  templateId: varchar("template_id").references(() => scrapingTemplates.id),
+  
+  // Progress tracking
   progress: integer("progress").default(0), // Percentage 0-100
   totalPages: integer("total_pages").default(0),
   scrapedPages: integer("scraped_pages").default(0),
   coursesFound: integer("courses_found").default(0),
   coursesExtracted: integer("courses_extracted").default(0),
+  
+  // Error handling
   errorMessage: text("error_message"),
   errorDetails: jsonb("error_details"), // Detailed error information
+  
+  // Timestamps
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1750,6 +1782,7 @@ export const scrapingJobs = pgTable("scraping_jobs", {
   institutionIdIdx: index("scraping_jobs_institution_id_idx").on(table.institutionId),
   statusIdx: index("scraping_jobs_status_idx").on(table.status),
   createdAtIdx: index("scraping_jobs_created_at_idx").on(table.createdAt),
+  templateIdIdx: index("scraping_jobs_template_id_idx").on(table.templateId),
 }));
 
 // Scraped courses table - staging area for scraped course data before approval
@@ -1821,6 +1854,12 @@ export const scrapedCourses = pgTable("scraped_courses", {
   confidenceIdx: index("scraped_courses_confidence_idx").on(table.confidence),
 }));
 
+export const insertScrapingTemplateSchema = createInsertSchema(scrapingTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertScrapingJobSchema = createInsertSchema(scrapingJobs).omit({
   id: true,
   createdAt: true,
@@ -1831,6 +1870,8 @@ export const insertScrapedCourseSchema = createInsertSchema(scrapedCourses).omit
   createdAt: true,
 });
 
+export type ScrapingTemplate = typeof scrapingTemplates.$inferSelect;
+export type InsertScrapingTemplate = z.infer<typeof insertScrapingTemplateSchema>;
 export type ScrapingJob = typeof scrapingJobs.$inferSelect;
 export type InsertScrapingJob = z.infer<typeof insertScrapingJobSchema>;
 export type ScrapedCourse = typeof scrapedCourses.$inferSelect;

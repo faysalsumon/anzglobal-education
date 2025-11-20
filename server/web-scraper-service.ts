@@ -248,39 +248,112 @@ export async function batchScrape(
 }
 
 /**
- * Find course listing page from institution homepage
- * Uses AI to identify likely course pages
+ * Intelligent course page discovery result
  */
-export async function findCourseListingPage(institutionUrl: string): Promise<string | null> {
-  try {
-    const result = await scrapeWebsite({ url: institutionUrl });
-    const $ = cheerio.load(result.html);
+export interface CoursePageDiscoveryResult {
+  url: string;
+  confidence: number;
+  reason: string;
+  method: "ai" | "regex" | "manual";
+}
 
-    // Common patterns for course listing pages
+/**
+ * Find course listing page from institution homepage
+ * Uses hybrid approach: AI + regex patterns for better accuracy
+ */
+export async function findCourseListingPage(
+  institutionUrl: string,
+  useAI: boolean = true
+): Promise<CoursePageDiscoveryResult | null> {
+  try {
+    console.log(`🔍 Discovering course listing page for: ${institutionUrl}`);
+    const result = await scrapeWebsite({ url: institutionUrl });
+    
+    // Try AI-powered discovery first if enabled
+    if (useAI) {
+      try {
+        // Import AI function dynamically to avoid circular dependencies
+        const { findCourseListingPageCandidates } = await import("./ai-extractor-service");
+        const candidates = await findCourseListingPageCandidates(result.html, institutionUrl);
+        
+        if (candidates.length > 0) {
+          const best = candidates[0]; // Already sorted by score
+          console.log(`✓ AI found candidate: ${best.url} (score: ${best.score.toFixed(2)})`);
+          return {
+            url: best.url,
+            confidence: best.score,
+            reason: best.reason,
+            method: "ai",
+          };
+        }
+      } catch (aiError: any) {
+        console.warn("AI discovery failed, falling back to regex:", aiError.message);
+      }
+    }
+
+    // Fallback: Use regex patterns
+    const $ = cheerio.load(result.html);
     const coursePatterns = [
-      /courses?/i,
-      /programs?/i,
-      /degrees?/i,
-      /study/i,
-      /academics?/i,
-      /what-we-offer/i,
+      { pattern: /courses?/i, weight: 1.0 },
+      { pattern: /programs?/i, weight: 0.9 },
+      { pattern: /degrees?/i, weight: 0.9 },
+      { pattern: /study/i, weight: 0.7 },
+      { pattern: /academics?/i, weight: 0.6 },
+      { pattern: /what-we-offer/i, weight: 0.5 },
     ];
 
-    // Search for links matching course patterns
-    const links: string[] = [];
+    // Search for links matching course patterns with scoring
+    const links: Array<{ url: string; score: number; text: string }> = [];
     $("a").each((_, element) => {
       const href = $(element).attr("href");
       const text = $(element).text().trim();
 
-      if (href && coursePatterns.some((pattern) => pattern.test(text) || pattern.test(href))) {
-        // Convert relative URLs to absolute
-        const absoluteUrl = new URL(href, institutionUrl).toString();
-        links.push(absoluteUrl);
+      if (!href) return;
+
+      let score = 0;
+      let matchedPattern = "";
+      
+      for (const { pattern, weight } of coursePatterns) {
+        if (pattern.test(text)) {
+          score = Math.max(score, weight);
+          matchedPattern = text;
+        } else if (pattern.test(href)) {
+          score = Math.max(score, weight * 0.8); // Lower score for URL-only match
+          matchedPattern = href;
+        }
+      }
+
+      if (score > 0) {
+        try {
+          const absoluteUrl = new URL(href, institutionUrl).toString();
+          const urlObj = new URL(absoluteUrl);
+          const baseUrlObj = new URL(institutionUrl);
+          
+          // Only include same-domain URLs
+          if (urlObj.hostname === baseUrlObj.hostname) {
+            links.push({ url: absoluteUrl, score, text: matchedPattern });
+          }
+        } catch {
+          // Skip invalid URLs
+        }
       }
     });
 
-    // Return first matching link
-    return links[0] || null;
+    // Sort by score and return best match
+    if (links.length > 0) {
+      links.sort((a, b) => b.score - a.score);
+      const best = links[0];
+      console.log(`✓ Regex found candidate: ${best.url} (score: ${best.score.toFixed(2)})`);
+      return {
+        url: best.url,
+        confidence: best.score,
+        reason: `Matched pattern in: ${best.text}`,
+        method: "regex",
+      };
+    }
+
+    console.log("✗ No course listing page found");
+    return null;
   } catch (error: any) {
     console.error("Failed to find course listing page:", error);
     return null;

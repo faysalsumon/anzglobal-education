@@ -335,6 +335,111 @@ Return the extracted institution data as JSON.`;
  * Extract multiple courses from an institution's course listing page
  * Identifies individual course links for further crawling
  */
+/**
+ * Find course listing page candidates using AI
+ * Returns scored candidates for further evaluation
+ */
+export async function findCourseListingPageCandidates(
+  htmlContent: string,
+  baseUrl: string
+): Promise<Array<{ url: string; score: number; reason: string }>> {
+  const systemPrompt = `You are an expert at analyzing university websites to find course listing pages.
+
+TASK: Identify links that likely lead to course/program listing pages.
+
+GOOD INDICATORS:
+- Links with text like "Courses", "Programs", "Degrees", "Study Options"
+- Links in main navigation or header
+- URLs containing: /courses, /programs, /degrees, /study, /academics
+- Pages that list multiple educational offerings
+
+BAD INDICATORS:
+- Footer links, social media, contact pages
+- Individual course detail pages (we want the LISTING page)
+- About us, news, events, admissions pages
+- External links to other domains
+
+OUTPUT: Return candidates with confidence scores (0-1) and reasoning.`;
+
+  const userPrompt = `Analyze this homepage and identify course listing page candidates:
+
+Base URL: ${baseUrl}
+
+HTML Content (truncated):
+${htmlContent.substring(0, 15000)}
+
+Return up to 5 candidates ranked by confidence.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "course_page_candidates",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              candidates: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    url: { type: "string", description: "Absolute URL to candidate page" },
+                    score: { type: "number", description: "Confidence score 0-1" },
+                    reason: { type: "string", description: "Why this is a good candidate" },
+                  },
+                  required: ["url", "score", "reason"],
+                  additionalProperties: false,
+                },
+                description: "Ranked candidate course listing pages",
+              },
+            },
+            required: ["candidates"],
+            additionalProperties: false,
+          },
+        },
+      },
+      temperature: 0.2,
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || "{}");
+    const candidates = result.candidates || [];
+    
+    // Normalize and validate URLs
+    const baseUrlObj = new URL(baseUrl);
+    return candidates
+      .map((candidate: any) => {
+        try {
+          // Convert to absolute URL
+          const url = new URL(candidate.url, baseUrl).toString();
+          const urlObj = new URL(url);
+          
+          // Only return same-domain URLs
+          if (urlObj.hostname === baseUrlObj.hostname) {
+            return {
+              url,
+              score: candidate.score,
+              reason: candidate.reason,
+            };
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      })
+      .filter((c: any) => c !== null);
+  } catch (error: any) {
+    console.error("Course page candidate extraction error:", error);
+    return [];
+  }
+}
+
 export async function extractCourseLinks(
   htmlContent: string,
   baseUrl: string

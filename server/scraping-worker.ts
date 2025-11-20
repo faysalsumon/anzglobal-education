@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { db } from "./db";
-import { scrapingJobs, scrapedCourses, courses } from "../shared/schema";
+import { scrapingJobs, scrapedCourses, courses, scrapingTemplates } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import {
   scrapeWebsite,
@@ -36,7 +36,7 @@ connection.on("error", (err: any) => {
  * Process a single scraping job
  */
 async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
-  const { jobId, institutionId, institutionUrl, institutionName, useBrowser } = job.data;
+  const { jobId, institutionId, institutionUrl, institutionName, templateId } = job.data;
 
   console.log(`Processing scraping job ${jobId} for ${institutionName || institutionUrl}`);
 
@@ -50,20 +50,70 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
       })
       .where(eq(scrapingJobs.id, jobId));
 
-    // Step 1: Find course listing page
-    await job.updateProgress({
-      progress: 10,
-      status: "Finding course listing page...",
-    } as ScrapingJobProgress);
-
-    let courseListingUrl = institutionUrl;
-    const foundListingPage = await findCourseListingPage(institutionUrl);
-    if (foundListingPage) {
-      courseListingUrl = foundListingPage;
-      console.log(`Found course listing page: ${courseListingUrl}`);
+    // Fetch template settings if templateId is provided (template drives browser settings)
+    let useBrowser = false; // Default to static scraping
+    let waitForSelector: string | undefined = undefined;
+    
+    if (templateId) {
+      const templates = await db
+        .select()
+        .from(scrapingTemplates)
+        .where(eq(scrapingTemplates.id, templateId))
+        .limit(1);
+      
+      if (templates.length > 0) {
+        const template = templates[0];
+        useBrowser = template.useBrowser || false;
+        waitForSelector = template.waitForSelector || undefined;
+        console.log(`✓ Loaded template: ${template.name} (useBrowser: ${useBrowser}, waitForSelector: ${waitForSelector})`);
+      } else {
+        console.warn(`⚠ Template ${templateId} not found, using default settings`);
+      }
     }
 
-    // Step 2: Scrape course listing page
+    // Step 1: Check if auto-discovery is enabled for this job
+    const jobDetails = await db
+      .select()
+      .from(scrapingJobs)
+      .where(eq(scrapingJobs.id, jobId))
+      .limit(1);
+    
+    const useAutoDiscovery = jobDetails[0]?.useAutoDiscovery || false;
+    
+    let courseListingUrl = institutionUrl;
+    let discoveryMethod = "manual" as string;
+    let discoveryConfidence = null as number | null;
+
+    // Step 2: Find course listing page if auto-discovery is enabled
+    if (useAutoDiscovery) {
+      await job.updateProgress({
+        progress: 10,
+        status: "Auto-discovering course listing page...",
+      } as ScrapingJobProgress);
+
+      const discoveryResult = await findCourseListingPage(institutionUrl, true); // Use AI
+      if (discoveryResult) {
+        courseListingUrl = discoveryResult.url;
+        discoveryMethod = discoveryResult.method;
+        discoveryConfidence = discoveryResult.confidence;
+        
+        // Store discovered URL in database
+        await db
+          .update(scrapingJobs)
+          .set({
+            discoveredCourseListingUrl: courseListingUrl,
+            discoveryMethod: discoveryMethod,
+            discoveryConfidence: discoveryConfidence, // Real column stores number directly
+          })
+          .where(eq(scrapingJobs.id, jobId));
+
+        console.log(`✓ Auto-discovered course listing page: ${courseListingUrl} (method: ${discoveryMethod}, confidence: ${discoveryConfidence.toFixed(2)})`);
+      } else {
+        console.log(`⚠ Auto-discovery failed, using homepage URL: ${institutionUrl}`);
+      }
+    }
+
+    // Step 3: Scrape course listing page
     await job.updateProgress({
       progress: 20,
       status: "Scraping course listing...",
@@ -71,10 +121,11 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
 
     const listingPage = await scrapeWebsite({
       url: courseListingUrl,
-      useBrowser: useBrowser || false,
+      useBrowser,
+      waitForSelector,
     });
 
-    // Step 3: Extract course page URLs using AI
+    // Step 4: Extract course page URLs using AI
     await job.updateProgress({
       progress: 30,
       status: "Extracting course links...",
@@ -95,7 +146,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
       })
       .where(eq(scrapingJobs.id, jobId));
 
-    // Step 4: Scrape and extract each course
+    // Step 5: Scrape and extract each course
     let scrapedCount = 0;
     let extractedCount = 0;
 
@@ -117,7 +168,8 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
         // Scrape course page
         const coursePage = await scrapeWebsite({
           url: courseUrl,
-          useBrowser: useBrowser || false,
+          useBrowser,
+          waitForSelector,
           timeout: 20000,
         });
         scrapedCount++;

@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -59,6 +60,20 @@ interface ScrapingJob {
   createdAt: string;
   completedAt?: string;
   createdBy: string;
+  useAutoDiscovery?: boolean;
+  discoveredCourseListingUrl?: string;
+  discoveryMethod?: string;
+  discoveryConfidence?: number;
+  templateId?: string;
+}
+
+interface ScrapingTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  platformType?: string;
+  useBrowser?: boolean;
+  isActive: boolean;
 }
 
 interface ScrapedCourse {
@@ -104,11 +119,17 @@ export function AdminScrapingPanel() {
   // Form state for triggering scrape
   const [institutionUrl, setInstitutionUrl] = useState("");
   const [institutionName, setInstitutionName] = useState("");
-  const [useBrowser, setUseBrowser] = useState(false);
+  const [useAutoDiscovery, setUseAutoDiscovery] = useState(true); // Default to enabled
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   // Fetch scraping jobs
   const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: ScrapingJob[] }>({
     queryKey: ["/api/admin/scraping/jobs"],
+  });
+
+  // Fetch scraping templates
+  const { data: templatesData } = useQuery<ScrapingTemplate[]>({
+    queryKey: ["/api/admin/scraping/templates"],
   });
 
   // Fetch scraped courses
@@ -118,7 +139,12 @@ export function AdminScrapingPanel() {
 
   // Trigger scraping job mutation
   const triggerScrapeMutation = useMutation({
-    mutationFn: async (data: { institutionUrl: string; institutionName?: string; useBrowser?: boolean }) => {
+    mutationFn: async (data: { 
+      institutionUrl: string; 
+      institutionName?: string; 
+      useAutoDiscovery?: boolean;
+      templateId?: string;
+    }) => {
       return await apiRequest("POST", "/api/admin/scraping/trigger", data);
     },
     onSuccess: () => {
@@ -130,7 +156,8 @@ export function AdminScrapingPanel() {
       setTriggerDialogOpen(false);
       setInstitutionUrl("");
       setInstitutionName("");
-      setUseBrowser(false);
+      setUseAutoDiscovery(true); // Reset to default
+      setSelectedTemplateId(""); // Reset template selection
     },
     onError: (error: any) => {
       toast({
@@ -277,7 +304,8 @@ export function AdminScrapingPanel() {
     triggerScrapeMutation.mutate({
       institutionUrl: institutionUrl.trim(),
       institutionName: institutionName.trim() || undefined,
-      useBrowser,
+      useAutoDiscovery,
+      templateId: selectedTemplateId || undefined,
     });
   };
 
@@ -898,11 +926,54 @@ export function AdminScrapingPanel() {
                 data-testid="input-institution-name"
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="template">Scraping Template</Label>
+              <Select
+                value={selectedTemplateId}
+                onValueChange={setSelectedTemplateId}
+              >
+                <SelectTrigger id="template" data-testid="select-template">
+                  <SelectValue placeholder="Select a template (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Template (AI Only)</SelectItem>
+                  {templatesData?.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                      {template.platformType && ` (${template.platformType})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Optional: Select a pre-configured template for common platforms
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="autoDiscovery"
+                checked={useAutoDiscovery}
+                onChange={(e) => setUseAutoDiscovery(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="checkbox-auto-discovery"
+              />
+              <Label htmlFor="autoDiscovery" className="text-sm font-normal cursor-pointer">
+                Auto-discover course listing page using AI
+              </Label>
+            </div>
+
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                The AI will automatically discover course pages, extract course data, and save them for your review.
-                This process may take several minutes depending on the website size.
+                {useAutoDiscovery ? (
+                  "AI will automatically find the course listing page from the homepage, extract course data, and save for your review."
+                ) : (
+                  "The provided URL will be treated as the course listing page directly."
+                )}
+                This process may take several minutes.
               </AlertDescription>
             </Alert>
           </div>

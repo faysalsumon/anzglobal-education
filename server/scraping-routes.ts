@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db } from "./db";
-import { scrapingJobs, scrapedCourses, courses, universities, type User, insertCourseSchema } from "../shared/schema";
+import { scrapingJobs, scrapedCourses, courses, universities, scrapingTemplates, type User, insertCourseSchema } from "../shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs } from "./scraping-queue";
-import { insertScrapingJobSchema, insertScrapedCourseSchema } from "../shared/schema";
+import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTemplateSchema } from "../shared/schema";
 import { logApprove, logReject } from "./activity-logger";
 
 const router = Router();
@@ -47,14 +47,15 @@ router.post("/trigger", async (req, res) => {
       institutionName: req.body.institutionName,
       createdBy: userId,
       status: "pending",
+      useAutoDiscovery: req.body.useAutoDiscovery,
+      templateId: req.body.templateId,
     });
 
     if (!validation.success) {
       return res.status(400).json({ error: "Invalid request data", details: validation.error.errors });
     }
 
-    const { institutionId, institutionUrl, institutionName } = validation.data;
-    const { useBrowser } = req.body;
+    const { institutionId, institutionUrl, institutionName, useAutoDiscovery, templateId } = validation.data;
 
     // Create database job record
     const [job] = await db
@@ -65,6 +66,8 @@ router.post("/trigger", async (req, res) => {
         institutionName: institutionName || null,
         status: "pending",
         createdBy: userId,
+        useAutoDiscovery: useAutoDiscovery !== undefined ? useAutoDiscovery : false, // Use validated value or default to false
+        templateId: templateId || null,
       })
       .returning();
 
@@ -75,7 +78,7 @@ router.post("/trigger", async (req, res) => {
         institutionId: institutionId || undefined,
         institutionUrl,
         institutionName: institutionName || undefined,
-        useBrowser: useBrowser || false,
+        templateId: templateId || undefined,
       });
       console.log(`Scraping job ${job.id} queued successfully`);
     } catch (queueError: any) {
@@ -848,6 +851,157 @@ router.get("/queue-status", async (req, res) => {
   } catch (error: any) {
     console.error("Error fetching queue status:", error);
     res.status(500).json({ error: "Failed to fetch queue status" });
+  }
+});
+
+// ==================== SCRAPING TEMPLATES ====================
+
+/**
+ * Get all scraping templates
+ * GET /api/admin/scraping/templates
+ */
+router.get("/templates", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const templates = await db
+      .select()
+      .from(scrapingTemplates)
+      .where(eq(scrapingTemplates.isActive, true))
+      .orderBy(scrapingTemplates.name);
+
+    res.json(templates);
+  } catch (error: any) {
+    console.error("Error fetching templates:", error);
+    res.status(500).json({ error: "Failed to fetch templates" });
+  }
+});
+
+/**
+ * Create new scraping template
+ * POST /api/admin/scraping/templates
+ */
+router.post("/templates", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const validation = insertScrapingTemplateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: "Invalid template data", details: validation.error.errors });
+    }
+
+    const [template] = await db
+      .insert(scrapingTemplates)
+      .values(validation.data)
+      .returning();
+
+    res.json(template);
+  } catch (error: any) {
+    console.error("Error creating template:", error);
+    res.status(500).json({ error: "Failed to create template" });
+  }
+});
+
+/**
+ * Update scraping template
+ * PUT /api/admin/scraping/templates/:id
+ */
+router.put("/templates/:id", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { id } = req.params;
+    const validation = insertScrapingTemplateSchema.partial().safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({ error: "Invalid template data", details: validation.error.errors });
+    }
+
+    const [updated] = await db
+      .update(scrapingTemplates)
+      .set({ ...validation.data, updatedAt: new Date() })
+      .where(eq(scrapingTemplates.id, id))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error("Error updating template:", error);
+    res.status(500).json({ error: "Failed to update template" });
+  }
+});
+
+/**
+ * Delete scraping template (soft delete)
+ * DELETE /api/admin/scraping/templates/:id
+ */
+router.delete("/templates/:id", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { id } = req.params;
+    
+    const [deleted] = await db
+      .update(scrapingTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(scrapingTemplates.id, id))
+      .returning();
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.json({ message: "Template deleted successfully" });
+  } catch (error: any) {
+    console.error("Error deleting template:", error);
+    res.status(500).json({ error: "Failed to delete template" });
   }
 });
 

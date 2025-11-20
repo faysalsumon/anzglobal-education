@@ -30,7 +30,7 @@ export interface ScrapingJobData {
   institutionId?: string; // Institution ID (if exists)
   institutionUrl: string;
   institutionName?: string;
-  useBrowser?: boolean; // Use Playwright vs static scraping
+  templateId?: string; // Scraping template ID (drives browser settings)
 }
 
 /**

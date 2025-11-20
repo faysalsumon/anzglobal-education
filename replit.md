@@ -8,7 +8,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### 2025-11-20: Web Scraping System Enhancements
+### 2025-11-20: Web Scraping System Enhancements (Part 1)
 - **Auto-Approval System**: Courses with ≥85% confidence, no warnings, complete required fields, and valid institution ID are automatically approved and merged into `courses` table during scraping worker processing
   - Uses database transactions to ensure atomicity (both `courses` and `scrapedCourses` tables updated together)
   - Falls back to pending review if auto-approval transaction fails
@@ -28,6 +28,24 @@ Preferred communication style: Simple, everyday language.
   - Confidence filter dropdown: All/High (≥85%)/Medium (70-85%)/Low (<70%)
   - Real-time course counts per filter category
 - **Status**: ✅ Fully implemented and tested
+
+### 2025-11-20: Web Scraping System Enhancements (Part 2)
+- **Intelligent Course Page Discovery**: AI-powered automatic discovery of course listing pages from institution homepages
+  - Hybrid approach: AI + regex patterns for maximum accuracy
+  - `findCourseListingPageCandidates` AI function analyzes homepage and ranks candidates by confidence (0-1 score)
+  - Fallback to regex patterns if AI unavailable, with weighted scoring for different patterns
+  - Returns CoursePageDiscoveryResult with URL, confidence, reason, and method (ai/regex/manual)
+  - Scraping worker checks `useAutoDiscovery` flag and stores discovered URL, method, and confidence in job record
+- **Scraping Templates**: Pre-configured templates for common university website platforms
+  - Database table `scrapingTemplates` with platform-specific selectors, browser settings
+  - Seeded default templates: WordPress, JavaScript SPAs, Custom CMS, Wix, Squarespace, Drupal, No Template (AI Only)
+  - CRUD API endpoints: GET/POST/PUT/DELETE `/api/admin/scraping/templates`
+  - Template selection stored in scraping jobs for reference
+- **Enhanced Admin UI**: Auto-discovery toggle and template selector in scraping trigger dialog
+  - Template dropdown shows all active templates with platform type
+  - Auto-discovery checkbox (enabled by default) with dynamic help text
+  - Job details display discovered URL and discovery metadata when auto-discovery used
+- **Status**: ✅ Fully implemented
 
 ### 2025-11-20: CRM-Style Activity Logging System
 - **Implemented comprehensive activity logging** similar to Zoho/Salesforce/Facebook for tracking all admin actions
