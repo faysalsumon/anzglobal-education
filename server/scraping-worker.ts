@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { db } from "./db";
-import { scrapingJobs, scrapedCourses } from "../shared/schema";
+import { scrapingJobs, scrapedCourses, courses } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import {
   scrapeWebsite,
@@ -129,20 +129,116 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
           institutionName
         );
 
-        // Save to scraped courses table
-        await db.insert(scrapedCourses).values({
-          jobId,
-          institutionId: institutionId || null,
-          sourceUrl: courseUrl,
-          extractedAt: new Date(extraction.extractedAt),
-          confidence: extraction.confidence.toString(),
-          warnings: extraction.warnings,
-          ...extraction.data,
-          reviewStatus: "pending",
-        });
-
-        extractedCount++;
-        console.log(`Extracted course: ${extraction.data.title || "Unknown"}`);
+        // Determine review status based on confidence threshold
+        const AUTO_APPROVAL_THRESHOLD = 0.85;
+        const shouldAutoApprove = extraction.confidence >= AUTO_APPROVAL_THRESHOLD && 
+                                  extraction.warnings.length === 0 &&
+                                  extraction.data.title &&
+                                  extraction.data.subject &&
+                                  institutionId; // Must have institution ID to create course
+        
+        if (shouldAutoApprove) {
+          // Auto-approval: Create course in main courses table AND update scraped_courses atomically
+          try {
+            await db.transaction(async (tx) => {
+              // Create course in main courses table
+              const courseData = extraction.data;
+              const [newCourse] = await tx.insert(courses).values({
+                universityId: institutionId!,
+                title: courseData.title!,
+                description: courseData.description,
+                subject: courseData.subject!,
+                discipline: courseData.discipline as any,
+                level: courseData.level as any,
+                duration: courseData.duration,
+                durationMonths: courseData.durationMonths,
+                durationWeeks: courseData.durationWeeks,
+                fees: courseData.fees,
+                currency: courseData.currency,
+                location: courseData.location,
+                country: courseData.country,
+                startDate: courseData.startDate,
+                applicationDeadline: courseData.applicationDeadline,
+                prerequisites: courseData.prerequisites,
+                thumbnailUrl: courseData.thumbnailUrl,
+                courseCode: courseData.courseCode,
+                prPathway: courseData.prPathway,
+                scholarshipPercentageMin: courseData.scholarshipPercentageMin,
+                scholarshipPercentageMax: courseData.scholarshipPercentageMax,
+                eligibilityRequirements: courseData.eligibilityRequirements,
+                englishRequirements: courseData.englishRequirements,
+                curriculumUrl: courseData.curriculumUrl,
+                costOfLiving: courseData.costOfLiving,
+                applicationFees: courseData.applicationFees,
+                images: courseData.images,
+                intakes: courseData.intakes,
+                studyAreas: courseData.studyAreas,
+                careerOutcomes: courseData.careerOutcomes,
+                careerPath: courseData.careerPath,
+                pathways: courseData.pathways,
+                minimumAge: courseData.minimumAge,
+                academicRequirements: courseData.academicRequirements,
+                englishRequirementsStructured: courseData.englishRequirementsStructured as any,
+                deliveryMode: courseData.deliveryMode,
+                campusLocations: courseData.campusLocations,
+                workRights: courseData.workRights,
+                internshipAvailable: courseData.internshipAvailable,
+                internshipDetails: courseData.internshipDetails,
+                approvalStatus: "approved", // Auto-approved, no manual review needed
+              }).returning();
+              
+              // Save to scraped courses table with reference to created course
+              await tx.insert(scrapedCourses).values({
+                jobId,
+                institutionId: institutionId || null,
+                sourceUrl: courseUrl,
+                extractedAt: new Date(extraction.extractedAt),
+                confidence: extraction.confidence.toString(),
+                warnings: extraction.warnings,
+                ...extraction.data,
+                reviewStatus: "approved",
+                reviewedAt: new Date(),
+                reviewedBy: "auto-approval-system",
+                reviewNotes: `Auto-approved: High confidence (${extraction.confidence.toFixed(2)})`,
+                approvedCourseId: newCourse.id,
+              });
+              
+              console.log(`✓ Auto-approved and created course: ${extraction.data.title || "Unknown"} (confidence: ${extraction.confidence.toFixed(2)}, course ID: ${newCourse.id})`);
+            });
+            
+            extractedCount++;
+          } catch (error: any) {
+            console.error(`Failed to auto-approve course ${extraction.data.title}:`, error.message);
+            // Fall back to pending review if auto-approval fails
+            await db.insert(scrapedCourses).values({
+              jobId,
+              institutionId: institutionId || null,
+              sourceUrl: courseUrl,
+              extractedAt: new Date(extraction.extractedAt),
+              confidence: extraction.confidence.toString(),
+              warnings: [...extraction.warnings, `Auto-approval failed: ${error.message}`],
+              ...extraction.data,
+              reviewStatus: "pending",
+            });
+            extractedCount++;
+            console.log(`Fell back to pending review for: ${extraction.data.title || "Unknown"}`);
+          }
+        } else {
+          // Manual review required: Save to scraped courses table only
+          await db.insert(scrapedCourses).values({
+            jobId,
+            institutionId: institutionId || null,
+            sourceUrl: courseUrl,
+            extractedAt: new Date(extraction.extractedAt),
+            confidence: extraction.confidence.toString(),
+            warnings: extraction.warnings,
+            ...extraction.data,
+            reviewStatus: "pending",
+          });
+          
+          extractedCount++;
+          console.log(`Extracted course for review: ${extraction.data.title || "Unknown"} (confidence: ${extraction.confidence.toFixed(2)})`);
+        }
       } catch (error: any) {
         console.error(`Failed to extract course from ${courseUrl}:`, error.message);
         // Continue with next course even if one fails

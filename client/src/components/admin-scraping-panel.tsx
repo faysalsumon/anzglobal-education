@@ -92,6 +92,15 @@ export function AdminScrapingPanel() {
   const [selectedCourse, setSelectedCourse] = useState<ScrapedCourse | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   
+  // Batch operations state
+  const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
+  const [batchActionDialogOpen, setBatchActionDialogOpen] = useState(false);
+  const [batchAction, setBatchAction] = useState<"approve" | "reject" | null>(null);
+  const [batchReviewNotes, setBatchReviewNotes] = useState("");
+  
+  // Filter state
+  const [confidenceFilter, setConfidenceFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  
   // Form state for triggering scrape
   const [institutionUrl, setInstitutionUrl] = useState("");
   const [institutionName, setInstitutionName] = useState("");
@@ -175,6 +184,54 @@ export function AdminScrapingPanel() {
       toast({
         title: "Error",
         description: error.message || "Failed to reject course",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Batch approve mutation
+  const batchApproveMutation = useMutation({
+    mutationFn: async ({ ids, reviewNotes }: { ids: string[]; reviewNotes?: string }) => {
+      return await apiRequest("POST", "/api/admin/scraping/scraped-courses/batch-approve", { courseIds: ids, reviewNotes });
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Courses approved",
+        description: `Successfully approved ${variables.ids.length} course(s).`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
+      setSelectedCourseIds(new Set());
+      setBatchActionDialogOpen(false);
+      setBatchReviewNotes("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve courses",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Batch reject mutation
+  const batchRejectMutation = useMutation({
+    mutationFn: async ({ ids, reviewNotes }: { ids: string[]; reviewNotes: string }) => {
+      return await apiRequest("POST", "/api/admin/scraping/scraped-courses/batch-reject", { courseIds: ids, reviewNotes });
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Courses rejected",
+        description: `Successfully rejected ${variables.ids.length} course(s).`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
+      setSelectedCourseIds(new Set());
+      setBatchActionDialogOpen(false);
+      setBatchReviewNotes("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reject courses",
         variant: "destructive",
       });
     },
@@ -271,6 +328,66 @@ export function AdminScrapingPanel() {
     });
   };
 
+  // Batch operation handlers
+  const handleToggleCourseSelection = (courseId: string) => {
+    setSelectedCourseIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(courseId)) {
+        newSet.delete(courseId);
+      } else {
+        newSet.add(courseId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (courses: ScrapedCourse[]) => {
+    const pendingCourses = courses.filter(c => c.reviewStatus === "pending");
+    setSelectedCourseIds(new Set(pendingCourses.map(c => c.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedCourseIds(new Set());
+  };
+
+  const handleBatchAction = (action: "approve" | "reject") => {
+    if (selectedCourseIds.size === 0) {
+      toast({
+        title: "No courses selected",
+        description: "Please select at least one course to perform batch operations",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBatchAction(action);
+    setBatchReviewNotes("");
+    setBatchActionDialogOpen(true);
+  };
+
+  const handleConfirmBatchAction = () => {
+    const ids = Array.from(selectedCourseIds);
+    
+    if (batchAction === "approve") {
+      batchApproveMutation.mutate({
+        ids,
+        reviewNotes: batchReviewNotes.trim() || undefined,
+      });
+    } else if (batchAction === "reject") {
+      if (!batchReviewNotes.trim()) {
+        toast({
+          title: "Error",
+          description: "Please provide a reason for rejection",
+          variant: "destructive",
+        });
+        return;
+      }
+      batchRejectMutation.mutate({
+        ids,
+        reviewNotes: batchReviewNotes.trim(),
+      });
+    }
+  };
+
   const getStatusBadge = (status: ScrapingJob["status"]) => {
     const variants: Record<ScrapingJob["status"], { variant: "default" | "secondary" | "destructive"; icon: any }> = {
       pending: { variant: "secondary", icon: Clock },
@@ -305,8 +422,30 @@ export function AdminScrapingPanel() {
     );
   };
 
-  const pendingCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "pending") ?? [];
+  const allPendingCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "pending") ?? [];
   const reviewedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus !== "pending") ?? [];
+  
+  // Apply confidence filter
+  const pendingCourses = allPendingCourses.filter(course => {
+    if (confidenceFilter === "all") return true;
+    if (confidenceFilter === "high") return course.confidence >= 0.85;
+    if (confidenceFilter === "medium") return course.confidence >= 0.70 && course.confidence < 0.85;
+    if (confidenceFilter === "low") return course.confidence < 0.70;
+    return true;
+  });
+  const approvedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "approved") ?? [];
+  const rejectedCourses = coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "rejected") ?? [];
+  
+  // Calculate enhanced statistics
+  const totalCourses = coursesData?.scrapedCourses?.length ?? 0;
+  const avgConfidence = totalCourses > 0 
+    ? (coursesData?.scrapedCourses?.reduce((sum, c) => sum + c.confidence, 0) ?? 0) / totalCourses
+    : 0;
+  const highConfidenceCourses = coursesData?.scrapedCourses?.filter(c => c.confidence >= 0.85)?.length ?? 0;
+  const autoApprovalRate = totalCourses > 0 ? (highConfidenceCourses / totalCourses) * 100 : 0;
+  const approvalRate = reviewedCourses.length > 0 ? (approvedCourses.length / reviewedCourses.length) * 100 : 0;
+  const runningJobs = jobsData?.jobs?.filter(j => j.status === "running") ?? [];
+  const completedJobs = jobsData?.jobs?.filter(j => j.status === "completed") ?? [];
 
   return (
     <div className="space-y-6">
@@ -342,6 +481,17 @@ export function AdminScrapingPanel() {
               {jobsData?.jobs?.length ?? 0}
             </CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground">
+              {runningJobs.length > 0 && (
+                <span className="text-blue-600 dark:text-blue-400">{runningJobs.length} running</span>
+              )}
+              {runningJobs.length > 0 && completedJobs.length > 0 && " • "}
+              {completedJobs.length > 0 && (
+                <span>{completedJobs.length} completed</span>
+              )}
+            </div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -350,22 +500,43 @@ export function AdminScrapingPanel() {
               {pendingCourses?.length ?? 0}
             </CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground">
+              {highConfidenceCourses > 0 && (
+                <span className="text-green-600 dark:text-green-400">
+                  {highConfidenceCourses} high confidence (&gt;85%)
+                </span>
+              )}
+            </div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Approved</CardDescription>
             <CardTitle className="text-3xl text-green-600 dark:text-green-400" data-testid="stat-approved">
-              {coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "approved")?.length ?? 0}
+              {approvedCourses?.length ?? 0}
             </CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground">
+              {reviewedCourses.length > 0 && (
+                <span>Approval rate: {approvalRate.toFixed(0)}%</span>
+              )}
+            </div>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Rejected</CardDescription>
-            <CardTitle className="text-3xl text-red-600 dark:text-red-400" data-testid="stat-rejected">
-              {coursesData?.scrapedCourses?.filter(c => c.reviewStatus === "rejected")?.length ?? 0}
+            <CardDescription>Avg Confidence</CardDescription>
+            <CardTitle className="text-3xl" data-testid="stat-avg-confidence">
+              {totalCourses > 0 ? (avgConfidence * 100).toFixed(0) : 0}%
             </CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground">
+              {totalCourses} total courses extracted
+            </div>
+          </CardContent>
         </Card>
       </div>
 
@@ -459,9 +630,88 @@ export function AdminScrapingPanel() {
         {/* Pending Review Tab */}
         <TabsContent value="review" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Pending Review</CardTitle>
-              <CardDescription>Review and approve scraped courses before publishing</CardDescription>
+            <CardHeader className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <CardTitle>Pending Review</CardTitle>
+                  <CardDescription>Review and approve scraped courses before publishing</CardDescription>
+                </div>
+                
+                {/* Confidence filter */}
+                {allPendingCourses.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="confidence-filter" className="text-sm whitespace-nowrap">
+                      Filter by confidence:
+                    </Label>
+                    <Select 
+                      value={confidenceFilter} 
+                      onValueChange={(value: any) => {
+                        setConfidenceFilter(value);
+                        setSelectedCourseIds(new Set()); // Clear selection when filter changes
+                      }}
+                    >
+                      <SelectTrigger className="w-[160px]" id="confidence-filter" data-testid="select-confidence-filter">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All ({allPendingCourses.length})</SelectItem>
+                        <SelectItem value="high">
+                          High ≥85% ({allPendingCourses.filter(c => c.confidence >= 0.85).length})
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          Medium 70-85% ({allPendingCourses.filter(c => c.confidence >= 0.70 && c.confidence < 0.85).length})
+                        </SelectItem>
+                        <SelectItem value="low">
+                          Low &lt;70% ({allPendingCourses.filter(c => c.confidence < 0.70).length})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              
+              {/* Batch action buttons */}
+              {(pendingCourses?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectAll(pendingCourses)}
+                    data-testid="button-select-all"
+                  >
+                    Select All ({pendingCourses.length})
+                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeselectAll}
+                      data-testid="button-deselect-all"
+                      disabled={selectedCourseIds.size === 0}
+                    >
+                      Deselect All
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleBatchAction("approve")}
+                      data-testid="button-batch-approve"
+                      disabled={selectedCourseIds.size === 0}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Approve Selected ({selectedCourseIds.size})
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleBatchAction("reject")}
+                      data-testid="button-batch-reject"
+                      disabled={selectedCourseIds.size === 0}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject Selected ({selectedCourseIds.size})
+                    </Button>
+                  </div>
+                )}
             </CardHeader>
             <CardContent>
               {coursesLoading ? (
@@ -477,6 +727,21 @@ export function AdminScrapingPanel() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedCourseIds.size > 0 && selectedCourseIds.size === pendingCourses.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleSelectAll(pendingCourses);
+                              } else {
+                                handleDeselectAll();
+                              }
+                            }}
+                            data-testid="checkbox-select-all"
+                            className="h-4 w-4"
+                          />
+                        </TableHead>
                         <TableHead>Course Title</TableHead>
                         <TableHead>Subject</TableHead>
                         <TableHead>Level</TableHead>
@@ -488,6 +753,15 @@ export function AdminScrapingPanel() {
                     <TableBody>
                       {pendingCourses.map((course) => (
                         <TableRow key={course.id} data-testid={`course-row-${course.id}`}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedCourseIds.has(course.id)}
+                              onChange={() => handleToggleCourseSelection(course.id)}
+                              data-testid={`checkbox-${course.id}`}
+                              className="h-4 w-4"
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <span className="font-medium">{course.title || "Untitled Course"}</span>
@@ -791,6 +1065,65 @@ export function AdminScrapingPanel() {
               {approveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Action Dialog */}
+      <Dialog open={batchActionDialogOpen} onOpenChange={setBatchActionDialogOpen}>
+        <DialogContent data-testid="dialog-batch-action">
+          <DialogHeader>
+            <DialogTitle>
+              {batchAction === "approve" ? "Batch Approve Courses" : "Batch Reject Courses"}
+            </DialogTitle>
+            <DialogDescription>
+              {batchAction === "approve" 
+                ? `You are about to approve ${selectedCourseIds.size} course(s). They will be added to the courses database.`
+                : `You are about to reject ${selectedCourseIds.size} course(s). Please provide a reason for rejection.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="batchReviewNotes">
+                Review Notes {batchAction === "reject" && "*"}
+              </Label>
+              <Textarea
+                id="batchReviewNotes"
+                placeholder={
+                  batchAction === "approve"
+                    ? "Optional notes about this approval..."
+                    : "Please explain why these courses are being rejected..."
+                }
+                value={batchReviewNotes}
+                onChange={(e) => setBatchReviewNotes(e.target.value)}
+                rows={4}
+                data-testid="textarea-batch-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setBatchActionDialogOpen(false)}
+              data-testid="button-cancel-batch"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant={batchAction === "approve" ? "default" : "destructive"}
+              onClick={handleConfirmBatchAction}
+              disabled={
+                (batchAction === "approve" && batchApproveMutation.isPending) ||
+                (batchAction === "reject" && batchRejectMutation.isPending)
+              }
+              data-testid="button-confirm-batch"
+            >
+              {(batchApproveMutation.isPending || batchRejectMutation.isPending) && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {batchAction === "approve" ? "Approve Selected" : "Reject Selected"}
             </Button>
           </DialogFooter>
         </DialogContent>

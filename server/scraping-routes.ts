@@ -595,6 +595,231 @@ router.put("/scraped-courses/:id/reject", async (req, res) => {
 });
 
 /**
+ * Batch approve scraped courses
+ * POST /api/admin/scraping/scraped-courses/batch-approve
+ */
+router.post("/scraped-courses/batch-approve", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { courseIds, reviewNotes } = req.body;
+
+    if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
+      return res.status(400).json({ error: "Course IDs array is required" });
+    }
+
+    const approvedCourses = [];
+    const errors = [];
+
+    for (const id of courseIds) {
+      try {
+        // Get scraped course
+        const [scrapedCourse] = await db
+          .select()
+          .from(scrapedCourses)
+          .where(eq(scrapedCourses.id, id));
+
+        if (!scrapedCourse) {
+          errors.push({ courseId: id, error: "Not found" });
+          continue;
+        }
+
+        if (scrapedCourse.reviewStatus !== "pending") {
+          errors.push({ courseId: id, error: "Already reviewed" });
+          continue;
+        }
+
+        // Create course in main courses table (same structure as individual approve)
+        const courseData = scrapedCourse;
+        const [newCourse] = await db
+          .insert(courses)
+          .values({
+            universityId: scrapedCourse.institutionId!,
+            title: courseData.title!,
+            description: courseData.description,
+            subject: courseData.subject!,
+            discipline: courseData.discipline as any,
+            level: courseData.level as any,
+            duration: courseData.duration,
+            durationMonths: courseData.durationMonths,
+            durationWeeks: courseData.durationWeeks,
+            fees: courseData.fees,
+            currency: courseData.currency,
+            location: courseData.location,
+            country: courseData.country,
+            startDate: courseData.startDate,
+            applicationDeadline: courseData.applicationDeadline,
+            prerequisites: courseData.prerequisites,
+            thumbnailUrl: courseData.thumbnailUrl,
+            courseCode: courseData.courseCode,
+            prPathway: courseData.prPathway,
+            scholarshipPercentageMin: courseData.scholarshipPercentageMin,
+            scholarshipPercentageMax: courseData.scholarshipPercentageMax,
+            eligibilityRequirements: courseData.eligibilityRequirements,
+            englishRequirements: courseData.englishRequirements,
+            curriculumUrl: courseData.curriculumUrl,
+            costOfLiving: courseData.costOfLiving,
+            applicationFees: courseData.applicationFees,
+            images: courseData.images,
+            intakes: courseData.intakes,
+            studyAreas: courseData.studyAreas,
+            careerOutcomes: courseData.careerOutcomes,
+            careerPath: courseData.careerPath,
+            pathways: courseData.pathways,
+            minimumAge: courseData.minimumAge,
+            academicRequirements: courseData.academicRequirements,
+            englishRequirementsStructured: courseData.englishRequirementsStructured as any,
+            deliveryMode: courseData.deliveryMode,
+            campusLocations: courseData.campusLocations,
+            workRights: courseData.workRights,
+            internshipAvailable: courseData.internshipAvailable,
+            internshipDetails: courseData.internshipDetails,
+            approvalStatus: "pending",
+          })
+          .returning();
+
+        // Update scraped course status
+        await db
+          .update(scrapedCourses)
+          .set({
+            reviewStatus: "approved",
+            reviewedAt: new Date(),
+            reviewedBy: userId,
+            reviewNotes,
+            approvedCourseId: newCourse.id,
+          })
+          .where(eq(scrapedCourses.id, id));
+
+        // Log activity
+        await logApprove({
+          req,
+          entityType: 'scraped_course',
+          entityId: id,
+          entityName: scrapedCourse.title || 'Unknown',
+          metadata: { approvedCourseId: newCourse.id, batchOperation: true },
+        });
+
+        approvedCourses.push(newCourse);
+      } catch (error: any) {
+        console.error(`Error approving course ${id}:`, error);
+        errors.push({ courseId: id, error: error.message });
+      }
+    }
+
+    res.json({
+      message: `Batch approval completed. ${approvedCourses.length} approved, ${errors.length} failed.`,
+      approved: approvedCourses.length,
+      failed: errors.length,
+      errors,
+    });
+  } catch (error: any) {
+    console.error("Error in batch approve:", error);
+    res.status(500).json({ error: "Failed to batch approve courses" });
+  }
+});
+
+/**
+ * Batch reject scraped courses
+ * POST /api/admin/scraping/scraped-courses/batch-reject
+ */
+router.post("/scraped-courses/batch-reject", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { courseIds, reviewNotes } = req.body;
+
+    if (!courseIds || !Array.isArray(courseIds) || courseIds.length === 0) {
+      return res.status(400).json({ error: "Course IDs array is required" });
+    }
+
+    if (!reviewNotes || !reviewNotes.trim()) {
+      return res.status(400).json({ error: "Review notes are required for rejection" });
+    }
+
+    const rejectedCount = [];
+    const errors = [];
+
+    for (const id of courseIds) {
+      try {
+        // Get scraped course
+        const [scrapedCourse] = await db
+          .select()
+          .from(scrapedCourses)
+          .where(eq(scrapedCourses.id, id));
+
+        if (!scrapedCourse) {
+          errors.push({ courseId: id, error: "Not found" });
+          continue;
+        }
+
+        if (scrapedCourse.reviewStatus !== "pending") {
+          errors.push({ courseId: id, error: "Already reviewed" });
+          continue;
+        }
+
+        // Update scraped course status
+        await db
+          .update(scrapedCourses)
+          .set({
+            reviewStatus: "rejected",
+            reviewedAt: new Date(),
+            reviewedBy: userId,
+            reviewNotes,
+          })
+          .where(eq(scrapedCourses.id, id));
+
+        // Log activity
+        await logReject({
+          req,
+          entityType: 'scraped_course',
+          entityId: id,
+          entityName: scrapedCourse.title || 'Unknown',
+          reason: reviewNotes,
+          metadata: { batchOperation: true },
+        });
+
+        rejectedCount.push(id);
+      } catch (error: any) {
+        console.error(`Error rejecting course ${id}:`, error);
+        errors.push({ courseId: id, error: error.message });
+      }
+    }
+
+    res.json({
+      message: `Batch rejection completed. ${rejectedCount.length} rejected, ${errors.length} failed.`,
+      rejected: rejectedCount.length,
+      failed: errors.length,
+      errors,
+    });
+  } catch (error: any) {
+    console.error("Error in batch reject:", error);
+    res.status(500).json({ error: "Failed to batch reject courses" });
+  }
+});
+
+/**
  * Get active and waiting jobs from queue
  * GET /api/admin/scraping/queue-status
  */

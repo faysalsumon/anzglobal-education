@@ -49,22 +49,85 @@ EXTRACTION RULES:
 4. For arrays, extract all relevant items found
 5. For enums, use EXACTLY one of the provided values
 6. Preserve original formatting for text fields
-7. Convert durations to both text and numeric formats when possible
-8. For fees, extract numeric values only (remove currency symbols)
-9. Extract English requirements in both text and structured format if available
-10. Include source attribution - note which section of HTML each field came from
+
+FIELD-SPECIFIC EXTRACTION GUIDANCE:
+
+TITLE & SUBJECT:
+- Extract the full official course name (e.g., "Bachelor of Computer Science")
+- Subject should be the main field of study (e.g., "Computer Science", "Engineering", "Business")
+
+FEES & COSTS:
+- Extract numeric values only (remove $, AUD, USD, commas)
+- Look for "tuition fees", "course fees", "annual fees"
+- fees: Total tuition amount
+- applicationFees: Application/enrollment fees
+- costOfLiving: Estimated living expenses if mentioned
+
+DURATION:
+- duration: Text format (e.g., "3 years full-time", "2 years")
+- durationMonths: Convert to months (e.g., "3 years" = 36)
+- durationWeeks: Convert to weeks if shorter courses (e.g., "10 weeks" = 10)
+
+DATES:
+- startDate: Look for intake dates, semester starts (e.g., "February 2024", "Semester 1")
+- applicationDeadline: Look for "apply by", "deadline", "closing date"
+- Format as ISO date or clear text (avoid ambiguous formats)
+
+LEVEL:
+- Must match ONE of these exactly: Certificate I, Certificate II, Certificate III, Certificate IV, Diploma, Advanced Diploma, Associate Degree, Bachelor Degree, Graduate Certificate, Graduate Diploma, Masters Degree, Doctoral Degree, Foundation, Vocational
+- Look for "level", "qualification type", "award type"
+
+DISCIPLINE:
+- Categories include: Business, IT, Engineering, Health, Arts, etc.
+- Match to the discipline enum if possible
+
+REQUIREMENTS:
+- prerequisites: Prior education/courses needed (e.g., "High school completion")
+- eligibilityRequirements: Entry requirements summary
+- academicRequirements: Academic scores/GPA requirements
+- englishRequirements: English language tests (text format)
+- englishRequirementsStructured: Parse IELTS/TOEFL scores if available (JSON format)
+- minimumAge: Age requirements if mentioned
+
+LOCATION & DELIVERY:
+- location: Campus name/city
+- country: Australia, Bangladesh, etc.
+- campusLocations: Array of all campus options
+- deliveryMode: Online, On-campus, Hybrid, Blended
+
+CAREER & PATHWAYS:
+- careerOutcomes: Array of potential job titles
+- careerPath: Text description of career progression
+- pathways: Further study options
+- workRights: Post-study work visa information
+
+OTHER IMPORTANT FIELDS:
+- courseCode: Official course code (e.g., "BACH-CS-01")
+- prPathway: PR/Immigration pathway information (Australia context)
+- scholarshipPercentageMin/Max: Scholarship availability (e.g., "10%-50%")
+- intakes: Available start dates array (e.g., ["February", "July"])
+- internshipAvailable: true/false for work placements
+- internshipDetails: Details about internships/placements
 
 VALIDATION:
-- Course title and subject are REQUIRED
-- Level must be one of the enum values
+- Course title and subject are REQUIRED - if not found, add warning
+- Level must match one of the enum values exactly
 - UniversityId will be provided separately (don't extract it)
-- All dates should be in ISO format or clear text (e.g., "January 2024")
+- Numeric fields should be numbers, not strings with currency symbols
 
 CONFIDENCE SCORING:
-- Return a confidence score (0.0-1.0) based on:
-  * Clarity of the HTML structure
-  * Completeness of extracted data
-  * Ambiguity in field values
+Score 0.0 to 1.0 based on:
+- 0.9-1.0: Most fields found with clear, unambiguous values
+- 0.7-0.9: Core fields found, some optional fields missing
+- 0.5-0.7: Only basic fields found (title, subject, level)
+- 0.3-0.5: Title and subject found but unclear/ambiguous
+- 0.0-0.3: Missing required fields or highly ambiguous data
+
+Add warnings for:
+- Missing required fields
+- Ambiguous values that need human review
+- Unusual or unexpected data formats
+- Fields that had to be inferred vs. explicitly stated
 
 OUTPUT FORMAT: Return a JSON object matching the schema exactly.`;
 

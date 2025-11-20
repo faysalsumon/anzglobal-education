@@ -8,6 +8,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### 2025-11-20: Web Scraping System Enhancements
+- **Auto-Approval System**: Courses with ≥85% confidence, no warnings, complete required fields, and valid institution ID are automatically approved and merged into `courses` table during scraping worker processing
+  - Uses database transactions to ensure atomicity (both `courses` and `scrapedCourses` tables updated together)
+  - Falls back to pending review if auto-approval transaction fails
+  - Logs detailed auto-approval information with course ID reference
+- **Batch Operations**: Added bulk approve/reject functionality with UI and backend support
+  - Frontend: Checkboxes for course selection, Select All/Deselect All buttons, batch action confirmation dialog with notes
+  - Backend: `POST /api/admin/scraping/scraped-courses/batch-approve` and `/batch-reject` endpoints
+  - Validates all course IDs, processes in loop with error collection, logs activity for each action
+- **Enhanced AI Extraction**: Improved GPT-4o-mini prompts with detailed field-specific guidance
+  - Clear instructions for fees/costs extraction (numeric only, remove symbols)
+  - Duration conversion guidance (text → months/weeks)
+  - Level matching to exact enum values
+  - Structured requirements extraction (prerequisites, English tests, academic requirements)
+  - Enhanced confidence scoring rubric (0.9-1.0 = complete, 0.5-0.7 = basic only)
+- **Improved Admin UI**: Enhanced statistics dashboard and filtering capabilities
+  - Stats show: total jobs (running/completed), pending review (high confidence count), approval rate, average confidence
+  - Confidence filter dropdown: All/High (≥85%)/Medium (70-85%)/Low (<70%)
+  - Real-time course counts per filter category
+- **Status**: ✅ Fully implemented and tested
+
 ### 2025-11-20: CRM-Style Activity Logging System
 - **Implemented comprehensive activity logging** similar to Zoho/Salesforce/Facebook for tracking all admin actions
 - Created `activityLogs` database table with JSONB for field-level change tracking, actor denormalization, and search optimization
