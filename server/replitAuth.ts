@@ -344,3 +344,28 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 export function getAuthenticatedUserId(req: any): string | null {
   return req.user?.claims?.sub ?? null;
 }
+
+/**
+ * Check if the authenticated user has institution/university access
+ * Returns { userId, universityId } if access granted, null otherwise
+ */
+export async function checkInstitutionAccess(req: any): Promise<{ userId: string; universityId: string } | null> {
+  const userId = getAuthenticatedUserId(req);
+  if (!userId) {
+    return null;
+  }
+
+  // Get user from database
+  const user = await storage.getUser(userId);
+  if (!user || user.userType !== 'university') {
+    return null;
+  }
+
+  // Get university associated with this user
+  const university = await storage.getUniversityByUserId(userId);
+  if (!university) {
+    return null;
+  }
+
+  return { userId, universityId: university.id };
+}

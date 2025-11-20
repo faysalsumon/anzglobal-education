@@ -681,5 +681,150 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     }
   });
 
+  // Request documents from student (institution only)
+  app.post("/api/institution/applications/:id/request-documents", isAuthenticated, async (req, res) => {
+    try {
+      const institutionAccess = await checkInstitutionAccess(req);
+      if (!institutionAccess) {
+        return res.status(403).json({ error: "Institution access required" });
+      }
+
+      const { id: applicationId } = req.params;
+      const { documentType, requestNote } = req.body;
+
+      if (!documentType || !requestNote) {
+        return res.status(400).json({ error: "Document type and request note are required" });
+      }
+
+      // Verify application belongs to institution
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Verify course belongs to institution
+      const course = await db.query.courses.findFirst({
+        where: eq(courses.id, application.courseId),
+      });
+
+      if (!course || course.universityId !== institutionAccess.universityId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Create a placeholder document entry to track the request
+      const [documentRequest] = await db.insert(applicationStageDocuments).values({
+        applicationId,
+        stage: application.currentStage,
+        documentType,
+        documentName: `Requested: ${documentType}`,
+        documentUrl: '', // Empty until student uploads
+        isRequired: true,
+        uploadedBy: institutionAccess.userId,
+        uploadedByRole: 'university',
+        uploadedAt: new Date(),
+        verificationNotes: requestNote, // Store request note here
+      }).returning();
+
+      // Log activity
+      await logActivity({
+        userId: institutionAccess.userId,
+        action: 'created',
+        entityType: 'document',
+        entityId: documentRequest.id,
+        actionDescription: `Requested document: ${documentType}`,
+        metadata: {
+          applicationId,
+          documentType,
+          requestNote,
+        },
+      });
+
+      res.json({ documentRequest, message: "Document request sent successfully" });
+    } catch (error: any) {
+      console.error("Error requesting documents:", error);
+      res.status(400).json({ error: error.message || "Failed to request documents" });
+    }
+  });
+
+  // Transition application stage (institution only - limited stages)
+  app.post("/api/institution/applications/:id/transition-stage", isAuthenticated, async (req, res) => {
+    try {
+      const institutionAccess = await checkInstitutionAccess(req);
+      if (!institutionAccess) {
+        return res.status(403).json({ error: "Institution access required" });
+      }
+
+      const { id: applicationId } = req.params;
+      const { toStage, notes } = req.body;
+
+      // Define stages that institutions can transition TO
+      const allowedStages = ['Documents Verification', 'Offer-Letter', 'GS-Clearance', 'COE'];
+      if (!allowedStages.includes(toStage)) {
+        return res.status(403).json({ error: `Institutions can only transition to: ${allowedStages.join(', ')}` });
+      }
+
+      // Verify application belongs to institution
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Verify course belongs to institution
+      const course = await db.query.courses.findFirst({
+        where: eq(courses.id, application.courseId),
+      });
+
+      if (!course || course.universityId !== institutionAccess.universityId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const fromStage = application.currentStage;
+
+      // Update application stage
+      await db.update(applications)
+        .set({
+          currentStage: toStage as any,
+          updatedAt: new Date(),
+        })
+        .where(eq(applications.id, applicationId));
+
+      // Record stage transition in history
+      await db.insert(applicationStageHistory).values({
+        applicationId,
+        fromStage,
+        toStage: toStage as any,
+        changedBy: institutionAccess.userId,
+        changedByRole: 'university',
+        notes: notes || `Stage transitioned by institution`,
+        metadata: { transitionedBy: 'institution' },
+      });
+
+      // Log activity
+      await logActivity({
+        userId: institutionAccess.userId,
+        action: 'updated',
+        entityType: 'application',
+        entityId: applicationId,
+        actionDescription: `Moved application from ${fromStage} to ${toStage}`,
+        metadata: {
+          fromStage,
+          toStage,
+          notes,
+        },
+      });
+
+      res.json({ message: "Stage transitioned successfully", fromStage, toStage });
+    } catch (error: any) {
+      console.error("Error transitioning stage:", error);
+      res.status(400).json({ error: error.message || "Failed to transition stage" });
+    }
+  });
+
   console.log("Application workflow routes registered");
 }
