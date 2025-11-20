@@ -105,12 +105,20 @@ export async function checkInstitutionAccess(req: any): Promise<{ userId: string
 
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
-    columns: { id: true, userType: true, universityId: true },
+    columns: { id: true, userType: true },
   });
 
-  if (!user || user.userType !== 'university' || !user.universityId) return null;
+  if (!user || user.userType !== 'university') return null;
 
-  return { userId: user.id, universityId: user.universityId };
+  // Get university linked to this user
+  const university = await db.query.universities.findFirst({
+    where: eq(universities.userId, userId),
+    columns: { id: true },
+  });
+
+  if (!university) return null;
+
+  return { userId: user.id, universityId: university.id };
 }
 
 /**
@@ -145,7 +153,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         })
         .from(applications)
         .leftJoin(courses, eq(applications.courseId, courses.id))
-        .leftJoin(universities, eq(courses.institutionId, universities.id))
+        .leftJoin(universities, eq(courses.universityId, universities.id))
         .leftJoin(users, eq(applications.assignedConsultantId, users.id))
         .where(eq(applications.studentId, profile.id))
         .orderBy(desc(applications.createdAt));
@@ -339,7 +347,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         })
         .from(applications)
         .leftJoin(courses, eq(applications.courseId, courses.id))
-        .leftJoin(universities, eq(courses.institutionId, universities.id))
+        .leftJoin(universities, eq(courses.universityId, universities.id))
         .leftJoin(studentProfiles, eq(applications.studentId, studentProfiles.id))
         .leftJoin(users, eq(applications.assignedConsultantId, users.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
