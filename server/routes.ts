@@ -6978,11 +6978,11 @@ Sitemap: ${baseUrl}/sitemap.xml
       const conditions: any[] = [];
       
       if (entityType) {
-        conditions.push(eq(activityLogs.entityType, entityType as string));
+        conditions.push(eq(activityLogs.entityType, entityType as any));
       }
       
       if (action) {
-        conditions.push(eq(activityLogs.action, action as string));
+        conditions.push(eq(activityLogs.action, action as any));
       }
       
       if (actorUserId) {
