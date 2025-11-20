@@ -895,7 +895,7 @@ export function AdminScrapingPanel() {
 
       {/* Trigger Scrape Dialog */}
       <Dialog open={triggerDialogOpen} onOpenChange={setTriggerDialogOpen}>
-        <DialogContent data-testid="dialog-trigger-scrape">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="dialog-trigger-scrape">
           <DialogHeader>
             <DialogTitle>Start New Scraping Job</DialogTitle>
             <DialogDescription>
@@ -974,12 +974,12 @@ export function AdminScrapingPanel() {
               </AlertDescription>
             </Alert>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={() => setTriggerDialogOpen(false)}
               data-testid="button-cancel-trigger"
-              className="sm:flex-1"
+              className="w-full sm:flex-1"
             >
               Cancel
             </Button>
@@ -988,7 +988,7 @@ export function AdminScrapingPanel() {
               onClick={handleTestScrape}
               disabled={testScrapeMutation.isPending || !institutionUrl.trim()}
               data-testid="button-test-scraping"
-              className="sm:flex-1"
+              className="w-full sm:flex-1"
             >
               {testScrapeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {testScrapeMutation.isPending ? "Testing..." : "Test Scraping"}
@@ -997,7 +997,7 @@ export function AdminScrapingPanel() {
               onClick={handleTriggerScrape}
               disabled={triggerScrapeMutation.isPending || !institutionUrl.trim()}
               data-testid="button-start-scraping"
-              className="sm:flex-1"
+              className="w-full sm:flex-1"
             >
               {triggerScrapeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Queue Job
