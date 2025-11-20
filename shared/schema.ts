@@ -64,6 +64,40 @@ export const providerTypeEnum = pgEnum('provider_type', [
   'School',
 ]);
 
+// Activity log action types
+export const activityActionEnum = pgEnum('activity_action', [
+  'created',
+  'updated',
+  'deleted',
+  'approved',
+  'rejected',
+  'activated',
+  'deactivated',
+  'assigned',
+  'unassigned',
+  'login',
+  'logout',
+  'status_changed',
+  'imported',
+  'exported',
+]);
+
+// Activity log entity types
+export const activityEntityTypeEnum = pgEnum('activity_entity_type', [
+  'user',
+  'institution',
+  'course',
+  'application',
+  'student_lead',
+  'inquiry_lead',
+  'blog',
+  'document',
+  'scraped_course',
+  'import_batch',
+  'team_member',
+  'notification',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -116,6 +150,43 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Activity Logs table - CRM-style audit trail for all platform actions
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Actor (user who performed the action) - denormalized for performance
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }), // Nullable if user is deleted
+  userEmail: varchar("user_email"),
+  userName: varchar("user_name"),
+  userProfilePicture: varchar("user_profile_picture"),
+  userType: varchar("user_type", { length: 20 }), // 'student', 'university', 'admin', 'super_admin'
+  
+  // Entity being acted upon
+  entityType: activityEntityTypeEnum("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  entityName: text("entity_name"), // Human-readable name (course title, institution name, etc.)
+  
+  // Action details
+  action: activityActionEnum("action").notNull(),
+  actionDescription: text("action_description"), // Human-readable description: "Changed title from 'Old' to 'New'"
+  
+  // Field-level change tracking (before/after values)
+  changes: jsonb("changes"), // { fieldName: { before: value, after: value } }
+  
+  // Additional context
+  metadata: jsonb("metadata"), // IP address, user agent, additional context
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Indexes for efficient querying
+  userIdx: index("activity_logs_user_idx").on(table.userId),
+  entityIdx: index("activity_logs_entity_idx").on(table.entityType, table.entityId),
+  actionIdx: index("activity_logs_action_idx").on(table.action),
+  createdAtIdx: index("activity_logs_created_at_idx").on(table.createdAt),
+  // Composite index for entity timeline queries
+  entityTimelineIdx: index("activity_logs_entity_timeline_idx").on(table.entityType, table.entityId, table.createdAt),
+}));
 
 // Universities table
 export const universities = pgTable("universities", {
@@ -967,6 +1038,15 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  entityType: z.enum(['user', 'institution', 'course', 'application', 'student_lead', 'inquiry_lead', 'blog', 'document', 'scraped_course', 'import_batch', 'team_member', 'notification']),
+  action: z.enum(['created', 'updated', 'deleted', 'approved', 'rejected', 'activated', 'deactivated', 'assigned', 'unassigned', 'login', 'logout', 'status_changed', 'imported', 'exported']),
+  entityId: z.string().min(1, "Entity ID is required"),
+});
+
 export const insertUniversitySchema = createInsertSchema(universities).omit({
   id: true,
   createdAt: true,
@@ -1392,6 +1472,9 @@ export const upsertUserSchema = createInsertSchema(users).omit({
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 
 export type University = typeof universities.$inferSelect;
 export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
