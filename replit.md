@@ -8,6 +8,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### 2025-11-20: CRM-Style Activity Logging System
+- **Implemented comprehensive activity logging** similar to Zoho/Salesforce/Facebook for tracking all admin actions
+- Created `activityLogs` database table with JSONB for field-level change tracking, actor denormalization, and search optimization
+- Built centralized logging utility (`server/activity-logger.ts`) with 17 action types (created, updated, deleted, approved, rejected, assigned, etc.) across 12 entity types
+- Added activity log API endpoints (`GET /api/admin/activity-logs`, `GET /api/admin/activity-logs/entity/:type/:id`) with pagination and filtering
+- Created `ActivityFeed` UI component with avatars, colored action badges, delta chips showing field changes, and skeleton loading states
+- Integrated logging into key operations: institution/course approval/rejection, scraped course management, user/application/lead CRUD
+- Added "Activity Logs" tab to admin dashboard (Tools section) with full-admin access control
+- **Status**: ✅ Fully wired end-to-end, architect approved
+
 ### 2025-11-19: Web Scraping Authentication Fix
 - **Fixed 403 "Admin access required" error** when creating scraping jobs via email/password authentication
 - Added `isAuthenticated` middleware to scraping routes registration  
@@ -31,6 +41,7 @@ Key features include:
 -   **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
 -   **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs using OpenAI GPT-4o.
 -   **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval workflow. Features schema-aware GPT-4o-mini extraction, Playwright/Cheerio scraping, BullMQ job queue, robots.txt compliance, confidence scoring, and side-by-side review UI for admin approval/rejection before merging to production courses table.
+-   **Activity Logging**: CRM-style audit trail tracking all admin actions with field-level change tracking, user attribution, and human-readable descriptions. Features colored action badges, delta chips showing before/after values, filtering by action/entity type, and entity-specific timelines. Accessible via "Activity Logs" tab in admin dashboard (full-admin access only).
 -   **Profile Management**: Student and Admin profile management with role-based security.
 -   **Content & SEO**: Course pages displaying scholarships/career pathways, markdown-based blog infrastructure, and comprehensive dynamic SEO for public pages.
 -   **Workflows**: Institution/Course approval workflow by platform admin.
