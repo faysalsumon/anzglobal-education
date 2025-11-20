@@ -1,153 +1,62 @@
 # ANZ Global Education Platform
 
 ## Overview
-ANZ Global Education is an AI-powered platform designed to connect international students with universities globally. Its primary purpose is to simplify course discovery, facilitate student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform aims to improve access to education, reduce administrative burdens for universities, and tap into the expanding international education market.
+ANZ Global Education is an AI-powered platform connecting international students with global universities. Its core purpose is to streamline course discovery, student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform aims to enhance access to education, reduce administrative burdens for universities, and capitalize on the growing international education market.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes
-
-### 2025-11-20: Web Scraping System Enhancements (Part 1)
-- **Auto-Approval System**: Courses with ≥85% confidence, no warnings, complete required fields, and valid institution ID are automatically approved and merged into `courses` table during scraping worker processing
-  - Uses database transactions to ensure atomicity (both `courses` and `scrapedCourses` tables updated together)
-  - Falls back to pending review if auto-approval transaction fails
-  - Logs detailed auto-approval information with course ID reference
-- **Batch Operations**: Added bulk approve/reject functionality with UI and backend support
-  - Frontend: Checkboxes for course selection, Select All/Deselect All buttons, batch action confirmation dialog with notes
-  - Backend: `POST /api/admin/scraping/scraped-courses/batch-approve` and `/batch-reject` endpoints
-  - Validates all course IDs, processes in loop with error collection, logs activity for each action
-- **Enhanced AI Extraction**: Improved GPT-4o-mini prompts with detailed field-specific guidance
-  - Clear instructions for fees/costs extraction (numeric only, remove symbols)
-  - Duration conversion guidance (text → months/weeks)
-  - Level matching to exact enum values
-  - Structured requirements extraction (prerequisites, English tests, academic requirements)
-  - Enhanced confidence scoring rubric (0.9-1.0 = complete, 0.5-0.7 = basic only)
-- **Improved Admin UI**: Enhanced statistics dashboard and filtering capabilities
-  - Stats show: total jobs (running/completed), pending review (high confidence count), approval rate, average confidence
-  - Confidence filter dropdown: All/High (≥85%)/Medium (70-85%)/Low (<70%)
-  - Real-time course counts per filter category
-- **Status**: ✅ Fully implemented and tested
-
-### 2025-11-20: Web Scraping System Enhancements (Part 2)
-- **Intelligent Course Page Discovery**: AI-powered automatic discovery of course listing pages from institution homepages
-  - Hybrid approach: AI + regex patterns for maximum accuracy
-  - `findCourseListingPageCandidates` AI function analyzes homepage and ranks candidates by confidence (0-1 score)
-  - Fallback to regex patterns if AI unavailable, with weighted scoring for different patterns
-  - Returns CoursePageDiscoveryResult with URL, confidence, reason, and method (ai/regex/manual)
-  - Scraping worker checks `useAutoDiscovery` flag and stores discovered URL, method, and confidence in job record
-- **Scraping Templates**: Pre-configured templates for common university website platforms
-  - Database table `scrapingTemplates` with platform-specific selectors, browser settings
-  - Seeded default templates: WordPress, JavaScript SPAs, Custom CMS, Wix, Squarespace, Drupal, No Template (AI Only)
-  - CRUD API endpoints: GET/POST/PUT/DELETE `/api/admin/scraping/templates`
-  - Template selection stored in scraping jobs for reference
-- **Enhanced Admin UI**: Auto-discovery toggle and template selector in scraping trigger dialog
-  - Template dropdown shows all active templates with platform type
-  - Auto-discovery checkbox (enabled by default) with dynamic help text
-  - Job details display discovered URL and discovery metadata when auto-discovery used
-- **Status**: ✅ Fully implemented
-
-### 2025-11-20: CRM-Style Activity Logging System
-- **Implemented comprehensive activity logging** similar to Zoho/Salesforce/Facebook for tracking all admin actions
-- Created `activityLogs` database table with JSONB for field-level change tracking, actor denormalization, and search optimization
-- Built centralized logging utility (`server/activity-logger.ts`) with 17 action types (created, updated, deleted, approved, rejected, assigned, etc.) across 12 entity types
-- Added activity log API endpoints (`GET /api/admin/activity-logs`, `GET /api/admin/activity-logs/entity/:type/:id`) with pagination and filtering
-- Created `ActivityFeed` UI component with avatars, colored action badges, delta chips showing field changes, and skeleton loading states
-- Integrated logging into key operations: institution/course approval/rejection, scraped course management, user/application/lead CRUD
-- Added "Activity Logs" tab to admin dashboard (Tools section) with full-admin access control
-- **Status**: ✅ Fully wired end-to-end, architect approved
-
-### 2025-11-19: Web Scraping Authentication Fix
-- **Fixed 403 "Admin access required" error** when creating scraping jobs via email/password authentication
-- Added `isAuthenticated` middleware to scraping routes registration  
-- Updated all 8 scraping route handlers to use `checkAdminAccess` pattern compatible with email/password sessions
-- Exported `checkAdminAccess` function from routes.ts for use by scraping routes
-- Fixed user ID extraction from `req.user.claims.sub` instead of direct `req.user.userType` check
-- Fixed button data-testid mismatch (`button-start-scraping`)
-- **Status**: ✅ Authentication working, jobs can be created successfully for institutions like Albright Institute
-
 ## System Architecture
+The platform adheres to ANZ Global Education's brand identity, utilizing a specific color palette (Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000) and typography (Nunito, Open Sans). Accessibility meeting WCAG AA standards is a priority, featuring a dual navigation system and a 3-column admin dashboard with dark mode support.
 
-### UI/UX and Features
-The platform adheres to ANZ Global Education's brand identity, using a specific color palette (Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000) and typography (Nunito, Open Sans). Accessibility meeting WCAG AA standards is a priority. It features a dual navigation system and a 3-column admin dashboard with dark mode support.
+### UI/UX Decisions
+- **Color Palette**: Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000.
+- **Typography**: Nunito, Open Sans.
+- **Accessibility**: WCAG AA standards.
+- **Navigation**: Dual navigation system.
+- **Admin Dashboard**: 3-column layout with dark mode support.
+- **AI Chat Agent**: Compact, Replit-style animated icon (ribbons/bookmarks with diagonal pencil) positioned to prevent header overlap, with dynamic sizing and a compact chat window using a small avatar and reduced text sizes.
 
-Key features include:
--   **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration.
--   **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
--   **Public Pages**: Landing page, "Study in Australia" page, course detail pages, institution pages, lead generation forms, and contact page.
--   **Authentication**: Student authentication modal with social login options, supporting Replit Auth and planned Firebase integration.
--   **Dashboards**: Super Admin dashboard for CRUD, and consistent modern UI/UX across Student, University, and Platform Admin dashboards with responsiveness and accessibility.
--   **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
--   **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs using OpenAI GPT-4o.
--   **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval workflow. Features schema-aware GPT-4o-mini extraction, Playwright/Cheerio scraping, BullMQ job queue, robots.txt compliance, confidence scoring, and side-by-side review UI for admin approval/rejection before merging to production courses table.
--   **Activity Logging**: CRM-style audit trail tracking all admin actions with field-level change tracking, user attribution, and human-readable descriptions. Features colored action badges, delta chips showing before/after values, filtering by action/entity type, and entity-specific timelines. Accessible via "Activity Logs" tab in admin dashboard (full-admin access only).
--   **Profile Management**: Student and Admin profile management with role-based security.
--   **Content & SEO**: Course pages displaying scholarships/career pathways, markdown-based blog infrastructure, and comprehensive dynamic SEO for public pages.
--   **Workflows**: Institution/Course approval workflow by platform admin.
--   **Filtering & Search**: Discipline-based course filtering with 15 categories and sub-disciplines, course level filtering with 14 standardized levels, dynamic animated typing for natural language search, and location-based course filtering with interactive campus badges on cards.
--   **Maps & Location**: Google Maps integration for campus locations with custom markers, and normalized campus data for precise location-based course search.
--   **AI Chat Agent**: RAG-powered AI assistant with a compact, Replit-style animated icon (ribbons/bookmarks with diagonal pencil). Positioned at bottom-20 right-3 (mobile) and bottom-24 right-4 (desktop) to prevent header overlap. Button sizes: 48px mobile, 56px desktop. Chat window: max-w-[340px] mobile, max-w-[360px] desktop, height min(480px, calc(100vh - 180px)). Compact header with small avatar (28px) and reduced text sizes. Uses Pinecone vector database for platform-specific knowledge and OpenAI GPT-4o-mini. Includes event-driven auto-updates for knowledge base, close/minimize buttons, and supports both authenticated and anonymous users.
+### Technical Implementations
+- **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
+- **Backend**: Node.js Express.js in TypeScript.
+- **Authentication**: OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage.
+- **API**: RESTful, organized by user type.
+- **Real-time**: WebSockets for chat.
+- **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
+- **Database**: PostgreSQL (Neon, Drizzle ORM) with GIN indexes.
+- **Job Queue**: BullMQ with Redis for background scraping jobs and retry logic.
+- **Web Scraping**: Playwright (headless browser automation), Cheerio (HTML parsing), robots-parser (robots.txt compliance).
+- **Object Storage**: Replit Object Storage.
+- **Authorization**: Role-based access control (`userType`) enforced by backend middleware.
 
-### Technical Implementation
--   **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
--   **Backend**: Node.js Express.js in TypeScript.
--   **Authentication**: OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage.
--   **API**: RESTful, organized by user type.
--   **Real-time**: WebSockets for chat.
--   **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
--   **Database**: PostgreSQL (Neon, Drizzle ORM) with GIN indexes.
--   **Job Queue**: BullMQ with Redis for background scraping jobs and retry logic.
--   **Web Scraping**: Playwright (headless browser automation), Cheerio (HTML parsing), robots-parser (robots.txt compliance).
--   **Object Storage**: Replit Object Storage.
--   **Authorization**: Role-based access control (`userType`) enforced by backend middleware.
+### Feature Specifications
+- **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration.
+- **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
+- **Public Pages**: Landing page, "Study in Australia" page, course detail pages, institution pages, lead generation forms, and contact page.
+- **Dashboards**: Super Admin dashboard for CRUD, and consistent modern UI/UX across Student, University, and Platform Admin dashboards with responsiveness and accessibility.
+- **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
+- **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs using OpenAI GPT-4o.
+- **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval, schema-aware GPT-4o-mini extraction, Playwright/Cheerio, BullMQ job queue, robots.txt compliance, confidence scoring, and side-by-side review UI. Includes AI-powered automatic discovery of course listing pages and pre-configured scraping templates.
+- **Activity Logging**: CRM-style audit trail tracking all admin actions with field-level change tracking, user attribution, and human-readable descriptions, displayed via an `ActivityFeed` UI component.
+- **Profile Management**: Student and Admin profile management with role-based security.
+- **Content & SEO**: Course pages displaying scholarships/career pathways, markdown-based blog, and comprehensive dynamic SEO for public pages.
+- **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and stage history tracking.
+- **Filtering & Search**: Discipline-based course filtering, course level filtering, dynamic animated typing for natural language search, and location-based course filtering with interactive campus badges.
+- **Maps & Location**: Google Maps integration for campus locations with custom markers, and normalized campus data.
+
+### System Design Choices
+- **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini structured outputs for data extraction, Playwright/Cheerio for web scraping, and BullMQ for job queuing. Features an auto-approval system for high-confidence courses and batch operations for review.
+- **Student Application Portal**: Utilizes an 11-stage workflow (Assessment to Visa-Lodgment/Outcome) with dedicated database tables for stages, history, and documents, supported by a REST API and a Student Portal UI for progress tracking and document uploads.
 
 ## External Dependencies
--   **Authentication Service**: Replit Auth.
--   **AI Service**: OpenAI API (GPT-4o for content, GPT-4o-mini for scraping).
--   **Vector Database**: Pinecone.
--   **Database**: PostgreSQL (Neon).
--   **Job Queue**: Redis (required for production deployment - BullMQ dependency).
--   **Object Storage**: Replit Object Storage.
--   **CDN**: Google Fonts CDN.
--   **Mapping/Location**: Google Maps JavaScript API, Google Places API.
--   **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
--   **Email Service**: Resend API.
-
-## AI Web Scraping System Architecture
-
-### Overview
-The AI web scraping system automates course data extraction from institution websites with human-in-the-loop approval. It combines dynamic schema introspection, GPT-4o-mini structured outputs, Playwright/Cheerio scraping, and BullMQ job queuing.
-
-### Components
-1. **Schema Introspection** (`server/schema-introspection.ts`): Dynamically reads Drizzle schema to generate AI prompts that adapt to current database fields, ensuring extracted data matches production schema.
-
-2. **AI Extraction Service** (`server/ai-extractor-service.ts`): Uses OpenAI GPT-4o-mini with structured outputs to extract course data from HTML. Provides confidence scores (0-1) and warnings for missing/uncertain fields.
-
-3. **Web Scraper Service** (`server/web-scraper-service.ts`): Playwright headless browser automation with Cheerio HTML parsing. Features robots.txt compliance, rate limiting, and provenance tracking (source URL, timestamp).
-
-4. **Job Queue** (`server/scraping-queue.ts`, `server/scraping-worker.ts`): BullMQ-based background processing with retry logic (3 attempts, exponential backoff). Worker processes crawl jobs asynchronously, storing results in staging table.
-
-5. **API Routes** (`server/scraping-routes.ts`): Admin endpoints for triggering crawls (POST /api/admin/scraping/jobs), viewing job status (GET), and reviewing/approving/rejecting scraped courses (PUT /approve, PUT /reject). All routes use Zod validation and admin-only middleware.
-
-6. **Admin UI** (`client/src/components/admin-scraping-panel.tsx`): Management dashboard with statistics, job monitoring, pending review tab with confidence scores/warnings, side-by-side comparison dialog, and review history. Integrated into admin dashboard "Web Scraping" tab.
-
-### Database Tables
-- **scrapingJobs**: Tracks crawl jobs (status: pending/running/completed/failed/cancelled, progress, metadata)
-- **scrapedCourses**: Staging area for extracted courses with review status (pending/approved/rejected), confidence scores, AI warnings, source URLs, and reviewer notes
-
-### Workflow
-1. Admin triggers crawl job with institution URL via UI
-2. BullMQ worker fetches HTML, extracts courses using GPT-4o-mini
-3. Scraped courses saved to staging table with confidence scores
-4. Admin reviews courses in UI with side-by-side comparison
-5. Approved courses merged to production courses table
-6. Rejected courses logged with notes for improvement
-
-### Production Deployment Requirements
-⚠️ **Redis Server Required**: BullMQ depends on Redis for job queue persistence. Configure `REDIS_URL` environment variable pointing to Redis instance before deploying.
-
-### Development Notes
-- Redis connection errors in development are expected (no local Redis server)
-- Scraping worker starts on server boot but gracefully handles missing Redis
-- Job queue functionality requires production Redis for testing
-- Admin UI works independently of Redis for viewing existing scraped data
+- **Authentication Service**: Replit Auth.
+- **AI Service**: OpenAI API (GPT-4o, GPT-4o-mini).
+- **Vector Database**: Pinecone.
+- **Database**: PostgreSQL (Neon).
+- **Job Queue**: Redis (BullMQ dependency).
+- **Object Storage**: Replit Object Storage.
+- **CDN**: Google Fonts CDN.
+- **Mapping/Location**: Google Maps JavaScript API, Google Places API.
+- **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
+- **Email Service**: Resend API.
