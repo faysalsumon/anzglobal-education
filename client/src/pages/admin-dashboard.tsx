@@ -1143,10 +1143,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // Sidebar styling
+  // Sidebar styling - compact and responsive
   const sidebarStyle = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "4.5rem",
+    "--sidebar-width": "14rem",        // Compact: 224px (was 256px)
+    "--sidebar-width-icon": "3.5rem",  // Icon mode: 56px (was 72px)
   } as React.CSSProperties;
 
   // Handle tab change with scroll to top

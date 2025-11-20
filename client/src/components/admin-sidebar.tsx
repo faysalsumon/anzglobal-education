@@ -105,32 +105,27 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
 
   const handleItemClick = (value: string) => {
     onTabChange(value);
-    // Close sidebar drawer on mobile after selection
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    // Always close sidebar after selection for better UX
+    setOpenMobile(false);
   };
-
-  // Use larger button size on mobile for better touch targets (44px minimum)
-  const buttonSize = isMobile ? "lg" : "default";
 
   return (
     <Sidebar collapsible="icon" data-testid="admin-sidebar">
-      <SidebarHeader className="border-b border-border/40 px-3 py-4">
+      <SidebarHeader className="border-b border-border/40 px-2 py-3">
         <div className="flex items-center gap-2 px-1">
-          <img src={logoUrl} alt="ANZ Global" className="h-7 w-auto group-data-[collapsible=icon]:hidden" />
+          <img src={logoUrl} alt="ANZ Global" className="h-6 w-auto group-data-[collapsible=icon]:hidden" />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-xs font-semibold">Admin Panel</span>
-            <span className="text-[10px] text-muted-foreground">Management Dashboard</span>
+            <span className="text-xs font-semibold">Admin</span>
+            <span className="text-[10px] text-muted-foreground">Dashboard</span>
           </div>
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="px-2 py-4">
+      <SidebarContent className="px-1.5 py-3">
         {/* Management Section - Only for full admin access */}
         {visibleManagement.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 text-xs">Management</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Management</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleManagement.map((item) => {
@@ -141,11 +136,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
-                        size={buttonSize}
+                        size="default"
                         data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
                       >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -158,7 +154,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
         {/* Content & Leads Section */}
         {visibleContent.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 text-xs">Content & Leads</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Content & Leads</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleContent.map((item) => {
@@ -169,11 +165,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
-                        size={buttonSize}
+                        size="default"
                         data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
                       >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
@@ -186,7 +183,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
         {/* Tools Section */}
         {visibleTools.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 text-xs">Tools</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Tools</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleTools.map((item) => {
@@ -197,11 +194,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
                         onClick={() => handleItemClick(item.value)}
                         isActive={activeTab === item.value}
                         tooltip={item.label}
-                        size={buttonSize}
+                        size="default"
                         data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
                       >
-                        <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
