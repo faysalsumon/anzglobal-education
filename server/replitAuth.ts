@@ -336,3 +336,11 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 };
+
+/**
+ * Helper to extract authenticated user ID from request
+ * Returns null if user is not authenticated
+ */
+export function getAuthenticatedUserId(req: any): string | null {
+  return req.user?.claims?.sub ?? null;
+}

@@ -46,6 +46,7 @@ import { AdminSidebar } from "@/components/admin-sidebar";
 import { AdminBlogManagement } from "@/components/admin-blog-management";
 import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
 import { ActivityFeed } from "@/components/activity-feed";
+import { AdminApplicationsKanban } from "@/components/admin-applications-kanban";
 
 interface User {
   id: string;
@@ -2156,126 +2157,8 @@ export default function AdminDashboard() {
         {/* Applications Tab */}
         {activeTab === "applications" && (
           <div className="space-y-6 md:space-y-8">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div>
-                  <CardTitle>Applications</CardTitle>
-                  <CardDescription>View all course applications from students</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by student name, course, university..."
-                    value={applicationSearchQuery}
-                    onChange={(e) => setApplicationSearchQuery(e.target.value)}
-                    className="pl-10"
-                    data-testid="input-search-applications"
-                  />
-                </div>
-                <Select value={applicationStatusFilter} onValueChange={setApplicationStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-application-status">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="reviewing">Reviewing</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>University</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Applied Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {applicationsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                          Loading applications...
-                        </TableCell>
-                      </TableRow>
-                    ) : !applications || applications.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          No applications found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      applications
-                        .filter((app) => {
-                          const searchLower = applicationSearchQuery.toLowerCase();
-                          const matchesSearch =
-                            !searchLower ||
-                            app.student.name?.toLowerCase().includes(searchLower) ||
-                            app.course.title?.toLowerCase().includes(searchLower) ||
-                            app.university.name?.toLowerCase().includes(searchLower);
-                          
-                          const matchesStatus =
-                            applicationStatusFilter === 'all' ||
-                            app.status === applicationStatusFilter;
-                          
-                          return matchesSearch && matchesStatus;
-                        })
-                        .map((app) => (
-                          <TableRow key={app.id} data-testid={`row-application-${app.id}`}>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{app.student.name}</span>
-                                <span className="text-sm text-muted-foreground">{app.student.email}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{app.course.title}</span>
-                                <span className="text-sm text-muted-foreground">
-                                  {app.course.level} • {app.course.subject}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{app.university.name}</TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={
-                                  app.status === 'accepted' ? 'default' :
-                                  app.status === 'rejected' ? 'destructive' :
-                                  app.status === 'reviewing' ? 'secondary' :
-                                  'outline'
-                                }
-                              >
-                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {app.createdAt
-                                ? new Date(app.createdAt).toLocaleDateString()
-                                : 'N/A'}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <AdminApplicationsKanban />
+          </div>
         )}
 
         {/* Data Import Tab */}

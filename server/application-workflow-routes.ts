@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { isAuthenticated } from "./replitAuth";
+import { isAuthenticated, getAuthenticatedUserId } from "./replitAuth";
 import {
   applications,
   applicationStageHistory,
@@ -132,7 +132,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
   // Get applications for current student
   app.get("/api/student/applications", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims?.sub || req.user!.id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
       // Get student profile
       const profile = await db.query.studentProfiles.findFirst({
@@ -168,7 +171,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
   // Get application stage history
   app.get("/api/student/applications/:id/history", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims?.sub || req.user!.id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const { id: applicationId } = req.params;
 
       // Verify application belongs to student
@@ -212,7 +218,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
   // Get application documents
   app.get("/api/student/applications/:id/documents", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims?.sub || req.user!.id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const { id: applicationId } = req.params;
 
       // Verify application belongs to student
@@ -258,7 +267,10 @@ export function registerApplicationWorkflowRoutes(app: Express) {
   // Upload document for current stage
   app.post("/api/student/applications/:id/upload-document", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.claims?.sub || req.user!.id;
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const { id: applicationId } = req.params;
       const validatedData = stageDocumentUploadSchema.parse(req.body);
 
