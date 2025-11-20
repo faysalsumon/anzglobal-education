@@ -266,7 +266,7 @@ export function AdminScrapingPanel() {
 
   // Test scraping mutation (direct, bypasses queue)
   const testScrapeMutation = useMutation({
-    mutationFn: async (data: { institutionUrl: string; institutionName?: string; useBrowser?: boolean }) => {
+    mutationFn: async (data: { institutionUrl: string; institutionName?: string }) => {
       return await apiRequest("POST", "/api/admin/scraping/test", data);
     },
     onSuccess: async (response: any) => {
@@ -280,7 +280,6 @@ export function AdminScrapingPanel() {
       setTriggerDialogOpen(false);
       setInstitutionUrl("");
       setInstitutionName("");
-      setUseBrowser(false);
     },
     onError: (error: any) => {
       toast({
@@ -322,7 +321,6 @@ export function AdminScrapingPanel() {
     testScrapeMutation.mutate({
       institutionUrl: institutionUrl.trim(),
       institutionName: institutionName.trim() || undefined,
-      useBrowser,
     });
   };
 
@@ -490,7 +488,6 @@ export function AdminScrapingPanel() {
             // Reset form when opening dialog
             setInstitutionUrl("");
             setInstitutionName("");
-            setUseBrowser(false);
             setTriggerDialogOpen(true);
           }} 
           data-testid="button-new-job"
