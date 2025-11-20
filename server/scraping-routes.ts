@@ -149,6 +149,23 @@ router.post("/test", async (req, res) => {
     console.log(`[Direct Scraping] Extraction complete - Confidence: ${extractionResult.confidence}`);
     console.log(`[Direct Scraping] Warnings: ${extractionResult.warnings.join(", ") || "None"}`);
 
+    // Helper to sanitize numeric fields (convert string "null" to actual null)
+    const sanitizeNumeric = (value: any): number | null => {
+      if (value === null || value === undefined || value === "null" || value === "") {
+        return null;
+      }
+      const parsed = typeof value === 'string' ? parseFloat(value) : value;
+      return isNaN(parsed) ? null : parsed;
+    };
+
+    const sanitizeInteger = (value: any): number | null => {
+      if (value === null || value === undefined || value === "null" || value === "") {
+        return null;
+      }
+      const parsed = typeof value === 'string' ? parseInt(value, 10) : value;
+      return isNaN(parsed) ? null : parsed;
+    };
+
     // Create a job record for tracking (jobId is required for scrapedCourses)
     const [tempJob] = await db
       .insert(scrapingJobs)
@@ -160,7 +177,7 @@ router.post("/test", async (req, res) => {
       })
       .returning();
 
-    // Save to scraped_courses table
+    // Save to scraped_courses table with sanitized numeric fields
     const [scrapedCourse] = await db
       .insert(scrapedCourses)
       .values({
@@ -170,8 +187,14 @@ router.post("/test", async (req, res) => {
         level: extractionResult.data.level,
         duration: extractionResult.data.duration,
         description: extractionResult.data.description,
-        fees: extractionResult.data.fees,
-        applicationFees: extractionResult.data.applicationFees,
+        fees: sanitizeNumeric(extractionResult.data.fees),
+        applicationFees: sanitizeNumeric(extractionResult.data.applicationFees),
+        costOfLiving: sanitizeNumeric(extractionResult.data.costOfLiving),
+        durationMonths: sanitizeInteger(extractionResult.data.durationMonths),
+        durationWeeks: sanitizeInteger(extractionResult.data.durationWeeks),
+        minimumAge: sanitizeInteger(extractionResult.data.minimumAge),
+        scholarshipPercentageMin: sanitizeInteger(extractionResult.data.scholarshipPercentageMin),
+        scholarshipPercentageMax: sanitizeInteger(extractionResult.data.scholarshipPercentageMax),
         englishRequirements: extractionResult.data.englishRequirements,
         academicRequirements: extractionResult.data.academicRequirements,
         intakes: extractionResult.data.intakes,

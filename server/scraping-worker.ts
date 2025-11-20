@@ -33,6 +33,42 @@ connection.on("error", (err: any) => {
 });
 
 /**
+ * Sanitize numeric fields to convert string "null" to actual null
+ */
+function sanitizeNumeric(value: any): number | null {
+  if (value === null || value === undefined || value === "null" || value === "") {
+    return null;
+  }
+  const parsed = typeof value === 'string' ? parseFloat(value) : value;
+  return isNaN(parsed) ? null : parsed;
+}
+
+function sanitizeInteger(value: any): number | null {
+  if (value === null || value === undefined || value === "null" || value === "") {
+    return null;
+  }
+  const parsed = typeof value === 'string' ? parseInt(value, 10) : value;
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Sanitize extraction data to ensure numeric fields are properly typed
+ */
+function sanitizeExtractionData(data: any) {
+  return {
+    ...data,
+    fees: sanitizeNumeric(data.fees),
+    applicationFees: sanitizeNumeric(data.applicationFees),
+    costOfLiving: sanitizeNumeric(data.costOfLiving),
+    durationMonths: sanitizeInteger(data.durationMonths),
+    durationWeeks: sanitizeInteger(data.durationWeeks),
+    minimumAge: sanitizeInteger(data.minimumAge),
+    scholarshipPercentageMin: sanitizeInteger(data.scholarshipPercentageMin),
+    scholarshipPercentageMax: sanitizeInteger(data.scholarshipPercentageMax),
+  };
+}
+
+/**
  * Process a single scraping job
  */
 async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
@@ -239,7 +275,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
                 approvalStatus: "approved", // Auto-approved, no manual review needed
               }).returning();
               
-              // Save to scraped courses table with reference to created course
+              // Save to scraped courses table with reference to created course (sanitize numeric fields)
               await tx.insert(scrapedCourses).values({
                 jobId,
                 institutionId: institutionId || null,
@@ -247,7 +283,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
                 extractedAt: new Date(extraction.extractedAt),
                 confidence: extraction.confidence.toString(),
                 warnings: extraction.warnings,
-                ...extraction.data,
+                ...sanitizeExtractionData(extraction.data),
                 reviewStatus: "approved",
                 reviewedAt: new Date(),
                 reviewedBy: "auto-approval-system",
@@ -261,7 +297,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
             extractedCount++;
           } catch (error: any) {
             console.error(`Failed to auto-approve course ${extraction.data.title}:`, error.message);
-            // Fall back to pending review if auto-approval fails
+            // Fall back to pending review if auto-approval fails (sanitize numeric fields)
             await db.insert(scrapedCourses).values({
               jobId,
               institutionId: institutionId || null,
@@ -269,14 +305,14 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
               extractedAt: new Date(extraction.extractedAt),
               confidence: extraction.confidence.toString(),
               warnings: [...extraction.warnings, `Auto-approval failed: ${error.message}`],
-              ...extraction.data,
+              ...sanitizeExtractionData(extraction.data),
               reviewStatus: "pending",
             });
             extractedCount++;
             console.log(`Fell back to pending review for: ${extraction.data.title || "Unknown"}`);
           }
         } else {
-          // Manual review required: Save to scraped courses table only
+          // Manual review required: Save to scraped courses table only (sanitize numeric fields)
           await db.insert(scrapedCourses).values({
             jobId,
             institutionId: institutionId || null,
@@ -284,7 +320,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
             extractedAt: new Date(extraction.extractedAt),
             confidence: extraction.confidence.toString(),
             warnings: extraction.warnings,
-            ...extraction.data,
+            ...sanitizeExtractionData(extraction.data),
             reviewStatus: "pending",
           });
           
