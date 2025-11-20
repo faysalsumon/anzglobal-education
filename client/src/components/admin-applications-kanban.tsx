@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,6 +104,129 @@ const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
+
+// Droppable stage column
+function DroppableStageColumn({ 
+  stage, 
+  children 
+}: { 
+  stage: ApplicationStage;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef } = useDroppable({
+    id: stage,
+  });
+
+  return (
+    <div ref={setNodeRef} className="h-full">
+      {children}
+    </div>
+  );
+}
+
+// Draggable application card
+function DraggableApplicationCard({ 
+  app, 
+  isSelected,
+  onToggleSelection,
+  onViewDetails,
+  onAdvanceStage,
+  nextStage
+}: { 
+  app: AdminApplication;
+  isSelected: boolean;
+  onToggleSelection: () => void;
+  onViewDetails: () => void;
+  onAdvanceStage: () => void;
+  nextStage: ApplicationStage | null;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: app.application.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="hover-elevate cursor-move"
+      data-testid={`application-card-${app.application.id}`}
+    >
+      <CardContent className="p-4 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 flex-1">
+            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing pt-1">
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onToggleSelection}
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`checkbox-application-${app.application.id}`}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {app.student.firstName} {app.student.lastName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {app.course.title}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {app.university.name}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {app.consultant && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <User className="h-3 w-3" />
+            <span className="truncate">
+              {app.consultant.firstName} {app.consultant.lastName}
+            </span>
+          </div>
+        )}
+
+        <Separator />
+
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-1 text-xs"
+            onClick={onViewDetails}
+            data-testid={`button-view-details-${app.application.id}`}
+          >
+            <FileText className="h-3 w-3 mr-1" />
+            Details
+          </Button>
+          {nextStage && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
+              onClick={onAdvanceStage}
+              data-testid={`button-next-stage-${app.application.id}`}
+            >
+              <ChevronRight className="h-3 w-3 mr-1" />
+              Next
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AdminApplicationsKanban() {
   const { toast } = useToast();
@@ -263,6 +386,44 @@ export function AdminApplicationsKanban() {
     transitionMutation.mutate({ applicationId, toStage });
   };
 
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const applicationId = active.id as string;
+    
+    // Get the target stage - check if it's a column drop zone or read from sortable container
+    let newStage: ApplicationStage | undefined;
+    
+    // Check if dropped directly on a column (droppable zone)
+    if (STAGES.includes(over.id as ApplicationStage) || TERMINAL_STAGES.includes(over.id as ApplicationStage)) {
+      newStage = over.id as ApplicationStage;
+    } 
+    // If dropped on another card, get its container (column)
+    else if (over.data.current?.sortable) {
+      newStage = over.data.current.sortable.containerId as ApplicationStage;
+    }
+
+    if (!newStage) return;
+
+    // Find the application being dragged
+    const application = filteredApplications.find(app => app.application.id === applicationId);
+    if (!application) return;
+
+    // Don't do anything if dropped in the same stage
+    if (application.application.currentStage === newStage) return;
+
+    // Transition to the new stage
+    handleStageTransition(applicationId, newStage);
+  };
+
+  const handleDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
   // Calculate stats
   const stats = {
     total: filteredApplications.length,
@@ -402,168 +563,131 @@ export function AdminApplicationsKanban() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-8">
-          {/* Active Stages */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Active Stages</h3>
-            <ScrollArea className="w-full pb-4">
-              <div className="flex gap-4 min-w-max">
-                {STAGES.map((stage) => (
-                  <div key={stage} className="w-80 flex-shrink-0">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-medium">
-                            {stage.replace(/-/g, ' ')}
-                          </CardTitle>
-                          <Badge variant="secondary" className="text-xs">
-                            {applicationsByStage[stage].length}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <ScrollArea className="h-96">
-                          <div className="space-y-3 pr-4">
-                            {applicationsByStage[stage].length === 0 ? (
-                              <p className="text-sm text-muted-foreground text-center py-8">
-                                No applications
-                              </p>
-                            ) : (
-                              applicationsByStage[stage].map((app) => (
-                                <Card
-                                  key={app.application.id}
-                                  className="hover-elevate cursor-pointer"
-                                  data-testid={`application-card-${app.application.id}`}
-                                >
-                                  <CardContent className="p-4 space-y-2">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="flex items-start gap-2 flex-1">
-                                        <Checkbox
-                                          checked={selectedApplications.has(app.application.id)}
-                                          onCheckedChange={() => toggleSelection(app.application.id)}
-                                          onClick={(e) => e.stopPropagation()}
-                                          data-testid={`checkbox-application-${app.application.id}`}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium truncate">
-                                            {app.student.firstName} {app.student.lastName}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground truncate">
-                                            {app.course.title}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground truncate">
-                                            {app.university.name}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {app.consultant && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <User className="h-3 w-3" />
-                                        <span className="truncate">
-                                          {app.consultant.firstName} {app.consultant.lastName}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    <Separator />
-
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="flex-1 text-xs"
-                                        onClick={() => {
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-8">
+            {/* Active Stages */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Active Stages</h3>
+              <ScrollArea className="w-full pb-4">
+                <div className="flex gap-4 min-w-max">
+                  {STAGES.map((stage) => (
+                    <DroppableStageColumn key={stage} stage={stage}>
+                      <SortableContext
+                        id={stage}
+                        items={applicationsByStage[stage].map(app => app.application.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="w-80 flex-shrink-0">
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-medium">
+                                  {stage}
+                                </CardTitle>
+                                <Badge variant="secondary" className="text-xs">
+                                  {applicationsByStage[stage].length}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <ScrollArea className="h-96">
+                                <div className="space-y-3 pr-4">
+                                  {applicationsByStage[stage].length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-8">
+                                      No applications
+                                    </p>
+                                  ) : (
+                                    applicationsByStage[stage].map((app) => (
+                                      <DraggableApplicationCard
+                                        key={app.application.id}
+                                        app={app}
+                                        isSelected={selectedApplications.has(app.application.id)}
+                                        onToggleSelection={() => toggleSelection(app.application.id)}
+                                        onViewDetails={() => {
                                           setSelectedApplication(app);
                                           setDetailsDialogOpen(true);
                                         }}
-                                        data-testid={`button-view-details-${app.application.id}`}
-                                      >
-                                        <FileText className="h-3 w-3 mr-1" />
-                                        Details
-                                      </Button>
-                                      {getNextStage(stage) && (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="flex-1 text-xs"
-                                          onClick={() => handleStageTransition(app.application.id, getNextStage(stage)!)}
-                                          disabled={transitionMutation.isPending}
-                                          data-testid={`button-next-stage-${app.application.id}`}
-                                        >
-                                          <ChevronRight className="h-3 w-3 mr-1" />
-                                          Next
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))
-                            )}
+                                        onAdvanceStage={() => {
+                                          const next = getNextStage(stage);
+                                          if (next) handleStageTransition(app.application.id, next);
+                                        }}
+                                        nextStage={getNextStage(stage)}
+                                      />
+                                    ))
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </SortableContext>
+                    </DroppableStageColumn>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Terminal Stages */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Final Outcomes</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                {TERMINAL_STAGES.map((stage) => (
+                  <DroppableStageColumn key={stage} stage={stage}>
+                    <SortableContext
+                      id={stage}
+                      items={applicationsByStage[stage].map(app => app.application.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-medium">
+                              {stage}
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs">
+                              {applicationsByStage[stage].length}
+                            </Badge>
                           </div>
-                        </ScrollArea>
-                      </CardContent>
-                    </Card>
-                  </div>
+                        </CardHeader>
+                        <CardContent>
+                          <ScrollArea className="h-64">
+                            <div className="space-y-2 pr-4">
+                              {applicationsByStage[stage].length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                  No applications
+                                </p>
+                              ) : (
+                                applicationsByStage[stage].map((app) => (
+                                  <DraggableApplicationCard
+                                    key={app.application.id}
+                                    app={app}
+                                    isSelected={selectedApplications.has(app.application.id)}
+                                    onToggleSelection={() => toggleSelection(app.application.id)}
+                                    onViewDetails={() => {
+                                      setSelectedApplication(app);
+                                      setDetailsDialogOpen(true);
+                                    }}
+                                    onAdvanceStage={() => {}}
+                                    nextStage={null}
+                                  />
+                                ))
+                              )}
+                            </div>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </SortableContext>
+                  </DroppableStageColumn>
                 ))}
               </div>
-            </ScrollArea>
-          </div>
-
-          {/* Terminal Stages */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Final Outcomes</h3>
-            <div className="grid gap-4 md:grid-cols-3">
-              {TERMINAL_STAGES.map((stage) => (
-                <Card key={stage}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-medium">
-                        {stage.replace(/-/g, ' ')}
-                      </CardTitle>
-                      <Badge variant="secondary" className="text-xs">
-                        {applicationsByStage[stage].length}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-64">
-                      <div className="space-y-2 pr-4">
-                        {applicationsByStage[stage].length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            No applications
-                          </p>
-                        ) : (
-                          applicationsByStage[stage].map((app) => (
-                            <Card
-                              key={app.application.id}
-                              className="hover-elevate cursor-pointer"
-                              onClick={() => {
-                                setSelectedApplication(app);
-                                setDetailsDialogOpen(true);
-                              }}
-                              data-testid={`application-card-${app.application.id}`}
-                            >
-                              <CardContent className="p-3">
-                                <p className="text-sm font-medium truncate">
-                                  {app.student.firstName} {app.student.lastName}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {app.course.title}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          ))
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
-        </div>
+        </DndContext>
       )}
 
       {/* Assign Dialog */}
