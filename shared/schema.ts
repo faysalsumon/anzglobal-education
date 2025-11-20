@@ -65,6 +65,21 @@ export const providerTypeEnum = pgEnum('provider_type', [
   'School',
 ]);
 
+// Application stage enum based on CRM workflow
+export const applicationStageEnum = pgEnum('application_stage', [
+  'Assessment',
+  'Collect Docs',
+  'Documents Verification',
+  'Offer-Letter',
+  'GS-Clearance',
+  'COE',
+  'Health Cover',
+  'Visa Lodgment',
+  'Application Won',
+  'Refusal/Refunds',
+  'Application Lost',
+]);
+
 // Activity log action types
 export const activityActionEnum = pgEnum('activity_action', [
   'created',
@@ -81,6 +96,7 @@ export const activityActionEnum = pgEnum('activity_action', [
   'status_changed',
   'imported',
   'exported',
+  'stage_changed',
 ]);
 
 // Activity log entity types
@@ -427,12 +443,92 @@ export const applications = pgTable("applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   studentId: varchar("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
-  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewing', 'accepted', 'rejected'
+  
+  // Application stage workflow
+  currentStage: applicationStageEnum("current_stage").notNull().default('Assessment'),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'reviewing', 'accepted', 'rejected', 'withdrawn'
+  
+  // Consultant assignment for admin workflow
+  assignedConsultantId: varchar("assigned_consultant_id").references(() => users.id, { onDelete: "set null" }), // Admin/consultant assigned to review
+  assignedAt: timestamp("assigned_at"),
+  
+  // Application details
   personalStatement: text("personal_statement"),
   additionalInfo: text("additional_info"),
+  
+  // Stage-specific metadata
+  stageMetadata: jsonb("stage_metadata"), // Store stage-specific data (offer letter details, visa info, etc.)
+  
+  // Important dates
+  submittedAt: timestamp("submitted_at"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("applications_student_idx").on(table.studentId),
+  index("applications_course_idx").on(table.courseId),
+  index("applications_stage_idx").on(table.currentStage),
+  index("applications_consultant_idx").on(table.assignedConsultantId),
+  index("applications_status_idx").on(table.status),
+]);
+
+// Application stage history for tracking all stage transitions
+export const applicationStageHistory = pgTable("application_stage_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  
+  fromStage: applicationStageEnum("from_stage"),
+  toStage: applicationStageEnum("to_stage").notNull(),
+  
+  changedBy: varchar("changed_by").notNull().references(() => users.id, { onDelete: "cascade" }), // Who moved the stage
+  changedByRole: varchar("changed_by_role", { length: 20 }).notNull(), // 'student', 'admin', 'university'
+  
+  notes: text("notes"), // Optional notes for the stage transition
+  metadata: jsonb("metadata"), // Additional stage-specific data
+  
+  durationInStage: integer("duration_in_stage"), // Time spent in previous stage (hours)
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("stage_history_application_idx").on(table.applicationId),
+  index("stage_history_changed_by_idx").on(table.changedBy),
+  index("stage_history_created_at_idx").on(table.createdAt),
+]);
+
+// Stage-specific documents for applications
+export const applicationStageDocuments = pgTable("application_stage_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  stage: applicationStageEnum("stage").notNull(),
+  
+  documentId: varchar("document_id").references(() => documents.id, { onDelete: "set null" }), // Reference to uploaded document
+  
+  documentType: varchar("document_type", { length: 50 }).notNull(), // 'passport', 'academic_transcript', 'offer_letter', etc.
+  documentName: text("document_name").notNull(),
+  documentUrl: text("document_url"),
+  
+  isRequired: boolean("is_required").default(false),
+  isVerified: boolean("is_verified").default(false),
+  
+  uploadedBy: varchar("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  uploadedByRole: varchar("uploaded_by_role", { length: 20 }), // 'student', 'admin', 'university'
+  uploadedAt: timestamp("uploaded_at"),
+  
+  verifiedBy: varchar("verified_by").references(() => users.id, { onDelete: "set null" }),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
+  
+  rejectionReason: text("rejection_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("stage_docs_application_idx").on(table.applicationId),
+  index("stage_docs_stage_idx").on(table.stage),
+  index("stage_docs_uploaded_by_idx").on(table.uploadedBy),
+]);
 
 // Favorites table for students to save favorite institutions and courses
 export const favorites = pgTable("favorites", {
@@ -1348,6 +1444,21 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+export const insertApplicationStageHistorySchema = createInsertSchema(applicationStageHistory).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertApplicationStageHistory = z.infer<typeof insertApplicationStageHistorySchema>;
+export type ApplicationStageHistory = typeof applicationStageHistory.$inferSelect;
+
+export const insertApplicationStageDocumentSchema = createInsertSchema(applicationStageDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertApplicationStageDocument = z.infer<typeof insertApplicationStageDocumentSchema>;
+export type ApplicationStageDocument = typeof applicationStageDocuments.$inferSelect;
 
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   id: true,

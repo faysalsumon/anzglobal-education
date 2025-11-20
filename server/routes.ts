@@ -6986,6 +6986,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.use('/api/admin/scraping', isAuthenticated, scrapingRouter.default);
   console.log('Scraping routes registered for AI-powered course extraction');
 
+  // Register application workflow routes
+  const { registerApplicationWorkflowRoutes } = await import('./application-workflow-routes');
+  registerApplicationWorkflowRoutes(app);
+  console.log('Application workflow routes registered for CRM-style application management');
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering
