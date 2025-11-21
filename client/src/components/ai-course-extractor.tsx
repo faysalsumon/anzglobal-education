@@ -132,6 +132,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
     onError: (error: any) => {
       let title = "Extraction failed";
       let description = error.message || "Failed to extract data from website. Please check the URL and try again.";
+      let duration = 8000;
       
       // Handle rate limiting with better messaging
       if (error.rateLimit) {
@@ -140,13 +141,29 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
         
         title = "Rate Limit Exceeded";
         description = `${error.message}\n\nYou've used all ${error.rateLimit.limit} requests for this hour. You can try again in ${minutesUntilReset} minute${minutesUntilReset !== 1 ? 's' : ''} (at ${resetDate.toLocaleTimeString()}).`;
+      } 
+      // Handle website access restrictions (403, bot detection)
+      else if (error.message?.toLowerCase().includes('forbidden') || error.message?.toLowerCase().includes('403')) {
+        title = "Website Access Restricted";
+        description = "The course website is blocking automated access. This is common with university sites. Try:\n• Using a different course URL from the same institution\n• Checking if the URL is accessible in your browser\n• Entering course details manually instead";
+        duration = 12000; // Show longer for actionable advice
+      }
+      // Handle not found errors
+      else if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('404')) {
+        title = "Course Page Not Found";
+        description = "The course URL doesn't exist or has been moved. Please verify the URL is correct and accessible in your browser.";
+      }
+      // Handle timeout/network errors
+      else if (error.message?.toLowerCase().includes('timeout') || error.message?.toLowerCase().includes('network')) {
+        title = "Connection Timeout";
+        description = "The website took too long to respond. This could be due to a slow connection or server issues. Please try again.";
       }
       
       toast({
         title,
         description,
         variant: "destructive",
-        duration: 8000, // Show rate limit errors longer
+        duration,
       });
     },
   });
@@ -188,8 +205,8 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
       [fieldName]: {
         ...prev[fieldName],
         rejected: false,
-        // Restore previous approval state
-        approved: prev[fieldName].wasApprovedBeforeReject || false,
+        // Only restore approval if it was actually approved before rejection
+        approved: !!prev[fieldName].wasApprovedBeforeReject,
         wasApprovedBeforeReject: undefined // Clear stale state
       },
     }));
@@ -289,7 +306,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
             {isEdited && <Badge variant="secondary" className="text-xs">Edited</Badge>}
             {isRejected ? (
               <>
-                <Badge variant="destructive">
+                <Badge variant="secondary" className="opacity-60">
                   <XCircle className="h-3 w-3 mr-1" />
                   Rejected
                 </Badge>
@@ -334,35 +351,49 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
         {type === "boolean" ? (
           <div className="flex items-center gap-2">
             <Switch
-              checked={field.value || false}
+              checked={field.value === true}
               onCheckedChange={(checked) => handleFieldEdit(fieldName, checked)}
               disabled={isApproved || isRejected}
               data-testid={`input-${fieldName}`}
             />
-            <span className="text-sm text-muted-foreground">{field.value ? "Yes" : "No"}</span>
+            <span className="text-sm text-muted-foreground">
+              {field.value === null ? "(not set)" : field.value ? "Yes" : "No"}
+            </span>
           </div>
         ) : type === "textarea" ? (
           <Textarea
-            value={field.value || ""}
-            onChange={(e) => handleFieldEdit(fieldName, e.target.value)}
+            value={field.value === null ? "" : field.value}
+            onChange={(e) => handleFieldEdit(fieldName, e.target.value || null)}
             disabled={isApproved || isRejected}
             className="min-h-[100px]"
+            placeholder={field.value === null ? "(null)" : ""}
             data-testid={`input-${fieldName}`}
           />
         ) : type === "array" ? (
           <Textarea
-            value={Array.isArray(field.value) ? field.value.join(", ") : ""}
-            onChange={(e) => handleFieldEdit(fieldName, e.target.value.split(",").map((v: string) => v.trim()).filter(Boolean))}
+            value={Array.isArray(field.value) && field.value.length > 0 ? field.value.join(", ") : ""}
+            onChange={(e) => {
+              const trimmed = e.target.value.trim();
+              handleFieldEdit(fieldName, trimmed ? trimmed.split(",").map((v: string) => v.trim()).filter(Boolean) : null);
+            }}
             disabled={isApproved || isRejected}
-            placeholder="Comma-separated values"
+            placeholder={field.value === null ? "(null - no items)" : "Comma-separated values"}
             data-testid={`input-${fieldName}`}
           />
         ) : (
           <Input
             type={type}
-            value={field.value || ""}
-            onChange={(e) => handleFieldEdit(fieldName, type === "number" ? parseInt(e.target.value) : e.target.value)}
+            value={field.value === null || field.value === undefined ? "" : field.value}
+            onChange={(e) => {
+              if (type === "number") {
+                const val = e.target.value.trim();
+                handleFieldEdit(fieldName, val === "" ? null : parseFloat(val));
+              } else {
+                handleFieldEdit(fieldName, e.target.value.trim() || null);
+              }
+            }}
             disabled={isApproved || isRejected}
+            placeholder={field.value === null ? "(null)" : ""}
             data-testid={`input-${fieldName}`}
           />
         )}
