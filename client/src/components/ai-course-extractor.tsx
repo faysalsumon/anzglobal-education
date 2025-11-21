@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,47 +8,78 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Sparkles, Globe, CheckCircle2, XCircle, Edit3 } from "lucide-react";
+import { Loader2, Sparkles, Globe, CheckCircle2, XCircle, Edit3, Undo2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ExtractedData {
+  // Basic Information
   title: string | null;
   description: string | null;
   subject: string | null;
   level: string | null;
+  courseCode: string | null;
+  
+  // Duration & Timing
   duration: string | null;
   durationMonths: number | null;
-  fees: number | null;
-  currency: string | null;
-  location: string | null;
-  country: string | null;
+  durationWeeks: number | null;
   startDate: string | null;
   applicationDeadline: string | null;
-  prerequisites: string | null;
-  courseCode: string | null;
-  prPathway: boolean | null;
+  intakes: string[] | null;
+  
+  // Financial
+  fees: number | null;
+  currency: string | null;
+  applicationFees: number | null;
+  costOfLiving: number | null;
   scholarshipPercentageMin: number | null;
   scholarshipPercentageMax: number | null;
+  
+  // Location
+  location: string | null;
+  country: string | null;
+  campusLocations: string[] | null;
+  
+  // Requirements
+  prerequisites: string | null;
   eligibilityRequirements: string | null;
   englishRequirements: string | null;
   academicRequirements: string | null;
-  intakes: string[] | null;
+  minimumAge: number | null;
+  
+  // Academic Content
   studyAreas: string[] | null;
   careerOutcomes: string[] | null;
   careerPath: string | null;
+  pathways: string[] | null;
+  
+  // Delivery & Resources
   deliveryMode: string | null;
-  campusLocations: string[] | null;
+  thumbnailUrl: string | null;
+  curriculumUrl: string | null;
+  images: string[] | null;
+  
+  // Work & Pathways
+  prPathway: boolean | null;
   workRights: boolean | null;
   internshipAvailable: boolean | null;
   internshipDetails: string | null;
-  minimumAge: number | null;
 }
 
 interface EditableField {
   approved: boolean;
   edited: boolean;
   value: any;
+  rejected?: boolean; // Track rejected state instead of deleting
+  wasApprovedBeforeReject?: boolean; // Store approval state before rejection
 }
 
 interface AICourseExtractorProps {
@@ -57,9 +88,15 @@ interface AICourseExtractorProps {
 
 export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
   const [url, setUrl] = useState("");
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [editableFields, setEditableFields] = useState<Record<string, EditableField>>({});
   const { toast } = useToast();
+
+  // Fetch universities for institution selection
+  const { data: universitiesData } = useQuery<{ universities: Array<{ id: string; name: string; country: string }> }>({
+    queryKey: ["/api/universities"],
+  });
 
   const extractMutation = useMutation({
     mutationFn: async (websiteUrl: string) => {
@@ -76,15 +113,14 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
       setExtractedData(data);
       
       // Initialize editable fields with extracted data
+      // Include ALL fields, even those with null values, so reviewers can view and edit them
       const fields: Record<string, EditableField> = {};
       Object.keys(data).forEach((key) => {
-        if (data[key] !== null) {
-          fields[key] = {
-            approved: false,
-            edited: false,
-            value: data[key],
-          };
-        }
+        fields[key] = {
+          approved: false,
+          edited: false,
+          value: data[key],
+        };
       });
       setEditableFields(fields);
       
@@ -135,11 +171,28 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
   };
 
   const handleFieldReject = (fieldName: string) => {
-    setEditableFields((prev) => {
-      const newFields = { ...prev };
-      delete newFields[fieldName];
-      return newFields;
-    });
+    setEditableFields((prev) => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        wasApprovedBeforeReject: prev[fieldName].approved,
+        rejected: true,
+        approved: false
+      },
+    }));
+  };
+  
+  const handleFieldUnreject = (fieldName: string) => {
+    setEditableFields((prev) => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        rejected: false,
+        // Restore previous approval state
+        approved: prev[fieldName].wasApprovedBeforeReject || false,
+        wasApprovedBeforeReject: undefined // Clear stale state
+      },
+    }));
   };
 
   const handleFieldEdit = (fieldName: string, newValue: any) => {
@@ -152,7 +205,10 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
   const handleApproveAll = () => {
     const newFields = { ...editableFields };
     Object.keys(newFields).forEach((key) => {
-      newFields[key].approved = true;
+      // Only approve fields that aren't rejected
+      if (!newFields[key].rejected) {
+        newFields[key].approved = true;
+      }
     });
     setEditableFields(newFields);
     
@@ -163,14 +219,40 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
   };
 
   const handleSubmit = () => {
-    const approvedData: any = {};
+    if (!selectedInstitutionId) {
+      toast({
+        title: "Institution required",
+        description: "Please select an institution for this course.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const approvedData: any = { universityId: selectedInstitutionId };
     Object.entries(editableFields).forEach(([key, field]) => {
-      if (field.approved) {
-        approvedData[key] = field.value;
+      if (field.approved && !field.rejected) {
+        let value = field.value;
+        
+        // Normalize numeric fields - guard against NaN
+        if (typeof value === 'number' && isNaN(value)) {
+          value = null;
+        } else if (typeof value === 'string' && value.trim() === '') {
+          value = null;
+        }
+        
+        // Normalize array fields - ensure proper array format
+        if (Array.isArray(value)) {
+          value = value.filter(Boolean); // Remove empty strings
+          if (value.length === 0) {
+            value = null;
+          }
+        }
+        
+        approvedData[key] = value;
       }
     });
 
-    if (Object.keys(approvedData).length === 0) {
+    if (Object.keys(approvedData).length === 1) { // Only universityId
       toast({
         title: "No data approved",
         description: "Please approve at least one field before submitting.",
@@ -183,6 +265,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
     
     // Reset state
     setUrl("");
+    setSelectedInstitutionId("");
     setExtractedData(null);
     setEditableFields({});
   };
@@ -193,14 +276,34 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
     const field = editableFields[fieldName];
     const isApproved = field.approved;
     const isEdited = field.edited;
+    const isRejected = field.rejected;
 
     return (
-      <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-border" data-testid={`field-${fieldName}`}>
+      <div 
+        className={`space-y-2 p-4 rounded-lg border ${isRejected ? 'bg-muted/50 border-muted opacity-60' : 'bg-muted/30 border-border'}`} 
+        data-testid={`field-${fieldName}`}
+      >
         <div className="flex items-center justify-between">
-          <Label className="font-semibold">{label}</Label>
+          <Label className={`font-semibold ${isRejected ? 'text-muted-foreground line-through' : ''}`}>{label}</Label>
           <div className="flex items-center gap-2">
             {isEdited && <Badge variant="secondary" className="text-xs">Edited</Badge>}
-            {isApproved ? (
+            {isRejected ? (
+              <>
+                <Badge variant="destructive">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Rejected
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleFieldUnreject(fieldName)}
+                  data-testid={`button-undo-reject-${fieldName}`}
+                >
+                  <Undo2 className="h-4 w-4 mr-1" />
+                  Undo Reject
+                </Button>
+              </>
+            ) : isApproved ? (
               <Badge variant="default" className="bg-green-600 hover:bg-green-700">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Approved
@@ -233,7 +336,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
             <Switch
               checked={field.value || false}
               onCheckedChange={(checked) => handleFieldEdit(fieldName, checked)}
-              disabled={isApproved}
+              disabled={isApproved || isRejected}
               data-testid={`input-${fieldName}`}
             />
             <span className="text-sm text-muted-foreground">{field.value ? "Yes" : "No"}</span>
@@ -242,7 +345,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
           <Textarea
             value={field.value || ""}
             onChange={(e) => handleFieldEdit(fieldName, e.target.value)}
-            disabled={isApproved}
+            disabled={isApproved || isRejected}
             className="min-h-[100px]"
             data-testid={`input-${fieldName}`}
           />
@@ -250,7 +353,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
           <Textarea
             value={Array.isArray(field.value) ? field.value.join(", ") : ""}
             onChange={(e) => handleFieldEdit(fieldName, e.target.value.split(",").map((v: string) => v.trim()).filter(Boolean))}
-            disabled={isApproved}
+            disabled={isApproved || isRejected}
             placeholder="Comma-separated values"
             data-testid={`input-${fieldName}`}
           />
@@ -259,7 +362,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
             type={type}
             value={field.value || ""}
             onChange={(e) => handleFieldEdit(fieldName, type === "number" ? parseInt(e.target.value) : e.target.value)}
-            disabled={isApproved}
+            disabled={isApproved || isRejected}
             data-testid={`input-${fieldName}`}
           />
         )}
@@ -282,6 +385,38 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Institution Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="institution-select">Institution (Required)</Label>
+          <Select 
+            value={selectedInstitutionId} 
+            onValueChange={setSelectedInstitutionId}
+            disabled={extractMutation.isPending}
+          >
+            <SelectTrigger 
+              id="institution-select" 
+              data-testid="select-course-institution"
+              className="data-testid"
+            >
+              <SelectValue placeholder="Select institution for this course" />
+            </SelectTrigger>
+            <SelectContent>
+              {universitiesData?.universities.map((uni) => (
+                <SelectItem 
+                  key={uni.id} 
+                  value={uni.id}
+                  data-testid={`select-option-institution-${uni.id}`}
+                >
+                  {uni.name} ({uni.country})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Select the institution that offers this course. This is required before submission.
+          </p>
+        </div>
+
         {/* URL Input */}
         <div className="space-y-2">
           <Label htmlFor="website-url">Course Website URL</Label>
@@ -365,7 +500,10 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                   <h4 className="font-semibold text-sm text-muted-foreground">Duration & Fees</h4>
                   {renderField("Duration", "duration", extractedData.duration)}
                   {renderField("Duration (Months)", "durationMonths", extractedData.durationMonths, "number")}
+                  {renderField("Duration (Weeks)", "durationWeeks", extractedData.durationWeeks, "number")}
                   {renderField("Annual Tuition", "fees", extractedData.fees, "number")}
+                  {renderField("Application Fees", "applicationFees", extractedData.applicationFees, "number")}
+                  {renderField("Cost of Living", "costOfLiving", extractedData.costOfLiving, "number")}
                   {renderField("Currency", "currency", extractedData.currency)}
                 </div>
               )}
@@ -402,6 +540,7 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                   {renderField("Study Areas", "studyAreas", extractedData.studyAreas, "array")}
                   {renderField("Career Outcomes", "careerOutcomes", extractedData.careerOutcomes, "array")}
                   {renderField("Career Path", "careerPath", extractedData.careerPath, "textarea")}
+                  {renderField("Pathways", "pathways", extractedData.pathways, "array")}
                 </div>
               )}
 
@@ -423,6 +562,16 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                   {renderField("Work Rights", "workRights", extractedData.workRights, "boolean")}
                   {renderField("Internship Available", "internshipAvailable", extractedData.internshipAvailable, "boolean")}
                   {renderField("Internship Details", "internshipDetails", extractedData.internshipDetails, "textarea")}
+                </div>
+              )}
+
+              {/* Media & Resources */}
+              {(editableFields.thumbnailUrl || editableFields.curriculumUrl || editableFields.images) && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Media & Resources</h4>
+                  {renderField("Thumbnail URL", "thumbnailUrl", extractedData.thumbnailUrl)}
+                  {renderField("Curriculum URL", "curriculumUrl", extractedData.curriculumUrl)}
+                  {renderField("Images", "images", extractedData.images, "array")}
                 </div>
               )}
 
