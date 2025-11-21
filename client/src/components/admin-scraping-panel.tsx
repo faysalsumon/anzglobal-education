@@ -121,6 +121,15 @@ export function AdminScrapingPanel() {
   const [institutionName, setInstitutionName] = useState("");
   const [useAutoDiscovery, setUseAutoDiscovery] = useState(true); // Default to enabled
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
+  
+  // State for institution assignment in review dialog
+  const [reviewInstitutionId, setReviewInstitutionId] = useState<string>("");
+
+  // Fetch universities for institution selection
+  const { data: universitiesData } = useQuery<{ universities: Array<{ id: string; name: string; country: string }> }>({
+    queryKey: ["/api/universities"],
+  });
 
   // Fetch scraping jobs
   const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: ScrapingJob[] }>({
@@ -141,6 +150,7 @@ export function AdminScrapingPanel() {
   const triggerScrapeMutation = useMutation({
     mutationFn: async (data: { 
       institutionUrl: string; 
+      institutionId?: string;
       institutionName?: string; 
       useAutoDiscovery?: boolean;
       templateId?: string;
@@ -156,6 +166,7 @@ export function AdminScrapingPanel() {
       setTriggerDialogOpen(false);
       setInstitutionUrl("");
       setInstitutionName("");
+      setSelectedInstitutionId("");
       setUseAutoDiscovery(true); // Reset to default
       setSelectedTemplateId(""); // Reset template selection
     },
@@ -170,8 +181,8 @@ export function AdminScrapingPanel() {
 
   // Approve scraped course mutation
   const approveMutation = useMutation({
-    mutationFn: async ({ id, reviewNotes }: { id: string; reviewNotes?: string }) => {
-      return await apiRequest("PUT", `/api/admin/scraping/scraped-courses/${id}/approve`, { reviewNotes });
+    mutationFn: async ({ id, reviewNotes, institutionId }: { id: string; reviewNotes?: string; institutionId?: string }) => {
+      return await apiRequest("PUT", `/api/admin/scraping/scraped-courses/${id}/approve`, { reviewNotes, institutionId });
     },
     onSuccess: () => {
       toast({
@@ -302,6 +313,7 @@ export function AdminScrapingPanel() {
 
     triggerScrapeMutation.mutate({
       institutionUrl: institutionUrl.trim(),
+      institutionId: selectedInstitutionId || undefined,
       institutionName: institutionName.trim() || undefined,
       useAutoDiscovery,
       templateId: selectedTemplateId || undefined,
@@ -327,14 +339,27 @@ export function AdminScrapingPanel() {
   const handleReviewCourse = (course: ScrapedCourse) => {
     setSelectedCourse(course);
     setReviewNotes("");
+    setReviewInstitutionId(course.institutionId || "");
     setReviewDialogOpen(true);
   };
 
   const handleApprove = () => {
     if (!selectedCourse) return;
+    
+    // Validate institution is selected
+    if (!reviewInstitutionId) {
+      toast({
+        title: "Institution required",
+        description: "Please select an institution before approving",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     approveMutation.mutate({
       id: selectedCourse.id,
       reviewNotes: reviewNotes.trim() || undefined,
+      institutionId: reviewInstitutionId,
     });
   };
 
@@ -914,6 +939,28 @@ export function AdminScrapingPanel() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="institutionSelect">Select Institution *</Label>
+              <Select
+                value={selectedInstitutionId}
+                onValueChange={setSelectedInstitutionId}
+              >
+                <SelectTrigger id="institutionSelect" data-testid="select-institution">
+                  <SelectValue placeholder="Select an existing institution" />
+                </SelectTrigger>
+                <SelectContent>
+                  {universitiesData?.universities?.map((university) => (
+                    <SelectItem key={university.id} value={university.id}>
+                      {university.name} ({university.country})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select which institution these courses belong to
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="institutionName">Institution Name (Optional)</Label>
               <Input
                 id="institutionName"
@@ -922,6 +969,9 @@ export function AdminScrapingPanel() {
                 onChange={(e) => setInstitutionName(e.target.value)}
                 data-testid="input-institution-name"
               />
+              <p className="text-xs text-muted-foreground">
+                For reference only - courses will be linked to selected institution above
+              </p>
             </div>
             
             <div className="space-y-2">
@@ -1091,6 +1141,32 @@ export function AdminScrapingPanel() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Institution Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="reviewInstitution">Assign to Institution *</Label>
+                <Select
+                  value={reviewInstitutionId}
+                  onValueChange={setReviewInstitutionId}
+                >
+                  <SelectTrigger id="reviewInstitution" data-testid="select-review-institution">
+                    <SelectValue placeholder="Select which institution this course belongs to" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {universitiesData?.universities?.map((university) => (
+                      <SelectItem key={university.id} value={university.id}>
+                        {university.name} ({university.country})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {reviewInstitutionId 
+                    ? "This course will be added to the selected institution's catalog"
+                    : "⚠️ Required before approval - select the institution this course belongs to"
+                  }
+                </p>
               </div>
 
               <div>

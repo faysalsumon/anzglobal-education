@@ -456,7 +456,7 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
     }
 
     const { id } = req.params;
-    const { reviewNotes, editedData } = req.body;
+    const { reviewNotes, editedData, institutionId } = req.body;
 
     // Validate edited data if provided
     if (editedData) {
@@ -479,6 +479,15 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
       return res.status(404).json({ error: "Scraped course not found" });
     }
 
+    // Determine which institution ID to use (priority: request body > scraped course > error)
+    const finalInstitutionId = institutionId || scrapedCourse.institutionId;
+    
+    if (!finalInstitutionId) {
+      return res.status(400).json({ 
+        error: "Institution ID is required to approve course. Please assign an institution before approving." 
+      });
+    }
+
     // Use edited data if provided, otherwise use scraped data
     const courseData = editedData || scrapedCourse;
 
@@ -486,7 +495,7 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
     const [newCourse] = await db
       .insert(courses)
       .values({
-        universityId: scrapedCourse.institutionId!,
+        universityId: finalInstitutionId,
         title: courseData.title!,
         description: courseData.description,
         subject: courseData.subject!,
