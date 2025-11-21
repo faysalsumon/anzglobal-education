@@ -79,9 +79,7 @@ export default function ScrapingJobDetail() {
   // Delete job mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/admin/scraping/jobs/${jobId}`, {
-        method: "DELETE",
-      });
+      await apiRequest("DELETE", `/api/admin/scraping/jobs/${jobId}`);
     },
     onSuccess: () => {
       toast({

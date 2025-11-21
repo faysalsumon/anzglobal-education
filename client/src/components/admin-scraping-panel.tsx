@@ -21,6 +21,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +47,7 @@ import {
   AlertCircle,
   Eye,
   Play,
+  Trash2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -112,6 +123,7 @@ export function AdminScrapingPanel() {
   const [selectedCourse, setSelectedCourse] = useState<ScrapedCourse | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [refreshingJobId, setRefreshingJobId] = useState<string | null>(null);
+  const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
   
   // Batch operations state
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
@@ -326,6 +338,29 @@ export function AdminScrapingPanel() {
         description: error.message || "Failed to scrape and extract course data",
         variant: "destructive",
       });
+    },
+  });
+
+  // Delete job mutation
+  const deleteJobMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      await apiRequest("DELETE", `/api/admin/scraping/jobs/${jobId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Deleted",
+        description: "The scraping job has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] });
+      setDeleteJobId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete the scraping job.",
+      });
+      setDeleteJobId(null);
     },
   });
 
@@ -754,6 +789,14 @@ export function AdminScrapingPanel() {
                                 disabled={refreshingJobId === job.id}
                               >
                                 <RefreshCw className={`h-4 w-4 ${refreshingJobId === job.id ? 'animate-spin' : ''}`} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setDeleteJobId(job.id)}
+                                data-testid={`button-delete-${job.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1362,6 +1405,43 @@ export function AdminScrapingPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Job Confirmation Dialog */}
+      <AlertDialog open={deleteJobId !== null} onOpenChange={(open) => !open && setDeleteJobId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scraping Job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this scraping job and all associated data (discovered URLs, scraped courses, etc.). 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-job">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteJobId) {
+                  deleteJobMutation.mutate(deleteJobId);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-job"
+            >
+              {deleteJobMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Job
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
