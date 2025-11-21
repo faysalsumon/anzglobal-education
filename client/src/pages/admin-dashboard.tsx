@@ -3255,12 +3255,22 @@ export default function AdminDashboard() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Computer Science & IT">Computer Science & IT</SelectItem>
-                              <SelectItem value="Engineering & Technology">Engineering & Technology</SelectItem>
-                              <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
                               <SelectItem value="Accounting, Business & Finance">Accounting, Business & Finance</SelectItem>
+                              <SelectItem value="Agriculture & Forestry">Agriculture & Forestry</SelectItem>
+                              <SelectItem value="Applied Sciences & Professions">Applied Sciences & Professions</SelectItem>
                               <SelectItem value="Arts, Design & Architecture">Arts, Design & Architecture</SelectItem>
+                              <SelectItem value="Computer Science & IT">Computer Science & IT</SelectItem>
                               <SelectItem value="Education & Training">Education & Training</SelectItem>
+                              <SelectItem value="Engineering & Technology">Engineering & Technology</SelectItem>
+                              <SelectItem value="Environmental Studies & Earth Sciences">Environmental Studies & Earth Sciences</SelectItem>
+                              <SelectItem value="Hospitality, Leisure & Sports">Hospitality, Leisure & Sports</SelectItem>
+                              <SelectItem value="Humanities">Humanities</SelectItem>
+                              <SelectItem value="Journalism & Media">Journalism & Media</SelectItem>
+                              <SelectItem value="Law">Law</SelectItem>
+                              <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
+                              <SelectItem value="Short Courses">Short Courses</SelectItem>
+                              <SelectItem value="Trade">Trade</SelectItem>
+                              <SelectItem value="Trade Qualifications">Trade Qualifications</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
