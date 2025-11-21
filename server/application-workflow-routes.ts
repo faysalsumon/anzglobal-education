@@ -18,6 +18,7 @@ import {
 import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logActivity } from "./activity-logger";
+import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
@@ -783,6 +784,33 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         },
       });
 
+      // Send email notification to student
+      try {
+        const student = await db.query.studentProfiles.findFirst({
+          where: eq(studentProfiles.id, application.studentId),
+        });
+
+        const university = await db.query.universities.findFirst({
+          where: eq(universities.id, course.universityId),
+        });
+
+        if (student?.email) {
+          await sendDocumentRequestNotification({
+            studentEmail: student.email,
+            studentName: `${student.firstName} ${student.lastName}`,
+            applicationId,
+            courseTitle: course.title,
+            universityName: university?.name || 'University',
+            currentStage: application.currentStage,
+            documentTypes: [documentType],
+            requestNote,
+          });
+        }
+      } catch (emailError: any) {
+        console.error('Failed to send document request email:', emailError.message);
+        // Don't fail the request if email fails
+      }
+
       res.json({ documentRequest, message: "Document request sent successfully" });
     } catch (error: any) {
       console.error("Error requesting documents:", error);
@@ -899,6 +927,32 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           notes,
         },
       });
+
+      // Send email notification to student
+      try {
+        const student = await db.query.studentProfiles.findFirst({
+          where: eq(studentProfiles.id, application.studentId),
+        });
+
+        const university = await db.query.universities.findFirst({
+          where: eq(universities.id, course.universityId),
+        });
+
+        if (student?.email) {
+          await sendStageTransitionNotification({
+            studentEmail: student.email,
+            studentName: `${student.firstName} ${student.lastName}`,
+            applicationId,
+            courseTitle: course.title,
+            universityName: university?.name || 'University',
+            currentStage: toStage,
+            previousStage: fromStage,
+          });
+        }
+      } catch (emailError: any) {
+        console.error('Failed to send stage transition email:', emailError.message);
+        // Don't fail the request if email fails
+      }
 
       res.json({ message: "Stage transitioned successfully", fromStage, toStage });
     } catch (error: any) {

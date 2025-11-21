@@ -378,3 +378,176 @@ export async function sendContactInquiryEmails(data: ContactInquiryEmailData & {
     sendAdminNotification(data),
   ]);
 }
+
+// ============================================
+// APPLICATION WORKFLOW EMAIL NOTIFICATIONS
+// ============================================
+
+interface ApplicationEmailData {
+  studentEmail: string;
+  studentName: string;
+  applicationId: string;
+  courseTitle: string;
+  universityName: string;
+  currentStage: string;
+  previousStage?: string;
+  documentTypes?: string[];
+  requestNote?: string;
+  consultantName?: string;
+}
+
+// Stage transition notification HTML
+function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Application Stage Update</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Update</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your application has been updated</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hello ${data.studentName}!</h2>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Great news! Your application for <strong>${data.courseTitle}</strong> at <strong>${data.universityName}</strong> has progressed to the next stage.
+                  </p>
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Current Stage:</h3>
+                    <p style="color: #333333; font-size: 20px; font-weight: bold; margin: 0;">${data.currentStage}</p>
+                    ${data.previousStage ? `<p style="color: #666666; font-size: 14px; margin: 10px 0 0 0;">Previously: ${data.previousStage}</p>` : ''}
+                  </div>
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Document request notification HTML
+function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Document Request</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background-color: #FF5000; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">📄 Document Request</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Action Required</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hello ${data.studentName}!</h2>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    The university has requested additional documents for your application to <strong>${data.courseTitle}</strong>.
+                  </p>
+                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0;">
+                    <p style="color: #856404; margin: 0; font-size: 14px;">
+                      <strong>⚠️ Important:</strong> Please upload the requested documents as soon as possible to avoid delays in processing your application.
+                    </p>
+                  </div>
+                  <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 18px;">Requested Documents:</h3>
+                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
+                    ${data.documentTypes?.map(doc => `<li>${doc}</li>`).join('')}
+                  </ul>
+                  ${data.requestNote ? `
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                      <p style="color: #666666; font-size: 14px; margin: 0;"><strong>Note:</strong></p>
+                      <p style="color: #333333; font-size: 14px; margin: 10px 0 0 0;">${data.requestNote}</p>
+                    </div>
+                  ` : ''}
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Send stage transition notification
+export async function sendStageTransitionNotification(data: ApplicationEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping stage transition email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.studentEmail,
+      subject: `Application Update: ${data.currentStage} - ${data.courseTitle}`,
+      html: getStageTransitionEmailHtml(data),
+    });
+
+    console.log(`Stage transition email sent to ${data.studentEmail} for application ${data.applicationId}`);
+  } catch (error: any) {
+    console.error('Error sending stage transition email:', error.message);
+  }
+}
+
+// Send document request notification  
+export async function sendDocumentRequestNotification(data: ApplicationEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping document request email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.studentEmail,
+      subject: `Document Request for ${data.courseTitle}`,
+      html: getDocumentRequestEmailHtml(data),
+    });
+
+    console.log(`Document request email sent to ${data.studentEmail} for application ${data.applicationId}`);
+  } catch (error: any) {
+    console.error('Error sending document request email:', error.message);
+  }
+}
