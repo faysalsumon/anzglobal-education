@@ -1125,16 +1125,84 @@ router.post("/jobs/:jobId/process", async (req, res) => {
       try {
         console.log(`[Manual Processing] Starting job ${jobId}`);
         
+        // Use the crawler service directly
         const crawler = new WebsiteCrawlerService();
-        await crawler.crawlInstitutionWebsite({
-          jobId: job.id,
-          institutionUrl: job.institutionUrl,
-          institutionName: job.institutionName || undefined,
-          institutionId: job.institutionId || undefined,
-          extractInstitutionData: job.extractInstitutionData,
+        
+        // Step 1: Crawl website to discover course pages
+        const crawlResult = await crawler.crawlInstitutionWebsite(job.institutionUrl, {
+          maxDepth: 3,
+          maxPages: 500,
+          respectRobotsTxt: true,
+          includeSitemap: true,
         });
 
-        console.log(`[Manual Processing] Job ${jobId} completed successfully`);
+        console.log(`[Manual Processing] Discovered ${crawlResult.discoveredUrls.length} course URLs`);
+
+        // Step 2: Update job with discovered courses count
+        await db
+          .update(scrapingJobs)
+          .set({
+            coursesFound: crawlResult.discoveredUrls.length,
+            totalPages: crawlResult.discoveredUrls.length,
+            progress: 50,
+          })
+          .where(eq(scrapingJobs.id, jobId));
+
+        // Step 3: Extract data from each course URL
+        const { extractCourseData } = await import("./ai-extractor-service");
+        const { scrapeWebsite } = await import("./web-scraper-service");
+        let extractedCount = 0;
+
+        for (const courseUrl of crawlResult.discoveredUrls) {
+          try {
+            // Scrape the page
+            const scraped = await scrapeWebsite({ url: courseUrl });
+            
+            // Extract course data using AI
+            const extraction = await extractCourseData(scraped.html, courseUrl);
+
+            // Save to scraped_courses table
+            await db.insert(scrapedCourses).values({
+              jobId: job.id,
+              sourceUrl: courseUrl,
+              title: extraction.data.title || "Unknown Course",
+              subject: extraction.data.subject,
+              level: extraction.data.level,
+              duration: extraction.data.duration,
+              description: extraction.data.description,
+              fees: extraction.data.fees,
+              confidence: extraction.confidence.toString(),
+              warnings: extraction.warnings,
+              reviewStatus: "pending",
+            });
+
+            extractedCount++;
+            
+            // Update progress
+            await db
+              .update(scrapingJobs)
+              .set({
+                coursesExtracted: extractedCount,
+                progress: 50 + Math.floor((extractedCount / crawlResult.discoveredUrls.length) * 50),
+              })
+              .where(eq(scrapingJobs.id, jobId));
+
+          } catch (error: any) {
+            console.error(`[Manual Processing] Failed to extract ${courseUrl}:`, error.message);
+          }
+        }
+
+        // Mark job as completed
+        await db
+          .update(scrapingJobs)
+          .set({
+            status: "completed",
+            completedAt: new Date(),
+            progress: 100,
+          })
+          .where(eq(scrapingJobs.id, jobId));
+
+        console.log(`[Manual Processing] Job ${jobId} completed: ${extractedCount} courses extracted`);
       } catch (error: any) {
         console.error(`[Manual Processing] Job ${jobId} failed:`, error);
         await db
