@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "./db";
 import { scrapingJobs, scrapedCourses, courses, universities, scrapingTemplates, type User, insertCourseSchema } from "../shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql as dsql } from "drizzle-orm";
 import { addScrapingJob, getJobStatus, cancelJob, getActiveJobs, getWaitingJobs } from "./scraping-queue";
 import { insertScrapingJobSchema, insertScrapedCourseSchema, insertScrapingTemplateSchema } from "../shared/schema";
 import { logApprove, logReject } from "./activity-logger";
@@ -1068,6 +1068,199 @@ router.delete("/templates/:id", async (req, res) => {
   } catch (error: any) {
     console.error("Error deleting template:", error);
     res.status(500).json({ error: "Failed to delete template" });
+  }
+});
+
+/**
+ * Trigger a full website crawl to discover all courses
+ * POST /api/admin/scraping/crawl-institution
+ */
+router.post("/crawl-institution", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { institutionUrl, institutionName, institutionId, extractInstitutionData } = req.body;
+
+    if (!institutionUrl) {
+      return res.status(400).json({ error: "institutionUrl is required" });
+    }
+
+    // Create database job record with full website crawl enabled
+    const [job] = await db
+      .insert(scrapingJobs)
+      .values({
+        institutionId: institutionId || null,
+        institutionUrl,
+        institutionName: institutionName || null,
+        status: "pending",
+        createdBy: userId,
+        useFullWebsiteCrawl: true,
+        extractInstitutionData: extractInstitutionData || false,
+      })
+      .returning();
+
+    // Add to queue for processing
+    try {
+      await addScrapingJob({
+        jobId: job.id,
+        institutionId: institutionId || undefined,
+        institutionUrl,
+        institutionName: institutionName || undefined,
+      });
+      console.log(`Institution crawl job ${job.id} queued successfully`);
+    } catch (queueError: any) {
+      console.warn(`Could not queue job ${job.id} (Redis unavailable):`, queueError.message);
+    }
+
+    res.json({
+      message: "Institution crawl job created successfully",
+      job,
+    });
+  } catch (error: any) {
+    console.error("Error creating institution crawl job:", error);
+    res.status(500).json({ error: "Failed to create institution crawl job" });
+  }
+});
+
+/**
+ * Get discovered URLs for a crawl job
+ * GET /api/admin/scraping/jobs/:jobId/discovered-urls
+ */
+router.get("/jobs/:jobId/discovered-urls", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { jobId } = req.params;
+    const { discoveredCourseUrls } = await import("../shared/schema");
+
+    const urls = await db
+      .select()
+      .from(discoveredCourseUrls)
+      .where(eq(discoveredCourseUrls.jobId, jobId))
+      .orderBy(desc(discoveredCourseUrls.confidenceScore));
+
+    res.json({ discoveredUrls: urls });
+  } catch (error: any) {
+    console.error("Error fetching discovered URLs:", error);
+    res.status(500).json({ error: "Failed to fetch discovered URLs" });
+  }
+});
+
+/**
+ * Get scraped institution data for a job
+ * GET /api/admin/scraping/jobs/:jobId/scraped-institution
+ */
+router.get("/jobs/:jobId/scraped-institution", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { jobId } = req.params;
+    const { scrapedInstitutions } = await import("../shared/schema");
+
+    const [institution] = await db
+      .select()
+      .from(scrapedInstitutions)
+      .where(eq(scrapedInstitutions.jobId, jobId));
+
+    if (!institution) {
+      return res.status(404).json({ error: "No institution data found for this job" });
+    }
+
+    res.json({ scrapedInstitution: institution });
+  } catch (error: any) {
+    console.error("Error fetching scraped institution:", error);
+    res.status(500).json({ error: "Failed to fetch scraped institution" });
+  }
+});
+
+/**
+ * Get crawl job statistics and progress
+ * GET /api/admin/scraping/jobs/:jobId/stats
+ */
+router.get("/jobs/:jobId/stats", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { jobId } = req.params;
+
+    // Get job details
+    const [job] = await db
+      .select()
+      .from(scrapingJobs)
+      .where(eq(scrapingJobs.id, jobId));
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Get scraped courses count by status
+    const scrapedCoursesStats = await db
+      .select({
+        reviewStatus: scrapedCourses.reviewStatus,
+        count: dsql<number>`count(*)::int`,
+      })
+      .from(scrapedCourses)
+      .where(eq(scrapedCourses.jobId, jobId))
+      .groupBy(scrapedCourses.reviewStatus);
+
+    const stats = {
+      job,
+      scrapedCourses: {
+        total: scrapedCoursesStats.reduce((sum, s) => sum + s.count, 0),
+        pending: scrapedCoursesStats.find(s => s.reviewStatus === 'pending')?.count || 0,
+        approved: scrapedCoursesStats.find(s => s.reviewStatus === 'approved')?.count || 0,
+        rejected: scrapedCoursesStats.find(s => s.reviewStatus === 'rejected')?.count || 0,
+      },
+    };
+
+    res.json(stats);
+  } catch (error: any) {
+    console.error("Error fetching job stats:", error);
+    res.status(500).json({ error: "Failed to fetch job stats" });
   }
 });
 
