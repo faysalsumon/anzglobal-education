@@ -252,11 +252,30 @@ EXTRACTION RULES:
 3. If a field value is not found, omit it (for optional fields) or use null (for required fields)
 4. For arrays, extract all relevant items found
 5. For enums, use EXACTLY one of the provided values
-6. Extract institution name, description, and contact details accurately
-7. For images/gallery, extract URLs only
-8. For campus addresses, structure as JSON with address, city, state, postcode
-9. Extract facility names (Library, Sports Center, etc.)
-10. Determine provider type based on institution description (University, Institution, Tafe, School)
+
+FIELD-SPECIFIC EXTRACTION GUIDANCE:
+- name, description: Extract institution name and overview/description accurately
+- contact details (contactEmail, contactPhone, website): Extract from contact/footer sections
+- location, country: Extract from address, location, or "About" sections
+- providerType: Determine from institution description (University, Institution, Tafe, School)
+- establishedYear: Look for founding/established year, history sections
+- numberOfCampuses: Count distinct campus locations mentioned
+- campusAddresses: Structure as array of JSON objects [{address, city, state, postcode, country}]
+- smallDescription: Extract or synthesize a brief 100-word description highlighting key strengths
+- fullDescription: Extract comprehensive description from About/Overview pages
+- institutionGallery: Extract image URLs from galleries, photo sections (limit to 3-5 best images)
+- topCourses: Extract featured/popular course names mentioned prominently
+- topDisciplines: Extract main academic disciplines/fields of study offered
+- scholarshipPercentageMin/Max: Extract scholarship range if mentioned (numeric values)
+- tuitionFeesMin/Max: Extract tuition fee range across all programs (numeric values)
+- tuitionCurrency: Currency code for fees (AUD, USD, etc.)
+- deliveryModes: Extract delivery options mentioned ["on-campus", "online", "hybrid", "blended"]
+- intakePeriods: Extract intake/semester start dates ["January", "February", "July", "September", etc.]
+- accreditationStatus: Extract accreditation information ("Fully Accredited", "Provisional", etc.)
+- rankingBand: Extract ranking information if mentioned ("Top 100", "Top 500", "Regional Leader", etc.)
+- facilities: Extract campus facilities mentioned ["Library", "Sports Center", "Career Services", "Student Housing", "Research Labs", etc.]
+- internationalStudentSupport: Boolean - whether international student support services are mentioned
+- tags: Extract or generate relevant searchable tags based on institution characteristics
 
 VALIDATION:
 - Institution name is REQUIRED

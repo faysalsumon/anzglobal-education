@@ -6,7 +6,7 @@ interface UserWithAdminRole extends User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<UserWithAdminRole>({
+  const { data: user, isLoading, error, isFetched, isSuccess } = useQuery<UserWithAdminRole>({
     queryKey: ["/api/auth/user"],
     retry: false,
     refetchOnWindowFocus: true,
@@ -25,10 +25,20 @@ export function useAuth() {
   // Full admin access for super_admin and support_manager
   const hasFullAdminAccess = isSuperAdmin || isSupportManager;
 
+  // Auth is definitively resolved when:
+  // 1. Query has fetched at least once AND
+  // 2. Either succeeded with data OR failed with error (not still loading)
+  // This ensures we wait for a definitive result before rendering routes
+  const isAuthResolved = isFetched && !isLoading;
+  
+  // Authenticated only if we have a successful user response
+  const isAuthenticated = isSuccess && !!user;
+
   return {
     user,
     isLoading,
-    isAuthenticated: !isLoading && !error && !!user,
+    isAuthResolved, // Auth status is definitively known
+    isAuthenticated, // User is successfully authenticated
     isUniversity: user?.userType === "university",
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin",

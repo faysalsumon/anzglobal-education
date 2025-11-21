@@ -10,19 +10,31 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Sparkles, Globe, CheckCircle2, XCircle, Edit3 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 interface ExtractedData {
+  // Basic Information
   name: string | null;
   description: string | null;
   overview: string | null;
+  smallDescription: string | null;
+  fullDescription: string | null;
+  location: string | null;
   country: string | null;
   establishedYear: number | null;
-  contactEmail: string | null;
-  contactPhone: string | null;
+  logo: string | null;
   website: string | null;
   providerType: string | null;
+  
+  // Contact Information
+  contactEmail: string | null;
+  contactPhone: string | null;
+  
+  // Academic Information
   topDisciplines: string[] | null;
   topCourses: string[] | null;
+  
+  // Campus Information
   numberOfCampuses: number | null;
   campusAddresses: Array<{
     address: string;
@@ -31,8 +43,25 @@ interface ExtractedData {
     postcode?: string;
     country?: string;
   }> | null;
+  
+  // Financial Information
   scholarshipPercentageMin: number | null;
   scholarshipPercentageMax: number | null;
+  tuitionFeesMin: number | null;
+  tuitionFeesMax: number | null;
+  tuitionCurrency: string | null;
+  
+  // Delivery & Intake
+  deliveryModes: string[] | null;
+  intakePeriods: string[] | null;
+  
+  // Additional Information
+  accreditationStatus: string | null;
+  rankingBand: string | null;
+  facilities: string[] | null;
+  internationalStudentSupport: boolean | null;
+  tags: string[] | null;
+  institutionGallery: string[] | null;
 }
 
 interface EditableField {
@@ -154,11 +183,57 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
 
   const handleSubmit = () => {
     const approvedData: any = {};
+    const validationErrors: string[] = [];
+
     Object.entries(editableFields).forEach(([key, field]) => {
       if (field.approved) {
-        approvedData[key] = field.value;
+        let value = field.value;
+
+        // Validate and normalize gallery URLs
+        if (key === "institutionGallery" && Array.isArray(value)) {
+          const validUrls = value.filter((url: string) => {
+            try {
+              new URL(url);
+              return true;
+            } catch {
+              validationErrors.push(`Invalid gallery URL: ${url}`);
+              return false;
+            }
+          });
+          value = validUrls;
+        }
+
+        // Validate numeric fields
+        if (key.includes("Min") || key.includes("Max") || key === "tuitionFeesMin" || key === "tuitionFeesMax" || key === "establishedYear" || key === "numberOfCampuses" || key === "scholarshipPercentageMin" || key === "scholarshipPercentageMax") {
+          if (typeof value === "number") {
+            if (isNaN(value)) {
+              validationErrors.push(`${key} has an invalid numeric value`);
+              return;
+            }
+            if (value < 0) {
+              validationErrors.push(`${key} cannot be negative`);
+              return;
+            }
+          }
+        }
+
+        // Ensure booleans are actual booleans
+        if (key === "internationalStudentSupport") {
+          value = !!value;
+        }
+
+        approvedData[key] = value;
       }
     });
+
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation errors",
+        description: validationErrors.join(". "),
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (Object.keys(approvedData).length === 0) {
       toast({
@@ -177,7 +252,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
     setEditableFields({});
   };
 
-  const renderField = (label: string, fieldName: string, value: any, type: "text" | "textarea" | "number" | "array" = "text") => {
+  const renderField = (label: string, fieldName: string, value: any, type: "text" | "textarea" | "number" | "array" | "boolean" = "text") => {
     if (!editableFields[fieldName]) return null;
 
     const field = editableFields[fieldName];
@@ -218,7 +293,19 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
           </div>
         </div>
         
-        {type === "textarea" ? (
+        {type === "boolean" ? (
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={!!field.value}
+              onCheckedChange={(checked) => handleFieldEdit(fieldName, checked)}
+              disabled={isApproved}
+              data-testid={`input-${fieldName}`}
+            />
+            <span className="text-sm text-muted-foreground">
+              {field.value === null || field.value === undefined ? "Unknown" : field.value ? "Yes" : "No"}
+            </span>
+          </div>
+        ) : type === "textarea" ? (
           <Textarea
             value={field.value || ""}
             onChange={(e) => handleFieldEdit(fieldName, e.target.value)}
@@ -327,8 +414,10 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
                 <h4 className="font-semibold text-sm text-muted-foreground">Basic Information</h4>
                 {renderField("Institution Name", "name", extractedData.name)}
                 {renderField("Provider Type", "providerType", extractedData.providerType)}
+                {renderField("Location", "location", extractedData.location)}
                 {renderField("Country", "country", extractedData.country)}
                 {renderField("Website", "website", extractedData.website)}
+                {renderField("Logo URL", "logo", extractedData.logo)}
                 {renderField("Established Year", "establishedYear", extractedData.establishedYear, "number")}
               </div>
 
@@ -342,11 +431,13 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
               )}
 
               {/* Descriptions */}
-              {(editableFields.overview || editableFields.description) && (
+              {(editableFields.overview || editableFields.description || editableFields.smallDescription || editableFields.fullDescription) && (
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground">Descriptions</h4>
                   {renderField("Overview", "overview", extractedData.overview, "textarea")}
-                  {renderField("Full Description", "description", extractedData.description, "textarea")}
+                  {renderField("Small Description", "smallDescription", extractedData.smallDescription, "textarea")}
+                  {renderField("Full Description", "fullDescription", extractedData.fullDescription, "textarea")}
+                  {renderField("Description", "description", extractedData.description, "textarea")}
                 </div>
               )}
 
@@ -359,13 +450,52 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
                 </div>
               )}
 
-              {/* Campus & Scholarships */}
-              {(editableFields.numberOfCampuses || editableFields.scholarshipPercentageMin || editableFields.scholarshipPercentageMax) && (
+              {/* Financial Information */}
+              {(editableFields.scholarshipPercentageMin || editableFields.scholarshipPercentageMax || editableFields.tuitionFeesMin || editableFields.tuitionFeesMax || editableFields.tuitionCurrency) && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Campus & Scholarships</h4>
-                  {renderField("Number of Campuses", "numberOfCampuses", extractedData.numberOfCampuses, "number")}
+                  <h4 className="font-semibold text-sm text-muted-foreground">Financial Information</h4>
                   {renderField("Scholarship Min %", "scholarshipPercentageMin", extractedData.scholarshipPercentageMin, "number")}
                   {renderField("Scholarship Max %", "scholarshipPercentageMax", extractedData.scholarshipPercentageMax, "number")}
+                  {renderField("Tuition Fees Min", "tuitionFeesMin", extractedData.tuitionFeesMin, "number")}
+                  {renderField("Tuition Fees Max", "tuitionFeesMax", extractedData.tuitionFeesMax, "number")}
+                  {renderField("Tuition Currency", "tuitionCurrency", extractedData.tuitionCurrency)}
+                </div>
+              )}
+
+              {/* Campus Information */}
+              {editableFields.numberOfCampuses && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Campus Information</h4>
+                  {renderField("Number of Campuses", "numberOfCampuses", extractedData.numberOfCampuses, "number")}
+                </div>
+              )}
+
+              {/* Delivery & Intake */}
+              {(editableFields.deliveryModes || editableFields.intakePeriods) && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Delivery & Intake</h4>
+                  {renderField("Delivery Modes", "deliveryModes", extractedData.deliveryModes, "array")}
+                  {renderField("Intake Periods", "intakePeriods", extractedData.intakePeriods, "array")}
+                </div>
+              )}
+
+              {/* Additional Information */}
+              {(editableFields.accreditationStatus || editableFields.rankingBand || editableFields.facilities || editableFields.internationalStudentSupport || editableFields.tags) && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Additional Information</h4>
+                  {renderField("Accreditation Status", "accreditationStatus", extractedData.accreditationStatus)}
+                  {renderField("Ranking Band", "rankingBand", extractedData.rankingBand)}
+                  {renderField("Facilities", "facilities", extractedData.facilities, "array")}
+                  {renderField("International Student Support", "internationalStudentSupport", extractedData.internationalStudentSupport, "boolean")}
+                  {renderField("Tags", "tags", extractedData.tags, "array")}
+                </div>
+              )}
+
+              {/* Gallery Images */}
+              {editableFields.institutionGallery && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm text-muted-foreground">Gallery Images</h4>
+                  {renderField("Institution Gallery URLs", "institutionGallery", extractedData.institutionGallery, "array")}
                 </div>
               )}
 

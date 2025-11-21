@@ -111,7 +111,7 @@ function Router() {
 }
 
 function AppContent() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isAuthResolved } = useAuth();
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
@@ -123,7 +123,20 @@ function AppContent() {
     location.startsWith('/blog/')
   );
 
-  if (isLoading || !isAuthenticated || !user?.userType) {
+  // Show loading state while auth is initializing OR until auth status is resolved
+  // This prevents the race condition where routes render before auth hydration completes
+  if (isLoading || !isAuthResolved) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user?.userType) {
     return <Router />;
   }
 
