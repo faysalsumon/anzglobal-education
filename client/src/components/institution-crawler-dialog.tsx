@@ -23,6 +23,8 @@ interface InstitutionCrawlerDialogProps {
   institutionId?: string;
   institutionName?: string;
   onJobCreated?: (jobId: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function InstitutionCrawlerDialog({
@@ -30,8 +32,14 @@ export function InstitutionCrawlerDialog({
   institutionId,
   institutionName,
   onJobCreated,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: InstitutionCrawlerDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Use external control if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
   const [url, setUrl] = useState("");
   const [extractInstitutionData, setExtractInstitutionData] = useState(true);
   const [createdJobId, setCreatedJobId] = useState<string | null>(null);
