@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Globe2,
@@ -48,6 +50,8 @@ interface JobStats {
 export default function ScrapingJobDetail() {
   const { jobId } = useParams<{ jobId: string }>();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const previousStatusRef = useRef<string | null>(null);
 
   // Fetch job details and statistics
   const { data: stats, isLoading, error } = useQuery<JobStats>({
@@ -58,6 +62,41 @@ export default function ScrapingJobDetail() {
       return job?.status === "running" || job?.status === "pending" ? 2000 : false;
     },
   });
+
+  // Show notification when crawl completes
+  useEffect(() => {
+    if (stats?.job) {
+      const currentStatus = stats.job.status;
+      const previousStatus = previousStatusRef.current;
+
+      // Check if status changed to completed
+      if (previousStatus && previousStatus !== "completed" && currentStatus === "completed") {
+        const coursesFound = stats.job.coursesFound || 0;
+        
+        toast({
+          title: "✅ Crawling Completed!",
+          description: `Successfully discovered and extracted ${coursesFound} course${coursesFound !== 1 ? 's' : ''} from ${stats.job.institutionName || 'the institution'}.`,
+          duration: 10000, // Show for 10 seconds
+        });
+
+        // Play notification sound if available
+        if (typeof Audio !== 'undefined') {
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGAk+ltryxnMpBSl+zPLaizsIGGS57OihUBELTKXh8bllHAU2jdXzzn0vBSF1xe/glEILElyx6OyrWBUIQ5zd8sFuJAUuhM/z1YU2Bhxqvu7mnEoPEFWq5O+zYBoJPJPY88p2KwUme8rx3I4+CRZitOvpo1QSC0mi4PK8aB8FM4nU8tGAMQYfccPu45ZFDBFYrOPwsmMaCT2U2PLJdiwFJ33K8dyOPgkWYrTr6aJUEgtJouDyvGgfBTOJ1PLRgDEGH3HD7uOWRQwRV6zj8LJjGgk9lNjyyXYsBSd9yvHcjj4JFmK06+mjVBILSaLg8rxoHwUzidTy0YAxBh9xw+7jlkUMEVes4/CyYxoJPZTY8sl2LAUnfcrx3I4+CRZitOvpo1QSC0mi4PK8aB8FM4nU8tGAMQYfccPu45ZFDBFXrOPwsmMaCT2U2PLJdiwFJ33K8dyOPgkWYrTr6aJUEgtJouDyvGgfBTOJ1PLRgDEGH3HD7uOWRQwRV6zj8LJjGgk9lNjyyXYsBSd9yvHcjj4JFmK06+mjVBILSaLg8rxoHwUzidTy0YAxBh9xw+7jlkUMEVes4/CyYxoJPZTY8sl2LAUnfcrx3I4+CRZitOvpo1QSC0mi4PK8aB8FM4nU8tGAMQYfccPu45ZFDBFXrOPwsmMaCT2U2PLJdiwFJ33K8dyOPgkWYrTr6aNUEgtJouDyvGgfBTOJ1PLRgDEGH3HD7uOWRQwRV6zj8LJjGgk9lNjyyXYsBSd9yvHcjj4JFmK06+mjVBILSaLg8rxoHwUzidTy0YAxBh9xw+7jlkUMEVes4/CyYxoJPZTY8sl2LAUnfcrx3I4+CRZitOvpo1QSC0mi4PK8aB8FM4nU8tGAMQYfccPu45ZFDBFXrOPwsmMaCT2U2PLJdiwFJ33K8dyOPgkWYrTr6aNUEgtJouDyvGgfBTOJ1PLRgDEGH3HD7uOWRQwRV6zj8LJjGgk9lNjyyXYsBSd9yvHcjj4JFmK06+mjVBILSaLg8rxoHwUzidTy0YAxBh9xw+7jlkUMEVes4/CyYxoJPZTY8sl2LAUnfcrx3I4+CRZitOvpo1QSC0mi4PK8aB8FM4nU8tGAMQYfccPu45ZFDBFXrOPwsmMaCT2U2PLJdiwFJ33K8dyOPgkWYrTr6aNUEgtJouDyvGgfBTOJ1PLRgDEGH3HD7uOWRQwRV6zj8LJjGgo=');
+            audio.volume = 0.3;
+            audio.play().catch(() => {
+              // Ignore errors if audio playback is blocked
+            });
+          } catch (e) {
+            // Ignore audio errors
+          }
+        }
+      }
+
+      // Update previous status
+      previousStatusRef.current = currentStatus;
+    }
+  }, [stats?.job, toast]);
 
   if (isLoading) {
     return (
