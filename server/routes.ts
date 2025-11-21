@@ -4679,20 +4679,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         name,
         description,
-        location,
-        email,
-        phone,
+        country,
+        contactEmail,
+        contactPhone,
         website,
         userId: institutionUserId,
         providerType,
         numberOfCampuses,
         establishedYear,
-        scholarshipPercentage,
+        scholarshipPercentageMin,
+        scholarshipPercentageMax,
         topDisciplines,
+        logo,
+        topCourses,
+        institutionGallery,
+        campusAddresses,
+        hasScholarship,
+        smallDescription,
+        fullDescription,
+        tuitionFeesMin,
+        tuitionFeesMax,
+        tuitionCurrency,
+        deliveryModes,
+        intakePeriods,
+        accreditationStatus,
+        rankingBand,
+        facilities,
+        internationalStudentSupport,
+        tags,
       } = req.body;
 
-      if (!name || !location) {
-        return res.status(400).json({ message: "Name and location are required" });
+      if (!name || !country) {
+        return res.status(400).json({ message: "Name and country are required" });
       }
 
       // If userId is provided, verify the user exists and is university type
@@ -4709,17 +4727,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newInstitution = await storage.createUniversity({
         name,
         description: description || null,
-        location,
-        contactEmail: email || null,
-        contactPhone: phone || null,
+        country,
+        contactEmail: contactEmail || null,
+        contactPhone: contactPhone || null,
         website: website || null,
         userId: institutionUserId || null,
         providerType: providerType || null,
         numberOfCampuses: numberOfCampuses || null,
         establishedYear: establishedYear || null,
-        scholarshipPercentage: scholarshipPercentage || null,
+        scholarshipPercentageMin: scholarshipPercentageMin || null,
+        scholarshipPercentageMax: scholarshipPercentageMax || null,
         topDisciplines: topDisciplines || null,
+        logo: logo || null,
+        topCourses: topCourses || null,
+        institutionGallery: institutionGallery || null,
+        campusAddresses: campusAddresses || null,
+        smallDescription: smallDescription || null,
+        fullDescription: fullDescription || null,
+        tuitionFeesMin: tuitionFeesMin || null,
+        tuitionFeesMax: tuitionFeesMax || null,
+        tuitionCurrency: tuitionCurrency || "AUD",
+        deliveryModes: deliveryModes || null,
+        intakePeriods: intakePeriods || null,
+        accreditationStatus: accreditationStatus || null,
+        rankingBand: rankingBand || null,
+        facilities: facilities || null,
+        internationalStudentSupport: internationalStudentSupport || null,
+        tags: tags || null,
       });
+
+      // Trigger async knowledge base rebuild
+      triggerKnowledgeBaseRebuild('super-admin institution creation');
 
       res.status(201).json(newInstitution);
     } catch (error) {
