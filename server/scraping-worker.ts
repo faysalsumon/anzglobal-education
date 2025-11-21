@@ -60,8 +60,23 @@ function sanitizeInteger(value: any): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
+function sanitizeBoolean(value: any): boolean | null {
+  if (value === null || value === undefined || value === "null" || value === "") {
+    return null;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === 'true' || lower === '1' || lower === 'yes') return true;
+    if (lower === 'false' || lower === '0' || lower === 'no') return false;
+  }
+  return null;
+}
+
 /**
- * Sanitize extraction data to ensure numeric fields are properly typed
+ * Sanitize extraction data to ensure numeric and boolean fields are properly typed
  */
 function sanitizeExtractionData(data: any) {
   return {
@@ -74,6 +89,9 @@ function sanitizeExtractionData(data: any) {
     minimumAge: sanitizeInteger(data.minimumAge),
     scholarshipPercentageMin: sanitizeInteger(data.scholarshipPercentageMin),
     scholarshipPercentageMax: sanitizeInteger(data.scholarshipPercentageMax),
+    prPathway: sanitizeBoolean(data.prPathway),
+    workRights: sanitizeBoolean(data.workRights),
+    internshipAvailable: sanitizeBoolean(data.internshipAvailable),
   };
 }
 
@@ -207,7 +225,7 @@ async function processFullWebsiteCrawl(
           jobId,
           institutionId,
           sourceUrl: courseUrl,
-          confidence: extraction.confidence.toString(),
+          confidence: (sanitizeNumeric(extraction.confidence) ?? 0.5).toString(),
           warnings: extraction.warnings,
           ...sanitized,
           reviewStatus: "pending",
@@ -495,13 +513,13 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
                 institutionId: institutionId || null,
                 sourceUrl: courseUrl,
                 extractedAt: new Date(extraction.extractedAt),
-                confidence: extraction.confidence.toString(),
+                confidence: (sanitizeNumeric(extraction.confidence) ?? 0.5).toString(),
                 warnings: extraction.warnings,
                 ...sanitizeExtractionData(extraction.data),
                 reviewStatus: "approved",
                 reviewedAt: new Date(),
                 reviewedBy: "auto-approval-system",
-                reviewNotes: `Auto-approved: High confidence (${extraction.confidence.toFixed(2)})`,
+                reviewNotes: `Auto-approved: High confidence (${(sanitizeNumeric(extraction.confidence) ?? 0.5).toFixed(2)})`,
                 approvedCourseId: newCourse.id,
               });
               
@@ -517,7 +535,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
               institutionId: institutionId || null,
               sourceUrl: courseUrl,
               extractedAt: new Date(extraction.extractedAt),
-              confidence: extraction.confidence.toString(),
+              confidence: (sanitizeNumeric(extraction.confidence) ?? 0.5).toString(),
               warnings: [...extraction.warnings, `Auto-approval failed: ${error.message}`],
               ...sanitizeExtractionData(extraction.data),
               reviewStatus: "pending",
@@ -532,7 +550,7 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
             institutionId: institutionId || null,
             sourceUrl: courseUrl,
             extractedAt: new Date(extraction.extractedAt),
-            confidence: extraction.confidence.toString(),
+            confidence: (sanitizeNumeric(extraction.confidence) ?? 0.5).toString(),
             warnings: extraction.warnings,
             ...sanitizeExtractionData(extraction.data),
             reviewStatus: "pending",
