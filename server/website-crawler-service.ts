@@ -360,6 +360,11 @@ export class WebsiteCrawlerService {
     const heuristicCourseUrls = urls.filter((url) => {
       const lowerUrl = url.toLowerCase();
       
+      // Australian Training Package Codes (common qualification codes)
+      // Examples: BSB60720, CHC52021, RII50520, CPC31320, SIT30821, ICT50220
+      const ausQualificationCodePattern = /\b([A-Z]{3}\d{5})\b/i;
+      const hasAusQualCode = ausQualificationCodePattern.test(url);
+      
       // Include if contains course-related keywords
       const includeKeywords = [
         "/course/",
@@ -369,6 +374,14 @@ export class WebsiteCrawlerService {
         "/programs/",
         "/study/",
         "/qualification/",
+        "/qualifications/",
+        "diploma",
+        "certificate",
+        "advanced-diploma",
+        "graduate-diploma",
+        "degree",
+        "bachelor",
+        "master",
       ];
       
       // Exclude admin, login, search, etc.
@@ -380,14 +393,32 @@ export class WebsiteCrawlerService {
         "/about",
         "/news",
         "/events",
+        "/blog",
         "/wp-admin",
         "/wp-content",
+        "/wp-includes",
+        "/gallery",
+        "/author",
+        "/category",
+        "/tag",
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        "/accommodation",
+        "/student-services",
+        "/forms-and-policies",
+        "/promotional-materials",
       ];
       
       const hasIncludeKeyword = includeKeywords.some((kw) => lowerUrl.includes(kw));
       const hasExcludeKeyword = excludeKeywords.some((kw) => lowerUrl.includes(kw));
       
-      return hasIncludeKeyword && !hasExcludeKeyword;
+      // Include if:
+      // 1. Has Australian qualification code OR
+      // 2. Has include keyword AND doesn't have exclude keyword
+      return (hasAusQualCode && !hasExcludeKeyword) || (hasIncludeKeyword && !hasExcludeKeyword);
     });
     
     console.log(`[Crawler] Heuristic filtering: ${heuristicCourseUrls.length} likely course pages`);
