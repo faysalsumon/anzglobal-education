@@ -378,8 +378,8 @@ export default function UniversityApplications() {
                             >
                               <option value="">Select a stage...</option>
                               <option value="Documents Verification">Documents Verification</option>
-                              <option value="Offer-Letter">Offer Letter</option>
-                              <option value="GS-Clearance">GS Clearance</option>
+                              <option value="Offer-Letter">Offer-Letter</option>
+                              <option value="GS-Clearance">GS-Clearance</option>
                               <option value="COE">COE</option>
                             </select>
                           </div>

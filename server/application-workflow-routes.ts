@@ -161,7 +161,33 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         .where(eq(applications.studentId, profile.id))
         .orderBy(desc(applications.createdAt));
 
-      res.json({ applications: studentApplications });
+      // Map to expected frontend format
+      const formattedApplications = studentApplications.map(item => ({
+        application: item.application,
+        course: item.course ? {
+          id: item.course.id,
+          title: item.course.title,
+          universityId: item.course.universityId,
+          level: item.course.level || 'N/A',
+          duration: item.course.duration || 'N/A',
+          fees: item.course.fees ? item.course.fees.toString() : 'N/A',
+          country: item.course.country || 'N/A',
+        } : null,
+        university: item.university ? {
+          id: item.university.id,
+          name: item.university.name,
+          logo: item.university.logo,
+          country: item.university.country,
+        } : null,
+        consultant: item.consultant ? {
+          id: item.consultant.id,
+          firstName: item.consultant.firstName,
+          lastName: item.consultant.lastName,
+          email: item.consultant.email,
+        } : null,
+      }));
+
+      res.json({ applications: formattedApplications });
     } catch (error: any) {
       console.error("Error fetching student applications:", error);
       res.status(500).json({ error: "Failed to fetch applications" });
@@ -714,19 +740,34 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "Access denied" });
       }
 
-      // Create a placeholder document entry to track the request
+      // Create a document request entry (NOT an upload - students will upload later)
       const [documentRequest] = await db.insert(applicationStageDocuments).values({
         applicationId,
         stage: application.currentStage,
         documentType,
-        documentName: `Requested: ${documentType}`,
-        documentUrl: '', // Empty until student uploads
+        documentName: `Required: ${documentType}`,
+        documentUrl: null, // NULL until student uploads (not empty string)
         isRequired: true,
-        uploadedBy: institutionAccess.userId,
-        uploadedByRole: 'university',
-        uploadedAt: new Date(),
-        verificationNotes: requestNote, // Store request note here
+        uploadedBy: null, // NULL - no upload yet
+        uploadedByRole: null,
+        uploadedAt: null,
+        verificationNotes: requestNote, // Institution's request message to student
       }).returning();
+
+      // Create stage history entry for the document request
+      await db.insert(applicationStageHistory).values({
+        applicationId,
+        fromStage: application.currentStage,
+        toStage: application.currentStage, // Same stage, just requesting a document
+        changedBy: institutionAccess.userId,
+        changedByRole: 'university',
+        notes: `Document requested: ${documentType} - ${requestNote}`,
+        metadata: { 
+          action: 'document_request',
+          documentType,
+          documentRequestId: documentRequest.id,
+        },
+      });
 
       // Log activity
       await logActivity({
@@ -746,6 +787,46 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error requesting documents:", error);
       res.status(400).json({ error: error.message || "Failed to request documents" });
+    }
+  });
+
+  // Get pending document requests for student's application
+  app.get("/api/student/applications/:id/pending-documents", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const { id: applicationId } = req.params;
+
+      // Verify application belongs to this student
+      const studentProfile = await db.query.studentProfiles.findFirst({
+        where: eq(studentProfiles.userId, userId),
+      });
+
+      if (!studentProfile) {
+        return res.status(404).json({ error: "Student profile not found" });
+      }
+
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application || application.studentId !== studentProfile.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Fetch pending document requests (isRequired=true, documentUrl=NULL)
+      const pendingRequests = await db.query.applicationStageDocuments.findMany({
+        where: and(
+          eq(applicationStageDocuments.applicationId, applicationId),
+          eq(applicationStageDocuments.isRequired, true),
+          isNull(applicationStageDocuments.documentUrl)
+        ),
+        orderBy: (docs, { desc }) => [desc(docs.createdAt)],
+      });
+
+      res.json({ pendingRequests });
+    } catch (error: any) {
+      console.error("Error fetching pending documents:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch pending documents" });
     }
   });
 

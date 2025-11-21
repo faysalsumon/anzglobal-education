@@ -7,22 +7,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Calendar, Building2, Upload, CheckCircle, Clock, XCircle, Eye, ChevronRight, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FileText, Calendar, Building2, Upload, CheckCircle, Clock, XCircle, Eye, ChevronRight, Download, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type ApplicationStage = 
   | "Assessment"
-  | "Collect-Docs"
-  | "Documents-Verification"
+  | "Collect Docs"
+  | "Documents Verification"
   | "Offer-Letter"
   | "GS-Clearance"
   | "COE"
-  | "Health-Cover"
-  | "Visa-Lodgment"
-  | "Application-Won"
-  | "Application-Refusal"
-  | "Application-Lost";
+  | "Health Cover"
+  | "Visa Lodgment"
+  | "Application Won"
+  | "Refusal/Refunds"
+  | "Application Lost";
 
 interface StageHistory {
   id: string;
@@ -41,11 +42,11 @@ interface StageDocument {
   applicationId: string;
   stage: ApplicationStage;
   documentName: string;
-  documentUrl: string;
+  documentUrl: string | null;
   documentType: string | null;
-  uploadedByUserId: string;
-  uploadedByRole: string;
-  uploadedAt: string;
+  uploadedByUserId: string | null;
+  uploadedByRole: string | null;
+  uploadedAt: string | null;
   isVerified: boolean | null;
   verificationNotes: string | null;
   rejectionReason: string | null;
@@ -90,44 +91,44 @@ interface ApplicationCardProps {
 
 const STAGE_ORDER: ApplicationStage[] = [
   "Assessment",
-  "Collect-Docs",
-  "Documents-Verification",
+  "Collect Docs",
+  "Documents Verification",
   "Offer-Letter",
   "GS-Clearance",
   "COE",
-  "Health-Cover",
-  "Visa-Lodgment",
-  "Application-Won",
-  "Application-Refusal",
-  "Application-Lost",
+  "Health Cover",
+  "Visa Lodgment",
+  "Application Won",
+  "Refusal/Refunds",
+  "Application Lost",
 ];
 
 const STAGE_DISPLAY_NAMES: Record<ApplicationStage, string> = {
   "Assessment": "Initial Assessment",
-  "Collect-Docs": "Collect Documents",
-  "Documents-Verification": "Document Verification",
+  "Collect Docs": "Collect Documents",
+  "Documents Verification": "Document Verification",
   "Offer-Letter": "Offer Letter",
   "GS-Clearance": "GS Clearance",
   "COE": "Confirmation of Enrollment",
-  "Health-Cover": "Health Cover",
-  "Visa-Lodgment": "Visa Lodgment",
-  "Application-Won": "Application Won",
-  "Application-Refusal": "Application Refusal",
-  "Application-Lost": "Application Lost",
+  "Health Cover": "Health Cover",
+  "Visa Lodgment": "Visa Lodgment",
+  "Application Won": "Application Won",
+  "Refusal/Refunds": "Refusal/Refunds",
+  "Application Lost": "Application Lost",
 };
 
 const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Assessment": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "Collect-Docs": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  "Documents-Verification": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  "Collect Docs": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  "Documents Verification": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   "Offer-Letter": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
   "GS-Clearance": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
   "COE": "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
-  "Health-Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
-  "Visa-Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  "Application-Won": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  "Application-Refusal": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-  "Application-Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  "Health Cover": "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+  "Visa Lodgment": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  "Application Won": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
@@ -148,6 +149,11 @@ export function ApplicationCard({ application, course, university, consultant }:
   const { data: documents } = useQuery<StageDocument[]>({
     queryKey: [`/api/student/applications/${application.id}/documents`],
     enabled: isExpanded,
+  });
+
+  // Fetch pending document requests (always fetched to show alert)
+  const { data: pendingDocuments } = useQuery<{ pendingRequests: any[] }>({
+    queryKey: [`/api/student/applications/${application.id}/pending-documents`],
   });
 
   const uploadDocumentMutation = useMutation({
@@ -248,6 +254,38 @@ export function ApplicationCard({ application, course, university, consultant }:
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Pending Document Requests Alert */}
+        {pendingDocuments && pendingDocuments.pendingRequests && pendingDocuments.pendingRequests.length > 0 && (
+          <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800" data-testid={`alert-pending-docs-${application.id}`}>
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="text-amber-900 dark:text-amber-100">
+              Documents Requested ({pendingDocuments.pendingRequests.length})
+            </AlertTitle>
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
+              <div className="space-y-2 mt-2">
+                {pendingDocuments.pendingRequests.map((req: any) => (
+                  <div key={req.id} className="flex flex-col gap-1 p-2 bg-background/50 rounded-md">
+                    <p className="font-medium text-sm">{req.documentType}</p>
+                    {req.verificationNotes && (
+                      <p className="text-xs text-muted-foreground">{req.verificationNotes}</p>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="mt-2"
+                  onClick={() => setDocumentDialogOpen(true)}
+                  data-testid={`button-upload-requested-doc-${application.id}`}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Requested Documents
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Progress Timeline */}
         <div>
           <h4 className="text-sm font-medium mb-4">Application Progress</h4>
@@ -420,11 +458,11 @@ export function ApplicationCard({ application, course, university, consultant }:
         )}
 
         {/* Documents */}
-        {isExpanded && documents && documents.length > 0 && (
+        {isExpanded && documents && documents.filter(d => d.documentUrl).length > 0 && (
           <div className="border-t pt-4">
             <h4 className="text-sm font-medium mb-3">Uploaded Documents</h4>
             <div className="space-y-2">
-              {documents.map((doc) => (
+              {documents.filter(d => d.documentUrl).map((doc) => (
                 <div
                   key={doc.id}
                   className="flex items-center justify-between gap-3 p-3 rounded-lg border"
@@ -435,7 +473,7 @@ export function ApplicationCard({ application, course, university, consultant }:
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{doc.documentName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(doc.uploadedAt).toLocaleDateString()}
+                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -458,16 +496,18 @@ export function ApplicationCard({ application, course, university, consultant }:
                         Pending
                       </Badge>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      asChild
-                      data-testid={`button-download-${doc.id}`}
-                    >
-                      <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4" />
-                      </a>
-                    </Button>
+                    {doc.documentUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        asChild
+                        data-testid={`button-download-${doc.id}`}
+                      >
+                        <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

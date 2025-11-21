@@ -8,16 +8,16 @@ import { ApplicationCard } from "@/components/application-card";
 
 type ApplicationStage = 
   | "Assessment"
-  | "Collect-Docs"
-  | "Documents-Verification"
+  | "Collect Docs"
+  | "Documents Verification"
   | "Offer-Letter"
   | "GS-Clearance"
   | "COE"
-  | "Health-Cover"
-  | "Visa-Lodgment"
-  | "Application-Won"
-  | "Application-Refusal"
-  | "Application-Lost";
+  | "Health Cover"
+  | "Visa Lodgment"
+  | "Application Won"
+  | "Refusal/Refunds"
+  | "Application Lost";
 
 interface ApplicationWithDetails {
   application: {
@@ -57,9 +57,11 @@ interface ApplicationWithDetails {
 }
 
 export default function StudentApplications() {
-  const { data: applications, isLoading, isError, error, refetch } = useQuery<ApplicationWithDetails[]>({
+  const { data, isLoading, isError, error, refetch } = useQuery<{ applications: ApplicationWithDetails[] }>({
     queryKey: ["/api/student/applications"],
   });
+  
+  const applications = data?.applications || [];
 
   return (
     <div className="space-y-6">
@@ -92,7 +94,7 @@ export default function StudentApplications() {
             </Card>
           ))}
         </div>
-      ) : !applications || applications.length === 0 ? (
+      ) : applications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />

@@ -31,7 +31,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Authorization**: Role-based access control (`userType`) enforced by backend middleware.
 
 ### Feature Specifications
-- **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration.
+- **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Features comprehensive application management with stage transitions (limited to Documents Verification, Offer-Letter, GS-Clearance, COE stages for institution users), document request system with NULL field storage for pending uploads, stage history tracking, and activity logging. Institution users can view assigned applications (filtered by their university's courses), request documents from students, and advance applications through workflow stages. All stage enum values aligned across database (shared/schema.ts), ApplicationCard component, and StudentApplications page to prevent type mismatches. Document requests create records with uploaded_by=NULL, document_url=NULL, uploaded_by_role=NULL to indicate pending student uploads. StageDocument interface supports nullable fields for pending requests.
 - **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 - **Public Pages**: Landing page, "Study in Australia" page, course detail pages, institution pages, lead generation forms, and contact page.
 - **Dashboards**: Super Admin dashboard for CRUD, and consistent modern UI/UX across Student, University, and Platform Admin dashboards with responsiveness and accessibility.
