@@ -44,9 +44,13 @@ import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
 import ChatPage from "@/pages/chat";
 
-function Router() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+interface RouterProps {
+  user: any;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
 
+function Router({ user, isAuthenticated, isLoading }: RouterProps) {
   // Debug logging for routing issues
   console.log('[Router Debug]', {
     isLoading,
@@ -137,14 +141,14 @@ function AppContent() {
   }
 
   if (!isAuthenticated || !user?.userType) {
-    return <Router />;
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
   return (
     <div className="flex flex-col h-screen w-full">
       <TopNavBar />
       <main className={`flex-1 overflow-y-auto ${isPublicRoute ? 'pb-20 md:pb-6' : 'p-4 md:p-6 pb-20 md:pb-6'}`}>
-        <Router />
+        <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
       </main>
       <MobileBottomNav />
       <ChatWidget />

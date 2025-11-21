@@ -69,6 +69,7 @@ interface EditableField {
   edited: boolean;
   value: any;
   rejected?: boolean; // Track rejected state instead of deleting
+  wasApprovedBeforeReject?: boolean; // Store approval state before rejection
 }
 
 interface AIInstitutionExtractorProps {
@@ -156,14 +157,24 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
   const handleFieldReject = (fieldName: string) => {
     setEditableFields((prev) => ({
       ...prev,
-      [fieldName]: {  ...prev[fieldName], rejected: true, approved: false },
+      [fieldName]: {
+        ...prev[fieldName],
+        wasApprovedBeforeReject: prev[fieldName].approved,
+        rejected: true,
+        approved: false
+      },
     }));
   };
   
   const handleFieldUnreject = (fieldName: string) => {
     setEditableFields((prev) => ({
       ...prev,
-      [fieldName]: { ...prev[fieldName], rejected: false },
+      [fieldName]: {
+        ...prev[fieldName],
+        rejected: false,
+        // Restore previous approval state
+        approved: prev[fieldName].wasApprovedBeforeReject || false,
+      },
     }));
   };
 
@@ -195,6 +206,27 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
       if (field.approved && !field.rejected) {
         let value = field.value;
 
+        // Normalize string values - trim whitespace
+        if (typeof value === "string") {
+          value = value.trim();
+          // Convert empty strings to null
+          if (value === "") {
+            value = null;
+          }
+        }
+
+        // Normalize array values - remove empty items and trim
+        if (Array.isArray(value)) {
+          value = value
+            .map((item: any) => typeof item === "string" ? item.trim() : item)
+            .filter((item: any) => item !== "" && item !== null && item !== undefined);
+          
+          // Convert empty arrays to null
+          if (value.length === 0) {
+            value = null;
+          }
+        }
+
         // Validate and normalize gallery URLs
         if (key === "institutionGallery" && Array.isArray(value)) {
           const validUrls = value.filter((url: string) => {
@@ -206,7 +238,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
               return false;
             }
           });
-          value = validUrls;
+          value = validUrls.length > 0 ? validUrls : null;
         }
 
         // Validate numeric fields - handle null, NaN, and empty strings
@@ -214,7 +246,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
         if (numericFields.includes(key) || key.includes("Min") || key.includes("Max")) {
           // Skip null values (optional fields)
           if (value !== null && value !== undefined) {
-            // Convert to number if it's a string
+            // Convert to number if it's a string (already trimmed above)
             const numValue = typeof value === "string" ? Number(value) : value;
             
             if (isNaN(numValue)) {
@@ -272,8 +304,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
     const isRejected = field.rejected;
     const isEdited = field.edited;
 
-    // Don't render rejected fields unless they have content
-    if (isRejected && !field.value) return null;
+    // Always render fields, even if rejected, so reviewers can recover them
 
     return (
       <div className={`space-y-2 p-4 rounded-lg border ${isRejected ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/30 border-border'}`} data-testid={`field-${fieldName}`}>
@@ -460,82 +491,66 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
               </div>
 
               {/* Contact Information */}
-              {(editableFields.contactEmail || editableFields.contactPhone) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Contact Information</h4>
-                  {renderField("Contact Email", "contactEmail", extractedData.contactEmail)}
-                  {renderField("Contact Phone", "contactPhone", extractedData.contactPhone)}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Contact Information</h4>
+                {renderField("Contact Email", "contactEmail", extractedData?.contactEmail)}
+                {renderField("Contact Phone", "contactPhone", extractedData?.contactPhone)}
+              </div>
 
               {/* Descriptions */}
-              {(editableFields.overview || editableFields.description || editableFields.smallDescription || editableFields.fullDescription) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Descriptions</h4>
-                  {renderField("Overview", "overview", extractedData.overview, "textarea")}
-                  {renderField("Small Description", "smallDescription", extractedData.smallDescription, "textarea")}
-                  {renderField("Full Description", "fullDescription", extractedData.fullDescription, "textarea")}
-                  {renderField("Description", "description", extractedData.description, "textarea")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Descriptions</h4>
+                {renderField("Overview", "overview", extractedData?.overview, "textarea")}
+                {renderField("Small Description", "smallDescription", extractedData?.smallDescription, "textarea")}
+                {renderField("Full Description", "fullDescription", extractedData?.fullDescription, "textarea")}
+                {renderField("Description", "description", extractedData?.description, "textarea")}
+              </div>
 
               {/* Academic Information */}
-              {(editableFields.topDisciplines || editableFields.topCourses) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Academic Information</h4>
-                  {renderField("Top Disciplines", "topDisciplines", extractedData.topDisciplines, "array")}
-                  {renderField("Top Courses", "topCourses", extractedData.topCourses, "array")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Academic Information</h4>
+                {renderField("Top Disciplines", "topDisciplines", extractedData?.topDisciplines, "array")}
+                {renderField("Top Courses", "topCourses", extractedData?.topCourses, "array")}
+              </div>
 
               {/* Financial Information */}
-              {(editableFields.scholarshipPercentageMin || editableFields.scholarshipPercentageMax || editableFields.tuitionFeesMin || editableFields.tuitionFeesMax || editableFields.tuitionCurrency) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Financial Information</h4>
-                  {renderField("Scholarship Min %", "scholarshipPercentageMin", extractedData.scholarshipPercentageMin, "number")}
-                  {renderField("Scholarship Max %", "scholarshipPercentageMax", extractedData.scholarshipPercentageMax, "number")}
-                  {renderField("Tuition Fees Min", "tuitionFeesMin", extractedData.tuitionFeesMin, "number")}
-                  {renderField("Tuition Fees Max", "tuitionFeesMax", extractedData.tuitionFeesMax, "number")}
-                  {renderField("Tuition Currency", "tuitionCurrency", extractedData.tuitionCurrency)}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Financial Information</h4>
+                {renderField("Scholarship Min %", "scholarshipPercentageMin", extractedData?.scholarshipPercentageMin, "number")}
+                {renderField("Scholarship Max %", "scholarshipPercentageMax", extractedData?.scholarshipPercentageMax, "number")}
+                {renderField("Tuition Fees Min", "tuitionFeesMin", extractedData?.tuitionFeesMin, "number")}
+                {renderField("Tuition Fees Max", "tuitionFeesMax", extractedData?.tuitionFeesMax, "number")}
+                {renderField("Tuition Currency", "tuitionCurrency", extractedData?.tuitionCurrency)}
+              </div>
 
               {/* Campus Information */}
-              {editableFields.numberOfCampuses && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Campus Information</h4>
-                  {renderField("Number of Campuses", "numberOfCampuses", extractedData.numberOfCampuses, "number")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Campus Information</h4>
+                {renderField("Number of Campuses", "numberOfCampuses", extractedData?.numberOfCampuses, "number")}
+              </div>
 
               {/* Delivery & Intake */}
-              {(editableFields.deliveryModes || editableFields.intakePeriods) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Delivery & Intake</h4>
-                  {renderField("Delivery Modes", "deliveryModes", extractedData.deliveryModes, "array")}
-                  {renderField("Intake Periods", "intakePeriods", extractedData.intakePeriods, "array")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Delivery & Intake</h4>
+                {renderField("Delivery Modes", "deliveryModes", extractedData?.deliveryModes, "array")}
+                {renderField("Intake Periods", "intakePeriods", extractedData?.intakePeriods, "array")}
+              </div>
 
               {/* Additional Information */}
-              {(editableFields.accreditationStatus || editableFields.rankingBand || editableFields.facilities || editableFields.internationalStudentSupport || editableFields.tags) && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Additional Information</h4>
-                  {renderField("Accreditation Status", "accreditationStatus", extractedData.accreditationStatus)}
-                  {renderField("Ranking Band", "rankingBand", extractedData.rankingBand)}
-                  {renderField("Facilities", "facilities", extractedData.facilities, "array")}
-                  {renderField("International Student Support", "internationalStudentSupport", extractedData.internationalStudentSupport, "boolean")}
-                  {renderField("Tags", "tags", extractedData.tags, "array")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Additional Information</h4>
+                {renderField("Accreditation Status", "accreditationStatus", extractedData?.accreditationStatus)}
+                {renderField("Ranking Band", "rankingBand", extractedData?.rankingBand)}
+                {renderField("Facilities", "facilities", extractedData?.facilities, "array")}
+                {renderField("International Student Support", "internationalStudentSupport", extractedData?.internationalStudentSupport, "boolean")}
+                {renderField("Tags", "tags", extractedData?.tags, "array")}
+              </div>
 
               {/* Gallery Images */}
-              {editableFields.institutionGallery && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Gallery Images</h4>
-                  {renderField("Institution Gallery URLs", "institutionGallery", extractedData.institutionGallery, "array")}
-                </div>
-              )}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground">Gallery Images</h4>
+                {renderField("Institution Gallery URLs", "institutionGallery", extractedData?.institutionGallery, "array")}
+              </div>
 
               {/* Submit Button */}
               <div className="pt-4">
