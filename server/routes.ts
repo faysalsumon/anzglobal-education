@@ -1174,6 +1174,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API endpoint for scraping panel - returns all universities (approved and pending)
+  app.get("/api/universities", async (req, res) => {
+    try {
+      const allUniversities = await storage.getAllUniversities();
+      // Return in format expected by scraping panel
+      const universities = allUniversities.map(u => ({
+        id: u.id,
+        name: u.name,
+        country: u.country || 'Unknown'
+      }));
+      res.json({ universities });
+    } catch (error) {
+      console.error("Error fetching universities:", error);
+      res.status(500).json({ message: "Failed to fetch universities" });
+    }
+  });
+
   // Public institutions route with comprehensive filtering support
   app.get("/api/institutions", async (req, res) => {
     try {
