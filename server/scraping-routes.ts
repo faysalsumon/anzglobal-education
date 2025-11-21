@@ -314,7 +314,7 @@ router.get("/jobs/:id", async (req, res) => {
 });
 
 /**
- * Cancel a scraping job
+ * Delete a scraping job (permanently removes from database)
  * DELETE /api/admin/scraping/jobs/:id
  */
 router.delete("/jobs/:id", async (req, res) => {
@@ -334,22 +334,27 @@ router.delete("/jobs/:id", async (req, res) => {
 
     const { id } = req.params;
 
-    // Cancel in queue
-    await cancelJob(id);
+    // Check if job exists
+    const [job] = await db.select().from(scrapingJobs).where(eq(scrapingJobs.id, id));
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
 
-    // Update database
-    await db
-      .update(scrapingJobs)
-      .set({
-        status: "cancelled",
-        completedAt: new Date(),
-      })
-      .where(eq(scrapingJobs.id, id));
+    // Cancel in queue if still running
+    try {
+      await cancelJob(id);
+    } catch (error) {
+      // Ignore queue cancellation errors (job might not be in queue)
+    }
 
-    res.json({ message: "Job cancelled successfully" });
+    // Delete from database (cascade will delete related scraped_courses and discovered_course_urls)
+    await db.delete(scrapingJobs).where(eq(scrapingJobs.id, id));
+
+    console.log(`Scraping job ${id} deleted successfully by user ${userId}`);
+    res.json({ message: "Job deleted successfully" });
   } catch (error: any) {
-    console.error("Error cancelling scraping job:", error);
-    res.status(500).json({ error: "Failed to cancel scraping job" });
+    console.error("Error deleting scraping job:", error);
+    res.status(500).json({ error: "Failed to delete scraping job" });
   }
 });
 
