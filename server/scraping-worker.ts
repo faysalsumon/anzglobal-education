@@ -1,6 +1,13 @@
 import { Worker, Job } from "bullmq";
 import { db } from "./db";
-import { scrapingJobs, scrapedCourses, courses, scrapingTemplates } from "../shared/schema";
+import { 
+  scrapingJobs, 
+  scrapedCourses, 
+  scrapedInstitutions,
+  discoveredCourseUrls,
+  courses, 
+  scrapingTemplates 
+} from "../shared/schema";
 import { eq } from "drizzle-orm";
 import {
   scrapeWebsite,
@@ -10,9 +17,11 @@ import {
 import {
   extractCourseData,
   extractCourseLinks,
+  extractInstitutionData,
   type ExtractionResult,
 } from "./ai-extractor-service";
 import type { ScrapingJobData, ScrapingJobProgress } from "./scraping-queue";
+import { WebsiteCrawlerService } from "./website-crawler-service";
 import Redis from "ioredis";
 
 const connection = new Redis({
@@ -69,7 +78,203 @@ function sanitizeExtractionData(data: any) {
 }
 
 /**
- * Process a single scraping job
+ * Process full website crawl (NEW MODE)
+ * Discovers all course pages and extracts institution data
+ */
+async function processFullWebsiteCrawl(
+  job: Job<ScrapingJobData>,
+  jobId: string,
+  institutionId: string | undefined,
+  institutionUrl: string,
+  institutionName: string | undefined,
+  extractInstitution: boolean
+): Promise<void> {
+  const crawler = new WebsiteCrawlerService();
+
+  try {
+    // Step 1: Crawl entire website to discover all course pages
+    await job.updateProgress({
+      progress: 5,
+      status: "Starting full website crawl...",
+    } as ScrapingJobProgress);
+
+    console.log(`[Full Crawl] Starting crawl of ${institutionUrl}`);
+    const crawlResult = await crawler.crawlInstitutionWebsite(institutionUrl, {
+      maxDepth: 3,
+      maxPages: 500,
+      respectRobotsTxt: true,
+      includeSitemap: true,
+    });
+
+    console.log(`[Full Crawl] Discovered ${crawlResult.discoveredUrls.length} course URLs`);
+    console.log(`[Full Crawl] Scanned ${crawlResult.totalPagesScanned} total pages`);
+
+    // Step 2: Save discovered URLs to database
+    await job.updateProgress({
+      progress: 15,
+      status: `Discovered ${crawlResult.discoveredUrls.length} course pages, saving...`,
+    } as ScrapingJobProgress);
+
+    for (const url of crawlResult.discoveredUrls) {
+      await db.insert(discoveredCourseUrls).values({
+        jobId,
+        url,
+        discoveryMethod: "website_crawl",
+        isLikelyCourse: true,
+        confidenceScore: 0.8, // Heuristic confidence
+      });
+    }
+
+    // Step 3: Extract and save institution data if requested
+    if (extractInstitution && crawlResult.institutionData) {
+      await job.updateProgress({
+        progress: 20,
+        status: "Extracting institution data from homepage...",
+      } as ScrapingJobProgress);
+
+      console.log(`[Full Crawl] Extracting institution data from ${institutionUrl}`);
+      
+      try {
+        // Scrape the homepage
+        const homepage = await scrapeWebsite({ url: institutionUrl });
+        
+        // Extract institution data using AI
+        const institutionExtraction = await extractInstitutionData(homepage.html, institutionUrl);
+
+        // Save to scrapedInstitutions table
+        await db.insert(scrapedInstitutions).values({
+          jobId,
+          sourceUrl: institutionUrl,
+          confidence: institutionExtraction.confidence.toString(),
+          warnings: institutionExtraction.warnings,
+          ...institutionExtraction.data,
+          reviewStatus: "pending",
+        });
+
+        console.log(`[Full Crawl] Institution data extracted (confidence: ${institutionExtraction.confidence})`);
+      } catch (error: any) {
+        console.error(`[Full Crawl] Failed to extract institution data:`, error);
+        // Continue with course extraction even if institution extraction fails
+      }
+    }
+
+    // Step 4: Extract data from each discovered course URL
+    await job.updateProgress({
+      progress: 25,
+      status: `Extracting course data from ${crawlResult.discoveredUrls.length} pages...`,
+    } as ScrapingJobProgress);
+
+    await db
+      .update(scrapingJobs)
+      .set({
+        totalPages: crawlResult.discoveredUrls.length,
+        coursesFound: crawlResult.discoveredUrls.length,
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    let extractedCount = 0;
+    const totalUrls = crawlResult.discoveredUrls.length;
+
+    for (let i = 0; i < totalUrls; i++) {
+      const courseUrl = crawlResult.discoveredUrls[i];
+      const progress = 25 + Math.floor((i / totalUrls) * 70); // 25% to 95%
+
+      await job.updateProgress({
+        progress,
+        totalPages: totalUrls,
+        scrapedPages: i,
+        coursesFound: totalUrls,
+        coursesExtracted: extractedCount,
+        currentPage: courseUrl,
+        status: `Extracting course ${i + 1}/${totalUrls}...`,
+      } as ScrapingJobProgress);
+
+      try {
+        // Scrape the course page
+        const coursePage = await scrapeWebsite({ url: courseUrl, timeout: 20000 });
+
+        // Extract course data using AI
+        const extraction = await extractCourseData(
+          coursePage.html,
+          courseUrl,
+          institutionName
+        );
+
+        // Save to scrapedCourses table
+        const sanitized = sanitizeExtractionData(extraction.data);
+        
+        await db.insert(scrapedCourses).values({
+          jobId,
+          institutionId,
+          sourceUrl: courseUrl,
+          confidence: extraction.confidence.toString(),
+          warnings: extraction.warnings,
+          ...sanitized,
+          reviewStatus: "pending",
+        });
+
+        // Update discovered URL status
+        await db
+          .update(discoveredCourseUrls)
+          .set({
+            extractionStatus: "extracted",
+            extractedAt: new Date(),
+          })
+          .where(eq(discoveredCourseUrls.url, courseUrl));
+
+        extractedCount++;
+        console.log(`[Full Crawl] Extracted ${extractedCount}/${totalUrls}: ${sanitized.title || "Unknown"}`);
+      } catch (error: any) {
+        console.error(`[Full Crawl] Failed to extract ${courseUrl}:`, error.message);
+        
+        // Mark URL as failed
+        await db
+          .update(discoveredCourseUrls)
+          .set({
+            extractionStatus: "failed",
+            extractionError: error.message,
+          })
+          .where(eq(discoveredCourseUrls.url, courseUrl));
+      }
+    }
+
+    // Step 5: Mark job as completed
+    await job.updateProgress({
+      progress: 100,
+      status: "Completed!",
+      coursesExtracted: extractedCount,
+    } as ScrapingJobProgress);
+
+    await db
+      .update(scrapingJobs)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        progress: 100,
+        coursesExtracted: extractedCount,
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    console.log(`[Full Crawl] ✓ Completed! Extracted ${extractedCount}/${totalUrls} courses`);
+  } catch (error: any) {
+    console.error(`[Full Crawl] Fatal error:`, error);
+    
+    await db
+      .update(scrapingJobs)
+      .set({
+        status: "failed",
+        completedAt: new Date(),
+        errorMessage: error.message,
+        errorDetails: { stack: error.stack },
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    throw error;
+  }
+}
+
+/**
+ * Process a single scraping job (ORIGINAL MODE)
  */
 async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
   const { jobId, institutionId, institutionUrl, institutionName, templateId } = job.data;
@@ -115,6 +320,15 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
       .limit(1);
     
     const useAutoDiscovery = jobDetails[0]?.useAutoDiscovery || false;
+    const useFullWebsiteCrawl = jobDetails[0]?.useFullWebsiteCrawl || false;
+    const extractInstitutionData = jobDetails[0]?.extractInstitutionData || false;
+    
+    // If full website crawl is enabled, use the advanced crawler
+    if (useFullWebsiteCrawl) {
+      console.log(`🌐 Using full website crawling mode for ${institutionUrl}`);
+      await processFullWebsiteCrawl(job, jobId, institutionId, institutionUrl, institutionName, extractInstitutionData);
+      return;
+    }
     
     let courseListingUrl = institutionUrl;
     let discoveryMethod = "manual" as string;

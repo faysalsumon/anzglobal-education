@@ -1868,6 +1868,10 @@ export const scrapingJobs = pgTable("scraping_jobs", {
   discoveryMethod: text("discovery_method"), // "ai", "regex", or "manual"
   discoveryConfidence: real("discovery_confidence"), // 0.0-1.0 confidence score
   
+  // Full website crawling settings
+  useFullWebsiteCrawl: boolean("use_full_website_crawl").default(false), // Crawl entire website to discover all courses
+  extractInstitutionData: boolean("extract_institution_data").default(false), // Extract institution data during crawl
+  
   // Template settings
   templateId: varchar("template_id").references(() => scrapingTemplates.id),
   
@@ -1963,6 +1967,103 @@ export const scrapedCourses = pgTable("scraped_courses", {
   confidenceIdx: index("scraped_courses_confidence_idx").on(table.confidence),
 }));
 
+// Discovered Course URLs - tracks all URLs found during website crawling
+export const discoveredCourseUrls = pgTable("discovered_course_urls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").references(() => scrapingJobs.id, { onDelete: "cascade" }).notNull(),
+  
+  url: text("url").notNull(),
+  discoveredAt: timestamp("discovered_at").defaultNow(),
+  discoveryMethod: text("discovery_method"), // 'sitemap', 'crawl', 'ai', 'regex'
+  pageTitle: text("page_title"), // Page title if discovered
+  
+  // Extraction status
+  extractionStatus: varchar("extraction_status", { length: 20 }).notNull().default("pending"), // 'pending', 'extracted', 'failed', 'skipped'
+  extractedAt: timestamp("extracted_at"),
+  extractionError: text("extraction_error"),
+  scrapedCourseId: varchar("scraped_course_id").references(() => scrapedCourses.id), // Link to extracted course
+  
+  // Confidence scoring
+  isLikelyCourse: boolean("is_likely_course").default(true), // AI confidence this is a course page
+  confidenceScore: real("confidence_score"), // 0.0-1.0
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  jobIdIdx: index("discovered_urls_job_id_idx").on(table.jobId),
+  urlIdx: index("discovered_urls_url_idx").on(table.url),
+  extractionStatusIdx: index("discovered_urls_extraction_status_idx").on(table.extractionStatus),
+  isLikelyCourseIdx: index("discovered_urls_is_likely_course_idx").on(table.isLikelyCourse),
+}));
+
+// Scraped Institutions - staging area for institution data before approval
+export const scrapedInstitutions = pgTable("scraped_institutions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").references(() => scrapingJobs.id, { onDelete: "cascade" }).notNull(),
+  
+  // Provenance tracking
+  sourceUrl: text("source_url").notNull(),
+  extractedAt: timestamp("extracted_at").defaultNow(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // AI confidence score 0.00-1.00
+  warnings: text("warnings").array(), // Extraction warnings
+  
+  // All institution fields (mirrors universities table but in staging)
+  name: text("name"),
+  description: text("description"),
+  overview: text("overview"),
+  smallDescription: text("small_description"),
+  fullDescription: text("full_description"),
+  location: text("location"),
+  country: text("country"),
+  establishedYear: integer("established_year"),
+  logo: text("logo"),
+  website: text("website"),
+  providerType: text("provider_type"),
+  
+  // Contact Information
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  
+  // Academic Information
+  topDisciplines: text("top_disciplines").array(),
+  topCourses: text("top_courses").array(),
+  
+  // Campus Information
+  numberOfCampuses: integer("number_of_campuses"),
+  campusAddresses: jsonb("campus_addresses"), // Array of address objects
+  
+  // Financial Information
+  scholarshipPercentageMin: integer("scholarship_percentage_min"),
+  scholarshipPercentageMax: integer("scholarship_percentage_max"),
+  tuitionFeesMin: decimal("tuition_fees_min", { precision: 10, scale: 2 }),
+  tuitionFeesMax: decimal("tuition_fees_max", { precision: 10, scale: 2 }),
+  tuitionCurrency: varchar("tuition_currency", { length: 3 }),
+  
+  // Delivery & Intake
+  deliveryModes: text("delivery_modes").array(),
+  intakePeriods: text("intake_periods").array(),
+  
+  // Additional Information
+  accreditationStatus: text("accreditation_status"),
+  rankingBand: text("ranking_band"),
+  facilities: text("facilities").array(),
+  internationalStudentSupport: boolean("international_student_support"),
+  tags: text("tags").array(),
+  institutionGallery: text("institution_gallery").array(),
+  
+  // Review status
+  reviewStatus: varchar("review_status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected', 'merged'
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  approvedInstitutionId: varchar("approved_institution_id").references(() => universities.id), // If approved and merged
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  jobIdIdx: index("scraped_institutions_job_id_idx").on(table.jobId),
+  reviewStatusIdx: index("scraped_institutions_review_status_idx").on(table.reviewStatus),
+  confidenceIdx: index("scraped_institutions_confidence_idx").on(table.confidence),
+}));
+
 export const insertScrapingTemplateSchema = createInsertSchema(scrapingTemplates).omit({
   id: true,
   createdAt: true,
@@ -1979,9 +2080,23 @@ export const insertScrapedCourseSchema = createInsertSchema(scrapedCourses).omit
   createdAt: true,
 });
 
+export const insertDiscoveredCourseUrlSchema = createInsertSchema(discoveredCourseUrls).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertScrapedInstitutionSchema = createInsertSchema(scrapedInstitutions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type ScrapingTemplate = typeof scrapingTemplates.$inferSelect;
 export type InsertScrapingTemplate = z.infer<typeof insertScrapingTemplateSchema>;
 export type ScrapingJob = typeof scrapingJobs.$inferSelect;
 export type InsertScrapingJob = z.infer<typeof insertScrapingJobSchema>;
 export type ScrapedCourse = typeof scrapedCourses.$inferSelect;
 export type InsertScrapedCourse = z.infer<typeof insertScrapedCourseSchema>;
+export type DiscoveredCourseUrl = typeof discoveredCourseUrls.$inferSelect;
+export type InsertDiscoveredCourseUrl = z.infer<typeof insertDiscoveredCourseUrlSchema>;
+export type ScrapedInstitution = typeof scrapedInstitutions.$inferSelect;
+export type InsertScrapedInstitution = z.infer<typeof insertScrapedInstitutionSchema>;
