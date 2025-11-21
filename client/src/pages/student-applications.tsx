@@ -57,7 +57,7 @@ interface ApplicationWithDetails {
 }
 
 export default function StudentApplications() {
-  const { data, isLoading, isError, error, refetch } = useQuery<{ applications: ApplicationWithDetails[] }>({
+  const { data, isLoading, isError, error, refetch} = useQuery<{ applications: ApplicationWithDetails[] }>({
     queryKey: ["/api/student/applications"],
   });
   
