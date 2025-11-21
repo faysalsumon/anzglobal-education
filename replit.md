@@ -41,7 +41,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Activity Logging**: CRM-style audit trail tracking all admin actions with field-level change tracking, user attribution, and human-readable descriptions, displayed via an `ActivityFeed` UI component.
 - **Profile Management**: Student and Admin profile management with role-based security.
 - **Content & SEO**: Course pages displaying scholarships/career pathways, markdown-based blog, and comprehensive dynamic SEO for public pages.
-- **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and stage history tracking.
+- **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, stage history tracking, and email notifications. Business rules system enforces stage-specific document requirements, role-based stage transition permissions, stage transition validation, and SLA monitoring with warning/critical alerts.
 - **Filtering & Search**: Discipline-based course filtering, course level filtering, dynamic animated typing for natural language search, and location-based course filtering with interactive campus badges.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers, and normalized campus data.
 
