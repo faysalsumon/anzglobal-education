@@ -488,6 +488,18 @@ router.put("/scraped-courses/:id/approve", async (req, res) => {
       });
     }
 
+    // Verify that the institution exists
+    const [university] = await db
+      .select()
+      .from(universities)
+      .where(eq(universities.id, finalInstitutionId));
+
+    if (!university) {
+      return res.status(400).json({ 
+        error: `Invalid institution ID: ${finalInstitutionId}. The selected institution does not exist.` 
+      });
+    }
+
     // Use edited data if provided, otherwise use scraped data
     const courseData = editedData || scrapedCourse;
 
@@ -675,12 +687,29 @@ router.post("/scraped-courses/batch-approve", async (req, res) => {
           continue;
         }
 
+        // Validate institutionId
+        if (!scrapedCourse.institutionId) {
+          errors.push({ courseId: id, error: "Institution ID is required" });
+          continue;
+        }
+
+        // Verify that the institution exists
+        const [university] = await db
+          .select()
+          .from(universities)
+          .where(eq(universities.id, scrapedCourse.institutionId));
+
+        if (!university) {
+          errors.push({ courseId: id, error: `Invalid institution ID: ${scrapedCourse.institutionId}` });
+          continue;
+        }
+
         // Create course in main courses table (same structure as individual approve)
         const courseData = scrapedCourse;
         const [newCourse] = await db
           .insert(courses)
           .values({
-            universityId: scrapedCourse.institutionId!,
+            universityId: scrapedCourse.institutionId,
             title: courseData.title!,
             description: courseData.description,
             subject: courseData.subject!,
@@ -752,11 +781,16 @@ router.post("/scraped-courses/batch-approve", async (req, res) => {
       }
     }
 
-    res.json({
+    // Return 400 if all courses failed, otherwise 200 (even with partial failures)
+    // This allows client to handle partial failures in onSuccess handler
+    const statusCode = errors.length > 0 && approvedCourses.length === 0 ? 400 : 200;
+    
+    res.status(statusCode).json({
       message: `Batch approval completed. ${approvedCourses.length} approved, ${errors.length} failed.`,
       approved: approvedCourses.length,
       failed: errors.length,
       errors,
+      success: approvedCourses.length > 0, // Indicates partial or full success
     });
   } catch (error: any) {
     console.error("Error in batch approve:", error);

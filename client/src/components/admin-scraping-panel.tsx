@@ -232,11 +232,33 @@ export function AdminScrapingPanel() {
     mutationFn: async ({ ids, reviewNotes }: { ids: string[]; reviewNotes?: string }) => {
       return await apiRequest("POST", "/api/admin/scraping/scraped-courses/batch-approve", { courseIds: ids, reviewNotes });
     },
-    onSuccess: (_, variables) => {
-      toast({
-        title: "Courses approved",
-        description: `Successfully approved ${variables.ids.length} course(s).`,
-      });
+    onSuccess: (response: any) => {
+      const approved = response.approved || 0;
+      const failed = response.failed || 0;
+      const errors = response.errors || [];
+
+      // Show success for approved courses
+      if (approved > 0) {
+        toast({
+          title: "Batch approval completed",
+          description: failed > 0 
+            ? `${approved} course(s) approved, ${failed} failed. Check below for details.`
+            : `Successfully approved ${approved} course(s).`,
+        });
+      }
+
+      // Show detailed errors if any courses failed
+      if (failed > 0 && errors.length > 0) {
+        const errorDetails = errors.slice(0, 3).map((e: any) => e.error).join(", ");
+        const moreErrors = errors.length > 3 ? ` and ${errors.length - 3} more` : "";
+        
+        toast({
+          title: `${failed} course(s) failed to approve`,
+          description: `Errors: ${errorDetails}${moreErrors}`,
+          variant: "destructive",
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/scraped-courses"] });
       setSelectedCourseIds(new Set());
       setBatchActionDialogOpen(false);
