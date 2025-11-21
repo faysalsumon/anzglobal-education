@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-// Tabs removed - navigation now in AdminSidebar only
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
@@ -219,10 +220,43 @@ const courseSchema = z.object({
   universityId: z.string().min(1, "Institution is required"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  duration: z.string().optional(),
-  fees: z.coerce.number().positive().optional().or(z.literal("")),
-  level: z.string().optional(),
   subject: z.string().min(1, "Subject is required"),
+  level: z.string().optional(),
+  discipline: z.string().optional(),
+  
+  // Duration & Fees
+  duration: z.string().optional(),
+  durationMonths: z.coerce.number().int().positive().optional().or(z.literal("")),
+  durationWeeks: z.coerce.number().int().positive().optional().or(z.literal("")),
+  fees: z.coerce.number().positive().optional().or(z.literal("")),
+  applicationFees: z.coerce.number().positive().optional().or(z.literal("")),
+  costOfLiving: z.coerce.number().positive().optional().or(z.literal("")),
+  currency: z.string().optional(),
+  
+  // Location & Dates
+  location: z.string().optional(),
+  country: z.string().optional(),
+  startDate: z.string().optional(),
+  applicationDeadline: z.string().optional(),
+  intakes: z.string().optional(), // Comma-separated, will convert to array
+  
+  // Requirements
+  prerequisites: z.string().optional(),
+  eligibilityRequirements: z.string().optional(),
+  englishRequirements: z.string().optional(),
+  
+  // Additional Details
+  courseCode: z.string().optional(),
+  prPathway: z.boolean().optional(),
+  scholarshipPercentageMin: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
+  scholarshipPercentageMax: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
+  thumbnailUrl: z.string().url().optional().or(z.literal("")),
+  curriculumUrl: z.string().url().optional().or(z.literal("")),
+  images: z.string().optional(), // Comma-separated URLs, will convert to array
+  pathways: z.string().optional(), // Comma-separated, will convert to array
+  studyAreas: z.string().optional(), // Comma-separated, will convert to array
+  careerOutcomes: z.string().optional(), // Comma-separated, will convert to array
+  careerPath: z.string().optional(),
 });
 
 const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
@@ -342,10 +376,35 @@ export default function AdminDashboard() {
       universityId: "",
       title: "",
       description: "",
-      duration: "",
-      fees: "" as any,
-      level: "",
       subject: "",
+      level: "",
+      discipline: "",
+      duration: "",
+      durationMonths: "" as any,
+      durationWeeks: "" as any,
+      fees: "" as any,
+      applicationFees: "" as any,
+      costOfLiving: "" as any,
+      currency: "AUD",
+      location: "",
+      country: "",
+      startDate: "",
+      applicationDeadline: "",
+      intakes: "",
+      prerequisites: "",
+      eligibilityRequirements: "",
+      englishRequirements: "",
+      courseCode: "",
+      prPathway: false,
+      scholarshipPercentageMin: "" as any,
+      scholarshipPercentageMax: "" as any,
+      thumbnailUrl: "",
+      curriculumUrl: "",
+      images: "",
+      pathways: "",
+      studyAreas: "",
+      careerOutcomes: "",
+      careerPath: "",
     },
   });
 
@@ -1138,10 +1197,20 @@ export default function AdminDashboard() {
   };
 
   const handleSubmitCourse = (data: z.infer<typeof courseSchema>) => {
+    // Transform comma-separated strings to arrays for backend
+    const transformedData: any = {
+      ...data,
+      intakes: data.intakes ? data.intakes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      images: data.images ? data.images.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      studyAreas: data.studyAreas ? data.studyAreas.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      careerOutcomes: data.careerOutcomes ? data.careerOutcomes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+    };
+
     if (editingCourse) {
-      updateCourseMutation.mutate({ id: editingCourse.id, data });
+      updateCourseMutation.mutate({ id: editingCourse.id, data: transformedData });
     } else {
-      createCourseMutation.mutate(data);
+      createCourseMutation.mutate(transformedData);
     }
   };
 
@@ -2985,14 +3054,48 @@ export default function AdminDashboard() {
               setAiCourseExtractorDialogOpen(false);
               
               // Prepare form data by merging AI-extracted data with defaults
-              const formData = {
+              // Convert arrays to comma-separated strings for form fields
+              const formData: any = {
                 universityId: approvedData.universityId || "",
                 title: approvedData.title || "",
                 description: approvedData.description || "",
                 subject: approvedData.subject || "",
                 level: approvedData.level || "",
+                discipline: approvedData.discipline || "",
+                courseCode: approvedData.courseCode || "",
+                
+                // Duration & Fees
                 duration: approvedData.duration || "",
-                fees: (approvedData.fees !== null && approvedData.fees !== undefined) ? approvedData.fees : ("" as any),
+                durationMonths: approvedData.durationMonths !== null && approvedData.durationMonths !== undefined ? approvedData.durationMonths : ("" as any),
+                durationWeeks: approvedData.durationWeeks !== null && approvedData.durationWeeks !== undefined ? approvedData.durationWeeks : ("" as any),
+                fees: approvedData.fees !== null && approvedData.fees !== undefined ? approvedData.fees : ("" as any),
+                applicationFees: approvedData.applicationFees !== null && approvedData.applicationFees !== undefined ? approvedData.applicationFees : ("" as any),
+                costOfLiving: approvedData.costOfLiving !== null && approvedData.costOfLiving !== undefined ? approvedData.costOfLiving : ("" as any),
+                currency: approvedData.currency || "AUD",
+                
+                // Location & Dates
+                location: approvedData.location || "",
+                country: approvedData.country || "",
+                startDate: approvedData.startDate || "",
+                applicationDeadline: approvedData.applicationDeadline || "",
+                intakes: Array.isArray(approvedData.intakes) ? approvedData.intakes.join(", ") : "",
+                
+                // Requirements
+                prerequisites: approvedData.prerequisites || "",
+                eligibilityRequirements: approvedData.eligibilityRequirements || "",
+                englishRequirements: approvedData.englishRequirements || "",
+                
+                // Additional Details
+                prPathway: approvedData.prPathway || false,
+                scholarshipPercentageMin: approvedData.scholarshipPercentageMin !== null && approvedData.scholarshipPercentageMin !== undefined ? approvedData.scholarshipPercentageMin : ("" as any),
+                scholarshipPercentageMax: approvedData.scholarshipPercentageMax !== null && approvedData.scholarshipPercentageMax !== undefined ? approvedData.scholarshipPercentageMax : ("" as any),
+                thumbnailUrl: approvedData.thumbnailUrl || "",
+                curriculumUrl: approvedData.curriculumUrl || "",
+                images: Array.isArray(approvedData.images) ? approvedData.images.join(", ") : "",
+                pathways: Array.isArray(approvedData.pathways) ? approvedData.pathways.join(", ") : "",
+                studyAreas: Array.isArray(approvedData.studyAreas) ? approvedData.studyAreas.join(", ") : "",
+                careerOutcomes: Array.isArray(approvedData.careerOutcomes) ? approvedData.careerOutcomes.join(", ") : "",
+                careerPath: approvedData.careerPath || "",
               };
               
               // Reset form with the merged data - this sets all fields at once
@@ -3013,7 +3116,7 @@ export default function AdminDashboard() {
 
       {/* Course Create/Edit Dialog */}
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
             <DialogDescription>
@@ -3022,124 +3125,527 @@ export default function AdminDashboard() {
           </DialogHeader>
           <Form {...courseForm}>
             <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="space-y-4">
-              <FormField
-                control={courseForm.control}
-                name="universityId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institution</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-course-institution">
-                          <SelectValue placeholder="Select institution" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {institutions?.map((institution) => (
-                          <SelectItem key={institution.id} value={institution.id}>
-                            {institution.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={courseForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Course Title</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Bachelor of Computer Science" data-testid="input-course-title" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={courseForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Course description..." />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={courseForm.control}
-                  name="level"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Level</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="basic">Basic</TabsTrigger>
+                  <TabsTrigger value="fees">Fees & Duration</TabsTrigger>
+                  <TabsTrigger value="location">Location & Dates</TabsTrigger>
+                  <TabsTrigger value="requirements">Requirements</TabsTrigger>
+                  <TabsTrigger value="additional">Additional</TabsTrigger>
+                </TabsList>
+
+                {/* Basic Information Tab */}
+                <TabsContent value="basic" className="space-y-4 mt-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="universityId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Institution *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-course-institution">
+                              <SelectValue placeholder="Select institution" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {institutions?.map((institution) => (
+                              <SelectItem key={institution.id} value={institution.id}>
+                                {institution.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Course Title *</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
-                          </SelectTrigger>
+                          <Input {...field} placeholder="Bachelor of Computer Science" data-testid="input-course-title" />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Certificate">Certificate</SelectItem>
-                          <SelectItem value="Diploma">Diploma</SelectItem>
-                          <SelectItem value="Bachelor">Bachelor</SelectItem>
-                          <SelectItem value="Master">Master</SelectItem>
-                          <SelectItem value="Doctorate">Doctorate</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={courseForm.control}
-                  name="subject"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subject</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Computer Science" data-testid="input-course-subject" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={courseForm.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="3 years" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={courseForm.control}
-                  name="fees"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fees ($)</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" placeholder="30000" data-testid="input-course-fees" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Course description..." rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="subject"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subject *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Computer Science" data-testid="input-course-subject" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="courseCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Course Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="CS101" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="level"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Level</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select level" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Certificate II">Certificate II</SelectItem>
+                              <SelectItem value="Certificate III">Certificate III</SelectItem>
+                              <SelectItem value="Certificate IV">Certificate IV</SelectItem>
+                              <SelectItem value="Diploma">Diploma</SelectItem>
+                              <SelectItem value="Advanced Diploma">Advanced Diploma</SelectItem>
+                              <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
+                              <SelectItem value="Masters Degree">Masters Degree</SelectItem>
+                              <SelectItem value="Doctoral Degree">Doctoral Degree</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="discipline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discipline</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select discipline" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Computer Science & IT">Computer Science & IT</SelectItem>
+                              <SelectItem value="Engineering & Technology">Engineering & Technology</SelectItem>
+                              <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
+                              <SelectItem value="Accounting, Business & Finance">Accounting, Business & Finance</SelectItem>
+                              <SelectItem value="Arts, Design & Architecture">Arts, Design & Architecture</SelectItem>
+                              <SelectItem value="Education & Training">Education & Training</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Fees & Duration Tab */}
+                <TabsContent value="fees" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="duration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (Text)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="3 years" />
+                          </FormControl>
+                          <FormDescription>e.g., "2 years", "6 months"</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="durationMonths"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (Months)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="24" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="durationWeeks"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (Weeks)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="104" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="fees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tuition Fees</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="30000" data-testid="input-course-fees" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="AUD">AUD</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="applicationFees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Application Fees</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="100" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="costOfLiving"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cost of Living (Annual)</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="20000" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Location & Dates Tab */}
+                <TabsContent value="location" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location/Campus</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Sydney Campus" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Australia" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="February 2025" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="applicationDeadline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Application Deadline</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="December 31, 2024" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={courseForm.control}
+                    name="intakes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Intakes (Comma-separated)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="January, March, July, September" />
+                        </FormControl>
+                        <FormDescription>Enter multiple intakes separated by commas</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                {/* Requirements Tab */}
+                <TabsContent value="requirements" className="space-y-4 mt-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="prerequisites"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prerequisites</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="High school diploma or equivalent..." rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="eligibilityRequirements"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Eligibility Requirements</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Academic and other eligibility requirements..." rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="englishRequirements"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>English Language Requirements</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="IELTS 6.5 overall, no band less than 6.0..." rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                {/* Additional Details Tab */}
+                <TabsContent value="additional" className="space-y-4 mt-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="prPathway"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div>
+                          <FormLabel>PR Pathway</FormLabel>
+                          <FormDescription>Does this course lead to permanent residency?</FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="scholarshipPercentageMin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Min %</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="10" min="0" max="100" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="scholarshipPercentageMax"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scholarship Max %</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="50" min="0" max="100" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={courseForm.control}
+                      name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Thumbnail URL</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="url" placeholder="https://..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="curriculumUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Curriculum URL</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="url" placeholder="https://..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={courseForm.control}
+                    name="images"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Images (Comma-separated URLs)</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="https://image1.jpg, https://image2.jpg" rows={2} />
+                        </FormControl>
+                        <FormDescription>Enter multiple image URLs separated by commas</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="pathways"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pathways (Comma-separated)</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="University degrees, Advanced studies" rows={2} />
+                        </FormControl>
+                        <FormDescription>Enter progression routes separated by commas</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="studyAreas"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Study Areas (Comma-separated)</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Programming, Database Design, Web Development" rows={2} />
+                        </FormControl>
+                        <FormDescription>Enter study topics separated by commas</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="careerOutcomes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Career Outcomes (Comma-separated)</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Software Engineer, Data Analyst, Web Developer" rows={2} />
+                        </FormControl>
+                        <FormDescription>Enter career paths separated by commas</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="careerPath"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Career Path Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Detailed career progression and trajectory..." rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={() => setCourseDialogOpen(false)}>
                   Cancel
                 </Button>
