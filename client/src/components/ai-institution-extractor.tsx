@@ -68,6 +68,7 @@ interface EditableField {
   approved: boolean;
   edited: boolean;
   value: any;
+  rejected?: boolean; // Track rejected state instead of deleting
 }
 
 interface AIInstitutionExtractorProps {
@@ -95,15 +96,14 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
       setExtractedData(data);
       
       // Initialize editable fields with extracted data
+      // Include ALL fields, even those with null values, so reviewers can view and edit them
       const fields: Record<string, EditableField> = {};
       Object.keys(data).forEach((key) => {
-        if (data[key] !== null) {
-          fields[key] = {
-            approved: false,
-            edited: false,
-            value: data[key],
-          };
-        }
+        fields[key] = {
+          approved: false,
+          edited: false,
+          value: data[key],
+        };
       });
       setEditableFields(fields);
       
@@ -154,11 +154,17 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
   };
 
   const handleFieldReject = (fieldName: string) => {
-    setEditableFields((prev) => {
-      const newFields = { ...prev };
-      delete newFields[fieldName];
-      return newFields;
-    });
+    setEditableFields((prev) => ({
+      ...prev,
+      [fieldName]: {  ...prev[fieldName], rejected: true, approved: false },
+    }));
+  };
+  
+  const handleFieldUnreject = (fieldName: string) => {
+    setEditableFields((prev) => ({
+      ...prev,
+      [fieldName]: { ...prev[fieldName], rejected: false },
+    }));
   };
 
   const handleFieldEdit = (fieldName: string, newValue: any) => {
@@ -186,7 +192,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
     const validationErrors: string[] = [];
 
     Object.entries(editableFields).forEach(([key, field]) => {
-      if (field.approved) {
+      if (field.approved && !field.rejected) {
         let value = field.value;
 
         // Validate and normalize gallery URLs
@@ -203,23 +209,29 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
           value = validUrls;
         }
 
-        // Validate numeric fields
-        if (key.includes("Min") || key.includes("Max") || key === "tuitionFeesMin" || key === "tuitionFeesMax" || key === "establishedYear" || key === "numberOfCampuses" || key === "scholarshipPercentageMin" || key === "scholarshipPercentageMax") {
-          if (typeof value === "number") {
-            if (isNaN(value)) {
+        // Validate numeric fields - handle null, NaN, and empty strings
+        const numericFields = ["tuitionFeesMin", "tuitionFeesMax", "establishedYear", "numberOfCampuses", "scholarshipPercentageMin", "scholarshipPercentageMax"];
+        if (numericFields.includes(key) || key.includes("Min") || key.includes("Max")) {
+          // Skip null values (optional fields)
+          if (value !== null && value !== undefined) {
+            // Convert to number if it's a string
+            const numValue = typeof value === "string" ? Number(value) : value;
+            
+            if (isNaN(numValue)) {
               validationErrors.push(`${key} has an invalid numeric value`);
               return;
             }
-            if (value < 0) {
+            if (numValue < 0) {
               validationErrors.push(`${key} cannot be negative`);
               return;
             }
+            value = numValue; // Use the normalized number
           }
         }
 
         // Ensure booleans are actual booleans
         if (key === "internationalStudentSupport") {
-          value = !!value;
+          value = value === null || value === undefined ? null : !!value;
         }
 
         approvedData[key] = value;
@@ -257,19 +269,37 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
 
     const field = editableFields[fieldName];
     const isApproved = field.approved;
+    const isRejected = field.rejected;
     const isEdited = field.edited;
 
+    // Don't render rejected fields unless they have content
+    if (isRejected && !field.value) return null;
+
     return (
-      <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-border" data-testid={`field-${fieldName}`}>
+      <div className={`space-y-2 p-4 rounded-lg border ${isRejected ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/30 border-border'}`} data-testid={`field-${fieldName}`}>
         <div className="flex items-center justify-between">
           <Label className="font-semibold">{label}</Label>
           <div className="flex items-center gap-2">
             {isEdited && <Badge variant="secondary" className="text-xs">Edited</Badge>}
+            {isRejected && (
+              <Badge variant="destructive" className="text-xs">
+                Rejected
+              </Badge>
+            )}
             {isApproved ? (
               <Badge variant="default" className="bg-green-600 hover:bg-green-700">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Approved
               </Badge>
+            ) : isRejected ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleFieldUnreject(fieldName)}
+                data-testid={`button-unreject-${fieldName}`}
+              >
+                Undo Reject
+              </Button>
             ) : (
               <>
                 <Button
@@ -298,7 +328,7 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
             <Switch
               checked={!!field.value}
               onCheckedChange={(checked) => handleFieldEdit(fieldName, checked)}
-              disabled={isApproved}
+              disabled={isApproved || isRejected}
               data-testid={`input-${fieldName}`}
             />
             <span className="text-sm text-muted-foreground">
@@ -307,9 +337,9 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
           </div>
         ) : type === "textarea" ? (
           <Textarea
-            value={field.value || ""}
+            value={field.value === null || field.value === undefined ? "" : field.value}
             onChange={(e) => handleFieldEdit(fieldName, e.target.value)}
-            disabled={isApproved}
+            disabled={isApproved || isRejected}
             className="min-h-[100px]"
             data-testid={`input-${fieldName}`}
           />
@@ -317,16 +347,24 @@ export function AIInstitutionExtractor({ onDataApproved }: AIInstitutionExtracto
           <Textarea
             value={Array.isArray(field.value) ? field.value.join(", ") : ""}
             onChange={(e) => handleFieldEdit(fieldName, e.target.value.split(",").map((v: string) => v.trim()).filter(Boolean))}
-            disabled={isApproved}
+            disabled={isApproved || isRejected}
             placeholder="Comma-separated values"
             data-testid={`input-${fieldName}`}
           />
         ) : (
           <Input
             type={type}
-            value={field.value || ""}
-            onChange={(e) => handleFieldEdit(fieldName, type === "number" ? parseInt(e.target.value) : e.target.value)}
-            disabled={isApproved}
+            value={field.value === null || field.value === undefined ? "" : field.value}
+            onChange={(e) => {
+              if (type === "number") {
+                // Normalize numeric inputs: empty string becomes null, otherwise parse
+                const rawValue = e.target.value.trim();
+                handleFieldEdit(fieldName, rawValue === "" ? null : Number(rawValue));
+              } else {
+                handleFieldEdit(fieldName, e.target.value);
+              }
+            }}
+            disabled={isApproved || isRejected}
             data-testid={`input-${fieldName}`}
           />
         )}
