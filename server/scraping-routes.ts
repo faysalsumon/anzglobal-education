@@ -1072,6 +1072,93 @@ router.delete("/templates/:id", async (req, res) => {
 });
 
 /**
+ * Manual job processing endpoint (for when Redis is unavailable)
+ * POST /api/admin/scraping/jobs/:jobId/process
+ */
+router.post("/jobs/:jobId/process", async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user || !user.claims) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const userId = user.claims.sub;
+    const checkAdminFn = await getCheckAdminAccess();
+    const access = await checkAdminFn(userId);
+
+    if (!access) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const { jobId } = req.params;
+
+    // Get the job from database
+    const [job] = await db
+      .select()
+      .from(scrapingJobs)
+      .where(eq(scrapingJobs.id, jobId))
+      .limit(1);
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (job.status !== "pending") {
+      return res.status(400).json({ error: `Job is already ${job.status}` });
+    }
+
+    // Import the crawler service
+    const { WebsiteCrawlerService } = await import("./website-crawler-service");
+
+    // Update job status to running
+    await db
+      .update(scrapingJobs)
+      .set({ 
+        status: "running",
+        startedAt: new Date(),
+        progress: 0,
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    // Start processing in background (don't await)
+    (async () => {
+      try {
+        console.log(`[Manual Processing] Starting job ${jobId}`);
+        
+        const crawler = new WebsiteCrawlerService();
+        await crawler.crawlInstitutionWebsite({
+          jobId: job.id,
+          institutionUrl: job.institutionUrl,
+          institutionName: job.institutionName || undefined,
+          institutionId: job.institutionId || undefined,
+          extractInstitutionData: job.extractInstitutionData,
+        });
+
+        console.log(`[Manual Processing] Job ${jobId} completed successfully`);
+      } catch (error: any) {
+        console.error(`[Manual Processing] Job ${jobId} failed:`, error);
+        await db
+          .update(scrapingJobs)
+          .set({ 
+            status: "failed",
+            errorMessage: error.message,
+            completedAt: new Date(),
+          })
+          .where(eq(scrapingJobs.id, jobId));
+      }
+    })();
+
+    res.json({
+      message: "Job processing started",
+      jobId,
+    });
+  } catch (error: any) {
+    console.error("Error processing job:", error);
+    res.status(500).json({ error: "Failed to process job" });
+  }
+});
+
+/**
  * Trigger a full website crawl to discover all courses
  * POST /api/admin/scraping/crawl-institution
  */

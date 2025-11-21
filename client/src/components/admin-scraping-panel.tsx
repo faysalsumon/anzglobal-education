@@ -36,6 +36,7 @@ import {
   ExternalLink,
   AlertCircle,
   Eye,
+  Play,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -706,6 +707,32 @@ export function AdminScrapingPanel() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+                              {job.status === "pending" && (
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      await apiRequest("POST", `/api/admin/scraping/jobs/${job.id}/process`, {});
+                                      toast({
+                                        title: "Processing started",
+                                        description: "The job is now being processed manually.",
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Failed to start processing",
+                                        description: error.message,
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                  data-testid={`button-process-${job.id}`}
+                                >
+                                  <Play className="h-4 w-4 mr-1" />
+                                  Start
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
                                 size="sm"
