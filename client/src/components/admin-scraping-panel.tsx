@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InstitutionCrawlerDialog } from "@/components/institution-crawler-dialog";
 
 interface ScrapingJob {
   id: string;
@@ -103,6 +104,7 @@ interface ScrapedCourse {
 export function AdminScrapingPanel() {
   const { toast } = useToast();
   const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
+  const [crawlerDialogOpen, setCrawlerDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<ScrapedCourse | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -530,19 +532,35 @@ export function AdminScrapingPanel() {
             Automatically extract course data from institution websites
           </p>
         </div>
-        <Button 
-          onClick={() => {
-            // Reset form when opening dialog
-            setInstitutionUrl("");
-            setInstitutionName("");
-            setTriggerDialogOpen(true);
-          }} 
-          data-testid="button-new-job"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Scraping Job
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setCrawlerDialogOpen(true)} 
+            data-testid="button-scrape-institution"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            Scrape Institution
+          </Button>
+          <Button 
+            onClick={() => {
+              // Reset form when opening dialog
+              setInstitutionUrl("");
+              setInstitutionName("");
+              setTriggerDialogOpen(true);
+            }} 
+            variant="outline"
+            data-testid="button-new-job"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Scraping Job
+          </Button>
+        </div>
       </div>
+      
+      {/* Institution Crawler Dialog */}
+      <InstitutionCrawlerDialog 
+        open={crawlerDialogOpen}
+        onOpenChange={setCrawlerDialogOpen}
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
