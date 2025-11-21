@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
   Globe2,
@@ -17,7 +27,9 @@ import {
   AlertCircle,
   FileText,
   Building2,
+  Trash2,
 } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface ScrapingJob {
   id: string;
@@ -52,6 +64,7 @@ export default function ScrapingJobDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const previousStatusRef = useRef<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Fetch job details and statistics
   const { data: stats, isLoading, error } = useQuery<JobStats>({
@@ -60,6 +73,30 @@ export default function ScrapingJobDetail() {
       // Auto-refresh every 2 seconds while job is running
       const job = query.state.data?.job;
       return job?.status === "running" || job?.status === "pending" ? 2000 : false;
+    },
+  });
+
+  // Delete job mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest(`/api/admin/scraping/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Deleted",
+        description: "The scraping job has been permanently deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] });
+      setLocation("/admin/dashboard");
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete the scraping job.",
+      });
     },
   });
 
@@ -182,7 +219,19 @@ export default function ScrapingJobDetail() {
             <p className="text-sm text-muted-foreground">{job.id}</p>
           </div>
         </div>
-        {getStatusBadge()}
+        <div className="flex items-center gap-2">
+          {getStatusBadge()}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={deleteMutation.isPending}
+            data-testid="button-delete-job"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Job
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -364,6 +413,41 @@ export default function ScrapingJobDetail() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scraping Job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this scraping job and all associated data (discovered URLs, scraped courses, etc.). 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteMutation.mutate();
+                setShowDeleteDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Job
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
