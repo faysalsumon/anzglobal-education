@@ -54,7 +54,7 @@ export default function ScrapingReviewDashboard() {
 
   // Fetch scraped courses for this job (filtered)
   const { data: courses, isLoading } = useQuery<{ scrapedCourses: ScrapedCourse[] }>({
-    queryKey: ["/api/admin/scraping/scraped-courses", { jobId, reviewStatus: filter === "all" ? undefined : filter }],
+    queryKey: [`/api/admin/scraping/scraped-courses?jobId=${jobId}${filter !== "all" ? `&reviewStatus=${filter}` : ""}`],
     refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
