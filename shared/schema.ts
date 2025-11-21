@@ -36,7 +36,6 @@ export const disciplineEnum = pgEnum('discipline', [
   'Medicine & Health',
   'Short Courses',
   'Trade',
-  'Trade Qualifications',
 ]);
 
 // Course level enum for standardized qualification levels
@@ -1255,7 +1254,6 @@ const baseCourseSchema = createInsertSchema(courses).omit({
     'Medicine & Health',
     'Short Courses',
     'Trade',
-    'Trade Qualifications',
   ]).optional(),
   
   // Validate course level - enforce enum values

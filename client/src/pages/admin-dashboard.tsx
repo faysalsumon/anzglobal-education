@@ -3270,7 +3270,6 @@ export default function AdminDashboard() {
                               <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
                               <SelectItem value="Short Courses">Short Courses</SelectItem>
                               <SelectItem value="Trade">Trade</SelectItem>
-                              <SelectItem value="Trade Qualifications">Trade Qualifications</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

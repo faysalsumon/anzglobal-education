@@ -459,7 +459,7 @@ export default function CourseForm() {
                         <SelectItem value="Law">Law</SelectItem>
                         <SelectItem value="Medicine & Health">Medicine & Health</SelectItem>
                         <SelectItem value="Short Courses">Short Courses</SelectItem>
-                        <SelectItem value="Trade Qualifications">Trade Qualifications</SelectItem>
+                        <SelectItem value="Trade">Trade</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

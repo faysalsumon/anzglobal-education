@@ -16,8 +16,7 @@ import {
   Newspaper, 
   Scale, 
   Stethoscope, 
-  Clock,
-  Hammer
+  Clock
 } from "lucide-react";
 
 const disciplineIcons: Record<string, any> = {
@@ -36,7 +35,6 @@ const disciplineIcons: Record<string, any> = {
   "Medicine & Health": Stethoscope,
   "Short Courses": Clock,
   "Trade": Wrench,
-  "Trade Qualifications": Hammer,
 };
 
 interface Discipline {
