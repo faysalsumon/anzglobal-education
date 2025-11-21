@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ interface ScrapedCourse {
 
 export function AdminScrapingPanel() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
   const [crawlerDialogOpen, setCrawlerDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -560,6 +562,10 @@ export function AdminScrapingPanel() {
       <InstitutionCrawlerDialog 
         open={crawlerDialogOpen}
         onOpenChange={setCrawlerDialogOpen}
+        onJobCreated={(jobId) => {
+          setCrawlerDialogOpen(false);
+          setLocation(`/admin/scraping/jobs/${jobId}`);
+        }}
       />
 
       {/* Stats Cards */}
@@ -698,14 +704,25 @@ export function AdminScrapingPanel() {
                             {new Date(job.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] })}
-                              data-testid={`button-refresh-${job.id}`}
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setLocation(`/admin/scraping/jobs/${job.id}`)}
+                                data-testid={`button-view-${job.id}`}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] })}
+                                data-testid={`button-refresh-${job.id}`}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
