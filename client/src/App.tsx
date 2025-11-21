@@ -42,6 +42,8 @@ import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
+import ScrapingJobDetail from "@/pages/scraping-job-detail";
+import ScrapingReviewDashboard from "@/pages/scraping-review-dashboard";
 import ChatPage from "@/pages/chat";
 
 interface RouterProps {
@@ -91,6 +93,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
           <Route path="/admin/dashboard" component={AdminDashboard} />
           <Route path="/admin/profile" component={AdminProfile} />
           <Route path="/admin/csv-import" component={AdminCSVImport} />
+          <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
+          <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
           <Route path="/university/profile" component={UniversityProfile} />
           <Route path="/university/institutions" component={UniversityInstitutions} />
           <Route path="/university/courses" component={UniversityCourses} />
