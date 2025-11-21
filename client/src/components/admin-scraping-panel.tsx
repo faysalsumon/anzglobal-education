@@ -110,6 +110,7 @@ export function AdminScrapingPanel() {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<ScrapedCourse | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [refreshingJobId, setRefreshingJobId] = useState<string | null>(null);
   
   // Batch operations state
   const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set());
@@ -717,10 +718,15 @@ export function AdminScrapingPanel() {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] })}
+                                onClick={async () => {
+                                  setRefreshingJobId(job.id);
+                                  await queryClient.invalidateQueries({ queryKey: ["/api/admin/scraping/jobs"] });
+                                  setTimeout(() => setRefreshingJobId(null), 500);
+                                }}
                                 data-testid={`button-refresh-${job.id}`}
+                                disabled={refreshingJobId === job.id}
                               >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className={`h-4 w-4 ${refreshingJobId === job.id ? 'animate-spin' : ''}`} />
                               </Button>
                             </div>
                           </TableCell>
