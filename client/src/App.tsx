@@ -53,16 +53,6 @@ interface RouterProps {
 }
 
 function Router({ user, isAuthenticated, isLoading }: RouterProps) {
-  // Debug logging for routing issues
-  console.log('[Router Debug]', {
-    isLoading,
-    isAuthenticated,
-    userType: user?.userType,
-    userEmail: user?.email,
-    userRole: user?.role,
-    shouldRenderAuthRoutes: !isLoading && isAuthenticated && !!user?.userType
-  });
-
   return (
     <Switch>
       {/* Public routes accessible to everyone */}
@@ -82,37 +72,33 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/blog/:slug" component={PublicBlogDetail} />
       <Route path="/blog" component={PublicBlogArchive} />
       
-      {!isLoading && isAuthenticated && !user?.userType && (
-        <Route path="/user-type" component={UserTypeSelection} />
-      )}
+      {/* Protected routes - always available but protected at component level */}
+      <Route path="/user-type" component={UserTypeSelection} />
+      <Route path="/dashboard" component={Home} />
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/profile" component={AdminProfile} />
+      <Route path="/admin/csv-import" component={AdminCSVImport} />
+      <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
+      <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
+      <Route path="/university/profile" component={UniversityProfile} />
+      <Route path="/university/dashboard" component={Home} />
+      <Route path="/university/institutions" component={UniversityInstitutions} />
+      <Route path="/university/courses" component={UniversityCourses} />
+      <Route path="/university/courses/new" component={CourseForm} />
+      <Route path="/university/courses/:id/edit" component={CourseForm} />
+      <Route path="/university/applications" component={UniversityApplications} />
+      <Route path="/university/team" component={UniversityTeam} />
+      <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
+      <Route path="/student/courses" component={StudentCourses} />
+      <Route path="/student/courses/:id" component={CourseDetail} />
+      <Route path="/student/profile" component={StudentProfilePage} />
+      <Route path="/student/applications" component={StudentApplications} />
+      <Route path="/student/documents" component={StudentDocuments} />
+      <Route path="/student/referrals" component={StudentReferrals} />
+      <Route path="/student/ai-assistant" component={StudentAIAssistant} />
+      <Route path="/chat" component={ChatPage} />
       
-      {!isLoading && isAuthenticated && user?.userType && (
-        <>
-          <Route path="/dashboard" component={Home} />
-          <Route path="/admin" component={AdminDashboard} />
-          <Route path="/admin/dashboard" component={AdminDashboard} />
-          <Route path="/admin/profile" component={AdminProfile} />
-          <Route path="/admin/csv-import" component={AdminCSVImport} />
-          <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
-          <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
-          <Route path="/university/profile" component={UniversityProfile} />
-          <Route path="/university/institutions" component={UniversityInstitutions} />
-          <Route path="/university/courses" component={UniversityCourses} />
-          <Route path="/university/courses/new" component={CourseForm} />
-          <Route path="/university/courses/:id/edit" component={CourseForm} />
-          <Route path="/university/applications" component={UniversityApplications} />
-          <Route path="/university/team" component={UniversityTeam} />
-          <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
-          <Route path="/student/courses" component={StudentCourses} />
-          <Route path="/student/courses/:id" component={CourseDetail} />
-          <Route path="/student/profile" component={StudentProfilePage} />
-          <Route path="/student/applications" component={StudentApplications} />
-          <Route path="/student/documents" component={StudentDocuments} />
-          <Route path="/student/referrals" component={StudentReferrals} />
-          <Route path="/student/ai-assistant" component={StudentAIAssistant} />
-          <Route path="/chat" component={ChatPage} />
-        </>
-      )}
       <Route component={NotFound} />
     </Switch>
   );
