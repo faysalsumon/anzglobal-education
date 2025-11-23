@@ -123,7 +123,7 @@ export async function setupAuth(app: Express) {
         const userId = claims.sub;
         const sessionData = req.session as any;
         const loginIntent = sessionData?.loginIntent;
-        const studentRedirect = sessionData?.studentLoginRedirect || '/dashboard';
+        const studentRedirect = sessionData?.studentLoginRedirect || '/student/courses';
 
         // If this is a student login, provision student profile and folders
         if (loginIntent === 'student') {
@@ -144,7 +144,7 @@ export async function setupAuth(app: Express) {
                 return res.redirect("/login?error=login_failed");
               }
               // Redirect based on user type
-              const redirectUrl = existingUser.userType === 'admin' ? '/admin/dashboard' : '/dashboard';
+              const redirectUrl = existingUser.userType === 'admin' ? '/admin/dashboard' : '/university/dashboard';
               res.redirect(redirectUrl);
             });
             return;
@@ -270,10 +270,14 @@ export async function setupAuth(app: Express) {
             }
             // Get user type to determine default redirect
             const currentUser = await storage.getUser(userId);
-            const defaultRedirect = currentUser?.userType === 'admin' ? '/admin/dashboard' : '/dashboard';
+            console.log('[AUTH REDIRECT DEBUG] currentUser:', currentUser);
+            console.log('[AUTH REDIRECT DEBUG] userType:', currentUser?.userType, 'isAdmin:', currentUser?.userType === 'admin');
+            const defaultRedirect = currentUser?.userType === 'admin' ? '/admin/dashboard' : '/university/dashboard';
+            console.log('[AUTH REDIRECT DEBUG] defaultRedirect:', defaultRedirect);
             
             // Honor returnTo if set, otherwise redirect to role-appropriate dashboard
             const returnTo = (sessionData?.returnTo as string) || defaultRedirect;
+            console.log('[AUTH REDIRECT DEBUG] final returnTo:', returnTo);
             delete sessionData?.returnTo;
             res.redirect(returnTo);
           });
