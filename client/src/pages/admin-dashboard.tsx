@@ -439,16 +439,10 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/leads"],
   });
 
-  // Fetch campuses for selected institution
-  const { data: availableCampuses, isLoading: campusesLoading, isError: campusesError } = useQuery<any[]>({
-    queryKey: ["/api/institutions", selectedInstitutionId, "campuses"],
+  // Fetch selected institution to get its campusAddresses
+  const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
+    queryKey: ["/api/institutions", selectedInstitutionId],
     enabled: !!selectedInstitutionId,
-  });
-
-  // Fetch existing course campuses when editing
-  const { data: existingCourseCampuses } = useQuery<any[]>({
-    queryKey: ["/api/courses", editingCourse?.id, "campuses"],
-    enabled: !!editingCourse?.id,
   });
 
   // Watch numberOfCampuses and update campusAddresses array
@@ -473,15 +467,15 @@ export default function AdminDashboard() {
     return () => subscription.unsubscribe();
   }, [courseForm]);
 
-  // Load existing course campuses when editing
+  // Load existing course campus locations when editing
   useEffect(() => {
-    if (existingCourseCampuses && existingCourseCampuses.length > 0) {
-      setSelectedCampusIds(existingCourseCampuses.map(campus => campus.id));
+    if (editingCourse?.campusLocations && editingCourse.campusLocations.length > 0) {
+      setSelectedCampusIds(editingCourse.campusLocations);
     } else if (!editingCourse) {
       // Reset when creating new course
       setSelectedCampusIds([]);
     }
-  }, [existingCourseCampuses, editingCourse]);
+  }, [editingCourse]);
 
   // User mutations
   const createUserMutation = useMutation({
@@ -680,17 +674,14 @@ export default function AdminDashboard() {
   // Course mutations
   const createCourseMutation = useMutation({
     mutationFn: async (data: z.infer<typeof courseSchema>) => {
-      return await apiRequest("POST", "/api/super-admin/courses", data);
+      // Include campusLocations in the course data
+      const courseData = {
+        ...data,
+        campusLocations: selectedCampusIds.length > 0 ? selectedCampusIds : undefined,
+      };
+      return await apiRequest("POST", "/api/super-admin/courses", courseData);
     },
-    onSuccess: async (createdCourse: any) => {
-      // Save campus selections if any
-      if (selectedCampusIds.length > 0) {
-        try {
-          await apiRequest("PUT", `/api/courses/${createdCourse.id}/campuses`, { campusIds: selectedCampusIds });
-        } catch (error) {
-          console.error("Error saving course campuses:", error);
-        }
-      }
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       setCourseDialogOpen(false);
       courseForm.reset();
@@ -712,17 +703,15 @@ export default function AdminDashboard() {
 
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof courseSchema>> }) => {
-      return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, data);
+      // Include campusLocations in the update data
+      const courseData = {
+        ...data,
+        campusLocations: selectedCampusIds.length > 0 ? selectedCampusIds : undefined,
+      };
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, courseData);
     },
     onSuccess: async (_, variables) => {
-      // Save campus selections if any
-      try {
-        await apiRequest("PUT", `/api/courses/${variables.id}/campuses`, { campusIds: selectedCampusIds });
-      } catch (error) {
-        console.error("Error saving course campuses:", error);
-      }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/courses", variables.id, "campuses"] });
       setCourseDialogOpen(false);
       setEditingCourse(null);
       courseForm.reset();
@@ -3496,47 +3485,43 @@ export default function AdminDashboard() {
                     </div>
                     {!selectedInstitutionId ? (
                       <p className="text-sm text-muted-foreground">Please select an institution first</p>
-                    ) : campusesLoading ? (
-                      <p className="text-sm text-muted-foreground">Loading campuses...</p>
-                    ) : campusesError ? (
-                      <div className="p-4 border border-destructive rounded-md bg-destructive/10">
-                        <p className="text-sm text-destructive font-medium">Failed to load campuses</p>
-                        <p className="text-xs text-muted-foreground mt-1">Please try selecting a different institution or refresh the page</p>
-                      </div>
-                    ) : !availableCampuses || availableCampuses.length === 0 ? (
+                    ) : institutionDetailsLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading institution details...</p>
+                    ) : !selectedInstitution?.campusAddresses || selectedInstitution.campusAddresses.length === 0 ? (
                       <div className="p-4 border rounded-md bg-muted/30">
-                        <p className="text-sm text-muted-foreground">No campuses found for this institution</p>
-                        <p className="text-xs text-muted-foreground mt-1">Use the campus management feature to add campuses first</p>
+                        <p className="text-sm text-muted-foreground">No campuses configured for this institution</p>
+                        <p className="text-xs text-muted-foreground mt-1">Edit the institution to add campus addresses</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-md">
-                        {availableCampuses.map((campus) => (
-                          <div key={campus.id} className="flex items-start space-x-2">
-                            <Checkbox
-                              id={`campus-${campus.id}`}
-                              checked={selectedCampusIds.includes(campus.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedCampusIds([...selectedCampusIds, campus.id]);
-                                } else {
-                                  setSelectedCampusIds(selectedCampusIds.filter(id => id !== campus.id));
-                                }
-                              }}
-                              data-testid={`checkbox-campus-${campus.name}`}
-                            />
-                            <label
-                              htmlFor={`campus-${campus.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                            >
-                              <div>{campus.name}</div>
-                              {campus.city && campus.state && (
+                        {selectedInstitution.campusAddresses.map((campus, index) => {
+                          const campusKey = `${campus.address}, ${campus.city}, ${campus.state} ${campus.postcode}`;
+                          return (
+                            <div key={index} className="flex items-start space-x-2">
+                              <Checkbox
+                                id={`campus-${index}`}
+                                checked={selectedCampusIds.includes(campusKey)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedCampusIds([...selectedCampusIds, campusKey]);
+                                  } else {
+                                    setSelectedCampusIds(selectedCampusIds.filter(id => id !== campusKey));
+                                  }
+                                }}
+                                data-testid={`checkbox-campus-${index}`}
+                              />
+                              <label
+                                htmlFor={`campus-${index}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                <div>{campus.address}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {campus.city}, {campus.state}
+                                  {campus.city}, {campus.state} {campus.postcode}
                                 </div>
-                              )}
-                            </label>
-                          </div>
-                        ))}
+                              </label>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
