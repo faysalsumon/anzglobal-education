@@ -2541,7 +2541,7 @@ export default function AdminDashboard() {
       {/* Institution Create/Edit Dialog */}
       <Dialog open={institutionDialogOpen} onOpenChange={setInstitutionDialogOpen}>
         <DialogContent 
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] flex flex-col gap-0 p-0"
           onPointerDownOutside={(e) => {
             // Prevent dialog from closing when clicking on Google Places autocomplete dropdown
             // Google renders .pac-container outside React tree at document.body level
@@ -2555,14 +2555,15 @@ export default function AdminDashboard() {
             }
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>{editingInstitution ? "Edit Institution" : "Create Institution"}</DialogTitle>
             <DialogDescription>
               {editingInstitution ? "Update institution information" : "Create a new institution"}
             </DialogDescription>
           </DialogHeader>
           <Form {...institutionForm}>
-            <form onSubmit={institutionForm.handleSubmit(handleSubmitInstitution)} className="space-y-4">
+            <form onSubmit={institutionForm.handleSubmit(handleSubmitInstitution)} className="flex flex-col min-h-0 flex-1">
+              <div className="overflow-y-auto px-6 flex-1 space-y-4">
               {/* Logo Upload */}
               <div className="space-y-3">
                 <FormLabel>Institution Logo</FormLabel>
@@ -2959,8 +2960,9 @@ export default function AdminDashboard() {
                   })}
                 </div>
               )}
+              </div>
 
-              <DialogFooter>
+              <DialogFooter className="px-6 py-4 mt-0 shrink-0 border-t">
                 <Button type="button" variant="outline" onClick={() => setInstitutionDialogOpen(false)} data-testid="button-admin-cancel">
                   Cancel
                 </Button>
@@ -3161,13 +3163,15 @@ export default function AdminDashboard() {
             <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="flex flex-col min-h-0 flex-1">
               <div className="overflow-y-auto px-6 flex-1 space-y-4">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-                  <TabsTrigger value="basic">Basic</TabsTrigger>
-                  <TabsTrigger value="fees">Fees</TabsTrigger>
-                  <TabsTrigger value="location" className="hidden sm:block">Location</TabsTrigger>
-                  <TabsTrigger value="requirements" className="hidden lg:block">Requirements</TabsTrigger>
-                  <TabsTrigger value="additional" className="hidden lg:block">Additional</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto -mx-6 px-6 pb-2">
+                  <TabsList className="inline-flex w-auto min-w-full">
+                    <TabsTrigger value="basic" className="flex-1 sm:flex-none">Basic</TabsTrigger>
+                    <TabsTrigger value="fees" className="flex-1 sm:flex-none">Fees</TabsTrigger>
+                    <TabsTrigger value="location" className="flex-1 sm:flex-none">Location</TabsTrigger>
+                    <TabsTrigger value="requirements" className="flex-1 sm:flex-none">Requirements</TabsTrigger>
+                    <TabsTrigger value="additional" className="flex-1 sm:flex-none">Additional</TabsTrigger>
+                  </TabsList>
+                </div>
 
                 {/* Basic Information Tab */}
                 <TabsContent value="basic" className="space-y-4 mt-4">
