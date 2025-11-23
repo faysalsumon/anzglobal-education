@@ -2541,7 +2541,7 @@ export default function AdminDashboard() {
       {/* Institution Create/Edit Dialog */}
       <Dialog open={institutionDialogOpen} onOpenChange={setInstitutionDialogOpen}>
         <DialogContent 
-          className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] flex flex-col gap-0 p-0"
+          className="max-w-[95vw] sm:max-w-2xl max-h-[75vh] sm:max-h-[80vh] flex flex-col gap-0 p-0 my-4 sm:my-8"
           onPointerDownOutside={(e) => {
             // Prevent dialog from closing when clicking on Google Places autocomplete dropdown
             // Google renders .pac-container outside React tree at document.body level
@@ -3152,7 +3152,7 @@ export default function AdminDashboard() {
 
       {/* Course Create/Edit Dialog */}
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[75vh] sm:max-h-[80vh] flex flex-col gap-0 p-0 my-4 sm:my-8">
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
             <DialogDescription>
@@ -3187,7 +3187,7 @@ export default function AdminDashboard() {
                               <SelectValue placeholder="Select institution" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
                             {institutions?.map((institution) => (
                               <SelectItem key={institution.id} value={institution.id}>
                                 {institution.name}
@@ -3266,7 +3266,7 @@ export default function AdminDashboard() {
                                 <SelectValue placeholder="Select level" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
                               <SelectItem value="Certificate II">Certificate II</SelectItem>
                               <SelectItem value="Certificate III">Certificate III</SelectItem>
                               <SelectItem value="Certificate IV">Certificate IV</SelectItem>
@@ -3293,7 +3293,7 @@ export default function AdminDashboard() {
                                 <SelectValue placeholder="Select discipline" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
                               <SelectItem value="Accounting, Business & Finance">Accounting, Business & Finance</SelectItem>
                               <SelectItem value="Agriculture & Forestry">Agriculture & Forestry</SelectItem>
                               <SelectItem value="Applied Sciences & Professions">Applied Sciences & Professions</SelectItem>
