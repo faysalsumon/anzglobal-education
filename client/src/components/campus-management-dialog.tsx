@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,15 @@ export function CampusManagementDialog({
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [postcode, setPostcode] = useState("");
+
+  // Reset form inputs when institution changes to prevent stale data
+  useEffect(() => {
+    setName("");
+    setStreet("");
+    setCity("");
+    setState("");
+    setPostcode("");
+  }, [institution?.id]);
 
   // Fetch campuses for this institution
   const { data: campuses, isLoading } = useQuery<Campus[]>({
@@ -104,6 +113,17 @@ export function CampusManagementDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Guard: Ensure institution exists before making API call
+    if (!institution?.id) {
+      toast({
+        title: "Error",
+        description: "No institution selected. Please close and reopen the dialog.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!name || !city) {
       toast({
         title: "Validation Error",
@@ -112,6 +132,7 @@ export function CampusManagementDialog({
       });
       return;
     }
+    
     createCampusMutation.mutate({
       name,
       street: street || null,
@@ -120,6 +141,20 @@ export function CampusManagementDialog({
       postcode: postcode || null,
       country: "Australia",
     });
+  };
+
+  const handleDeleteCampus = (campusId: string) => {
+    // Guard: Ensure institution exists before making API call
+    if (!institution?.id) {
+      toast({
+        title: "Error",
+        description: "No institution selected. Cannot delete campus.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    deleteCampusMutation.mutate(campusId);
   };
 
   return (
@@ -244,7 +279,7 @@ export function CampusManagementDialog({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => deleteCampusMutation.mutate(campus.id)}
+                              onClick={() => handleDeleteCampus(campus.id)}
                               disabled={deleteCampusMutation.isPending}
                               data-testid={`button-delete-campus-${campus.id}`}
                             >

@@ -447,7 +447,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch campuses for selected institution
-  const { data: availableCampuses, isLoading: campusesLoading } = useQuery<any[]>({
+  const { data: availableCampuses, isLoading: campusesLoading, isError: campusesError } = useQuery<any[]>({
     queryKey: ["/api/institutions", selectedInstitutionId, "campuses"],
     enabled: !!selectedInstitutionId,
   });
@@ -3520,8 +3520,16 @@ export default function AdminDashboard() {
                       <p className="text-sm text-muted-foreground">Please select an institution first</p>
                     ) : campusesLoading ? (
                       <p className="text-sm text-muted-foreground">Loading campuses...</p>
+                    ) : campusesError ? (
+                      <div className="p-4 border border-destructive rounded-md bg-destructive/10">
+                        <p className="text-sm text-destructive font-medium">Failed to load campuses</p>
+                        <p className="text-xs text-muted-foreground mt-1">Please try selecting a different institution or refresh the page</p>
+                      </div>
                     ) : !availableCampuses || availableCampuses.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No campuses found for this institution</p>
+                      <div className="p-4 border rounded-md bg-muted/30">
+                        <p className="text-sm text-muted-foreground">No campuses found for this institution</p>
+                        <p className="text-xs text-muted-foreground mt-1">Use the campus management feature to add campuses first</p>
+                      </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-md">
                         {availableCampuses.map((campus) => (
