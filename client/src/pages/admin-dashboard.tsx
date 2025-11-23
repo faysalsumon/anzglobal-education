@@ -323,6 +323,8 @@ export default function AdminDashboard() {
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [rejectingCourse, setRejectingCourse] = useState<Course | null>(null);
   const [courseRejectionReason, setCourseRejectionReason] = useState("");
+  const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
 
   // Student leads state
   const [studentLeadSearchQuery, setStudentLeadSearchQuery] = useState("");
@@ -437,6 +439,18 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/leads"],
   });
 
+  // Fetch campuses for selected institution
+  const { data: availableCampuses, isLoading: campusesLoading } = useQuery<any[]>({
+    queryKey: ["/api/institutions", selectedInstitutionId, "campuses"],
+    enabled: !!selectedInstitutionId,
+  });
+
+  // Fetch existing course campuses when editing
+  const { data: existingCourseCampuses } = useQuery<any[]>({
+    queryKey: ["/api/courses", editingCourse?.id, "campuses"],
+    enabled: !!editingCourse?.id,
+  });
+
   // Watch numberOfCampuses and update campusAddresses array
   useEffect(() => {
     const numberOfCampuses = institutionForm.watch("numberOfCampuses");
@@ -448,6 +462,26 @@ export default function AdminDashboard() {
       institutionForm.setValue("campusAddresses", newAddresses);
     }
   }, [institutionForm.watch("numberOfCampuses")]);
+
+  // Watch for changes to the selected institution and update state
+  useEffect(() => {
+    const subscription = courseForm.watch((value, { name }) => {
+      if (name === "universityId" && value.universityId) {
+        setSelectedInstitutionId(value.universityId);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [courseForm]);
+
+  // Load existing course campuses when editing
+  useEffect(() => {
+    if (existingCourseCampuses && existingCourseCampuses.length > 0) {
+      setSelectedCampusIds(existingCourseCampuses.map(campus => campus.id));
+    } else if (!editingCourse) {
+      // Reset when creating new course
+      setSelectedCampusIds([]);
+    }
+  }, [existingCourseCampuses, editingCourse]);
 
   // User mutations
   const createUserMutation = useMutation({
@@ -648,10 +682,20 @@ export default function AdminDashboard() {
     mutationFn: async (data: z.infer<typeof courseSchema>) => {
       return await apiRequest("POST", "/api/super-admin/courses", data);
     },
-    onSuccess: () => {
+    onSuccess: async (createdCourse: any) => {
+      // Save campus selections if any
+      if (selectedCampusIds.length > 0) {
+        try {
+          await apiRequest("PUT", `/api/courses/${createdCourse.id}/campuses`, { campusIds: selectedCampusIds });
+        } catch (error) {
+          console.error("Error saving course campuses:", error);
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       setCourseDialogOpen(false);
       courseForm.reset();
+      setSelectedCampusIds([]);
+      setSelectedInstitutionId(null);
       toast({
         title: "Course created",
         description: "Course has been created successfully",
@@ -670,11 +714,20 @@ export default function AdminDashboard() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof courseSchema>> }) => {
       return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
+      // Save campus selections if any
+      try {
+        await apiRequest("PUT", `/api/courses/${variables.id}/campuses`, { campusIds: selectedCampusIds });
+      } catch (error) {
+        console.error("Error saving course campuses:", error);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", variables.id, "campuses"] });
       setCourseDialogOpen(false);
       setEditingCourse(null);
       courseForm.reset();
+      setSelectedCampusIds([]);
+      setSelectedInstitutionId(null);
       toast({
         title: "Course updated",
         description: "Course has been updated successfully",
@@ -1184,6 +1237,7 @@ export default function AdminDashboard() {
 
   const handleEditCourse = (course: any) => {
     setEditingCourse(course);
+    setSelectedInstitutionId(course.universityId); // Set institution ID to load campuses
     // Load all course fields into the form
     courseForm.reset({
       universityId: course.universityId || "",
@@ -3432,6 +3486,53 @@ export default function AdminDashboard() {
 
                 {/* Location & Dates Tab */}
                 <TabsContent value="location" className="space-y-4 mt-4">
+                  {/* Campus Multi-Select */}
+                  <div className="space-y-3">
+                    <div>
+                      <FormLabel>Campuses Offering This Course *</FormLabel>
+                      <FormDescription className="text-xs">
+                        Select all campuses where this course is available
+                      </FormDescription>
+                    </div>
+                    {!selectedInstitutionId ? (
+                      <p className="text-sm text-muted-foreground">Please select an institution first</p>
+                    ) : campusesLoading ? (
+                      <p className="text-sm text-muted-foreground">Loading campuses...</p>
+                    ) : !availableCampuses || availableCampuses.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No campuses found for this institution</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-md">
+                        {availableCampuses.map((campus) => (
+                          <div key={campus.id} className="flex items-start space-x-2">
+                            <Checkbox
+                              id={`campus-${campus.id}`}
+                              checked={selectedCampusIds.includes(campus.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCampusIds([...selectedCampusIds, campus.id]);
+                                } else {
+                                  setSelectedCampusIds(selectedCampusIds.filter(id => id !== campus.id));
+                                }
+                              }}
+                              data-testid={`checkbox-campus-${campus.name}`}
+                            />
+                            <label
+                              htmlFor={`campus-${campus.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              <div>{campus.name}</div>
+                              {campus.city && campus.state && (
+                                <div className="text-xs text-muted-foreground">
+                                  {campus.city}, {campus.state}
+                                </div>
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
