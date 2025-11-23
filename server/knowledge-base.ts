@@ -1,8 +1,7 @@
 import { Pinecone, PineconeRecord } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
 import { db } from './db';
-import { courses, universities, campuses, courseCampuses } from '@shared/schema';
-import type { Campus } from '@shared/schema';
+import { courses, universities } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 const PINECONE_INDEX_NAME = 'anz-global-education';
@@ -183,19 +182,8 @@ async function extractCourseDocuments(): Promise<KnowledgeDocument[]> {
   for (const { course, university } of coursesWithUniversities) {
     if (!university) continue;
 
-    // Get campuses for this course
-    const coursesCampusesData = await db
-      .select({
-        campus: campuses,
-      })
-      .from(courseCampuses)
-      .leftJoin(campuses, eq(courseCampuses.campusId, campuses.id))
-      .where(eq(courseCampuses.courseId, course.id));
-
-    const campusLocations = coursesCampusesData
-      .map((cc: { campus: Campus | null }) => cc.campus?.city)
-      .filter(Boolean)
-      .join(', ');
+    // Get campus locations from course's campusLocations array
+    const campusLocations = course.campusLocations?.join(', ') || 'Not specified';
 
     const content = `
 Course: ${course.title}
@@ -204,7 +192,7 @@ Provider Type: ${university.providerType}
 Discipline: ${course.discipline || 'Not specified'}
 Level: ${course.level || 'Not specified'}
 Country: ${course.country || 'Not specified'}
-Campus Locations: ${campusLocations || 'Not specified'}
+Campus Locations: ${campusLocations}
 Duration: ${course.duration || 'Not specified'}
 Fees: ${course.fees ? `$${course.fees} AUD` : 'Not specified'}
 Course Code: ${course.courseCode || 'Not specified'}
@@ -246,22 +234,16 @@ async function extractInstitutionDocuments(): Promise<KnowledgeDocument[]> {
   const documents: KnowledgeDocument[] = [];
 
   for (const university of allUniversities) {
-    // Get campuses for this institution
-    const institutionCampuses = await db
-      .select()
-      .from(campuses)
-      .where(eq(campuses.institutionId, university.id));
-
-    const campusLocations = institutionCampuses
-      .map((c: Campus) => c.city)
-      .filter(Boolean)
-      .join(', ');
+    // Get campus locations from institution's campusAddresses array
+    const campusLocations = university.campusAddresses
+      ?.map(campus => `${campus.city}, ${campus.state}`)
+      .join('; ') || 'Not specified';
 
     const content = `
 Institution: ${university.name}
 Provider Type: ${university.providerType}
 Country: ${university.country || 'Not specified'}
-Campus Locations: ${campusLocations || 'Not specified'}
+Campus Locations: ${campusLocations}
 Description: ${university.description || 'No description available'}
 Ranking: ${university.rankingBand || 'Not specified'}
 Accreditation: ${university.accreditationStatus || 'Not specified'}
