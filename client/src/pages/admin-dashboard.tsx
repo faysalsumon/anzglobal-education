@@ -2563,7 +2563,7 @@ export default function AdminDashboard() {
           </DialogHeader>
           <Form {...institutionForm}>
             <form onSubmit={institutionForm.handleSubmit(handleSubmitInstitution)} className="flex flex-col min-h-0 flex-1">
-              <div className="overflow-y-auto px-6 flex-1 space-y-4">
+              <div className="overflow-y-auto px-6 flex-1 space-y-4 pb-6">
               {/* Logo Upload */}
               <div className="space-y-3">
                 <FormLabel>Institution Logo</FormLabel>
@@ -3161,7 +3161,7 @@ export default function AdminDashboard() {
           </DialogHeader>
           <Form {...courseForm}>
             <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="flex flex-col min-h-0 flex-1">
-              <div className="overflow-y-auto px-6 flex-1 space-y-4">
+              <div className="overflow-y-auto px-6 flex-1 space-y-4 pb-6">
               <Tabs defaultValue="basic" className="w-full">
                 <div className="overflow-x-auto -mx-6 px-6 pb-2">
                   <TabsList className="inline-flex w-auto min-w-full">
