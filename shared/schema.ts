@@ -284,50 +284,6 @@ export const subDisciplines = pgTable("sub_disciplines", {
   usageIdx: index("sub_disciplines_usage_idx").on(table.usageCount),
 }));
 
-// Campuses table (normalized campus locations for institutions)
-export const campuses = pgTable("campuses", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
-  name: text("name").notNull(), // Campus name (e.g., "Melbourne Campus", "Sydney City Campus")
-  street: text("street"), // Street address
-  city: text("city").notNull(), // City
-  state: text("state"), // State/province
-  postcode: text("postcode"), // Postal/ZIP code
-  country: text("country").notNull().default("Australia"),
-  latitude: decimal("latitude", { precision: 10, scale: 7 }), // For mapping and distance calculations
-  longitude: decimal("longitude", { precision: 10, scale: 7 }), // For mapping and distance calculations
-  displayOrder: integer("display_order").default(0), // Order to display campuses
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  // Index for institution lookups
-  institutionIdx: index("campuses_institution_idx").on(table.institutionId),
-  // Composite index for location-based searches
-  locationIdx: index("campuses_location_idx").on(table.city, table.state, table.postcode),
-  // Index for active campuses
-  activeIdx: index("campuses_active_idx").on(table.isActive),
-  // Composite index for common query patterns
-  institutionActiveIdx: index("campuses_institution_active_idx").on(table.institutionId, table.isActive),
-}));
-
-// Course-Campus junction table (many-to-many: courses can be offered at multiple campuses)
-export const courseCampuses = pgTable("course_campuses", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  campusId: varchar("campus_id").notNull().references(() => campuses.id, { onDelete: "cascade" }),
-  deliveryModeOverride: text("delivery_mode_override"), // Optional campus-specific delivery mode
-  seatsAvailable: integer("seats_available"), // Optional seat availability per campus
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  // Unique constraint to prevent duplicate course-campus combinations
-  courseCampusUnique: unique("course_campuses_course_campus_unique").on(table.courseId, table.campusId),
-  // Index for course lookups
-  courseIdx: index("course_campuses_course_idx").on(table.courseId),
-  // Index for campus lookups
-  campusIdx: index("course_campuses_campus_idx").on(table.campusId),
-}));
 
 // Courses table
 export const courses = pgTable("courses", {
@@ -1378,58 +1334,6 @@ export const insertSubDisciplineSchema = createInsertSchema(subDisciplines).omit
 export type InsertSubDiscipline = z.infer<typeof insertSubDisciplineSchema>;
 export type SubDiscipline = typeof subDisciplines.$inferSelect;
 
-// Campus schemas
-export const insertCampusSchema = createInsertSchema(campuses).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  name: z.string().min(1, "Campus name is required"),
-  city: z.string().min(1, "City is required"),
-  country: z.string().min(1, "Country is required"),
-  latitude: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      if (typeof val === "number") return val;
-      if (typeof val === "string") {
-        const parsed = parseFloat(val);
-        if (isNaN(parsed)) return undefined;
-        return parsed;
-      }
-      return undefined;
-    },
-    z.number().min(-90).max(90).optional()
-  ),
-  longitude: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      if (typeof val === "number") return val;
-      if (typeof val === "string") {
-        const parsed = parseFloat(val);
-        if (isNaN(parsed)) return undefined;
-        return parsed;
-      }
-      return undefined;
-    },
-    z.number().min(-180).max(180).optional()
-  ),
-});
-
-export type InsertCampus = z.infer<typeof insertCampusSchema>;
-export type Campus = typeof campuses.$inferSelect;
-
-// Course-Campus junction schemas
-export const insertCourseCampusSchema = createInsertSchema(courseCampuses).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  courseId: z.string().min(1, "Course ID is required"),
-  campusId: z.string().min(1, "Campus ID is required"),
-});
-
-export type InsertCourseCampus = z.infer<typeof insertCourseCampusSchema>;
-export type CourseCampus = typeof courseCampuses.$inferSelect;
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
   id: true,
@@ -1592,7 +1496,7 @@ export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
 export type Course = typeof courses.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type CourseWithUniversity = Course & { university?: University | null };
-export type CourseWithDetails = CourseWithUniversity & { campuses?: Campus[] };
+export type CourseWithDetails = CourseWithUniversity;
 
 export type StudentProfile = typeof studentProfiles.$inferSelect;
 export type InsertStudentProfile = z.infer<typeof insertStudentProfileSchema>;
