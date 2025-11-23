@@ -1182,16 +1182,50 @@ export default function AdminDashboard() {
     setCourseDialogOpen(true);
   };
 
-  const handleEditCourse = (course: Course) => {
+  const handleEditCourse = (course: any) => {
     setEditingCourse(course);
+    // Load all course fields into the form
     courseForm.reset({
-      universityId: course.universityId,
-      title: course.title,
+      universityId: course.universityId || "",
+      title: course.title || "",
       description: course.description || "",
-      duration: course.duration || "",
-      fees: course.fees as any,
-      level: course.level || "",
       subject: course.subject || "",
+      level: course.level || "",
+      discipline: course.discipline || "",
+      
+      // Duration & Fees
+      duration: course.duration || "",
+      durationMonths: course.durationMonths || ("" as any),
+      durationWeeks: course.durationWeeks || ("" as any),
+      fees: course.fees || ("" as any),
+      applicationFees: course.applicationFees || ("" as any),
+      costOfLiving: course.costOfLiving || ("" as any),
+      currency: course.currency || "AUD",
+      
+      // Location & Dates
+      location: course.location || "",
+      country: course.country || "",
+      startDate: course.startDate || "",
+      applicationDeadline: course.applicationDeadline || "",
+      intakes: Array.isArray(course.intakes) ? course.intakes.join(", ") : "",
+      
+      // Requirements
+      prerequisites: course.prerequisites || "",
+      eligibilityRequirements: course.eligibilityRequirements || "",
+      englishRequirements: course.englishRequirements || "",
+      
+      // Additional Details
+      courseCode: course.courseCode || "",
+      prPathway: course.prPathway || false,
+      scholarshipPercentageMin: course.scholarshipPercentageMin || ("" as any),
+      scholarshipPercentageMax: course.scholarshipPercentageMax || ("" as any),
+      thumbnailUrl: course.thumbnailUrl || "",
+      curriculumUrl: course.curriculumUrl || "",
+      images: Array.isArray(course.images) ? course.images.join(", ") : "",
+      pathways: Array.isArray(course.pathways) ? course.pathways.join(", ") : "",
+      studyAreas: Array.isArray(course.studyAreas) ? course.studyAreas.join(", ") : "",
+      careerOutcomes: Array.isArray(course.careerOutcomes) ? course.careerOutcomes.join(", ") : "",
+      careerPath: course.careerPath || "",
     });
     setCourseDialogOpen(true);
   };
@@ -3116,15 +3150,16 @@ export default function AdminDashboard() {
 
       {/* Course Create/Edit Dialog */}
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[85vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
             <DialogDescription>
               {editingCourse ? "Update course information" : "Create a new course"}
             </DialogDescription>
           </DialogHeader>
           <Form {...courseForm}>
-            <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="space-y-4">
+            <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="flex flex-col min-h-0 flex-1">
+              <div className="overflow-y-auto px-6 flex-1 space-y-4">
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                   <TabsTrigger value="basic">Basic</TabsTrigger>
@@ -3653,8 +3688,9 @@ export default function AdminDashboard() {
                   />
                 </TabsContent>
               </Tabs>
-
-              <DialogFooter className="mt-6">
+              </div>
+              
+              <DialogFooter className="px-6 py-4 mt-0 shrink-0 border-t">
                 <Button type="button" variant="outline" onClick={() => setCourseDialogOpen(false)}>
                   Cancel
                 </Button>
