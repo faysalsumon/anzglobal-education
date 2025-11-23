@@ -229,7 +229,7 @@ const courseSchema = z.object({
   durationMonths: z.coerce.number().int().positive().optional().or(z.literal("")),
   durationWeeks: z.coerce.number().int().positive().optional().or(z.literal("")),
   fees: z.coerce.number().positive().optional().or(z.literal("")),
-  applicationFees: z.coerce.number().positive().optional().or(z.literal("")),
+  applicationFees: z.coerce.number().nonnegative().optional().or(z.literal("")),
   costOfLiving: z.coerce.number().positive().optional().or(z.literal("")),
   currency: z.string().optional(),
   
