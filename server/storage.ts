@@ -87,7 +87,6 @@ export interface IStorage {
   getCourseById(id: string): Promise<CourseWithUniversity | undefined>;
   getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]>;
   getAllCourses(): Promise<CourseWithUniversity[]>;
-  getAllCoursesWithCampuses(): Promise<CourseWithDetails[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
@@ -97,19 +96,6 @@ export interface IStorage {
   getSubDisciplineById(id: string): Promise<SubDiscipline | undefined>;
   createSubDiscipline(subDiscipline: InsertSubDiscipline): Promise<SubDiscipline>;
   incrementSubDisciplineUsage(id: string): Promise<void>;
-  
-  // Campus operations
-  getCampusesByInstitutionId(institutionId: string): Promise<Campus[]>;
-  getCampusById(id: string): Promise<Campus | undefined>;
-  createCampus(campus: InsertCampus): Promise<Campus>;
-  updateCampus(id: string, data: Partial<InsertCampus>): Promise<Campus>;
-  deleteCampus(id: string): Promise<void>;
-  
-  // Course-Campus junction operations
-  getCourseCampuses(courseId: string): Promise<Campus[]>;
-  addCourseCampus(data: InsertCourseCampus): Promise<CourseCampus>;
-  removeCourseCampus(courseId: string, campusId: string): Promise<void>;
-  replaceCourseCampuses(courseId: string, campusIds: string[]): Promise<void>;
   
   // Student profile operations
   getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
@@ -362,44 +348,6 @@ export class DatabaseStorage implements IStorage {
     return rows.map(({ course, university }) => ({ ...course, university }));
   }
 
-  async getAllCoursesWithCampuses(): Promise<CourseWithDetails[]> {
-    // Get all courses with universities
-    const courseRows = await db
-      .select({
-        course: courses,
-        university: universities,
-      })
-      .from(courses)
-      .leftJoin(universities, eq(courses.universityId, universities.id));
-    
-    // Get all course-campus mappings with campus details
-    const campusRows = await db
-      .select({
-        courseId: courseCampuses.courseId,
-        campus: campuses,
-      })
-      .from(courseCampuses)
-      .innerJoin(campuses, eq(courseCampuses.campusId, campuses.id))
-      .where(eq(campuses.isActive, true))
-      .orderBy(campuses.displayOrder);
-    
-    // Group campuses by course ID
-    const campusesByCourse: Record<string, Campus[]> = {};
-    campusRows.forEach(({ courseId, campus }) => {
-      if (!campusesByCourse[courseId]) {
-        campusesByCourse[courseId] = [];
-      }
-      campusesByCourse[courseId].push(campus);
-    });
-    
-    // Combine courses with their campuses
-    return courseRows.map(({ course, university }) => ({
-      ...course,
-      university,
-      campuses: campusesByCourse[course.id] || [],
-    }));
-  }
-
   async createCourse(courseData: InsertCourse): Promise<Course> {
     const [course] = await db
       .insert(courses)
@@ -476,98 +424,6 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(subDisciplines.id, id));
-  }
-
-  // Campus operations
-  async getCampusesByInstitutionId(institutionId: string): Promise<Campus[]> {
-    return await db
-      .select()
-      .from(campuses)
-      .where(and(
-        eq(campuses.institutionId, institutionId),
-        eq(campuses.isActive, true)
-      ))
-      .orderBy(campuses.displayOrder);
-  }
-
-  async getCampusById(id: string): Promise<Campus | undefined> {
-    const [campus] = await db
-      .select()
-      .from(campuses)
-      .where(eq(campuses.id, id));
-    return campus;
-  }
-
-  async createCampus(campusData: InsertCampus): Promise<Campus> {
-    const [campus] = await db
-      .insert(campuses)
-      .values(campusData)
-      .returning();
-    return campus;
-  }
-
-  async updateCampus(id: string, data: Partial<InsertCampus>): Promise<Campus> {
-    const [campus] = await db
-      .update(campuses)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(campuses.id, id))
-      .returning();
-    return campus;
-  }
-
-  async deleteCampus(id: string): Promise<void> {
-    await db.delete(campuses).where(eq(campuses.id, id));
-  }
-
-  // Course-Campus junction operations
-  async getCourseCampuses(courseId: string): Promise<Campus[]> {
-    const rows = await db
-      .select({
-        campus: campuses,
-      })
-      .from(courseCampuses)
-      .innerJoin(campuses, eq(courseCampuses.campusId, campuses.id))
-      .where(and(
-        eq(courseCampuses.courseId, courseId),
-        eq(campuses.isActive, true)
-      ))
-      .orderBy(campuses.displayOrder);
-    
-    return rows.map(row => row.campus);
-  }
-
-  async addCourseCampus(data: InsertCourseCampus): Promise<CourseCampus> {
-    const [courseCampus] = await db
-      .insert(courseCampuses)
-      .values(data)
-      .returning();
-    return courseCampus;
-  }
-
-  async removeCourseCampus(courseId: string, campusId: string): Promise<void> {
-    await db
-      .delete(courseCampuses)
-      .where(and(
-        eq(courseCampuses.courseId, courseId),
-        eq(courseCampuses.campusId, campusId)
-      ));
-  }
-
-  async replaceCourseCampuses(courseId: string, campusIds: string[]): Promise<void> {
-    // Use a transaction to ensure atomicity
-    await db.transaction(async (tx) => {
-      // Delete all existing campus associations
-      await tx
-        .delete(courseCampuses)
-        .where(eq(courseCampuses.courseId, courseId));
-      
-      // Insert new campus associations
-      if (campusIds.length > 0) {
-        await tx
-          .insert(courseCampuses)
-          .values(campusIds.map(campusId => ({ courseId, campusId })));
-      }
-    });
   }
 
   // Student profile operations
