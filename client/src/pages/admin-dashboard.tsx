@@ -1882,7 +1882,7 @@ export default function AdminDashboard() {
 
               {/* Courses Table */}
               <div className="overflow-x-auto border rounded-md sm:rounded-lg">
-                <Table>
+                <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">
@@ -1892,13 +1892,13 @@ export default function AdminDashboard() {
                           data-testid="checkbox-select-all-courses"
                         />
                       </TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Institution</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Fees</TableHead>
+                      <TableHead className="min-w-[200px]">Title</TableHead>
+                      <TableHead className="hidden md:table-cell">Institution</TableHead>
+                      <TableHead className="hidden lg:table-cell">Level</TableHead>
+                      <TableHead className="hidden xl:table-cell">Duration</TableHead>
+                      <TableHead className="hidden sm:table-cell">Fees</TableHead>
                       <TableHead>Approval</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden md:table-cell">Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1917,11 +1917,11 @@ export default function AdminDashboard() {
                               data-testid={`checkbox-course-${course.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">{course.title}</TableCell>
-                          <TableCell>{course.institutionName}</TableCell>
-                          <TableCell>{course.level || "-"}</TableCell>
-                          <TableCell>{course.duration || "-"}</TableCell>
-                          <TableCell>
+                          <TableCell className="font-medium min-w-[200px]">{course.title}</TableCell>
+                          <TableCell className="hidden md:table-cell">{course.institutionName}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{course.level || "-"}</TableCell>
+                          <TableCell className="hidden xl:table-cell">{course.duration || "-"}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
                           <TableCell>
@@ -1967,7 +1967,7 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {/* Only full admins can change status */}
                             {hasFullAdminAccess ? (
                               <Button
@@ -3116,7 +3116,7 @@ export default function AdminDashboard() {
 
       {/* Course Create/Edit Dialog */}
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
             <DialogDescription>
@@ -3126,12 +3126,12 @@ export default function AdminDashboard() {
           <Form {...courseForm}>
             <form onSubmit={courseForm.handleSubmit(handleSubmitCourse)} className="space-y-4">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                   <TabsTrigger value="basic">Basic</TabsTrigger>
-                  <TabsTrigger value="fees">Fees & Duration</TabsTrigger>
-                  <TabsTrigger value="location">Location & Dates</TabsTrigger>
-                  <TabsTrigger value="requirements">Requirements</TabsTrigger>
-                  <TabsTrigger value="additional">Additional</TabsTrigger>
+                  <TabsTrigger value="fees">Fees</TabsTrigger>
+                  <TabsTrigger value="location" className="hidden sm:block">Location</TabsTrigger>
+                  <TabsTrigger value="requirements" className="hidden lg:block">Requirements</TabsTrigger>
+                  <TabsTrigger value="additional" className="hidden lg:block">Additional</TabsTrigger>
                 </TabsList>
 
                 {/* Basic Information Tab */}
@@ -3186,7 +3186,7 @@ export default function AdminDashboard() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="subject"
@@ -3214,7 +3214,7 @@ export default function AdminDashboard() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="level"
@@ -3323,7 +3323,7 @@ export default function AdminDashboard() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="fees"
@@ -3361,7 +3361,7 @@ export default function AdminDashboard() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="applicationFees"
@@ -3393,7 +3393,7 @@ export default function AdminDashboard() {
 
                 {/* Location & Dates Tab */}
                 <TabsContent value="location" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="location"
@@ -3421,7 +3421,7 @@ export default function AdminDashboard() {
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
                       name="startDate"
