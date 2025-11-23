@@ -33,7 +33,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, MapPin } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -48,7 +48,6 @@ import { AdminBlogManagement } from "@/components/admin-blog-management";
 import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
 import { ActivityFeed } from "@/components/activity-feed";
 import { AdminApplicationsKanban } from "@/components/admin-applications-kanban";
-import { CampusManagementDialog } from "@/components/campus-management-dialog";
 
 interface User {
   id: string;
@@ -313,12 +312,6 @@ export default function AdminDashboard() {
   const [rejectingInstitution, setRejectingInstitution] = useState<Institution | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedInstitutions, setSelectedInstitutions] = useState<Set<string>>(new Set());
-
-  // Campus management state
-  const [campusDialogOpen, setCampusDialogOpen] = useState(false);
-  const [managingCampusesForInstitution, setManagingCampusesForInstitution] = useState<Institution | null>(null);
-  const [editingCampus, setEditingCampus] = useState<any>(null);
-  const [deletingCampus, setDeletingCampus] = useState<any>(null);
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
@@ -1809,21 +1802,6 @@ export default function AdminDashboard() {
                                     <XCircle className="h-4 w-4 text-destructive" />
                                   </Button>
                                 </>
-                              )}
-                              {/* Manage Campuses button (only for full admins) */}
-                              {hasFullAdminAccess && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setManagingCampusesForInstitution(institution);
-                                    setCampusDialogOpen(true);
-                                  }}
-                                  data-testid={`button-manage-campuses-${institution.id}`}
-                                  title="Manage Campuses"
-                                >
-                                  <MapPin className="h-4 w-4" />
-                                </Button>
                               )}
                               {/* Edit button (only for full admins) */}
                               {hasFullAdminAccess && (
@@ -3976,13 +3954,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Campus Management Dialog */}
-      <CampusManagementDialog
-        open={campusDialogOpen}
-        onOpenChange={setCampusDialogOpen}
-        institution={managingCampusesForInstitution}
-      />
       </div>
     </SidebarProvider>
   );
