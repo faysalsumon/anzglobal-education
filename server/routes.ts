@@ -6831,6 +6831,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   registerWorkflowValidationRoutes(app);
   console.log('Workflow validation routes registered for business rules enforcement');
 
+  // Register CRM routes for leads and contacts management
+  const crmRouter = await import('./crm-routes');
+  app.use('/api/crm', isAuthenticated, crmRouter.default);
+  console.log('CRM routes registered for leads and contacts management');
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering
