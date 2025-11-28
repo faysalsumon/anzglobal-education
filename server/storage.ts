@@ -57,6 +57,19 @@ import {
   contactInquiries,
   type ContactInquiry,
   type InsertContactInquiry,
+  // CRM imports
+  tasks,
+  applicationInternalNotes,
+  followUpReminders,
+  type Task,
+  type InsertTask,
+  type UpdateTask,
+  type ApplicationInternalNote,
+  type InsertApplicationInternalNote,
+  type FollowUpReminder,
+  type InsertFollowUpReminder,
+  type TaskWithRelations,
+  type WorkloadSummary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
@@ -202,6 +215,54 @@ export interface IStorage {
   updateContactInquiry(id: string, data: Partial<InsertContactInquiry>): Promise<ContactInquiry>;
   updateContactInquiryStatus(id: string, status: "new" | "in_progress" | "responded" | "closed"): Promise<ContactInquiry>;
   assignContactInquiry(id: string, assignedTo: string): Promise<ContactInquiry>;
+  
+  // ============================================
+  // CRM SYSTEM OPERATIONS
+  // ============================================
+  
+  // Task operations
+  getTaskById(id: string): Promise<Task | undefined>;
+  getTasksByAssignee(userId: string): Promise<Task[]>;
+  getTasksByApplicationId(applicationId: string): Promise<Task[]>;
+  getAllTasks(filters?: { 
+    status?: string; 
+    priority?: string; 
+    assignedToId?: string;
+    applicationId?: string;
+    category?: string;
+  }): Promise<Task[]>;
+  getTasksWithRelations(filters?: { 
+    status?: string; 
+    priority?: string; 
+    assignedToId?: string;
+    applicationId?: string;
+    category?: string;
+  }): Promise<TaskWithRelations[]>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, data: UpdateTask): Promise<Task>;
+  deleteTask(id: string): Promise<void>;
+  completeTask(id: string): Promise<Task>;
+  
+  // Application internal notes operations
+  getNoteById(id: string): Promise<ApplicationInternalNote | undefined>;
+  getNotesByApplicationId(applicationId: string): Promise<ApplicationInternalNote[]>;
+  createNote(note: InsertApplicationInternalNote): Promise<ApplicationInternalNote>;
+  updateNote(id: string, data: Partial<InsertApplicationInternalNote>): Promise<ApplicationInternalNote>;
+  deleteNote(id: string): Promise<void>;
+  toggleNotePin(id: string): Promise<ApplicationInternalNote>;
+  
+  // Follow-up reminder operations
+  getReminderById(id: string): Promise<FollowUpReminder | undefined>;
+  getRemindersByUserId(userId: string): Promise<FollowUpReminder[]>;
+  getUpcomingReminders(userId: string): Promise<FollowUpReminder[]>;
+  getRemindersByApplicationId(applicationId: string): Promise<FollowUpReminder[]>;
+  createReminder(reminder: InsertFollowUpReminder): Promise<FollowUpReminder>;
+  updateReminder(id: string, data: Partial<InsertFollowUpReminder>): Promise<FollowUpReminder>;
+  completeReminder(id: string): Promise<FollowUpReminder>;
+  deleteReminder(id: string): Promise<void>;
+  
+  // Workload summary operations
+  getTeamWorkloadSummary(): Promise<WorkloadSummary[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1295,6 +1356,347 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contactInquiries.id, id))
       .returning();
     return inquiry;
+  }
+
+  // ============================================
+  // CRM SYSTEM IMPLEMENTATIONS
+  // ============================================
+
+  // Task operations
+  async getTaskById(id: string): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task;
+  }
+
+  async getTasksByAssignee(userId: string): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.assignedToId, userId))
+      .orderBy(desc(tasks.dueDate));
+  }
+
+  async getTasksByApplicationId(applicationId: string): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.applicationId, applicationId))
+      .orderBy(desc(tasks.createdAt));
+  }
+
+  async getAllTasks(filters?: { 
+    status?: string; 
+    priority?: string; 
+    assignedToId?: string;
+    applicationId?: string;
+    category?: string;
+  }): Promise<Task[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(tasks.status, filters.status as any));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(tasks.priority, filters.priority as any));
+    }
+    if (filters?.assignedToId) {
+      conditions.push(eq(tasks.assignedToId, filters.assignedToId));
+    }
+    if (filters?.applicationId) {
+      conditions.push(eq(tasks.applicationId, filters.applicationId));
+    }
+    if (filters?.category) {
+      conditions.push(eq(tasks.category, filters.category as any));
+    }
+    
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(tasks)
+        .where(and(...conditions))
+        .orderBy(desc(tasks.createdAt));
+    }
+    
+    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  }
+
+  async getTasksWithRelations(filters?: { 
+    status?: string; 
+    priority?: string; 
+    assignedToId?: string;
+    applicationId?: string;
+    category?: string;
+  }): Promise<TaskWithRelations[]> {
+    const taskList = await this.getAllTasks(filters);
+    
+    const tasksWithRelations: TaskWithRelations[] = await Promise.all(
+      taskList.map(async (task) => {
+        // Get assigned user
+        let assignedTo = null;
+        if (task.assignedToId) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+            profileImageUrl: users.profileImageUrl,
+          }).from(users).where(eq(users.id, task.assignedToId));
+          assignedTo = user || null;
+        }
+
+        // Get creator
+        let createdBy = null;
+        if (task.createdById) {
+          const [user] = await db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          }).from(users).where(eq(users.id, task.createdById));
+          createdBy = user || null;
+        }
+
+        // Get application info
+        let application = null;
+        if (task.applicationId) {
+          const [app] = await db.select().from(applications).where(eq(applications.id, task.applicationId));
+          if (app) {
+            // Get student name
+            const [profile] = await db.select().from(studentProfiles).where(eq(studentProfiles.id, app.studentId));
+            // Get course name
+            const [course] = await db.select().from(courses).where(eq(courses.id, app.courseId));
+            
+            application = {
+              id: app.id,
+              currentStage: app.currentStage,
+              studentName: profile ? `${profile.firstName} ${profile.lastName}` : undefined,
+              courseName: course?.title,
+            };
+          }
+        }
+
+        return {
+          ...task,
+          assignedTo,
+          createdBy,
+          application,
+        };
+      })
+    );
+
+    return tasksWithRelations;
+  }
+
+  async createTask(task: InsertTask): Promise<Task> {
+    const [newTask] = await db.insert(tasks).values(task).returning();
+    return newTask;
+  }
+
+  async updateTask(id: string, data: UpdateTask): Promise<Task> {
+    const [task] = await db
+      .update(tasks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tasks.id, id))
+      .returning();
+    return task;
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async completeTask(id: string): Promise<Task> {
+    const [task] = await db
+      .update(tasks)
+      .set({ 
+        status: 'completed', 
+        completedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+    return task;
+  }
+
+  // Application internal notes operations
+  async getNoteById(id: string): Promise<ApplicationInternalNote | undefined> {
+    const [note] = await db.select().from(applicationInternalNotes).where(eq(applicationInternalNotes.id, id));
+    return note;
+  }
+
+  async getNotesByApplicationId(applicationId: string): Promise<ApplicationInternalNote[]> {
+    return await db
+      .select()
+      .from(applicationInternalNotes)
+      .where(eq(applicationInternalNotes.applicationId, applicationId))
+      .orderBy(desc(applicationInternalNotes.createdAt));
+  }
+
+  async createNote(note: InsertApplicationInternalNote): Promise<ApplicationInternalNote> {
+    const [newNote] = await db.insert(applicationInternalNotes).values(note).returning();
+    return newNote;
+  }
+
+  async updateNote(id: string, data: Partial<InsertApplicationInternalNote>): Promise<ApplicationInternalNote> {
+    const [note] = await db
+      .update(applicationInternalNotes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(applicationInternalNotes.id, id))
+      .returning();
+    return note;
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    await db.delete(applicationInternalNotes).where(eq(applicationInternalNotes.id, id));
+  }
+
+  async toggleNotePin(id: string): Promise<ApplicationInternalNote> {
+    const [existingNote] = await db.select().from(applicationInternalNotes).where(eq(applicationInternalNotes.id, id));
+    if (!existingNote) {
+      throw new Error('Note not found');
+    }
+    
+    const [note] = await db
+      .update(applicationInternalNotes)
+      .set({ 
+        isPinned: !existingNote.isPinned,
+        updatedAt: new Date() 
+      })
+      .where(eq(applicationInternalNotes.id, id))
+      .returning();
+    return note;
+  }
+
+  // Follow-up reminder operations
+  async getReminderById(id: string): Promise<FollowUpReminder | undefined> {
+    const [reminder] = await db.select().from(followUpReminders).where(eq(followUpReminders.id, id));
+    return reminder;
+  }
+
+  async getRemindersByUserId(userId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(eq(followUpReminders.userId, userId))
+      .orderBy(desc(followUpReminders.reminderAt));
+  }
+
+  async getUpcomingReminders(userId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(
+        and(
+          eq(followUpReminders.userId, userId),
+          eq(followUpReminders.isCompleted, false)
+        )
+      )
+      .orderBy(followUpReminders.reminderAt);
+  }
+
+  async getRemindersByApplicationId(applicationId: string): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(eq(followUpReminders.applicationId, applicationId))
+      .orderBy(desc(followUpReminders.reminderAt));
+  }
+
+  async createReminder(reminder: InsertFollowUpReminder): Promise<FollowUpReminder> {
+    const [newReminder] = await db.insert(followUpReminders).values(reminder).returning();
+    return newReminder;
+  }
+
+  async updateReminder(id: string, data: Partial<InsertFollowUpReminder>): Promise<FollowUpReminder> {
+    const [reminder] = await db
+      .update(followUpReminders)
+      .set(data)
+      .where(eq(followUpReminders.id, id))
+      .returning();
+    return reminder;
+  }
+
+  async completeReminder(id: string): Promise<FollowUpReminder> {
+    const [reminder] = await db
+      .update(followUpReminders)
+      .set({ 
+        isCompleted: true,
+        completedAt: new Date()
+      })
+      .where(eq(followUpReminders.id, id))
+      .returning();
+    return reminder;
+  }
+
+  async deleteReminder(id: string): Promise<void> {
+    await db.delete(followUpReminders).where(eq(followUpReminders.id, id));
+  }
+
+  // Workload summary operations
+  async getTeamWorkloadSummary(): Promise<WorkloadSummary[]> {
+    // Get all admin team members and their assigned work
+    const adminMembers = await db
+      .select({
+        userId: adminTeamMembers.userId,
+        role: adminTeamMembers.role,
+      })
+      .from(adminTeamMembers)
+      .where(eq(adminTeamMembers.isActive, true));
+
+    const workloadSummaries: WorkloadSummary[] = await Promise.all(
+      adminMembers.map(async (member) => {
+        // Get user details
+        const [user] = await db.select().from(users).where(eq(users.id, member.userId));
+        
+        // Get task counts
+        const allTasks = await db
+          .select()
+          .from(tasks)
+          .where(eq(tasks.assignedToId, member.userId));
+        
+        const now = new Date();
+        const pendingTasks = allTasks.filter(t => t.status === 'pending').length;
+        const inProgressTasks = allTasks.filter(t => t.status === 'in_progress').length;
+        const completedTasks = allTasks.filter(t => t.status === 'completed').length;
+        const overdueTasks = allTasks.filter(t => 
+          t.dueDate && new Date(t.dueDate) < now && t.status !== 'completed' && t.status !== 'cancelled'
+        ).length;
+
+        // Get assigned applications count
+        const assignedApps = await db
+          .select()
+          .from(applications)
+          .where(eq(applications.assignedConsultantId, member.userId));
+
+        // Calculate average task completion time
+        const completedTasksWithTimes = allTasks.filter(t => t.status === 'completed' && t.completedAt && t.createdAt);
+        let avgTaskCompletionTime: number | undefined;
+        if (completedTasksWithTimes.length > 0) {
+          const totalHours = completedTasksWithTimes.reduce((sum, t) => {
+            const created = new Date(t.createdAt!).getTime();
+            const completed = new Date(t.completedAt!).getTime();
+            return sum + ((completed - created) / (1000 * 60 * 60));
+          }, 0);
+          avgTaskCompletionTime = Math.round(totalHours / completedTasksWithTimes.length);
+        }
+
+        return {
+          userId: member.userId,
+          userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
+          userEmail: user?.email || null,
+          userRole: member.role,
+          profileImageUrl: user?.profileImageUrl || null,
+          totalTasks: allTasks.length,
+          pendingTasks,
+          inProgressTasks,
+          completedTasks,
+          overdueTasks,
+          assignedApplications: assignedApps.length,
+          avgTaskCompletionTime,
+        };
+      })
+    );
+
+    return workloadSummaries;
   }
 }
 

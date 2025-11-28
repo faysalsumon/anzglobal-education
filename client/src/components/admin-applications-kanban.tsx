@@ -17,8 +17,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, User, FileText, CheckCircle, XCircle, Clock, 
-  ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical
+  ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell
 } from "lucide-react";
+import { ApplicationInternalNotes } from "@/components/application-internal-notes";
+import { CreateReminderModal } from "@/components/create-reminder-modal";
+import { useAuth } from "@/hooks/useAuth";
 
 type ApplicationStage = 
   | "Assessment"
@@ -230,6 +233,7 @@ function DraggableApplicationCard({
 
 export function AdminApplicationsKanban() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [consultantFilter, setConsultantFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -239,6 +243,7 @@ export function AdminApplicationsKanban() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<AdminApplication | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -730,12 +735,12 @@ export function AdminApplicationsKanban() {
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-application-details">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-application-details">
           <DialogHeader>
             <DialogTitle>Application Details</DialogTitle>
           </DialogHeader>
           {selectedApplication && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Student</p>
@@ -775,15 +780,46 @@ export function AdminApplicationsKanban() {
                   </p>
                 </div>
               </div>
+
+              <Separator />
+
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-semibold text-sm">Internal Notes</h3>
+                </div>
+                <ApplicationInternalNotes 
+                  applicationId={selectedApplication.application.id}
+                  currentUserId={user?.id}
+                  compact
+                />
+              </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-row justify-between sm:justify-between">
+            <Button 
+              variant="outline"
+              onClick={() => setReminderDialogOpen(true)}
+              data-testid="button-set-reminder"
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Set Reminder
+            </Button>
             <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Reminder Modal */}
+      {selectedApplication && (
+        <CreateReminderModal
+          open={reminderDialogOpen}
+          onOpenChange={setReminderDialogOpen}
+          applicationId={selectedApplication.application.id}
+        />
+      )}
     </div>
   );
 }

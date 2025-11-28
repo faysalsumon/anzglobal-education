@@ -22,6 +22,9 @@ import {
   Newspaper,
   Globe,
   Activity,
+  ListTodo,
+  ClipboardList,
+  BarChart3,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -50,6 +53,22 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
     },
   ];
 
+  // CRM items (visible to all admins - their work assignments)
+  const crmItems = [
+    {
+      icon: ListTodo,
+      label: "My Tasks",
+      value: "my-tasks",
+      show: true,
+    },
+    {
+      icon: BarChart3,
+      label: "Team Workload",
+      value: "team-workload",
+      show: hasFullAdminAccess, // Only super_admin and support_manager
+    },
+  ];
+
   // Content & leads items (visible to all admins)
   const contentItems = [
     {
@@ -71,7 +90,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       show: true,
     },
     {
-      icon: FileText,
+      icon: ClipboardList,
       label: "Applications",
       value: "applications",
       show: true,
@@ -106,6 +125,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
     },
   ];
 
+  const visibleCRM = crmItems.filter(item => item.show);
   const visibleManagement = managementItems.filter(item => item.show);
   const visibleContent = contentItems.filter(item => item.show);
   const visibleTools = toolsItems.filter(item => item.show);
@@ -129,6 +149,35 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       </SidebarHeader>
       
       <SidebarContent className="px-1.5 py-3">
+        {/* CRM Section - My Work */}
+        {visibleCRM.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">My Work</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleCRM.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.value}>
+                      <SidebarMenuButton
+                        onClick={() => handleItemClick(item.value)}
+                        isActive={activeTab === item.value}
+                        tooltip={item.label}
+                        size="default"
+                        data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Management Section - Only for full admin access */}
         {visibleManagement.length > 0 && (
           <SidebarGroup>

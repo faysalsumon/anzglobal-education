@@ -112,6 +112,37 @@ export const activityEntityTypeEnum = pgEnum('activity_entity_type', [
   'import_batch',
   'team_member',
   'notification',
+  'task',
+  'internal_note',
+  'reminder',
+]);
+
+// CRM Task priority enum
+export const taskPriorityEnum = pgEnum('task_priority', [
+  'low',
+  'medium',
+  'high',
+  'urgent',
+]);
+
+// CRM Task status enum
+export const taskStatusEnum = pgEnum('task_status', [
+  'pending',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'on_hold',
+]);
+
+// CRM Task category enum
+export const taskCategoryEnum = pgEnum('task_category', [
+  'follow_up',
+  'document_collection',
+  'application_review',
+  'communication',
+  'visa_processing',
+  'general',
+  'urgent_action',
 ]);
 
 // Shared TypeScript interfaces for JSONB fields
@@ -497,6 +528,111 @@ export const applicationStageDocuments = pgTable("application_stage_documents", 
   index("stage_docs_stage_idx").on(table.stage),
   index("stage_docs_uploaded_by_idx").on(table.uploadedBy),
 ]);
+
+// ============================================
+// CRM SYSTEM TABLES
+// ============================================
+
+// Tasks table for CRM task management
+export const tasks = pgTable("tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Task details
+  title: text("title").notNull(),
+  description: text("description"),
+  category: taskCategoryEnum("category").notNull().default('general'),
+  
+  // Priority and status
+  priority: taskPriorityEnum("priority").notNull().default('medium'),
+  status: taskStatusEnum("status").notNull().default('pending'),
+  
+  // Assignment
+  assignedToId: varchar("assigned_to_id").references(() => users.id, { onDelete: "set null" }),
+  assignedByName: text("assigned_by_name"), // Store name for display even if user deleted
+  
+  // Related entities
+  applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }),
+  studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "set null" }),
+  relatedStage: applicationStageEnum("related_stage"), // Which application stage this task relates to
+  
+  // Timing
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  
+  // SLA tracking
+  slaWarningHours: integer("sla_warning_hours").default(24), // Hours before due date to show warning
+  slaCriticalHours: integer("sla_critical_hours").default(4), // Hours before due date to show critical
+  
+  // Audit
+  createdById: varchar("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tasks_assigned_to_idx").on(table.assignedToId),
+  index("tasks_application_idx").on(table.applicationId),
+  index("tasks_status_idx").on(table.status),
+  index("tasks_priority_idx").on(table.priority),
+  index("tasks_due_date_idx").on(table.dueDate),
+  index("tasks_created_by_idx").on(table.createdById),
+]);
+
+// Application internal notes for team communication (not visible to students)
+export const applicationInternalNotes = pgTable("application_internal_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  content: text("content").notNull(),
+  
+  // Optional tagging/mentions (store user IDs of mentioned team members)
+  mentionedUserIds: varchar("mentioned_user_ids").array(),
+  
+  // Mark important notes
+  isPinned: boolean("is_pinned").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("internal_notes_application_idx").on(table.applicationId),
+  index("internal_notes_author_idx").on(table.authorId),
+  index("internal_notes_created_at_idx").on(table.createdAt),
+]);
+
+// Follow-up reminders for tasks and applications
+export const followUpReminders = pgTable("follow_up_reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Can be linked to task, application, or both
+  taskId: varchar("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+  applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }),
+  
+  // Who gets reminded
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Reminder details
+  reminderAt: timestamp("reminder_at").notNull(),
+  message: text("message"),
+  
+  // Status
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  
+  // Was notification sent?
+  notificationSent: boolean("notification_sent").default(false),
+  notificationSentAt: timestamp("notification_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("reminders_user_idx").on(table.userId),
+  index("reminders_task_idx").on(table.taskId),
+  index("reminders_application_idx").on(table.applicationId),
+  index("reminders_reminder_at_idx").on(table.reminderAt),
+  index("reminders_is_completed_idx").on(table.isCompleted),
+]);
+
+// ============================================
+// END CRM SYSTEM TABLES
+// ============================================
 
 // Favorites table for students to save favorite institutions and courses
 export const favorites = pgTable("favorites", {
@@ -2018,3 +2154,81 @@ export type DiscoveredCourseUrl = typeof discoveredCourseUrls.$inferSelect;
 export type InsertDiscoveredCourseUrl = z.infer<typeof insertDiscoveredCourseUrlSchema>;
 export type ScrapedInstitution = typeof scrapedInstitutions.$inferSelect;
 export type InsertScrapedInstitution = z.infer<typeof insertScrapedInstitutionSchema>;
+
+// ============================================
+// CRM SYSTEM SCHEMAS AND TYPES
+// ============================================
+
+// Tasks
+export const insertTaskSchema = createInsertSchema(tasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export const updateTaskSchema = insertTaskSchema.partial();
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type UpdateTask = z.infer<typeof updateTaskSchema>;
+
+// Application Internal Notes
+export const insertApplicationInternalNoteSchema = createInsertSchema(applicationInternalNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ApplicationInternalNote = typeof applicationInternalNotes.$inferSelect;
+export type InsertApplicationInternalNote = z.infer<typeof insertApplicationInternalNoteSchema>;
+
+// Follow-up Reminders
+export const insertFollowUpReminderSchema = createInsertSchema(followUpReminders).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+  notificationSent: true,
+  notificationSentAt: true,
+});
+
+export type FollowUpReminder = typeof followUpReminders.$inferSelect;
+export type InsertFollowUpReminder = z.infer<typeof insertFollowUpReminderSchema>;
+
+// Task with related data for dashboard views
+export interface TaskWithRelations extends Task {
+  assignedTo?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+  createdBy?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  application?: {
+    id: string;
+    currentStage: string;
+    studentName?: string;
+    courseName?: string;
+  } | null;
+}
+
+// Workload summary for dashboard
+export interface WorkloadSummary {
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  userRole: string | null;
+  profileImageUrl: string | null;
+  totalTasks: number;
+  pendingTasks: number;
+  inProgressTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
+  assignedApplications: number;
+  avgTaskCompletionTime?: number; // in hours
+}

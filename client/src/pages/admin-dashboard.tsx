@@ -48,6 +48,9 @@ import { AdminBlogManagement } from "@/components/admin-blog-management";
 import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
 import { ActivityFeed } from "@/components/activity-feed";
 import { AdminApplicationsKanban } from "@/components/admin-applications-kanban";
+import { MyTasksPanel } from "@/components/my-tasks-panel";
+import { TeamWorkloadPanel } from "@/components/team-workload-panel";
+import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
 
 interface User {
   id: string;
@@ -267,14 +270,14 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess } = useAuth();
   
-  // Default tab based on role: restricted admins use applications, full admins use users
-  const defaultTab = (isConsultant || !hasFullAdminAccess) ? "applications" : "users";
+  // Default tab based on role: restricted admins use my-tasks, full admins use users
+  const defaultTab = (isConsultant || !hasFullAdminAccess) ? "my-tasks" : "users";
   
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs'];
-    const fullAdminOnlyTabs = ['users', 'institutions', 'data-import', 'web-scraping', 'activity-logs'];
+    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs'];
     
     if (hash && validTabs.includes(hash)) {
       // Check access for full-admin-only tabs
@@ -1367,6 +1370,27 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-6 md:space-y-8">
+        {/* My Tasks Tab */}
+        {activeTab === "my-tasks" && (
+          <div className="space-y-6 md:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <MyTasksPanel />
+              </div>
+              <div className="lg:col-span-1">
+                <UpcomingRemindersPanel />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Team Workload Tab */}
+        {activeTab === "team-workload" && hasFullAdminAccess && (
+          <div className="space-y-6 md:space-y-8">
+            <TeamWorkloadPanel />
+          </div>
+        )}
+
         {/* Users Tab */}
         {activeTab === "users" && (
           <div className="space-y-6 md:space-y-8">

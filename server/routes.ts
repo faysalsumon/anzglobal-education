@@ -40,6 +40,15 @@ import {
   importBatches,
   insertImportBatchSchema,
   activityLogs,
+  // CRM imports
+  insertTaskSchema,
+  updateTaskSchema,
+  insertApplicationInternalNoteSchema,
+  insertFollowUpReminderSchema,
+  tasks,
+  applicationInternalNotes,
+  followUpReminders,
+  adminTeamMembers,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
@@ -6967,6 +6976,555 @@ Sitemap: ${baseUrl}/sitemap.xml
       res.status(500).json({ message: "Failed to fetch recent activity logs" });
     }
   });
+
+  // ============================================
+  // CRM SYSTEM API ENDPOINTS
+  // ============================================
+
+  // Helper function to check if user is admin team member
+  async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; role: string | null }> {
+    const adminMember = await storage.getAdminTeamMemberByUserId(userId);
+    if (adminMember && adminMember.isActive) {
+      return { isAdmin: true, role: adminMember.role };
+    }
+    const user = await storage.getUser(userId);
+    if (user?.userType === 'admin' || user?.userType === 'super_admin') {
+      return { isAdmin: true, role: user.userType };
+    }
+    return { isAdmin: false, role: null };
+  }
+
+  // Get all tasks (admin only) with optional filters
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, priority, assignedToId, applicationId, category, withRelations } = req.query;
+      
+      const filters = {
+        status: status as string | undefined,
+        priority: priority as string | undefined,
+        assignedToId: assignedToId as string | undefined,
+        applicationId: applicationId as string | undefined,
+        category: category as string | undefined,
+      };
+      
+      if (withRelations === 'true') {
+        const tasks = await storage.getTasksWithRelations(filters);
+        return res.json(tasks);
+      }
+      
+      const tasks = await storage.getAllTasks(filters);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error("Error fetching tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  // Get my tasks (assigned to current user)
+  app.get("/api/tasks/my-tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const tasks = await storage.getTasksWithRelations({ assignedToId: userId });
+      res.json(tasks);
+    } catch (error: any) {
+      console.error("Error fetching my tasks:", error);
+      res.status(500).json({ message: "Failed to fetch my tasks" });
+    }
+  });
+
+  // Get workload summary for all team members
+  app.get("/api/tasks/workload-summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin, role } = await isAdminTeamMember(userId);
+      
+      // Only super_admin and support_manager can see workload summary
+      if (!isAdmin || !['super_admin', 'support_manager'].includes(role || '')) {
+        return res.status(403).json({ message: "Only super admins and support managers can view workload summary" });
+      }
+      
+      const summary = await storage.getTeamWorkloadSummary();
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Error fetching workload summary:", error);
+      res.status(500).json({ message: "Failed to fetch workload summary" });
+    }
+  });
+
+  // Get single task by ID
+  app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const task = await storage.getTaskById(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      res.json(task);
+    } catch (error: any) {
+      console.error("Error fetching task:", error);
+      res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  // Create new task
+  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const user = await storage.getUser(userId);
+      const assignedByName = getUserDisplayName(user);
+      
+      const data = insertTaskSchema.parse({
+        ...req.body,
+        createdById: userId,
+        assignedByName,
+      });
+      
+      const task = await storage.createTask(data);
+      
+      // Log activity
+      await logCreate(userId, 'task', task.id, `Created task: ${task.title}`);
+      
+      res.json(task);
+    } catch (error: any) {
+      console.error("Error creating task:", error);
+      res.status(400).json({ message: error.message || "Failed to create task" });
+    }
+  });
+
+  // Update task
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingTask = await storage.getTaskById(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const data = updateTaskSchema.parse(req.body);
+      const task = await storage.updateTask(req.params.id, data);
+      
+      // Log activity
+      await logUpdate(userId, 'task', task.id, `Updated task: ${task.title}`);
+      
+      res.json(task);
+    } catch (error: any) {
+      console.error("Error updating task:", error);
+      res.status(400).json({ message: error.message || "Failed to update task" });
+    }
+  });
+
+  // Complete task
+  app.post("/api/tasks/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingTask = await storage.getTaskById(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const task = await storage.completeTask(req.params.id);
+      
+      // Log activity
+      await logStatusChange(userId, 'task', task.id, `Completed task: ${task.title}`);
+      
+      res.json(task);
+    } catch (error: any) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  // Delete task
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin, role } = await isAdminTeamMember(userId);
+      
+      // Only super_admin and support_manager can delete tasks
+      if (!isAdmin || !['super_admin', 'support_manager'].includes(role || '')) {
+        return res.status(403).json({ message: "Only super admins and support managers can delete tasks" });
+      }
+      
+      const existingTask = await storage.getTaskById(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      await storage.deleteTask(req.params.id);
+      
+      // Log activity
+      await logDelete(userId, 'task', req.params.id, `Deleted task: ${existingTask.title}`);
+      
+      res.json({ message: "Task deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // ============================================
+  // APPLICATION INTERNAL NOTES API
+  // ============================================
+
+  // Get notes for an application
+  app.get("/api/applications/:id/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const applicationId = req.params.id;
+      const application = await storage.getApplicationById(applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      const notes = await storage.getNotesByApplicationId(applicationId);
+      
+      // Enrich notes with author information
+      const enrichedNotes = await Promise.all(
+        notes.map(async (note) => {
+          const author = await storage.getUser(note.authorId);
+          return {
+            ...note,
+            author: author ? {
+              id: author.id,
+              firstName: author.firstName,
+              lastName: author.lastName,
+              email: author.email,
+              profileImageUrl: author.profileImageUrl,
+            } : null,
+          };
+        })
+      );
+      
+      res.json(enrichedNotes);
+    } catch (error: any) {
+      console.error("Error fetching notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
+
+  // Create note for an application
+  app.post("/api/applications/:id/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const applicationId = req.params.id;
+      const application = await storage.getApplicationById(applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      const data = insertApplicationInternalNoteSchema.parse({
+        ...req.body,
+        applicationId,
+        authorId: userId,
+      });
+      
+      const note = await storage.createNote(data);
+      
+      // Log activity
+      await logCreate(userId, 'internal_note', note.id, `Added internal note to application`);
+      
+      // Get author info for response
+      const author = await storage.getUser(userId);
+      
+      res.json({
+        ...note,
+        author: author ? {
+          id: author.id,
+          firstName: author.firstName,
+          lastName: author.lastName,
+          email: author.email,
+          profileImageUrl: author.profileImageUrl,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("Error creating note:", error);
+      res.status(400).json({ message: error.message || "Failed to create note" });
+    }
+  });
+
+  // Toggle note pin status
+  app.post("/api/notes/:id/toggle-pin", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const note = await storage.toggleNotePin(req.params.id);
+      res.json(note);
+    } catch (error: any) {
+      console.error("Error toggling note pin:", error);
+      res.status(500).json({ message: "Failed to toggle note pin" });
+    }
+  });
+
+  // Delete note
+  app.delete("/api/notes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const note = await storage.getNoteById(req.params.id);
+      if (!note) {
+        return res.status(404).json({ message: "Note not found" });
+      }
+      
+      // Only the author or super_admin can delete a note
+      const { role } = await isAdminTeamMember(userId);
+      if (note.authorId !== userId && role !== 'super_admin') {
+        return res.status(403).json({ message: "Only the author or super admin can delete this note" });
+      }
+      
+      await storage.deleteNote(req.params.id);
+      
+      // Log activity
+      await logDelete(userId, 'internal_note', req.params.id, `Deleted internal note`);
+      
+      res.json({ message: "Note deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting note:", error);
+      res.status(500).json({ message: "Failed to delete note" });
+    }
+  });
+
+  // ============================================
+  // FOLLOW-UP REMINDERS API
+  // ============================================
+
+  // Get my upcoming reminders
+  app.get("/api/reminders/upcoming", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const reminders = await storage.getUpcomingReminders(userId);
+      res.json(reminders);
+    } catch (error: any) {
+      console.error("Error fetching reminders:", error);
+      res.status(500).json({ message: "Failed to fetch reminders" });
+    }
+  });
+
+  // Get all my reminders
+  app.get("/api/reminders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const reminders = await storage.getRemindersByUserId(userId);
+      res.json(reminders);
+    } catch (error: any) {
+      console.error("Error fetching reminders:", error);
+      res.status(500).json({ message: "Failed to fetch reminders" });
+    }
+  });
+
+  // Create reminder
+  app.post("/api/reminders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertFollowUpReminderSchema.parse({
+        ...req.body,
+        userId, // Set the reminder for the current user
+      });
+      
+      const reminder = await storage.createReminder(data);
+      
+      // Log activity
+      await logCreate(userId, 'reminder', reminder.id, `Created follow-up reminder`);
+      
+      res.json(reminder);
+    } catch (error: any) {
+      console.error("Error creating reminder:", error);
+      res.status(400).json({ message: error.message || "Failed to create reminder" });
+    }
+  });
+
+  // Complete reminder
+  app.post("/api/reminders/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingReminder = await storage.getReminderById(req.params.id);
+      if (!existingReminder) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      
+      // Only the owner can complete their own reminder
+      if (existingReminder.userId !== userId) {
+        return res.status(403).json({ message: "You can only complete your own reminders" });
+      }
+      
+      const reminder = await storage.completeReminder(req.params.id);
+      res.json(reminder);
+    } catch (error: any) {
+      console.error("Error completing reminder:", error);
+      res.status(500).json({ message: "Failed to complete reminder" });
+    }
+  });
+
+  // Delete reminder
+  app.delete("/api/reminders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const reminder = await storage.getReminderById(req.params.id);
+      if (!reminder) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      
+      // Only the owner or super_admin can delete a reminder
+      const { role } = await isAdminTeamMember(userId);
+      if (reminder.userId !== userId && role !== 'super_admin') {
+        return res.status(403).json({ message: "You can only delete your own reminders" });
+      }
+      
+      await storage.deleteReminder(req.params.id);
+      res.json({ message: "Reminder deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting reminder:", error);
+      res.status(500).json({ message: "Failed to delete reminder" });
+    }
+  });
+
+  // Get tasks by application ID
+  app.get("/api/applications/:id/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const applicationId = req.params.id;
+      const tasks = await storage.getTasksByApplicationId(applicationId);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error("Error fetching application tasks:", error);
+      res.status(500).json({ message: "Failed to fetch application tasks" });
+    }
+  });
+
+  // Get admin team members for assignment dropdowns
+  app.get("/api/admin/team-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const teamMembers = await storage.getAllAdminTeamMembers();
+      
+      // Enrich with user details
+      const enrichedMembers = await Promise.all(
+        teamMembers.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            ...member,
+            user: user ? {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              profileImageUrl: user.profileImageUrl,
+            } : null,
+          };
+        })
+      );
+      
+      res.json(enrichedMembers);
+    } catch (error: any) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // ============================================
+  // END CRM SYSTEM API ENDPOINTS
+  // ============================================
 
   // Start scraping worker
   const { startScrapingWorker } = await import('./scraping-worker');
