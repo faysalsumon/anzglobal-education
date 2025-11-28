@@ -27,11 +27,11 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const servicesMenuItems = [
-    { title: "Services For Institutions", href: "/services/institutions" },
+    { title: "Partner With Us", href: "/partner-with-us" },
     { title: "Study in Australia", href: "/study-in-australia" },
-    { title: "Student Visa", href: "/services/visa" },
-    { title: "Student Accommodation", href: "/services/accommodation" },
-    { title: "Health Insurance", href: "/services/insurance" },
+    { title: "Student Visa", href: "/blog?category=visa" },
+    { title: "Student Accommodation", href: "/contact?topic=accommodation" },
+    { title: "Health Insurance", href: "/contact?topic=insurance" },
   ];
 
   return (
@@ -47,7 +47,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
               <Link href="/courses?filter=trending" className="hover:text-white/80 transition-colors" data-testid="link-courses-demand">
                 COURSES IN DEMAND
               </Link>
-              <Link href="/knowledge-base" className="hover:text-white/80 transition-colors" data-testid="link-knowledge-base">
+              <Link href="/blog" className="hover:text-white/80 transition-colors" data-testid="link-knowledge-base">
                 KNOWLEDGE BASE
               </Link>
               <Link href="/blog" className="hover:text-white/80 transition-colors" data-testid="link-blog">
@@ -129,7 +129,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 </NavigationMenuList>
               </NavigationMenu>
 
-              <Link href="/about" className="text-foreground hover:text-primary transition-colors font-medium" data-testid="link-about">
+              <Link href="/our-story" className="text-foreground hover:text-primary transition-colors font-medium" data-testid="link-about">
                 ABOUT
               </Link>
             </nav>
@@ -187,7 +187,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                         FIND COURSES
                       </Link>
                       <Link
-                        href="/about"
+                        href="/our-story"
                         className="block py-2 text-sm font-medium hover:text-primary transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                         data-testid="mobile-link-about"
@@ -216,7 +216,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     <div className="pb-4">
                       <p className="text-xs font-semibold text-muted-foreground mb-3">QUICK LINKS</p>
                       <Link
-                        href="/knowledge-base"
+                        href="/blog"
                         className="block py-2 text-sm font-medium hover:text-primary transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                         data-testid="mobile-link-knowledge-base"
