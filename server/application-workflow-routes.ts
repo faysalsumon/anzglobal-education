@@ -567,6 +567,300 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     }
   });
 
+  // Update application details
+  app.patch("/api/admin/applications/:id", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+      const updateSchema = z.object({
+        assignedConsultantId: z.string().uuid().nullable().optional(),
+        personalStatement: z.string().optional(),
+        additionalInfo: z.string().optional(),
+        status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+
+      // Get current application for comparison
+      const currentApplication = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!currentApplication) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Build update object
+      const updateData: any = { updatedAt: new Date() };
+      const changes: string[] = [];
+
+      if (validatedData.assignedConsultantId !== undefined) {
+        updateData.assignedConsultantId = validatedData.assignedConsultantId;
+        updateData.assignedAt = validatedData.assignedConsultantId ? new Date() : null;
+        changes.push('consultant assignment');
+      }
+      if (validatedData.personalStatement !== undefined) {
+        updateData.personalStatement = validatedData.personalStatement;
+        changes.push('personal statement');
+      }
+      if (validatedData.additionalInfo !== undefined) {
+        updateData.additionalInfo = validatedData.additionalInfo;
+        changes.push('additional info');
+      }
+      if (validatedData.status !== undefined) {
+        updateData.status = validatedData.status;
+        changes.push('status');
+      }
+
+      // Update application
+      const [updatedApplication] = await db
+        .update(applications)
+        .set(updateData)
+        .where(eq(applications.id, applicationId))
+        .returning();
+
+      // Log activity
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'updated',
+        entityType: 'application',
+        entityId: applicationId,
+        actionDescription: `Updated application: ${changes.join(', ')}`,
+        metadata: validatedData,
+      });
+
+      res.json({ application: updatedApplication, message: "Application updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating application:", error);
+      res.status(400).json({ error: error.message || "Failed to update application" });
+    }
+  });
+
+  // Delete application
+  app.delete("/api/admin/applications/:id", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      // Get application details for logging
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Delete application (cascade will handle related records)
+      await db.delete(applications).where(eq(applications.id, applicationId));
+
+      // Log activity
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'deleted',
+        entityType: 'application',
+        entityId: applicationId,
+        actionDescription: `Deleted application`,
+        metadata: { deletedApplicationId: applicationId },
+      });
+
+      res.json({ message: "Application deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting application:", error);
+      res.status(500).json({ error: error.message || "Failed to delete application" });
+    }
+  });
+
+  // Get documents for application (admin)
+  app.get("/api/admin/applications/:id/documents", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      // Get all documents for this application
+      const documents = await db
+        .select()
+        .from(applicationStageDocuments)
+        .where(eq(applicationStageDocuments.applicationId, applicationId))
+        .orderBy(desc(applicationStageDocuments.createdAt));
+
+      res.json({ documents });
+    } catch (error: any) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  // Upload document (admin)
+  app.post("/api/admin/applications/:id/documents", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+      const validatedData = stageDocumentUploadSchema.parse({ ...req.body, applicationId });
+
+      // Verify application exists
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Create document record
+      const [document] = await db.insert(applicationStageDocuments).values({
+        applicationId,
+        stage: validatedData.stage,
+        documentType: validatedData.documentType,
+        documentName: validatedData.documentName,
+        documentUrl: validatedData.documentUrl,
+        isRequired: validatedData.isRequired || false,
+        uploadedBy: adminAccess.userId,
+        uploadedByRole: 'admin',
+      }).returning();
+
+      // Log activity
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'created',
+        entityType: 'document',
+        entityId: document.id,
+        actionDescription: `Uploaded document "${validatedData.documentName}" for ${validatedData.stage} stage`,
+        metadata: { documentType: validatedData.documentType, stage: validatedData.stage },
+      });
+
+      res.json({ document, message: "Document uploaded successfully" });
+    } catch (error: any) {
+      console.error("Error uploading document:", error);
+      res.status(400).json({ error: error.message || "Failed to upload document" });
+    }
+  });
+
+  // Delete document (admin)
+  app.delete("/api/admin/applications/:applicationId/documents/:documentId", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { applicationId, documentId } = req.params;
+
+      // Verify document exists
+      const document = await db.query.applicationStageDocuments.findFirst({
+        where: and(
+          eq(applicationStageDocuments.id, documentId),
+          eq(applicationStageDocuments.applicationId, applicationId)
+        ),
+      });
+
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Delete document
+      await db.delete(applicationStageDocuments).where(eq(applicationStageDocuments.id, documentId));
+
+      // Log activity
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'deleted',
+        entityType: 'document',
+        entityId: documentId,
+        actionDescription: `Deleted document "${document.documentName}"`,
+        metadata: { documentName: document.documentName, documentType: document.documentType },
+      });
+
+      res.json({ message: "Document deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ error: error.message || "Failed to delete document" });
+    }
+  });
+
+  // Request document from student
+  app.post("/api/admin/applications/:id/request-document", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+      const requestSchema = z.object({
+        stage: z.enum([
+          'Assessment', 'Collect Docs', 'Documents Verification', 'Offer-Letter',
+          'GS-Clearance', 'COE', 'Health Cover', 'Visa Lodgment',
+          'Application Won', 'Refusal/Refunds', 'Application Lost',
+        ]),
+        documentType: z.string(),
+        documentName: z.string(),
+        isRequired: z.boolean().optional(),
+      });
+
+      const validatedData = requestSchema.parse(req.body);
+
+      // Verify application exists and get student info
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Create pending document request (no URL, not uploaded yet)
+      const [documentRequest] = await db.insert(applicationStageDocuments).values({
+        applicationId,
+        stage: validatedData.stage,
+        documentType: validatedData.documentType,
+        documentName: validatedData.documentName,
+        documentUrl: null, // NULL indicates pending upload
+        isRequired: validatedData.isRequired || true,
+        uploadedBy: null,
+        uploadedByRole: null,
+      }).returning();
+
+      // Log activity
+      await logActivity({
+        userId: adminAccess.userId,
+        action: 'created',
+        entityType: 'document',
+        entityId: documentRequest.id,
+        actionDescription: `Requested "${validatedData.documentName}" from student`,
+        metadata: { documentType: validatedData.documentType, stage: validatedData.stage, isRequest: true },
+      });
+
+      // Send notification to student (if email service is available)
+      try {
+        await sendDocumentRequestNotification(applicationId);
+      } catch (emailError) {
+        console.warn("Failed to send document request notification:", emailError);
+      }
+
+      res.json({ documentRequest, message: "Document request created successfully" });
+    } catch (error: any) {
+      console.error("Error requesting document:", error);
+      res.status(400).json({ error: error.message || "Failed to request document" });
+    }
+  });
+
   // Get application statistics (for dashboard)
   app.get("/api/admin/applications/stats", isAuthenticated, async (req, res) => {
     try {
