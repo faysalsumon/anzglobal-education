@@ -278,7 +278,7 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'student-leads', 'inquiry-leads', 'applications', 'data-import', 'web-scraping', 'activity-logs'];
+    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs'];
     
     if (hash && validTabs.includes(hash)) {
@@ -333,8 +333,7 @@ export default function AdminDashboard() {
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
 
-  // Student leads state
-  const [studentLeadSearchQuery, setStudentLeadSearchQuery] = useState("");
+  // (Student leads state removed - consolidated into CRM Leads)
 
   // Applications state
   const [applicationSearchQuery, setApplicationSearchQuery] = useState("");
@@ -434,17 +433,13 @@ export default function AdminDashboard() {
     queryKey: ["/api/super-admin/courses"],
   });
 
-  const { data: studentLeads, isLoading: studentLeadsLoading } = useQuery<StudentLead[]>({
-    queryKey: ["/api/super-admin/student-leads"],
-  });
+  // (studentLeads query removed - consolidated into CRM Leads)
 
   const { data: applications, isLoading: applicationsLoading } = useQuery<Application[]>({
     queryKey: ["/api/super-admin/applications"],
   });
 
-  const { data: inquiryLeads, isLoading: inquiryLeadsLoading } = useQuery<InquiryLead[]>({
-    queryKey: ["/api/admin/leads"],
-  });
+  // (inquiryLeads query removed - consolidated into CRM Leads)
 
   // Fetch selected institution to get its campusAddresses
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
@@ -2144,194 +2139,6 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableCell colSpan={9} className="text-center">No courses found</TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        )}
-
-        {/* Student Leads Tab */}
-        {activeTab === "student-leads" && (
-          <div className="space-y-6 md:space-y-8">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div>
-                  <CardTitle>Student Leads</CardTitle>
-                  <CardDescription>View all registered students on the platform</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, nationality..."
-                  value={studentLeadSearchQuery}
-                  onChange={(e) => setStudentLeadSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search-student-leads"
-                />
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Nationality</TableHead>
-                      <TableHead>Education Level</TableHead>
-                      <TableHead>Field of Study</TableHead>
-                      <TableHead>Profile Status</TableHead>
-                      <TableHead>Registered</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {studentLeadsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          Loading student leads...
-                        </TableCell>
-                      </TableRow>
-                    ) : !studentLeads || studentLeads.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          No student leads found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      studentLeads
-                        .filter((lead) => {
-                          const searchLower = studentLeadSearchQuery.toLowerCase();
-                          return (
-                            !searchLower ||
-                            lead.email?.toLowerCase().includes(searchLower) ||
-                            lead.firstName?.toLowerCase().includes(searchLower) ||
-                            lead.lastName?.toLowerCase().includes(searchLower) ||
-                            lead.nationality?.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((lead) => (
-                          <TableRow key={lead.userId} data-testid={`row-student-lead-${lead.userId}`}>
-                            <TableCell className="font-medium">
-                              {lead.firstName && lead.lastName
-                                ? `${lead.firstName} ${lead.lastName}`
-                                : 'Not set'}
-                            </TableCell>
-                            <TableCell>{lead.email || 'N/A'}</TableCell>
-                            <TableCell>{lead.phone || 'N/A'}</TableCell>
-                            <TableCell>{lead.nationality || 'N/A'}</TableCell>
-                            <TableCell>{lead.educationLevel || 'N/A'}</TableCell>
-                            <TableCell>{lead.fieldOfStudy || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge variant={lead.profileComplete ? "default" : "secondary"}>
-                                {lead.profileComplete ? 'Complete' : 'Incomplete'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {lead.createdAt
-                                ? new Date(lead.createdAt).toLocaleDateString()
-                                : 'N/A'}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        )}
-
-        {/* Inquiry Leads Tab */}
-        {activeTab === "inquiry-leads" && (
-          <div className="space-y-6 md:space-y-8">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div>
-                  <CardTitle>Inquiry Leads</CardTitle>
-                  <CardDescription>Manage course information requests from prospective students</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Visa Status</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>University</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Submitted</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inquiryLeadsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          Loading inquiry leads...
-                        </TableCell>
-                      </TableRow>
-                    ) : !inquiryLeads || inquiryLeads.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                          No inquiry leads found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      inquiryLeads.map((lead) => (
-                        <TableRow key={lead.id} data-testid={`row-inquiry-lead-${lead.id}`}>
-                          <TableCell className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
-                            {lead.firstName} {lead.lastName}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1 text-sm">
-                              <span data-testid={`text-lead-email-${lead.id}`}>{lead.email}</span>
-                              <span className="text-muted-foreground" data-testid={`text-lead-phone-${lead.id}`}>{lead.phone}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell data-testid={`text-lead-visa-${lead.id}`}>
-                            <Badge variant="outline">
-                              {lead.visaStatus.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-lead-course-${lead.id}`}>
-                            {lead.course?.title || 'N/A'}
-                          </TableCell>
-                          <TableCell data-testid={`text-lead-university-${lead.id}`}>
-                            {lead.university?.name || 'N/A'}
-                          </TableCell>
-                          <TableCell data-testid={`status-lead-${lead.id}`}>
-                            <Badge
-                              variant={
-                                lead.status === 'new' ? 'default' :
-                                lead.status === 'contacted' ? 'secondary' :
-                                lead.status === 'converted' ? 'default' :
-                                'secondary'
-                              }
-                            >
-                              {lead.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`text-lead-date-${lead.id}`}>
-                            {lead.createdAt
-                              ? new Date(lead.createdAt).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      ))
                     )}
                   </TableBody>
                 </Table>

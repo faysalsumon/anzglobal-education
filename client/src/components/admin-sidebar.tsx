@@ -15,8 +15,6 @@ import {
   Users,
   Building2,
   BookOpen,
-  GraduationCap,
-  FileText,
   Upload,
   Settings,
   Newspaper,
@@ -83,24 +81,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
     },
   ];
 
-  // Content & leads items (visible to all admins)
+  // Content & workflow items (visible to all admins)
   const contentItems = [
     {
       icon: BookOpen,
       label: "Courses",
       value: "courses",
-      show: true,
-    },
-    {
-      icon: GraduationCap,
-      label: "Student Leads",
-      value: "student-leads",
-      show: true,
-    },
-    {
-      icon: FileText,
-      label: "Inquiry Leads",
-      value: "inquiry-leads",
       show: true,
     },
     {
@@ -221,10 +207,10 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
           </SidebarGroup>
         )}
 
-        {/* Content & Leads Section */}
+        {/* Content & Workflows Section */}
         {visibleContent.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Content & Leads</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Content</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleContent.map((item) => {
