@@ -7246,10 +7246,27 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const notes = await storage.getNotesByApplicationId(applicationId);
       
-      // Enrich notes with author information
+      // Enrich notes with author information and mentioned user details
       const enrichedNotes = await Promise.all(
         notes.map(async (note) => {
           const author = await storage.getUser(note.authorId);
+          
+          // Get mentioned user details if any
+          let mentionedUsers: { id: string; firstName: string | null; lastName: string | null; email: string | null }[] = [];
+          if (note.mentionedUserIds && note.mentionedUserIds.length > 0) {
+            mentionedUsers = await Promise.all(
+              note.mentionedUserIds.map(async (userId) => {
+                const user = await storage.getUser(userId);
+                return user ? {
+                  id: user.id,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  email: user.email,
+                } : { id: userId, firstName: null, lastName: null, email: null };
+              })
+            );
+          }
+          
           return {
             ...note,
             author: author ? {
@@ -7259,6 +7276,7 @@ Sitemap: ${baseUrl}/sitemap.xml
               email: author.email,
               profileImageUrl: author.profileImageUrl,
             } : null,
+            mentionedUsers,
           };
         })
       );
@@ -7300,11 +7318,39 @@ Sitemap: ${baseUrl}/sitemap.xml
         entityType: 'application',
         entityId: applicationId,
         entityName: `Internal note on application`,
-        metadata: { noteId: note.id },
+        metadata: { noteId: note.id, mentionedUserIds: note.mentionedUserIds },
       });
       
       // Get author info for response
       const author = await storage.getUser(userId);
+      const authorName = author?.firstName && author?.lastName 
+        ? `${author.firstName} ${author.lastName}` 
+        : (author?.email || 'A team member');
+      
+      // Send notifications to mentioned users (skip if author mentions themselves)
+      if (note.mentionedUserIds && note.mentionedUserIds.length > 0) {
+        for (const mentionedUserId of note.mentionedUserIds) {
+          if (mentionedUserId !== userId) {
+            try {
+              await createNotification({
+                userId: mentionedUserId,
+                type: 'internal_note_mention',
+                title: 'You were mentioned in a note',
+                message: `${authorName} mentioned you in an internal note on an application`,
+                link: `/admin/dashboard#applications`,
+                metadata: {
+                  noteId: note.id,
+                  applicationId: applicationId,
+                  mentionedBy: userId,
+                  mentionedByName: authorName,
+                }
+              });
+            } catch (notifError) {
+              console.warn(`Failed to send mention notification to ${mentionedUserId}:`, notifError);
+            }
+          }
+        }
+      }
       
       res.json({
         ...note,

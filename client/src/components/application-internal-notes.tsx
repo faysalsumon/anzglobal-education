@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,10 +13,17 @@ import {
   PinOff,
   Trash2,
   Clock,
+  AtSign,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Mention from "@tiptap/extension-mention";
+import Placeholder from "@tiptap/extension-placeholder";
+import tippy, { Instance as TippyInstance } from "tippy.js";
 
 interface Author {
   id: string;
@@ -27,11 +33,33 @@ interface Author {
   profileImageUrl?: string | null;
 }
 
+interface TeamMember {
+  id: number;
+  userId: string;
+  role: string;
+  isActive: boolean;
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+  };
+}
+
+interface MentionedUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+}
+
 interface InternalNote {
   id: string;
   applicationId: string;
   authorId: string;
   content: string;
+  mentionedUserIds?: string[] | null;
+  mentionedUsers?: MentionedUser[];
   isPinned: boolean | null;
   createdAt: Date | string | null;
   author?: Author | null;
@@ -43,13 +71,272 @@ interface ApplicationInternalNotesProps {
   compact?: boolean;
 }
 
+interface MentionListProps {
+  items: TeamMember[];
+  command: (attrs: { id: string; label: string }) => void;
+}
+
+interface MentionListRef {
+  onKeyDown: (props: { event: KeyboardEvent }) => boolean;
+}
+
+const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const selectItem = (index: number) => {
+    const item = props.items[index];
+    if (item) {
+      const name = item.user.firstName && item.user.lastName
+        ? `${item.user.firstName} ${item.user.lastName}`
+        : item.user.email || 'Unknown';
+      props.command({ id: item.userId, label: name });
+    }
+  };
+
+  const upHandler = () => {
+    setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length);
+  };
+
+  const downHandler = () => {
+    setSelectedIndex((selectedIndex + 1) % props.items.length);
+  };
+
+  const enterHandler = () => {
+    selectItem(selectedIndex);
+  };
+
+  useEffect(() => setSelectedIndex(0), [props.items]);
+
+  useImperativeHandle(ref, () => ({
+    onKeyDown: ({ event }) => {
+      if (event.key === "ArrowUp") {
+        upHandler();
+        return true;
+      }
+      if (event.key === "ArrowDown") {
+        downHandler();
+        return true;
+      }
+      if (event.key === "Enter") {
+        enterHandler();
+        return true;
+      }
+      return false;
+    },
+  }));
+
+  if (props.items.length === 0) {
+    return (
+      <div className="bg-popover border rounded-lg shadow-lg p-2 text-sm text-muted-foreground">
+        No team members found
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="bg-popover border rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto"
+      data-testid="mention-suggestions-dropdown"
+    >
+      {props.items.map((item, index) => {
+        const name = item.user.firstName && item.user.lastName
+          ? `${item.user.firstName} ${item.user.lastName}`
+          : item.user.email || 'Unknown';
+        const initials = item.user.firstName && item.user.lastName
+          ? `${item.user.firstName[0]}${item.user.lastName[0]}`
+          : (item.user.email?.slice(0, 2) || '??').toUpperCase();
+          
+        return (
+          <button
+            key={item.userId}
+            className={`flex items-center gap-2 w-full px-3 py-2 text-left text-sm hover-elevate ${
+              index === selectedIndex ? "bg-accent text-accent-foreground" : ""
+            }`}
+            onClick={() => selectItem(index)}
+            data-testid={`mention-option-${item.userId}`}
+          >
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{name}</div>
+              <div className="text-xs text-muted-foreground truncate">{item.role}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+});
+
+MentionList.displayName = "MentionList";
+
+function MentionEditor({
+  onSubmit,
+  isSubmitting,
+  compact,
+  teamMembers,
+}: {
+  onSubmit: (content: string, mentionedUserIds: string[]) => void;
+  isSubmitting: boolean;
+  compact?: boolean;
+  teamMembers: TeamMember[];
+}) {
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        bulletList: false,
+        orderedList: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
+      }),
+      Placeholder.configure({
+        placeholder: "Add a note... Type @ to mention team members",
+      }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention",
+        },
+        suggestion: {
+          items: ({ query }) => {
+            return teamMembers.filter((member) => {
+              const searchQuery = query.toLowerCase();
+              const firstName = member.user.firstName?.toLowerCase() || "";
+              const lastName = member.user.lastName?.toLowerCase() || "";
+              const email = member.user.email?.toLowerCase() || "";
+              const fullName = `${firstName} ${lastName}`;
+              return (
+                firstName.includes(searchQuery) ||
+                lastName.includes(searchQuery) ||
+                email.includes(searchQuery) ||
+                fullName.includes(searchQuery)
+              );
+            }).slice(0, 8);
+          },
+          render: () => {
+            let component: ReactRenderer<MentionListRef> | null = null;
+            let popup: TippyInstance[] | null = null;
+
+            return {
+              onStart: (props) => {
+                component = new ReactRenderer(MentionList, {
+                  props,
+                  editor: props.editor,
+                });
+
+                if (!props.clientRect) return;
+
+                popup = tippy("body", {
+                  getReferenceClientRect: props.clientRect as () => DOMRect,
+                  appendTo: () => document.body,
+                  content: component.element,
+                  showOnCreate: true,
+                  interactive: true,
+                  trigger: "manual",
+                  placement: "bottom-start",
+                });
+              },
+              onUpdate: (props) => {
+                component?.updateProps(props);
+
+                if (!props.clientRect) return;
+
+                popup?.[0]?.setProps({
+                  getReferenceClientRect: props.clientRect as () => DOMRect,
+                });
+              },
+              onKeyDown: (props) => {
+                if (props.event.key === "Escape") {
+                  popup?.[0]?.hide();
+                  return true;
+                }
+                return component?.ref?.onKeyDown(props) || false;
+              },
+              onExit: () => {
+                popup?.[0]?.destroy();
+                component?.destroy();
+              },
+            };
+          },
+        },
+      }),
+    ],
+    content: "",
+    editorProps: {
+      attributes: {
+        class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none ${
+          compact ? "min-h-[60px]" : "min-h-[80px]"
+        } px-3 py-2`,
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const mentions = editor.getJSON().content?.flatMap((node) =>
+        node.content?.filter((n) => n.type === "mention").map((m) => m.attrs?.id)
+      ).filter(Boolean) as string[];
+      setMentionedUserIds([...new Set(mentions || [])]);
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!editor || editor.isEmpty) return;
+    
+    const content = editor.getHTML();
+    onSubmit(content, mentionedUserIds);
+    editor.commands.clearContent();
+    setMentionedUserIds([]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className="flex gap-2">
+      <div 
+        className="flex-1 border rounded-md bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+        onKeyDown={handleKeyDown}
+      >
+        <EditorContent 
+          editor={editor} 
+          data-testid="textarea-new-note"
+        />
+        {mentionedUserIds.length > 0 && (
+          <div className="px-3 pb-2 flex items-center gap-1 text-xs text-muted-foreground">
+            <AtSign className="h-3 w-3" />
+            <span>Mentioning {mentionedUserIds.length} team member{mentionedUserIds.length > 1 ? 's' : ''}</span>
+          </div>
+        )}
+      </div>
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        disabled={!editor || editor.isEmpty || isSubmitting}
+        size={compact ? "sm" : "default"}
+        data-testid="button-add-note"
+      >
+        <Send className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 export function ApplicationInternalNotes({ 
   applicationId, 
   currentUserId,
   compact = false 
 }: ApplicationInternalNotesProps) {
   const { toast } = useToast();
-  const [newNote, setNewNote] = useState("");
+
+  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
+    queryKey: ["/api/admin/team-members"],
+  });
 
   const { data: notes = [], isLoading } = useQuery<InternalNote[]>({
     queryKey: ["/api/applications", applicationId, "notes"],
@@ -57,12 +344,14 @@ export function ApplicationInternalNotes({
   });
 
   const createNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return apiRequest("POST", `/api/applications/${applicationId}/notes`, { content });
+    mutationFn: async ({ content, mentionedUserIds }: { content: string; mentionedUserIds: string[] }) => {
+      return apiRequest("POST", `/api/applications/${applicationId}/notes`, { 
+        content,
+        mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications", applicationId, "notes"] });
-      setNewNote("");
       toast({
         title: "Note added",
         description: "Your internal note has been added",
@@ -113,10 +402,8 @@ export function ApplicationInternalNotes({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNote.trim()) return;
-    createNoteMutation.mutate(newNote.trim());
+  const handleSubmit = (content: string, mentionedUserIds: string[]) => {
+    createNoteMutation.mutate({ content, mentionedUserIds });
   };
 
   const getAuthorInitials = (author?: Author | null) => {
@@ -182,23 +469,12 @@ export function ApplicationInternalNotes({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <Textarea
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Add an internal note..."
-          className={compact ? "min-h-[60px]" : "min-h-[80px]"}
-          data-testid="textarea-new-note"
-        />
-        <Button 
-          type="submit" 
-          disabled={!newNote.trim() || createNoteMutation.isPending}
-          size={compact ? "sm" : "default"}
-          data-testid="button-add-note"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+      <MentionEditor
+        onSubmit={handleSubmit}
+        isSubmitting={createNoteMutation.isPending}
+        compact={compact}
+        teamMembers={teamMembers}
+      />
 
       {sortedNotes.length === 0 ? (
         <div className="text-center py-6 text-muted-foreground">
@@ -242,6 +518,34 @@ export function ApplicationInternalNotes({
           </div>
         </ScrollArea>
       )}
+
+      <style>{`
+        .mention {
+          background-color: hsl(var(--primary) / 0.15);
+          color: hsl(var(--primary));
+          border-radius: 0.25rem;
+          padding: 0.125rem 0.375rem;
+          font-weight: 500;
+          display: inline;
+          box-decoration-break: clone;
+        }
+        
+        .ProseMirror p.is-editor-empty:first-child::before {
+          color: hsl(var(--muted-foreground));
+          content: attr(data-placeholder);
+          float: left;
+          height: 0;
+          pointer-events: none;
+        }
+        
+        .ProseMirror {
+          outline: none;
+        }
+        
+        .ProseMirror p {
+          margin: 0;
+        }
+      `}</style>
     </div>
   );
 }
@@ -268,6 +572,7 @@ function NoteItem({
   isDeleting 
 }: NoteItemProps) {
   const isAuthor = currentUserId === note.authorId;
+  const hasMentions = note.mentionedUserIds && note.mentionedUserIds.length > 0;
   
   return (
     <div 
@@ -282,7 +587,7 @@ function NoteItem({
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-sm font-medium">{getAuthorName(note.author)}</span>
             {note.isPinned && (
               <Badge variant="outline" className="text-xs">
@@ -290,12 +595,21 @@ function NoteItem({
                 Pinned
               </Badge>
             )}
+            {hasMentions && (
+              <Badge variant="secondary" className="text-xs">
+                <AtSign className="h-3 w-3 mr-1" />
+                {note.mentionedUserIds!.length}
+              </Badge>
+            )}
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDate(note.createdAt)}
             </span>
           </div>
-          <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+          <div 
+            className="text-sm prose prose-sm dark:prose-invert max-w-none [&_.mention]:bg-primary/15 [&_.mention]:text-primary [&_.mention]:rounded [&_.mention]:px-1.5 [&_.mention]:py-0.5 [&_.mention]:font-medium"
+            dangerouslySetInnerHTML={{ __html: note.content }}
+          />
         </div>
         <div className="flex gap-1">
           <Button
