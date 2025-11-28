@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ChatWidget } from "@/components/chat-widget";
+import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -118,8 +119,24 @@ function AppContent() {
   );
 
   // Admin dashboard has its own sidebar layout - don't show TopNavBar/MobileBottomNav
-  // Cover both /admin and /admin/dashboard routes
-  const isAdminDashboard = location === '/admin' || location.startsWith('/admin/dashboard');
+  // Only for authenticated admin users on dashboard pages (not login)
+  const isAdminDashboard = location === '/admin' || 
+    (location.startsWith('/admin/') && location !== '/admin/login');
+
+  // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
+  const internalDashboardRoutes = [
+    '/dashboard',
+    '/university/',
+    '/student/',
+    '/chat'
+  ];
+  const isInternalDashboard = internalDashboardRoutes.some(route => 
+    location === route || location.startsWith(route)
+  );
+  
+  // Show footer on all pages except internal dashboards when authenticated
+  // Always show footer for unauthenticated users on any page
+  const shouldShowFooter = !isAuthenticated || !isInternalDashboard;
 
   // Show loading state while auth is initializing OR until auth status is resolved
   // This prevents the race condition where routes render before auth hydration completes
@@ -134,21 +151,30 @@ function AppContent() {
     );
   }
 
+  // Unauthenticated or no user type - show public layout with footer
   if (!isAuthenticated || !user?.userType) {
-    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
+    return (
+      <div className="flex flex-col min-h-screen w-full">
+        <main className="flex-1">
+          <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
+        </main>
+        {shouldShowFooter && <Footer />}
+      </div>
+    );
   }
 
-  // Admin dashboard uses its own full layout with sidebar
+  // Admin dashboard uses its own full layout with sidebar (no footer)
   if (isAdminDashboard) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col min-h-screen w-full">
       <TopNavBar />
       <main className={`flex-1 overflow-y-auto ${isPublicRoute ? 'pb-20 md:pb-6' : 'p-4 md:p-6 pb-20 md:pb-6'}`}>
         <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
       </main>
+      {shouldShowFooter && <Footer />}
       <MobileBottomNav />
       <ChatWidget />
     </div>
