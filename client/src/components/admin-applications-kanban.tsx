@@ -22,6 +22,8 @@ import {
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
+import { ApplicationStageSelector } from "@/components/application-stage-selector";
+import { ApplicationStage as StageType, STAGE_CONFIG, ALL_STAGES, ACTIVE_STAGES as CONFIG_ACTIVE_STAGES, TERMINAL_STAGES as CONFIG_TERMINAL_STAGES } from "@/lib/stage-config";
 
 type ApplicationStage = 
   | "Assessment"
@@ -760,10 +762,11 @@ export function AdminApplicationsKanban() {
                   <p className="text-xs text-muted-foreground">{selectedApplication.university.country}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Current Stage</p>
-                  <Badge className={STAGE_COLORS[selectedApplication.application.currentStage]}>
-                    {selectedApplication.application.currentStage.replace(/-/g, ' ')}
-                  </Badge>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Current Stage</p>
+                  <ApplicationStageSelector
+                    applicationId={selectedApplication.application.id}
+                    currentStage={selectedApplication.application.currentStage as StageType}
+                  />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Consultant</p>
