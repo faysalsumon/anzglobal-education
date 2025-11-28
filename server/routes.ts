@@ -7107,8 +7107,13 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const task = await storage.createTask(data);
       
-      // Log activity
-      await logCreate(userId, 'task', task.id, `Created task: ${task.title}`);
+      // Log activity with user attribution
+      await logCreate({
+        req,
+        entityType: 'task',
+        entityId: task.id,
+        entityName: task.title,
+      });
       
       res.json(task);
     } catch (error: any) {
@@ -7135,8 +7140,15 @@ Sitemap: ${baseUrl}/sitemap.xml
       const data = updateTaskSchema.parse(req.body);
       const task = await storage.updateTask(req.params.id, data);
       
-      // Log activity
-      await logUpdate(userId, 'task', task.id, `Updated task: ${task.title}`);
+      // Log activity with user attribution
+      await logUpdate({
+        req,
+        entityType: 'task',
+        entityId: task.id,
+        entityName: task.title,
+        oldData: existingTask,
+        newData: task,
+      });
       
       res.json(task);
     } catch (error: any) {
@@ -7162,8 +7174,15 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const task = await storage.completeTask(req.params.id);
       
-      // Log activity
-      await logStatusChange(userId, 'task', task.id, `Completed task: ${task.title}`);
+      // Log activity with user attribution
+      await logStatusChange({
+        req,
+        entityType: 'task',
+        entityId: task.id,
+        entityName: task.title,
+        oldStatus: existingTask.status,
+        newStatus: 'completed',
+      });
       
       res.json(task);
     } catch (error: any) {
@@ -7190,8 +7209,13 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       await storage.deleteTask(req.params.id);
       
-      // Log activity
-      await logDelete(userId, 'task', req.params.id, `Deleted task: ${existingTask.title}`);
+      // Log activity with user attribution
+      await logDelete({
+        req,
+        entityType: 'task',
+        entityId: req.params.id,
+        entityName: existingTask.title,
+      });
       
       res.json({ message: "Task deleted successfully" });
     } catch (error: any) {
@@ -7270,8 +7294,14 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const note = await storage.createNote(data);
       
-      // Log activity
-      await logCreate(userId, 'internal_note', note.id, `Added internal note to application`);
+      // Log activity with user attribution
+      await logCreate({
+        req,
+        entityType: 'application',
+        entityId: applicationId,
+        entityName: `Internal note on application`,
+        metadata: { noteId: note.id },
+      });
       
       // Get author info for response
       const author = await storage.getUser(userId);
@@ -7400,8 +7430,30 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       const reminder = await storage.createReminder(data);
       
-      // Log activity
-      await logCreate(userId, 'reminder', reminder.id, `Created follow-up reminder`);
+      // Log activity with user attribution - Use parent entity type since reminders are linked to tasks/applications
+      try {
+        if (reminder.taskId) {
+          await logCreate({
+            req,
+            entityType: 'task',
+            entityId: reminder.taskId,
+            entityName: 'Follow-up reminder',
+            metadata: { reminderId: reminder.id, reminderDate: reminder.reminderDate },
+          });
+        } else if (reminder.applicationId) {
+          await logCreate({
+            req,
+            entityType: 'application',
+            entityId: reminder.applicationId,
+            entityName: 'Follow-up reminder',
+            metadata: { reminderId: reminder.id, reminderDate: reminder.reminderDate },
+          });
+        }
+        // Note: Reminders without task or application links are not logged (standalone reminders)
+      } catch (logError) {
+        console.warn("Activity log warning for reminder creation:", logError);
+        // Continue with request - activity logging failure should not block reminder creation
+      }
       
       res.json(reminder);
     } catch (error: any) {

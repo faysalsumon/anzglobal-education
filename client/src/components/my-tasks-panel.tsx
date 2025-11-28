@@ -25,11 +25,13 @@ import {
   Filter,
   Plus,
   Bell,
+  Edit,
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast, isToday, isTomorrow, addDays } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { TaskDialog } from "@/components/task-dialog";
 import type { Task, FollowUpReminder } from "@shared/schema";
 
 interface TaskWithRelations extends Task {
@@ -73,6 +75,8 @@ export function MyTasksPanel() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<TaskWithRelations[]>({
     queryKey: ["/api/tasks/my-tasks"],
@@ -166,7 +170,7 @@ export function MyTasksPanel() {
     return { text: `Due ${format(date, "MMM d")}`, className: "text-muted-foreground" };
   };
 
-  const TaskItem = ({ task }: { task: TaskWithRelations }) => {
+  const TaskItem = ({ task, onEdit }: { task: TaskWithRelations; onEdit: (task: TaskWithRelations) => void }) => {
     const priority = priorityConfig[task.priority];
     const status = statusConfig[task.status];
     const PriorityIcon = priority.icon;
@@ -184,7 +188,7 @@ export function MyTasksPanel() {
           data-testid={`checkbox-task-${task.id}`}
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`font-medium text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
               {task.title}
             </span>
@@ -221,6 +225,15 @@ export function MyTasksPanel() {
             )}
           </div>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={() => onEdit(task)}
+          data-testid={`button-edit-task-${task.id}`}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
       </div>
     );
   };
@@ -336,7 +349,18 @@ export function MyTasksPanel() {
               </CardTitle>
               <CardDescription>Tasks assigned to you</CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={() => {
+                  setEditingTask(null);
+                  setTaskDialogOpen(true);
+                }}
+                size="sm"
+                data-testid="button-create-task"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Task
+              </Button>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
                   <Filter className="h-4 w-4 mr-2" />
@@ -381,7 +405,10 @@ export function MyTasksPanel() {
                     Overdue ({overdueTasks.length})
                   </h4>
                   {overdueTasks.map(task => (
-                    <TaskItem key={task.id} task={task} />
+                    <TaskItem key={task.id} task={task} onEdit={(t) => {
+                      setEditingTask(t);
+                      setTaskDialogOpen(true);
+                    }} />
                   ))}
                 </div>
               )}
@@ -392,7 +419,10 @@ export function MyTasksPanel() {
                     Due Today ({todayTasks.length})
                   </h4>
                   {todayTasks.map(task => (
-                    <TaskItem key={task.id} task={task} />
+                    <TaskItem key={task.id} task={task} onEdit={(t) => {
+                      setEditingTask(t);
+                      setTaskDialogOpen(true);
+                    }} />
                   ))}
                 </div>
               )}
@@ -403,7 +433,10 @@ export function MyTasksPanel() {
                     Upcoming ({upcomingTasks.length})
                   </h4>
                   {upcomingTasks.map(task => (
-                    <TaskItem key={task.id} task={task} />
+                    <TaskItem key={task.id} task={task} onEdit={(t) => {
+                      setEditingTask(t);
+                      setTaskDialogOpen(true);
+                    }} />
                   ))}
                 </div>
               )}
@@ -414,7 +447,10 @@ export function MyTasksPanel() {
                     No Due Date
                   </h4>
                   {sortedTasks.filter(t => !t.dueDate && t.status !== "completed").map(task => (
-                    <TaskItem key={task.id} task={task} />
+                    <TaskItem key={task.id} task={task} onEdit={(t) => {
+                      setEditingTask(t);
+                      setTaskDialogOpen(true);
+                    }} />
                   ))}
                 </div>
               )}
@@ -422,6 +458,15 @@ export function MyTasksPanel() {
           )}
         </CardContent>
       </Card>
+
+      <TaskDialog
+        open={taskDialogOpen}
+        onOpenChange={(open) => {
+          setTaskDialogOpen(open);
+          if (!open) setEditingTask(null);
+        }}
+        task={editingTask}
+      />
     </div>
   );
 }
