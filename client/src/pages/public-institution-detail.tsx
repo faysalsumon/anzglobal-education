@@ -17,6 +17,7 @@ import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
 import type { University, Campus } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
+import { useMemo } from "react";
 
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
@@ -28,11 +29,23 @@ export default function PublicInstitutionDetail() {
     enabled: !!institutionId,
   });
 
-  // Fetch campus data for this institution
-  const { data: campuses = [] } = useQuery<Campus[]>({
-    queryKey: [`/api/campuses/institution/${institutionId}`],
-    enabled: !!institutionId,
-  });
+  // Transform campusAddresses JSONB field to Campus[] format for the map component
+  const campuses = useMemo<Campus[]>(() => {
+    if (!institution?.campusAddresses || !Array.isArray(institution.campusAddresses)) {
+      return [];
+    }
+    return institution.campusAddresses.map((campus: any) => ({
+      name: campus.name || `${campus.city || ''} Campus`,
+      address: campus.address || '',
+      street: campus.address || campus.street || '',
+      city: campus.city || '',
+      state: campus.state || '',
+      postcode: campus.postcode || '',
+      country: campus.country || '',
+      latitude: campus.latitude,
+      longitude: campus.longitude,
+    }));
+  }, [institution?.campusAddresses]);
 
   if (isLoading) {
     return (
@@ -329,7 +342,7 @@ export default function PublicInstitutionDetail() {
                 <CardContent className="space-y-4">
                   {campuses.map((campus, index) => (
                     <div 
-                      key={campus.id} 
+                      key={index} 
                       className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
                         selectedCampusIndex === index 
                           ? 'bg-blue-50 dark:bg-blue-950/30 border-2 border-primary' 
@@ -348,7 +361,7 @@ export default function PublicInstitutionDetail() {
                           selectedCampusIndex === index ? 'text-primary' : 'text-muted-foreground'
                         }`} />
                         <div className="text-sm text-muted-foreground">
-                          {campus.street && <p>{campus.street}</p>}
+                          {(campus.street || campus.address) && <p>{campus.street || campus.address}</p>}
                           <p>
                             {[campus.city, campus.state, campus.postcode].filter(Boolean).join(', ')}
                           </p>

@@ -135,6 +135,19 @@ export interface EnglishRequirementsStructured {
   };
 }
 
+// Campus address interface (stored in institution.campusAddresses JSONB field)
+export interface Campus {
+  name?: string;           // Optional campus name (e.g., "Sydney Campus", "Melbourne CBD")
+  address: string;         // Street address (previously just "street")
+  street?: string;         // Alias for address for backward compatibility
+  city: string;
+  state: string;
+  postcode: string;
+  country: string;
+  latitude?: string;       // Optional GPS coordinates for direct map placement
+  longitude?: string;
+}
+
 // Session storage table (mandatory for Replit Auth)
 export const sessions = pgTable(
   "sessions",
