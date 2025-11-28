@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "./db";
+import { storage } from "./storage";
 import { 
   crmLeads, 
   crmContacts, 
@@ -7,7 +8,6 @@ import {
   users,
   courses,
   universities,
-  adminTeamMembers,
   insertCrmLeadSchema,
   updateCrmLeadSchema,
   insertCrmContactSchema,
@@ -24,24 +24,14 @@ function getUserId(req: any): string | null {
   return req.user.claims?.sub || req.user.id || null;
 }
 
-// Helper to check if user is an admin team member
+// Helper to check if user is an admin team member (uses storage layer)
 async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; role: string | null }> {
-  const [adminMember] = await db
-    .select()
-    .from(adminTeamMembers)
-    .where(eq(adminTeamMembers.userId, userId))
-    .limit(1);
-  
+  const adminMember = await storage.getAdminTeamMemberByUserId(userId);
   if (adminMember && adminMember.isActive) {
     return { isAdmin: true, role: adminMember.role };
   }
   
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  
+  const user = await storage.getUser(userId);
   if (user?.userType === 'admin' || user?.userType === 'super_admin') {
     return { isAdmin: true, role: user.userType };
   }
@@ -49,23 +39,28 @@ async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; ro
   return { isAdmin: false, role: null };
 }
 
-// Middleware to check admin access
+// Middleware to check admin access with proper error handling
 async function requireAdmin(req: any, res: any, next: any) {
-  if (!req.isAuthenticated?.() || !req.user) {
-    return res.status(401).json({ message: "Authentication required" });
+  try {
+    if (!req.isAuthenticated?.() || !req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const { isAdmin } = await isAdminTeamMember(userId);
+    if (!isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error in admin authentication:", error);
+    next(error);
   }
-  
-  const userId = getUserId(req);
-  if (!userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  
-  const { isAdmin } = await isAdminTeamMember(userId);
-  if (!isAdmin) {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  
-  next();
 }
 
 // ============================================
