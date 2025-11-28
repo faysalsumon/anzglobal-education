@@ -46,16 +46,20 @@ interface CrmLead {
   leadStatus: 'not_contacted' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
   leadRating: 'cold' | 'warm' | 'hot';
   leadSource: string | null;
+  leadCreationMethod: 'manually' | 'website_form' | 'facebook_ads' | 'google_ads' | 'education_fair' | 'referral' | 'recruitment_agent' | 'campus_walk_in' | 'database_import' | 'ai_web_scrape' | null;
   branch: string | null;
   nationality: string | null;
   country: string | null;
   city: string | null;
   courseId: string | null;
   universityId: string | null;
+  courseName: string | null;
+  interestedIn: string | null;
   productInterest: string | null;
   intakeMonth: string | null;
   intakeYear: string | null;
   notes: string | null;
+  referrer: string | null;
   assignedTo: string | null;
   leadOwner: string | null;
   convertedContactId: string | null;
@@ -356,7 +360,7 @@ export function CrmLeadsPanel() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
                         {lead.firstName} {lead.lastName}
                       </span>
@@ -366,8 +370,19 @@ export function CrmLeadsPanel() {
                       <Badge variant="outline" className={ratingColors[lead.leadRating]}>
                         {lead.leadRating}
                       </Badge>
+                      {lead.leadCreationMethod === 'website_form' && (
+                        <Badge variant="secondary" className="text-xs">
+                          Website Inquiry
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    {lead.courseName && (
+                      <div className="flex items-center gap-1 text-sm text-primary mt-1" data-testid={`text-lead-course-${lead.id}`}>
+                        <BookOpen className="h-3 w-3" />
+                        <span className="font-medium">{lead.courseName}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
                       <span className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
                         {lead.email}
@@ -378,9 +393,15 @@ export function CrmLeadsPanel() {
                           {lead.phone}
                         </span>
                       )}
-                      {lead.branch && (
+                      {lead.country && (
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
+                          {lead.country}
+                        </span>
+                      )}
+                      {lead.branch && (
+                        <span className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3" />
                           {lead.branch}
                         </span>
                       )}
@@ -803,15 +824,39 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className={statusColors[lead.leadStatus]}>
           {statusLabels[lead.leadStatus]}
         </Badge>
         <Badge variant="outline" className={ratingColors[lead.leadRating]}>
           {lead.leadRating}
         </Badge>
+        {lead.leadCreationMethod && (
+          <Badge variant="secondary">
+            {lead.leadCreationMethod === 'website_form' ? 'Website Inquiry' : lead.leadCreationMethod.replace(/_/g, ' ')}
+          </Badge>
+        )}
         {lead.branch && <Badge variant="secondary">{lead.branch}</Badge>}
       </div>
+
+      {lead.courseName && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Course Interest</h4>
+                <p className="text-lg font-medium mt-1" data-testid="text-detail-course-name">{lead.courseName}</p>
+                {lead.interestedIn && (
+                  <p className="text-sm text-muted-foreground mt-1">{lead.interestedIn}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList>
