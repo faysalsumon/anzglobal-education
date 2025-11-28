@@ -7,6 +7,7 @@ import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ChatWidget } from "@/components/chat-widget";
 import { Footer } from "@/components/footer";
+import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -151,10 +152,11 @@ function AppContent() {
     );
   }
 
-  // Unauthenticated or no user type - show public layout with footer
+  // Unauthenticated or no user type - show public layout with header and footer
   if (!isAuthenticated || !user?.userType) {
     return (
       <div className="flex flex-col min-h-screen w-full">
+        <PublicHeader />
         <main className="flex-1">
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
