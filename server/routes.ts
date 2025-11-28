@@ -1808,7 +1808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public lead creation endpoint (no auth required)
+  // Public lead creation endpoint (no auth required) - also creates CRM lead for unified management
   // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/leads", async (req, res) => {
     try {
@@ -1834,12 +1834,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Course does not belong to specified university" });
       }
       
-      // Create the lead
+      // Create the legacy student lead (for backwards compatibility)
       const lead = await storage.createLead(leadData);
+      
+      // Also create a CRM lead for unified lead management
+      try {
+        const [crmLead] = await db.insert(crmLeads).values({
+          firstName: leadData.firstName,
+          lastName: leadData.lastName,
+          email: leadData.email,
+          phone: leadData.phone,
+          leadStatus: "not_contacted" as const,
+          leadRating: "warm" as const,
+          leadCreationMethod: "web_form" as const,
+          courseName: course.title,
+          courseId: course.id,
+          universityId: course.universityId,
+          notes: `Course Inquiry via Course Page\n\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`,
+          referrer: req.headers["referer"] || undefined,
+        }).returning();
+        
+        // Create initial status history
+        await db.insert(leadStatusHistory).values({
+          leadId: crmLead.id,
+          fromStatus: null,
+          toStatus: "not_contacted" as const,
+          notes: `Lead auto-created from course inquiry for ${course.title}`,
+        });
+        
+        console.log("CRM lead created from course inquiry:", crmLead.id);
+      } catch (crmError) {
+        // Log error but don't fail the lead submission
+        console.error("Error creating CRM lead from course inquiry:", crmError);
+      }
       
       // Create notifications for all admins and consultants
       const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
-      const adminTeamMembers = await storage.getAllAdminTeamMembers();
+      const adminTeamMembersList = await storage.getAllAdminTeamMembers();
       
       const notificationRecords = [];
       
@@ -1850,19 +1881,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin/leads',
+          link: '/admin#crm-leads',
           metadata: { leadId: lead.id, courseId: course.id },
         });
       }
       
       // Notify consultant team members
-      for (const member of adminTeamMembers) {
+      for (const member of adminTeamMembersList) {
         notificationRecords.push({
           userId: member.userId,
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin/leads',
+          link: '/admin#crm-leads',
           metadata: { leadId: lead.id, courseId: course.id },
         });
       }
