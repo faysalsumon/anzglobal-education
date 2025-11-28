@@ -13,7 +13,7 @@ import {
   insertCrmContactSchema,
   updateCrmContactSchema,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 
 const router = Router();
@@ -513,7 +513,11 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     const { 
       type, 
       ownerId,
+      owner,
       search,
+      country,
+      nationality,
+      unassigned,
       limit = "50",
       offset = "0"
     } = req.query;
@@ -523,8 +527,17 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     if (type) {
       conditions.push(eq(crmContacts.contactType, type as any));
     }
-    if (ownerId) {
-      conditions.push(eq(crmContacts.contactOwner, ownerId as string));
+    if (ownerId || owner) {
+      conditions.push(eq(crmContacts.contactOwner, (ownerId || owner) as string));
+    }
+    if (unassigned === "true") {
+      conditions.push(isNull(crmContacts.contactOwner));
+    }
+    if (country) {
+      conditions.push(eq(crmContacts.country, country as string));
+    }
+    if (nationality) {
+      conditions.push(eq(crmContacts.nationality, nationality as string));
     }
     if (search) {
       conditions.push(

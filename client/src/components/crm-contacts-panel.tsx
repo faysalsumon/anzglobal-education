@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -26,14 +31,22 @@ import {
   Eye,
   ChevronLeft,
   Building2,
-  Globe
+  Globe,
+  List,
+  LayoutGrid,
+  Filter,
+  ChevronDown,
+  X,
+  GripVertical
 } from "lucide-react";
 import { format } from "date-fns";
+
+type ContactType = 'none' | 'clients' | 'employee' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
 
 interface CrmContact {
   id: string;
   photo: string | null;
-  contactType: 'none' | 'clients' | 'employee' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
+  contactType: ContactType;
   firstName: string;
   lastName: string;
   email: string;
@@ -91,25 +104,50 @@ const contactTypeColors: Record<string, string> = {
   providers_rep: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
 };
 
+const KANBAN_TYPES: ContactType[] = ['clients', 'employee', 'external', 'internal', 'partner', 'providers_rep', 'others'];
+
 export function CrmContactsPanel() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+  const [nationalityFilter, setNationalityFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [selectedContact, setSelectedContact] = useState<CrmContact | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<CrmContact>>({});
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const { data: contactsData, isLoading } = useQuery<{
     contacts: CrmContact[];
     total: number;
   }>({
-    queryKey: ["/api/crm/contacts", typeFilter, searchQuery],
+    queryKey: ["/api/crm/contacts", typeFilter, searchQuery, countryFilter, nationalityFilter, ownerFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (searchQuery) params.append("search", searchQuery);
+      if (countryFilter !== "all") params.append("country", countryFilter);
+      if (nationalityFilter !== "all") params.append("nationality", nationalityFilter);
+      if (ownerFilter !== "all") {
+        if (ownerFilter === "unassigned") {
+          params.append("unassigned", "true");
+        } else {
+          params.append("owner", ownerFilter);
+        }
+      }
       const response = await fetch(`/api/crm/contacts?${params.toString()}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch contacts");
       return response.json();
@@ -203,6 +241,51 @@ export function CrmContactsPanel() {
     setIsEditOpen(true);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    
+    if (!over) return;
+    
+    const contactId = active.id as string;
+    
+    let newType: ContactType | undefined;
+    
+    if (KANBAN_TYPES.includes(over.id as ContactType)) {
+      newType = over.id as ContactType;
+    } else if (over.data.current?.sortable) {
+      newType = over.data.current.sortable.containerId as ContactType;
+    }
+    
+    if (!newType) return;
+    
+    const contact = contactsData?.contacts?.find(c => c.id === contactId);
+    if (contact && contact.contactType !== newType) {
+      updateMutation.mutate({ 
+        id: contactId, 
+        data: { contactType: newType } 
+      });
+    }
+  };
+
+  const getContactsByType = (type: ContactType) => {
+    return contactsData?.contacts?.filter(contact => contact.contactType === type) || [];
+  };
+
+  const clearAllFilters = () => {
+    setTypeFilter("all");
+    setCountryFilter("all");
+    setNationalityFilter("all");
+    setOwnerFilter("all");
+    setSearchQuery("");
+  };
+
+  const activeFiltersCount = [typeFilter, countryFilter, nationalityFilter, ownerFilter]
+    .filter(f => f !== 'all').length;
+
+  const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
+  const uniqueNationalities = Array.from(new Set(contactsData?.contacts?.map(c => c.nationality).filter(Boolean) || []));
+
   if (selectedContact && !isEditOpen && !isDeleteOpen) {
     return (
       <ContactDetailView
@@ -221,114 +304,238 @@ export function CrmContactsPanel() {
           <h2 className="text-2xl font-bold" data-testid="text-crm-contacts-title">CRM Contacts</h2>
           <p className="text-muted-foreground">Manage your contact database</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-contact">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Contact
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              data-testid="button-view-list"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              data-testid="button-view-kanban"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-contact">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-contacts"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
-                <SelectValue placeholder="Contact Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="clients">Clients</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-                <SelectItem value="external">External</SelectItem>
-                <SelectItem value="internal">Internal</SelectItem>
-                <SelectItem value="partner">Partner</SelectItem>
-                <SelectItem value="providers_rep">Providers Rep</SelectItem>
-                <SelectItem value="others">Others</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-contacts"
+          />
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
+            <SelectValue placeholder="Contact Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="clients">Clients</SelectItem>
+            <SelectItem value="employee">Employee</SelectItem>
+            <SelectItem value="external">External</SelectItem>
+            <SelectItem value="internal">Internal</SelectItem>
+            <SelectItem value="partner">Partner</SelectItem>
+            <SelectItem value="providers_rep">Providers Rep</SelectItem>
+            <SelectItem value="others">Others</SelectItem>
+          </SelectContent>
+        </Select>
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" data-testid="button-more-filters">
+              <Filter className="h-4 w-4 mr-2" />
+              More Filters
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-2">{activeFiltersCount}</Badge>
+              )}
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+        </Collapsible>
+        {activeFiltersCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters} data-testid="button-clear-filters">
+            <X className="h-4 w-4 mr-1" />
+            Clear All
+          </Button>
+        )}
+      </div>
 
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading contacts...</div>
-          ) : contactsData?.contacts?.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No contacts found. Create your first contact to get started.
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <CollapsibleContent>
+          <Card className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Select value={countryFilter} onValueChange={setCountryFilter}>
+                  <SelectTrigger data-testid="select-country-filter">
+                    <SelectValue placeholder="All Countries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    {uniqueCountries.map((country) => (
+                      <SelectItem key={country} value={country!}>{country}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nationality</Label>
+                <Select value={nationalityFilter} onValueChange={setNationalityFilter}>
+                  <SelectTrigger data-testid="select-nationality-filter">
+                    <SelectValue placeholder="All Nationalities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Nationalities</SelectItem>
+                    {uniqueNationalities.map((nationality) => (
+                      <SelectItem key={nationality} value={nationality!}>{nationality}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Assigned To</Label>
+                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                  <SelectTrigger data-testid="select-owner-filter">
+                    <SelectValue placeholder="All Owners" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Owners</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {admins?.map((admin) => (
+                      <SelectItem key={admin.id} value={admin.id}>
+                        {admin.firstName} {admin.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {contactsData?.contacts?.map((contact) => (
-                <div
-                  key={contact.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
-                  onClick={() => setSelectedContact(contact)}
-                  data-testid={`card-contact-${contact.id}`}
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={contact.photo || undefined} />
-                    <AvatarFallback>
-                      {contact.firstName?.[0]}{contact.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium" data-testid={`text-contact-name-${contact.id}`}>
-                        {contact.firstName} {contact.lastName}
-                      </span>
-                      <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
-                        {contactTypeLabels[contact.contactType]}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {contact.email}
-                      </span>
-                      {contact.mobile && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {contact.mobile}
-                        </span>
-                      )}
-                      {contact.city && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {contact.city}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    {contact.createdAt && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(contact.createdAt), "MMM d, yyyy")}
-                      </div>
-                    )}
-                    {contact.ownerUser && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <User className="h-3 w-3" />
-                        {contact.ownerUser.firstName} {contact.ownerUser.lastName}
-                      </div>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground">Loading contacts...</div>
+      ) : viewMode === 'kanban' ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(event) => setActiveDragId(event.active.id as string)}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {KANBAN_TYPES.map((type) => (
+              <KanbanColumn
+                key={type}
+                type={type}
+                contacts={getContactsByType(type)}
+                onSelectContact={setSelectedContact}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeDragId ? (
+              <KanbanContactCardOverlay
+                contact={contactsData?.contacts?.find(c => c.id === activeDragId)!}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : contactsData?.contacts?.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No contacts found. Create your first contact to get started.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {contactsData?.contacts?.map((contact) => (
+            <div
+              key={contact.id}
+              className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
+              onClick={() => setSelectedContact(contact)}
+              data-testid={`card-contact-${contact.id}`}
+            >
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={contact.photo || undefined} />
+                <AvatarFallback>
+                  {contact.firstName?.[0]}{contact.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium" data-testid={`text-contact-name-${contact.id}`}>
+                    {contact.firstName} {contact.lastName}
+                  </span>
+                  <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
+                    {contactTypeLabels[contact.contactType]}
+                  </Badge>
+                  {contact.nationality && (
+                    <Badge variant="secondary" className="text-xs">
+                      {contact.nationality}
+                    </Badge>
+                  )}
                 </div>
-              ))}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {contact.email}
+                  </span>
+                  {contact.mobile && (
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {contact.mobile}
+                    </span>
+                  )}
+                  {contact.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {contact.city}
+                    </span>
+                  )}
+                  {contact.country && (
+                    <span className="flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {contact.country}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right text-sm text-muted-foreground">
+                {contact.createdAt && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {format(new Date(contact.createdAt), "MMM d, yyyy")}
+                  </div>
+                )}
+                {contact.ownerUser && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <User className="h-3 w-3" />
+                    {contact.ownerUser.firstName} {contact.ownerUser.lastName}
+                  </div>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}>
+                <Eye className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      )}
 
       <ContactFormDialog
         open={isCreateOpen}
@@ -369,6 +576,169 @@ export function CrmContactsPanel() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function KanbanColumn({ 
+  type, 
+  contacts, 
+  onSelectContact 
+}: { 
+  type: ContactType; 
+  contacts: CrmContact[]; 
+  onSelectContact: (contact: CrmContact) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: type,
+  });
+
+  const contactIds = contacts.map(contact => contact.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-shrink-0 w-72 bg-muted/30 rounded-lg p-3 ${isOver ? 'ring-2 ring-primary' : ''}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={contactTypeColors[type]}>
+            {contactTypeLabels[type]}
+          </Badge>
+          <span className="text-sm text-muted-foreground">({contacts.length})</span>
+        </div>
+      </div>
+      <ScrollArea className="h-[calc(100vh-360px)]">
+        <SortableContext id={type} items={contactIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 pr-2">
+            {contacts.map((contact) => (
+              <DraggableContactCard
+                key={contact.id}
+                contact={contact}
+                onSelect={() => onSelectContact(contact)}
+              />
+            ))}
+            {contacts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No contacts in this category
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function DraggableContactCard({ 
+  contact, 
+  onSelect,
+  isDragOverlay = false
+}: { 
+  contact: CrmContact; 
+  onSelect: () => void;
+  isDragOverlay?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: contact.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card 
+      ref={setNodeRef}
+      style={style}
+      className={`p-3 cursor-pointer hover-elevate ${isDragOverlay ? 'shadow-lg' : ''}`}
+      onClick={onSelect}
+      data-testid={`kanban-card-contact-${contact.id}`}
+    >
+      <div className="flex items-start gap-2">
+        <div 
+          {...attributes} 
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing mt-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={contact.photo || undefined} />
+              <AvatarFallback className="text-xs">
+                {contact.firstName?.[0]}{contact.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {contact.firstName} {contact.lastName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {contact.email}
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 space-y-1">
+            {contact.mobile && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Phone className="h-3 w-3" />
+                <span className="truncate">{contact.mobile}</span>
+              </div>
+            )}
+            {contact.country && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Globe className="h-3 w-3" />
+                <span className="truncate">{contact.country}</span>
+              </div>
+            )}
+          </div>
+          {contact.nationality && (
+            <Badge variant="secondary" className="mt-2 text-xs">
+              {contact.nationality}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function KanbanContactCardOverlay({ contact }: { contact: CrmContact }) {
+  return (
+    <Card className="p-3 shadow-lg w-72">
+      <div className="flex items-start gap-2">
+        <div className="cursor-grabbing mt-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={contact.photo || undefined} />
+              <AvatarFallback className="text-xs">
+                {contact.firstName?.[0]}{contact.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {contact.firstName} {contact.lastName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {contact.email}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
