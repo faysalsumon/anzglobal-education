@@ -51,6 +51,8 @@ import { AdminApplicationsKanban } from "@/components/admin-applications-kanban"
 import { MyTasksPanel } from "@/components/my-tasks-panel";
 import { TeamWorkloadPanel } from "@/components/team-workload-panel";
 import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
+import { CrmLeadsPanel } from "@/components/crm-leads-panel";
+import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 
 interface User {
   id: string;
@@ -1388,6 +1390,20 @@ export default function AdminDashboard() {
         {activeTab === "team-workload" && hasFullAdminAccess && (
           <div className="space-y-6 md:space-y-8">
             <TeamWorkloadPanel />
+          </div>
+        )}
+
+        {/* CRM Leads Tab */}
+        {activeTab === "crm-leads" && (
+          <div className="space-y-6 md:space-y-8">
+            <CrmLeadsPanel />
+          </div>
+        )}
+
+        {/* CRM Contacts Tab */}
+        {activeTab === "crm-contacts" && (
+          <div className="space-y-6 md:space-y-8">
+            <CrmContactsPanel />
           </div>
         )}
 

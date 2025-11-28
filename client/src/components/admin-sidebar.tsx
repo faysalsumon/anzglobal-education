@@ -25,6 +25,8 @@ import {
   ListTodo,
   ClipboardList,
   BarChart3,
+  UserPlus,
+  Contact,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -66,6 +68,18 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       label: "Team Workload",
       value: "team-workload",
       show: hasFullAdminAccess, // Only super_admin and support_manager
+    },
+    {
+      icon: UserPlus,
+      label: "CRM Leads",
+      value: "crm-leads",
+      show: true,
+    },
+    {
+      icon: Contact,
+      label: "CRM Contacts",
+      value: "crm-contacts",
+      show: true,
     },
   ];
 
