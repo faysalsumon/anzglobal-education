@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { PublicHeader } from "@/components/public-header";
-import { Footer } from "@/components/footer";
 import { ChatWidget } from "@/components/chat-widget";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,7 +23,6 @@ export function PublicLayout({ children, onStudentLoginClick }: PublicLayoutProp
       <main className="flex-1">
         {children}
       </main>
-      <Footer />
       <ChatWidget />
     </div>
   );
