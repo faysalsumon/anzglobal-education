@@ -115,6 +115,8 @@ export const activityEntityTypeEnum = pgEnum('activity_entity_type', [
   'task',
   'internal_note',
   'reminder',
+  'crm_lead',
+  'crm_contact',
 ]);
 
 // CRM Task priority enum
@@ -143,6 +145,45 @@ export const taskCategoryEnum = pgEnum('task_category', [
   'visa_processing',
   'general',
   'urgent_action',
+]);
+
+// CRM Lead status enum
+export const leadStatusEnum = pgEnum('lead_status', [
+  'not_contacted',
+  'contacted',
+  'qualified',
+  'unqualified',
+  'converted',
+  'lost',
+]);
+
+// CRM Lead rating enum
+export const leadRatingEnum = pgEnum('lead_rating', [
+  'cold',
+  'warm',
+  'hot',
+]);
+
+// CRM Lead creation method enum
+export const leadCreationMethodEnum = pgEnum('lead_creation_method', [
+  'manually',
+  'website_form',
+  'facebook_ads',
+  'referral',
+  'import',
+  'other',
+]);
+
+// CRM Contact type enum
+export const contactTypeEnum = pgEnum('contact_type', [
+  'none',
+  'clients',
+  'employee',
+  'external',
+  'internal',
+  'others',
+  'partner',
+  'providers_rep',
 ]);
 
 // Shared TypeScript interfaces for JSONB fields
@@ -954,6 +995,166 @@ export const contactSubmissions = pgTable("contact_submissions", {
   index("assigned_to_idx").on(table.assignedTo),
   index("created_at_contact_idx").on(table.createdAt),
 ]);
+
+// ============================================
+// CRM LEADS AND CONTACTS TABLES
+// ============================================
+
+// CRM Leads table - full lead management for student inquiries
+export const crmLeads = pgTable("crm_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Personal Information
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  mobile: text("mobile"),
+  city: text("city"),
+  
+  // Lead Source & Status
+  leadStatus: leadStatusEnum("lead_status").notNull().default("not_contacted"),
+  leadRating: leadRatingEnum("lead_rating").default("cold"),
+  leadCreationMethod: leadCreationMethodEnum("lead_creation_method").default("manually"),
+  country: text("country"),
+  nationality: text("nationality"),
+  
+  // Lead Location & Assignment
+  branch: text("branch"), // Melbourne, Sydney, etc.
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  leadOwner: varchar("lead_owner").references(() => users.id),
+  
+  // Product Interest
+  courseName: text("course_name"),
+  courseUrl: text("course_url"),
+  interestedIn: text("interested_in"),
+  courseId: varchar("course_id").references(() => courses.id),
+  universityId: varchar("university_id").references(() => universities.id),
+  
+  // Visit Summary (website tracking)
+  firstVisit: timestamp("first_visit"),
+  visitorScore: integer("visitor_score"),
+  referrer: text("referrer"),
+  averageTimeSpent: integer("average_time_spent"), // in minutes
+  mostRecentVisit: timestamp("most_recent_visit"),
+  firstPageVisited: text("first_page_visited"),
+  numberOfChats: integer("number_of_chats").default(0),
+  daysVisited: integer("days_visited").default(0),
+  
+  // Additional Information
+  bestTimeToContact: text("best_time_to_contact"),
+  ieltsScore: text("ielts_score"),
+  preferredInstitution: text("preferred_institution"),
+  languageStream: text("language_stream"),
+  programDiscipline: text("program_discipline"),
+  scheduledAppointment: timestamp("scheduled_appointment"),
+  whereToStudy: text("where_to_study"),
+  programType: text("program_type"),
+  subjectToStudy: text("subject_to_study"),
+  
+  // Facebook Ads Details
+  fbAdAccount: text("fb_ad_account"),
+  fbLeadForm: text("fb_lead_form"),
+  fbAdAccountId: text("fb_ad_account_id"),
+  fbLeadFormId: text("fb_lead_form_id"),
+  fbAdCampaign: text("fb_ad_campaign"),
+  
+  // Record Information
+  workdriveFolderUrl: text("workdrive_folder_url"),
+  workdriveFolderId: text("workdrive_folder_id"),
+  notes: text("notes"),
+  
+  // Converted contact reference
+  convertedContactId: varchar("converted_contact_id"),
+  convertedAt: timestamp("converted_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastActivityTime: timestamp("last_activity_time"),
+}, (table) => ({
+  leadStatusIdx: index("crm_leads_status_idx").on(table.leadStatus),
+  leadOwnerIdx: index("crm_leads_owner_idx").on(table.leadOwner),
+  assignedToIdx: index("crm_leads_assigned_idx").on(table.assignedTo),
+  branchIdx: index("crm_leads_branch_idx").on(table.branch),
+  emailIdx: index("crm_leads_email_idx").on(table.email),
+  createdAtIdx: index("crm_leads_created_at_idx").on(table.createdAt),
+  ratingIdx: index("crm_leads_rating_idx").on(table.leadRating),
+}));
+
+// Lead Status History for tracking status changes with timeline
+export const leadStatusHistory = pgTable("lead_status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
+  fromStatus: leadStatusEnum("from_status"),
+  toStatus: leadStatusEnum("to_status").notNull(),
+  changedBy: varchar("changed_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  leadIdIdx: index("lead_status_history_lead_idx").on(table.leadId),
+  createdAtIdx: index("lead_status_history_created_idx").on(table.createdAt),
+}));
+
+// CRM Contacts table - categorized organization contacts
+export const crmContacts = pgTable("crm_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Basic Information
+  photo: text("photo"),
+  contactType: contactTypeEnum("contact_type").notNull().default("none"),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  mobile: text("mobile").notNull(),
+  phone: text("phone"),
+  nationality: text("nationality"),
+  country: text("country"),
+  
+  // Address
+  unitNo: text("unit_no"),
+  street: text("street"),
+  suburb: text("suburb"),
+  state: text("state"),
+  postcode: text("postcode"),
+  
+  // Emergency Contact Details
+  emergencyContactRelationship: text("emergency_contact_relationship"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactMobile: text("emergency_contact_mobile"),
+  emergencyContactAddress: text("emergency_contact_address"),
+  
+  // Record Information
+  contactOwner: varchar("contact_owner").references(() => users.id),
+  workdriveFolderUrl: text("workdrive_folder_url"),
+  workdriveFolderId: text("workdrive_folder_id"),
+  
+  // Visit Summary (for website tracking)
+  firstVisit: timestamp("first_visit"),
+  visitorScore: integer("visitor_score"),
+  referrer: text("referrer"),
+  averageTimeSpent: integer("average_time_spent"),
+  
+  // Linked Accounts (for institutions/organizations)
+  linkedAccountId: varchar("linked_account_id"),
+  linkedAccountName: text("linked_account_name"),
+  
+  // Source lead reference
+  sourceLeadId: varchar("source_lead_id").references(() => crmLeads.id),
+  
+  // Notes
+  notes: text("notes"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  contactTypeIdx: index("crm_contacts_type_idx").on(table.contactType),
+  contactOwnerIdx: index("crm_contacts_owner_idx").on(table.contactOwner),
+  emailIdx: index("crm_contacts_email_idx").on(table.email),
+  createdAtIdx: index("crm_contacts_created_at_idx").on(table.createdAt),
+  sourceLeadIdx: index("crm_contacts_source_lead_idx").on(table.sourceLeadId),
+}));
 
 // CSV Import batches table for bulk import with approval workflow
 export const importBatches = pgTable("import_batches", {
@@ -2231,4 +2432,85 @@ export interface WorkloadSummary {
   overdueTasks: number;
   assignedApplications: number;
   avgTaskCompletionTime?: number; // in hours
+}
+
+// ============================================
+// CRM LEADS AND CONTACTS SCHEMAS AND TYPES
+// ============================================
+
+// CRM Leads
+export const insertCrmLeadSchema = createInsertSchema(crmLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastActivityTime: true,
+  convertedContactId: true,
+  convertedAt: true,
+});
+
+export const updateCrmLeadSchema = insertCrmLeadSchema.partial();
+
+export type CrmLead = typeof crmLeads.$inferSelect;
+export type InsertCrmLead = z.infer<typeof insertCrmLeadSchema>;
+export type UpdateCrmLead = z.infer<typeof updateCrmLeadSchema>;
+
+// Lead Status History
+export const insertLeadStatusHistorySchema = createInsertSchema(leadStatusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LeadStatusHistory = typeof leadStatusHistory.$inferSelect;
+export type InsertLeadStatusHistory = z.infer<typeof insertLeadStatusHistorySchema>;
+
+// CRM Contacts
+export const insertCrmContactSchema = createInsertSchema(crmContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateCrmContactSchema = insertCrmContactSchema.partial();
+
+export type CrmContact = typeof crmContacts.$inferSelect;
+export type InsertCrmContact = z.infer<typeof insertCrmContactSchema>;
+export type UpdateCrmContact = z.infer<typeof updateCrmContactSchema>;
+
+// Lead with relations for display
+export interface CrmLeadWithRelations extends CrmLead {
+  assignedToUser?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+  ownerUser?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+  course?: {
+    id: string;
+    title: string;
+  } | null;
+  university?: {
+    id: string;
+    name: string;
+  } | null;
+  statusHistory?: LeadStatusHistory[];
+}
+
+// Contact with relations for display
+export interface CrmContactWithRelations extends CrmContact {
+  ownerUser?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+  sourceLead?: CrmLead | null;
 }
