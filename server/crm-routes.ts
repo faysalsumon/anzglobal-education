@@ -76,6 +76,9 @@ router.get("/leads", requireAdmin, async (req, res) => {
       branch, 
       ownerId, 
       assignedToId,
+      assignedTo,
+      source,
+      country,
       search,
       limit = "50",
       offset = "0"
@@ -95,8 +98,21 @@ router.get("/leads", requireAdmin, async (req, res) => {
     if (ownerId) {
       conditions.push(eq(crmLeads.leadOwner, ownerId as string));
     }
-    if (assignedToId) {
-      conditions.push(eq(crmLeads.assignedTo, assignedToId as string));
+    // Support both assignedToId and assignedTo parameter names
+    const assignedFilter = assignedToId || assignedTo;
+    if (assignedFilter) {
+      if (assignedFilter === 'unassigned') {
+        const { isNull } = await import("drizzle-orm");
+        conditions.push(isNull(crmLeads.assignedTo));
+      } else {
+        conditions.push(eq(crmLeads.assignedTo, assignedFilter as string));
+      }
+    }
+    if (source) {
+      conditions.push(eq(crmLeads.leadCreationMethod, source as any));
+    }
+    if (country) {
+      conditions.push(eq(crmLeads.country, country as string));
     }
     if (search) {
       conditions.push(

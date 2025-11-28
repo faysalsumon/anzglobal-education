@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -32,9 +36,19 @@ import {
   BookOpen,
   Eye,
   ChevronLeft,
-  UserCheck
+  UserCheck,
+  List,
+  LayoutGrid,
+  ChevronDown,
+  GripVertical,
+  Globe
 } from "lucide-react";
 import { format } from "date-fns";
+
+type ViewMode = 'list' | 'kanban';
+type LeadStatus = 'not_contacted' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
+
+const KANBAN_STATUSES: LeadStatus[] = ['not_contacted', 'contacted', 'qualified', 'unqualified', 'converted', 'lost'];
 
 interface CrmLead {
   id: string;
@@ -124,27 +138,44 @@ const statusLabels: Record<string, string> = {
 
 export function CrmLeadsPanel() {
   const { toast } = useToast();
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+  const [assignedFilter, setAssignedFilter] = useState<string>("all");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<CrmLead>>({});
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const { data: leadsData, isLoading } = useQuery<{
     leads: CrmLead[];
     total: number;
   }>({
-    queryKey: ["/api/crm/leads", statusFilter, ratingFilter, branchFilter, searchQuery],
+    queryKey: ["/api/crm/leads", statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (ratingFilter !== "all") params.append("rating", ratingFilter);
       if (branchFilter !== "all") params.append("branch", branchFilter);
+      if (sourceFilter !== "all") params.append("source", sourceFilter);
+      if (countryFilter !== "all") params.append("country", countryFilter);
+      if (assignedFilter !== "all") params.append("assignedTo", assignedFilter);
       if (searchQuery) params.append("search", searchQuery);
       const response = await fetch(`/api/crm/leads?${params.toString()}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch leads");
@@ -273,6 +304,46 @@ export function CrmLeadsPanel() {
     );
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    
+    if (!over) return;
+    
+    const leadId = active.id as string;
+    
+    // Get the target status - check if it's a column drop zone or read from sortable container
+    let newStatus: LeadStatus | undefined;
+    
+    // Check if dropped directly on a column (droppable zone)
+    if (KANBAN_STATUSES.includes(over.id as LeadStatus)) {
+      newStatus = over.id as LeadStatus;
+    } 
+    // If dropped on another card, get its container (column)
+    else if (over.data.current?.sortable) {
+      newStatus = over.data.current.sortable.containerId as LeadStatus;
+    }
+    
+    if (!newStatus) return;
+    
+    const lead = leadsData?.leads?.find(l => l.id === leadId);
+    if (lead && lead.leadStatus !== newStatus) {
+      updateMutation.mutate({ 
+        id: leadId, 
+        data: { leadStatus: newStatus } 
+      });
+    }
+  };
+
+  const getLeadsByStatus = (status: LeadStatus) => {
+    return leadsData?.leads?.filter(lead => lead.leadStatus === status) || [];
+  };
+
+  const activeFiltersCount = [statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter]
+    .filter(f => f !== 'all').length;
+
+  const uniqueCountries = [...new Set(leadsData?.leads?.map(l => l.country).filter(Boolean) || [])];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -280,63 +351,163 @@ export function CrmLeadsPanel() {
           <h2 className="text-2xl font-bold" data-testid="text-crm-leads-title">CRM Leads</h2>
           <p className="text-muted-foreground">Manage and track potential students</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-lead">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Lead
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              data-testid="button-view-list"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              data-testid="button-view-kanban"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-lead">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Lead
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-leads"
-              />
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search leads..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-leads"
+                />
+              </div>
+              {viewMode === 'list' && (
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="not_contacted">Not Contacted</SelectItem>
+                    <SelectItem value="contacted">Contacted</SelectItem>
+                    <SelectItem value="qualified">Qualified</SelectItem>
+                    <SelectItem value="unqualified">Unqualified</SelectItem>
+                    <SelectItem value="converted">Converted</SelectItem>
+                    <SelectItem value="lost">Lost</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                <SelectTrigger className="w-[120px]" data-testid="select-rating-filter">
+                  <SelectValue placeholder="Rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Ratings</SelectItem>
+                  <SelectItem value="cold">Cold</SelectItem>
+                  <SelectItem value="warm">Warm</SelectItem>
+                  <SelectItem value="hot">Hot</SelectItem>
+                </SelectContent>
+              </Select>
+              <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    More Filters
+                    {activeFiltersCount > 0 && (
+                      <Badge variant="secondary" className="ml-1">{activeFiltersCount}</Badge>
+                    )}
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+              </Collapsible>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="not_contacted">Not Contacted</SelectItem>
-                <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-                <SelectItem value="unqualified">Unqualified</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger className="w-[120px]" data-testid="select-rating-filter">
-                <SelectValue placeholder="Rating" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Ratings</SelectItem>
-                <SelectItem value="cold">Cold</SelectItem>
-                <SelectItem value="warm">Warm</SelectItem>
-                <SelectItem value="hot">Hot</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="w-[130px]" data-testid="select-branch-filter">
-                <SelectValue placeholder="Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                <SelectItem value="Melbourne">Melbourne</SelectItem>
-                <SelectItem value="Sydney">Sydney</SelectItem>
-                <SelectItem value="Brisbane">Brisbane</SelectItem>
-                <SelectItem value="Perth">Perth</SelectItem>
-                <SelectItem value="Adelaide">Adelaide</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+              <CollapsibleContent>
+                <div className="flex flex-wrap gap-3 pt-2 border-t">
+                  <Select value={branchFilter} onValueChange={setBranchFilter}>
+                    <SelectTrigger className="w-[130px]" data-testid="select-branch-filter">
+                      <SelectValue placeholder="Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Branches</SelectItem>
+                      <SelectItem value="Melbourne">Melbourne</SelectItem>
+                      <SelectItem value="Sydney">Sydney</SelectItem>
+                      <SelectItem value="Brisbane">Brisbane</SelectItem>
+                      <SelectItem value="Perth">Perth</SelectItem>
+                      <SelectItem value="Adelaide">Adelaide</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                    <SelectTrigger className="w-[150px]" data-testid="select-source-filter">
+                      <SelectValue placeholder="Lead Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="website_form">Website Form</SelectItem>
+                      <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
+                      <SelectItem value="google_ads">Google Ads</SelectItem>
+                      <SelectItem value="education_fair">Education Fair</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="recruitment_agent">Recruitment Agent</SelectItem>
+                      <SelectItem value="campus_walk_in">Campus Walk-in</SelectItem>
+                      <SelectItem value="manually">Manual Entry</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-country-filter">
+                      <SelectValue placeholder="Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {uniqueCountries.map(country => (
+                        <SelectItem key={country} value={country!}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+                    <SelectTrigger className="w-[150px]" data-testid="select-assigned-filter">
+                      <SelectValue placeholder="Assigned To" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Consultants</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {admins?.map(admin => (
+                        <SelectItem key={admin.id} value={admin.id}>
+                          {admin.firstName} {admin.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {activeFiltersCount > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter('all');
+                        setRatingFilter('all');
+                        setBranchFilter('all');
+                        setSourceFilter('all');
+                        setCountryFilter('all');
+                        setAssignedFilter('all');
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           {isLoading ? (
@@ -345,6 +516,31 @@ export function CrmLeadsPanel() {
             <div className="text-center py-8 text-muted-foreground">
               No leads found. Create your first lead to get started.
             </div>
+          ) : viewMode === 'kanban' ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={(event) => setActiveDragId(event.active.id as string)}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {KANBAN_STATUSES.map((status) => (
+                  <KanbanColumn
+                    key={status}
+                    status={status}
+                    leads={getLeadsByStatus(status)}
+                    onSelectLead={setSelectedLead}
+                  />
+                ))}
+              </div>
+              <DragOverlay>
+                {activeDragId ? (
+                  <KanbanLeadCardOverlay
+                    lead={leadsData?.leads?.find(l => l.id === activeDragId)!}
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           ) : (
             <div className="space-y-2">
               {leadsData?.leads?.map((lead) => (
@@ -794,6 +990,191 @@ function LeadFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Kanban Column Component
+function KanbanColumn({ 
+  status, 
+  leads, 
+  onSelectLead 
+}: { 
+  status: LeadStatus; 
+  leads: CrmLead[]; 
+  onSelectLead: (lead: CrmLead) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+  });
+
+  const leadIds = leads.map(lead => lead.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-shrink-0 w-72 bg-muted/30 rounded-lg p-3 ${isOver ? 'ring-2 ring-primary' : ''}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={statusColors[status]}>
+            {statusLabels[status]}
+          </Badge>
+          <span className="text-sm text-muted-foreground">({leads.length})</span>
+        </div>
+      </div>
+      <ScrollArea className="h-[calc(100vh-360px)]">
+        <SortableContext id={status} items={leadIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 pr-2">
+            {leads.map((lead) => (
+              <DraggableLeadCard
+                key={lead.id}
+                lead={lead}
+                onSelect={() => onSelectLead(lead)}
+              />
+            ))}
+            {leads.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No leads in this status
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </ScrollArea>
+    </div>
+  );
+}
+
+// Draggable Lead Card Component for Kanban
+function DraggableLeadCard({ 
+  lead, 
+  onSelect,
+  isDragOverlay = false
+}: { 
+  lead: CrmLead; 
+  onSelect: () => void;
+  isDragOverlay?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lead.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={isDragOverlay ? undefined : style}
+      className={`cursor-pointer hover-elevate ${isDragging || isDragOverlay ? 'shadow-lg' : ''}`}
+      onClick={onSelect}
+      data-testid={`kanban-card-lead-${lead.id}`}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
+          <div 
+            {...attributes} 
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing mt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-xs">
+                  {lead.firstName?.[0]}{lead.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-medium text-sm truncate">
+                {lead.firstName} {lead.lastName}
+              </span>
+            </div>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 truncate">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{lead.email}</span>
+              </div>
+              {lead.phone && (
+                <div className="flex items-center gap-1">
+                  <Phone className="h-3 w-3 flex-shrink-0" />
+                  <span>{lead.phone}</span>
+                </div>
+              )}
+              {lead.country && (
+                <div className="flex items-center gap-1">
+                  <Globe className="h-3 w-3 flex-shrink-0" />
+                  <span>{lead.country}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1 mt-2 flex-wrap">
+              <Badge variant="outline" className={`text-xs ${ratingColors[lead.leadRating]}`}>
+                {lead.leadRating}
+              </Badge>
+              {lead.leadCreationMethod === 'website_form' && (
+                <Badge variant="secondary" className="text-xs">
+                  Web
+                </Badge>
+              )}
+              {lead.courseName && (
+                <Badge variant="outline" className="text-xs max-w-[120px] truncate">
+                  {lead.courseName}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Static Lead Card for DragOverlay (no hooks)
+function KanbanLeadCardOverlay({ lead }: { lead: CrmLead }) {
+  if (!lead) return null;
+  
+  return (
+    <Card className="cursor-grabbing shadow-lg w-64">
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
+          <div className="mt-1">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-xs">
+                  {lead.firstName?.[0]}{lead.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="font-medium text-sm truncate">
+                {lead.firstName} {lead.lastName}
+              </span>
+            </div>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 truncate">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{lead.email}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2">
+              <Badge variant="outline" className={`text-xs ${ratingColors[lead.leadRating]}`}>
+                {lead.leadRating}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
