@@ -1344,28 +1344,27 @@ export default function AdminDashboard() {
           </header>
 
           {/* Main Content */}
-          <div className="flex-1">
-            <div className="mx-auto w-full max-w-7xl px-4 md:px-6 py-4 md:py-6">
-              {/* Responsive Grid: Stacked on mobile, 2-column on xl+ */}
-              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] gap-6 md:gap-8">
-                {/* Main Column */}
-                <main className="space-y-4 md:space-y-6 min-w-0">
-                  <div>
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" data-testid="text-dashboard-title">
-                      {isConsultant 
-                        ? "Consultant Dashboard" 
-                        : isSuperAdmin 
-                          ? "Super Admin Dashboard" 
-                          : "Admin Dashboard"}
-                    </h1>
-                    <p className="text-muted-foreground text-sm md:text-base mt-1">
-                      {isConsultant 
-                        ? "Manage student applications and leads" 
-                        : "Manage all platform users, institutions, and courses"}
-                    </p>
-                  </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4 md:py-6">
+              {/* Simple single-column layout */}
+              <main className="space-y-4 md:space-y-6">
+                {/* Dashboard Header */}
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-dashboard-title">
+                    {isConsultant 
+                      ? "Consultant Dashboard" 
+                      : isSuperAdmin 
+                        ? "Super Admin Dashboard" 
+                        : "Admin Dashboard"}
+                  </h1>
+                  <p className="text-muted-foreground text-sm md:text-base mt-1">
+                    {isConsultant 
+                      ? "Manage student applications and leads" 
+                      : "Manage all platform users, institutions, and courses"}
+                  </p>
+                </div>
 
-                  <div className="space-y-6 md:space-y-8">
+                <div className="space-y-6 md:space-y-8">
         {/* Users Tab */}
         {activeTab === "users" && (
           <div className="space-y-6 md:space-y-8">
@@ -2336,147 +2335,8 @@ export default function AdminDashboard() {
             />
           </div>
         )}
-      </div>
-              </main>
-
-              {/* Right Rail - Quick Actions (Stacks below on mobile, sidebar on xl+) */}
-              <aside className="flex flex-col gap-4" data-testid="admin-quick-actions">
-                {/* Quick Create Actions */}
-                {hasFullAdminAccess && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Button 
-                        className="w-full justify-start" 
-                        variant="outline"
-                        onClick={() => {
-                          setEditingUser(null);
-                          userForm.reset();
-                          setUserDialogOpen(true);
-                        }}
-                        data-testid="quick-action-new-user"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New User
-                      </Button>
-                      <Button 
-                        className="w-full justify-start" 
-                        variant="outline"
-                        onClick={() => {
-                          setEditingInstitution(null);
-                          institutionForm.reset();
-                          setInstitutionDialogOpen(true);
-                        }}
-                        data-testid="quick-action-new-institution"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Institution
-                      </Button>
-                      <Button 
-                        className="w-full justify-start" 
-                        variant="outline"
-                        onClick={() => {
-                          setEditingCourse(null);
-                          courseForm.reset();
-                          setCourseDialogOpen(true);
-                        }}
-                        data-testid="quick-action-new-course"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Course
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* AI Extractors */}
-                {hasFullAdminAccess && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        AI Tools
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Button 
-                        className="w-full justify-start" 
-                        variant="outline"
-                        onClick={() => setAiExtractorDialogOpen(true)}
-                        data-testid="quick-action-ai-institution"
-                      >
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        AI Institution Extract
-                      </Button>
-                      <Button 
-                        className="w-full justify-start" 
-                        variant="outline"
-                        onClick={() => setAiCourseExtractorDialogOpen(true)}
-                        data-testid="quick-action-ai-course"
-                      >
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        AI Course Extract
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Quick Stats */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Overview</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {hasFullAdminAccess && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Users</span>
-                          <span className="font-semibold">{userStats.total}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Institutions</span>
-                          <span className="font-semibold">{institutionStats.total}</span>
-                        </div>
-                      </>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Courses</span>
-                      <span className="font-semibold">{courseStats.total}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Applications</span>
-                      <span className="font-semibold">{applications?.length || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Student Leads</span>
-                      <span className="font-semibold">{studentLeads?.length || 0}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Pending Approvals */}
-                {hasFullAdminAccess && institutionStats.pending > 0 && (
-                  <Card className="border-orange-500/50">
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2 text-orange-600">
-                        <Clock className="h-4 w-4" />
-                        Pending Approvals
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Institutions</span>
-                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
-                          {institutionStats.pending}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </aside>
               </div>
+              </main>
             </div>
           </div>
         </div>

@@ -117,6 +117,10 @@ function AppContent() {
     location.startsWith('/blog/')
   );
 
+  // Admin dashboard has its own sidebar layout - don't show TopNavBar/MobileBottomNav
+  // Cover both /admin and /admin/dashboard routes
+  const isAdminDashboard = location === '/admin' || location.startsWith('/admin/dashboard');
+
   // Show loading state while auth is initializing OR until auth status is resolved
   // This prevents the race condition where routes render before auth hydration completes
   if (isLoading || !isAuthResolved) {
@@ -131,6 +135,11 @@ function AppContent() {
   }
 
   if (!isAuthenticated || !user?.userType) {
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
+  }
+
+  // Admin dashboard uses its own full layout with sidebar
+  if (isAdminDashboard) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
