@@ -7,6 +7,7 @@ import {
   users,
   courses,
   universities,
+  adminTeamMembers,
   insertCrmLeadSchema,
   updateCrmLeadSchema,
   insertCrmContactSchema,
@@ -23,14 +24,47 @@ function getUserId(req: any): string | null {
   return req.user.claims?.sub || req.user.id || null;
 }
 
+// Helper to check if user is an admin team member
+async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; role: string | null }> {
+  const [adminMember] = await db
+    .select()
+    .from(adminTeamMembers)
+    .where(eq(adminTeamMembers.userId, userId))
+    .limit(1);
+  
+  if (adminMember && adminMember.isActive) {
+    return { isAdmin: true, role: adminMember.role };
+  }
+  
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  
+  if (user?.userType === 'admin' || user?.userType === 'super_admin') {
+    return { isAdmin: true, role: user.userType };
+  }
+  
+  return { isAdmin: false, role: null };
+}
+
 // Middleware to check admin access
-function requireAdmin(req: any, res: any, next: any) {
+async function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) {
     return res.status(401).json({ message: "Authentication required" });
   }
-  if (req.user.userType !== "admin" && req.user.userType !== "super_admin") {
+  
+  const userId = getUserId(req);
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  const { isAdmin } = await isAdminTeamMember(userId);
+  if (!isAdmin) {
     return res.status(403).json({ message: "Admin access required" });
   }
+  
   next();
 }
 
