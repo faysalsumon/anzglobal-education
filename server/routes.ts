@@ -1474,7 +1474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes - only show approved and active courses from approved institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const { discipline } = req.query;
+      const { discipline, universityId } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
@@ -1488,9 +1488,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isApprovedAndActive) return false;
         
+        // Apply universityId filter if provided
+        if (universityId && typeof universityId === 'string') {
+          if (course.universityId !== universityId) return false;
+        }
+        
         // Apply discipline filter if provided
         if (discipline && typeof discipline === 'string') {
-          return course.discipline === discipline;
+          if (course.discipline !== discipline) return false;
         }
         
         return true;

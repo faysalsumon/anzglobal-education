@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,21 +21,118 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home } from "lucide-react";
-import type { University, Campus } from "@shared/schema";
+import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home, Search, Clock, DollarSign, Loader2 } from "lucide-react";
+import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
-import { useMemo } from "react";
+
+// Available course levels for filtering
+const COURSE_LEVELS = [
+  'VCE (11-12)',
+  'Certificate II',
+  'Certificate III',
+  'Certificate IV',
+  'Diploma',
+  'Advanced Diploma',
+  'Graduate Certificate',
+  'Graduate Diploma',
+  'Bachelor Degree',
+  'Professional Year',
+  'Masters Degree',
+  'Doctoral Degree',
+  'Higher Doctoral Degree',
+  'ELICOS',
+];
+
+// Number of courses to show initially
+const INITIAL_COURSES_SHOWN = 6;
+const COURSES_PER_PAGE = 6;
 
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
   const [selectedCampusIndex, setSelectedCampusIndex] = useState<number | null>(null);
+  
+  // Course filter states
+  const [courseSearch, setCourseSearch] = useState("");
+  const [disciplineFilter, setDisciplineFilter] = useState<string>("all");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [coursesShown, setCoursesShown] = useState(INITIAL_COURSES_SHOWN);
 
   const { data: institution, isLoading } = useQuery<University>({
     queryKey: [`/api/institutions/${institutionId}`],
     enabled: !!institutionId,
   });
+
+  // Fetch courses for this specific institution
+  const { data: institutionCourses = [], isLoading: coursesLoading } = useQuery<Course[]>({
+    queryKey: ['/api/courses', { universityId: institutionId }],
+    queryFn: async () => {
+      const response = await fetch(`/api/courses?universityId=${institutionId}`);
+      if (!response.ok) throw new Error('Failed to fetch courses');
+      return response.json();
+    },
+    enabled: !!institutionId,
+  });
+
+  // Get unique disciplines from institution's courses
+  const availableDisciplines = useMemo(() => {
+    const disciplines = new Set<string>();
+    institutionCourses.forEach(course => {
+      if (course.discipline) {
+        disciplines.add(course.discipline);
+      }
+    });
+    return Array.from(disciplines).sort();
+  }, [institutionCourses]);
+
+  // Get unique levels from institution's courses
+  const availableLevels = useMemo(() => {
+    const levels = new Set<string>();
+    institutionCourses.forEach(course => {
+      if (course.level) {
+        levels.add(course.level);
+      }
+    });
+    return COURSE_LEVELS.filter(level => levels.has(level));
+  }, [institutionCourses]);
+
+  // Apply filters to courses
+  const filteredCourses = useMemo(() => {
+    let filtered = institutionCourses;
+
+    // Search filter
+    if (courseSearch.trim()) {
+      const searchLower = courseSearch.toLowerCase();
+      filtered = filtered.filter(course => 
+        course.title?.toLowerCase().includes(searchLower) ||
+        course.discipline?.toLowerCase().includes(searchLower) ||
+        course.level?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Discipline filter
+    if (disciplineFilter && disciplineFilter !== "all") {
+      filtered = filtered.filter(course => course.discipline === disciplineFilter);
+    }
+
+    // Level filter
+    if (levelFilter && levelFilter !== "all") {
+      filtered = filtered.filter(course => course.level === levelFilter);
+    }
+
+    return filtered;
+  }, [institutionCourses, courseSearch, disciplineFilter, levelFilter]);
+
+  // Courses to display (with pagination)
+  const displayedCourses = useMemo(() => {
+    return filteredCourses.slice(0, coursesShown);
+  }, [filteredCourses, coursesShown]);
+
+  // Reset pagination when filters change
+  const handleFilterChange = () => {
+    setCoursesShown(INITIAL_COURSES_SHOWN);
+  };
 
   // Transform campusAddresses JSONB field to Campus[] format for the map component
   const campuses = useMemo<Campus[]>(() => {
@@ -304,21 +409,6 @@ export default function PublicInstitutionDetail() {
               </Card>
             )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>View All Courses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Explore all the courses offered by {institution.name}
-                </p>
-                <Button asChild className="w-full" data-testid="button-view-courses">
-                  <Link href={`/courses?university=${institution.id}`}>
-                    View All Courses
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Sidebar Info */}
@@ -454,6 +544,210 @@ export default function PublicInstitutionDetail() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Courses Section - Full Width */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5" />
+                    Courses Offered
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {institutionCourses.length} course{institutionCourses.length !== 1 ? 's' : ''} available
+                  </p>
+                </div>
+                <Button asChild variant="outline" size="sm" data-testid="button-view-all-courses">
+                  <Link href={`/courses?university=${institution.id}`}>
+                    View Full Catalog
+                    <ExternalLink className="h-3 w-3 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search courses..."
+                    value={courseSearch}
+                    onChange={(e) => {
+                      setCourseSearch(e.target.value);
+                      handleFilterChange();
+                    }}
+                    className="pl-9"
+                    data-testid="input-course-search"
+                  />
+                </div>
+                <Select 
+                  value={disciplineFilter} 
+                  onValueChange={(value) => {
+                    setDisciplineFilter(value);
+                    handleFilterChange();
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-discipline">
+                    <SelectValue placeholder="All Disciplines" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Disciplines</SelectItem>
+                    {availableDisciplines.map((discipline) => (
+                      <SelectItem key={discipline} value={discipline}>
+                        {discipline}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select 
+                  value={levelFilter} 
+                  onValueChange={(value) => {
+                    setLevelFilter(value);
+                    handleFilterChange();
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-level">
+                    <SelectValue placeholder="All Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    {availableLevels.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(courseSearch || disciplineFilter !== "all" || levelFilter !== "all") && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setCourseSearch("");
+                      setDisciplineFilter("all");
+                      setLevelFilter("all");
+                      handleFilterChange();
+                    }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {/* Course Loading State */}
+              {coursesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : filteredCourses.length === 0 ? (
+                /* Empty State */
+                <div className="text-center py-12">
+                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  {institutionCourses.length === 0 ? (
+                    <>
+                      <h3 className="text-lg font-medium mb-2">No courses listed yet</h3>
+                      <p className="text-muted-foreground">
+                        Check back soon for available courses from {institution.name}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-medium mb-2">No matching courses</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Try adjusting your filters to see more courses
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setCourseSearch("");
+                          setDisciplineFilter("all");
+                          setLevelFilter("all");
+                          handleFilterChange();
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Results Count */}
+                  {(courseSearch || disciplineFilter !== "all" || levelFilter !== "all") && (
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Showing {displayedCourses.length} of {filteredCourses.length} matching course{filteredCourses.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+
+                  {/* Course Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {displayedCourses.map((course) => (
+                      <Link key={course.id} href={`/courses/${course.id}`}>
+                        <Card 
+                          className="h-full hover-elevate cursor-pointer transition-all duration-200"
+                          data-testid={`course-card-${course.id}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex flex-col h-full">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-sm line-clamp-2 mb-2" data-testid={`course-title-${course.id}`}>
+                                  {course.title}
+                                </h3>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {course.level && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {course.level}
+                                    </Badge>
+                                  )}
+                                  {course.discipline && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {course.discipline}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-1 text-xs text-muted-foreground mt-auto">
+                                {course.duration && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{course.duration}</span>
+                                  </div>
+                                )}
+                                {course.fees && (
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="h-3 w-3" />
+                                    <span>${Number(course.fees).toLocaleString()}/year</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* Show More Button */}
+                  {filteredCourses.length > coursesShown && (
+                    <div className="flex justify-center mt-6">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setCoursesShown(prev => prev + COURSES_PER_PAGE)}
+                        data-testid="button-show-more-courses"
+                      >
+                        Show More Courses ({filteredCourses.length - coursesShown} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
