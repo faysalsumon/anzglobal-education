@@ -16,7 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, ChevronDown } from "lucide-react";
+import { Menu, GraduationCap, BookOpen, Users, Info } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 interface PublicHeaderProps {
@@ -26,214 +26,89 @@ interface PublicHeaderProps {
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const servicesMenuItems = [
-    { title: "Partner With Us", href: "/partner-with-us" },
-    { title: "Study in Australia", href: "/study-in-australia" },
-    { title: "Student Visa", href: "/blog?category=visa" },
-    { title: "Student Accommodation", href: "/contact?topic=accommodation" },
-    { title: "Health Insurance", href: "/contact?topic=insurance" },
+  const navItems = [
+    { title: "Courses", href: "/courses", icon: BookOpen },
+    { title: "Institutions", href: "/institutions", icon: GraduationCap },
+    { title: "Blog", href: "/blog", icon: Users },
+    { title: "About", href: "/our-story", icon: Info },
   ];
 
   return (
-    <header className="sticky top-0 z-[9999] isolate">
-      {/* Top Utility Bar - Blue */}
-      <div className="bg-[#4F5DBE] text-white">
-        <div className="container mx-auto px-4">
-          <div className="hidden md:flex items-center justify-between h-10 text-sm">
-            <nav className="flex items-center gap-6">
-              <Link href="/institutions" className="hover:text-white/80 transition-colors" data-testid="link-top-institutions">
-                TOP INSTITUTIONS
+    <header className="sticky top-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border/40">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center" data-testid="link-logo">
+            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent/50"
+                data-testid={`link-nav-${item.title.toLowerCase()}`}
+              >
+                {item.title}
               </Link>
-              <Link href="/courses?filter=trending" className="hover:text-white/80 transition-colors" data-testid="link-courses-demand">
-                COURSES IN DEMAND
-              </Link>
-              <Link href="/blog" className="hover:text-white/80 transition-colors" data-testid="link-knowledge-base">
-                KNOWLEDGE BASE
-              </Link>
-              <Link href="/blog" className="hover:text-white/80 transition-colors" data-testid="link-blog">
-                BLOG
-              </Link>
-            </nav>
+            ))}
+          </nav>
+
+          {/* Desktop Login Button */}
+          <div className="hidden md:flex items-center gap-3">
             {onStudentLoginClick ? (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
                 onClick={onStudentLoginClick}
-                className="text-white hover:bg-white/10 hover:text-white h-8"
-                data-testid="button-student-login-top"
+                data-testid="button-login"
               >
-                STUDENT LOGIN
+                Login
               </Button>
             ) : (
               <Button
-                variant="ghost"
+                variant="default"
                 size="sm"
                 asChild
-                className="text-white hover:bg-white/10 hover:text-white h-8"
-                data-testid="button-student-login-top"
+                data-testid="button-login"
               >
-                <a href="/api/login?type=student">
-                  STUDENT LOGIN
-                </a>
+                <a href="/api/login?type=student">Login</a>
               </Button>
             )}
           </div>
-          {/* Mobile - Just show as thin bar */}
-          <div className="md:hidden h-10" />
-        </div>
-      </div>
 
-      {/* Main Navigation Bar - White */}
-      <div className="bg-background border-b shadow-sm">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16 gap-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2" data-testid="link-logo">
-              <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto" />
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/institutions" className="text-foreground hover:text-primary transition-colors font-medium" data-testid="link-find-institutes">
-                FIND INSTITUTES
-              </Link>
-              <Link href="/courses" className="text-foreground hover:text-primary transition-colors font-medium" data-testid="link-find-courses">
-                FIND COURSES
-              </Link>
-              
-              {/* Services Dropdown */}
-              <NavigationMenu>
-                <NavigationMenuList>
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="font-medium" data-testid="trigger-services">
-                      SERVICES
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[400px] gap-3 p-4">
-                        {servicesMenuItems.map((item) => (
-                          <li key={item.href}>
-                            <NavigationMenuLink asChild>
-                              <Link
-                                href={item.href}
-                                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                data-testid={`link-service-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
-                              >
-                                <div className="text-sm font-medium leading-none">{item.title}</div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                </NavigationMenuList>
-              </NavigationMenu>
-
-              <Link href="/our-story" className="text-foreground hover:text-primary transition-colors font-medium" data-testid="link-about">
-                ABOUT
-              </Link>
-            </nav>
-
-            {/* Desktop CTA */}
-            <div className="hidden md:block">
-              <Button
-                variant="default"
-                size="default"
-                className="bg-[#E86C4F] hover:bg-[#d65c3f] text-white font-medium"
-                data-testid="button-free-counseling"
-              >
-                FREE COUNSELING
-              </Button>
-            </div>
-
-            {/* Mobile Menu */}
-            <div className="md:hidden flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                className="bg-[#E86C4F] hover:bg-[#d65c3f] text-white"
-                data-testid="button-free-counseling-mobile"
-              >
-                FREE COUNSELING
-              </Button>
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[300px]">
-                  <SheetHeader>
-                    <SheetTitle>Menu</SheetTitle>
-                  </SheetHeader>
-                  <nav className="flex flex-col gap-4 mt-8">
-                    {/* Main nav links - NOW FIRST */}
-                    <div className="pb-4 border-b">
-                      <p className="text-xs font-semibold text-muted-foreground mb-3">NAVIGATION</p>
+          {/* Mobile Menu */}
+          <div className="md:hidden">
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px] p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="text-left">Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col p-4">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
                       <Link
-                        href="/institutions"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-find-institutes"
+                        data-testid={`mobile-link-${item.title.toLowerCase()}`}
                       >
-                        FIND INSTITUTES
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {item.title}
                       </Link>
-                      <Link
-                        href="/courses"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-find-courses"
-                      >
-                        FIND COURSES
-                      </Link>
-                      <Link
-                        href="/our-story"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-about"
-                      >
-                        ABOUT
-                      </Link>
-                    </div>
-
-                    {/* Services - NOW SECOND */}
-                    <div className="pb-4 border-b">
-                      <p className="text-xs font-semibold text-muted-foreground mb-3">SERVICES</p>
-                      {servicesMenuItems.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="block py-2 text-sm hover:text-primary transition-colors"
-                          onClick={() => setMobileMenuOpen(false)}
-                          data-testid={`mobile-link-service-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
-                        >
-                          {item.title}
-                        </Link>
-                      ))}
-                    </div>
-
-                    {/* Quick Links - NOW LAST */}
-                    <div className="pb-4">
-                      <p className="text-xs font-semibold text-muted-foreground mb-3">QUICK LINKS</p>
-                      <Link
-                        href="/blog"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-knowledge-base"
-                      >
-                        KNOWLEDGE BASE
-                      </Link>
-                      <Link
-                        href="/blog"
-                        className="block py-2 text-sm font-medium hover:text-primary transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-blog"
-                      >
-                        BLOG
-                      </Link>
-                    </div>
-
-                    {/* Student Login */}
+                    );
+                  })}
+                  
+                  <div className="mt-4 pt-4 border-t">
                     {onStudentLoginClick ? (
                       <Button
                         variant="default"
@@ -242,26 +117,24 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                           setMobileMenuOpen(false);
                           onStudentLoginClick();
                         }}
-                        data-testid="button-mobile-student-login"
+                        data-testid="button-mobile-login"
                       >
-                        STUDENT LOGIN
+                        Login
                       </Button>
                     ) : (
                       <Button
                         variant="default"
                         className="w-full"
                         asChild
-                        data-testid="button-mobile-student-login"
+                        data-testid="button-mobile-login"
                       >
-                        <a href="/api/login?type=student">
-                          STUDENT LOGIN
-                        </a>
+                        <a href="/api/login?type=student">Login</a>
                       </Button>
                     )}
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            </div>
+                  </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
