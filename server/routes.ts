@@ -49,6 +49,8 @@ import {
   applicationInternalNotes,
   followUpReminders,
   adminTeamMembers,
+  crmLeads,
+  leadStatusHistory,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
@@ -5879,7 +5881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CONTACT INQUIRY ROUTES
   // ========================================
 
-  // Create contact inquiry (public)
+  // Create contact inquiry (public) - also creates CRM lead for unified lead management
   app.post("/api/contact/inquiry", async (req, res) => {
     console.log("Contact inquiry endpoint hit");
     console.log("Request body:", JSON.stringify(req.body, null, 2));
@@ -5899,6 +5901,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create the inquiry
       const inquiry = await storage.createContactInquiry(fullInquiryData);
+      
+      // Also create a CRM lead for unified lead management
+      try {
+        // Parse name for student inquiries
+        let firstName = "";
+        let lastName = "";
+        if (inquiry.inquiryType === "student" && inquiry.studentName) {
+          const nameParts = inquiry.studentName.trim().split(" ");
+          firstName = nameParts[0] || "";
+          lastName = nameParts.slice(1).join(" ") || "";
+        } else if (inquiry.inquiryType === "institution" && inquiry.contactPerson) {
+          const nameParts = inquiry.contactPerson.trim().split(" ");
+          firstName = nameParts[0] || "";
+          lastName = nameParts.slice(1).join(" ") || "";
+        }
+        
+        // Create CRM lead from contact inquiry
+        const [crmLead] = await db.insert(crmLeads).values({
+          firstName: firstName || "Unknown",
+          lastName: lastName || "Contact",
+          email: inquiry.email,
+          phone: inquiry.phone || "",
+          country: inquiry.country || undefined,
+          leadStatus: "not_contacted" as const,
+          leadRating: "warm" as const,
+          leadCreationMethod: "web_form" as const,
+          interestedIn: inquiry.courseInterest || inquiry.partnershipType || undefined,
+          notes: `Contact Inquiry (${inquiry.inquiryType}):\n\n${inquiry.message}${inquiry.institutionName ? `\n\nInstitution: ${inquiry.institutionName}` : ""}${inquiry.website ? `\nWebsite: ${inquiry.website}` : ""}${inquiry.studyLevel ? `\nStudy Level: ${inquiry.studyLevel}` : ""}${inquiry.visaStatus ? `\nVisa Status: ${inquiry.visaStatus}` : ""}`,
+          referrer: req.headers["referer"] || undefined,
+        }).returning();
+        
+        // Create initial status history
+        await db.insert(leadStatusHistory).values({
+          leadId: crmLead.id,
+          fromStatus: null,
+          toStatus: "not_contacted" as const,
+          notes: `Lead auto-created from ${inquiry.inquiryType} contact form submission`,
+        });
+        
+        console.log("CRM lead created from contact inquiry:", crmLead.id);
+      } catch (crmError) {
+        // Log error but don't fail the inquiry submission
+        console.error("Error creating CRM lead from contact inquiry:", crmError);
+      }
       
       // Send email notifications (don't wait for them to complete)
       sendContactInquiryEmails({
