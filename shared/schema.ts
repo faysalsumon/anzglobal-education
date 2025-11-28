@@ -227,7 +227,7 @@ export const universities = pgTable("universities", {
   fullDescription: text("full_description"), // AI-powered
   institutionGallery: text("institution_gallery").array(), // Up to 3 images, 600x400px
   topCourses: text("top_courses").array(), // Array of course IDs or names
-  campusAddresses: jsonb("campus_addresses"), // Array of campus address objects: [{address: string, city: string, state: string, postcode: string}]
+  campusAddresses: jsonb("campus_addresses"), // Array of campus address objects: [{name: string, address: string, city: string, state: string, postcode: string, country: string}]
   
   // Filter-friendly fields (nullable, precomputed from course data)
   tuitionFeesMin: decimal("tuition_fees_min", { precision: 10, scale: 2 }), // Minimum tuition across all programs
@@ -1106,6 +1106,7 @@ export const insertUniversitySchema = createInsertSchema(universities).omit({
 }).extend({
   // Validate campus addresses structure
   campusAddresses: z.array(z.object({
+    name: z.string().optional(),
     address: z.string(),
     city: z.string().optional(),
     state: z.string().optional(),

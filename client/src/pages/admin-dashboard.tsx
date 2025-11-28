@@ -80,6 +80,7 @@ interface Institution {
   topCourses: string[] | null;
   institutionGallery: string[] | null;
   campusAddresses: Array<{
+    name?: string;
     address: string;
     city: string;
     state: string;
@@ -207,6 +208,7 @@ const institutionSchema = z.object({
   topCourses: z.string().optional(),
   institutionGallery: z.array(z.string()).optional(),
   campusAddresses: z.array(z.object({
+    name: z.string().optional(),
     address: z.string(),
     city: z.string(),
     state: z.string(),
@@ -2762,12 +2764,29 @@ export default function AdminDashboard() {
                   </div>
                   {Array.from({ length: Number(institutionForm.watch("numberOfCampuses") ?? 0) }).map((_, index) => {
                     const campusAddresses = institutionForm.watch("campusAddresses") || [];
-                    const currentAddress = campusAddresses[index] || { address: "", city: "", state: "", postcode: "", country: "" };
+                    const currentAddress = campusAddresses[index] || { name: "", address: "", city: "", state: "", postcode: "", country: "" };
 
                     return (
                       <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
                         <h4 className="font-medium text-sm">Campus {index + 1}</h4>
                         
+                        <div className="space-y-2">
+                          <FormLabel>Campus Name</FormLabel>
+                          <Input
+                            value={currentAddress.name || ""}
+                            onChange={(e) => {
+                              const newAddresses = [...(institutionForm.watch("campusAddresses") || [])];
+                              newAddresses[index] = { ...currentAddress, name: e.target.value };
+                              institutionForm.setValue("campusAddresses", newAddresses);
+                            }}
+                            placeholder="e.g., Sydney Campus, Melbourne CBD"
+                            data-testid={`input-admin-campusName-${index}`}
+                          />
+                          <FormDescription className="text-xs">
+                            A friendly name to identify this campus
+                          </FormDescription>
+                        </div>
+
                         <div className="space-y-2">
                           <FormLabel>Street Address</FormLabel>
                           <GoogleAddressAutocomplete
@@ -3355,6 +3374,7 @@ export default function AdminDashboard() {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 border rounded-md">
                         {selectedInstitution.campusAddresses.map((campus, index) => {
+                          // Always use full address as key for consistency with existing data
                           const campusKey = `${campus.address}, ${campus.city}, ${campus.state} ${campus.postcode}`;
                           return (
                             <div key={index} className="flex items-start space-x-2">
@@ -3374,7 +3394,10 @@ export default function AdminDashboard() {
                                 htmlFor={`campus-${index}`}
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                               >
-                                <div>{campus.address}</div>
+                                {campus.name && (
+                                  <div className="font-semibold">{campus.name}</div>
+                                )}
+                                <div className={campus.name ? "text-xs text-muted-foreground" : ""}>{campus.address}</div>
                                 <div className="text-xs text-muted-foreground">
                                   {campus.city}, {campus.state} {campus.postcode}
                                 </div>
