@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -171,6 +171,26 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) =>
 
 MentionList.displayName = "MentionList";
 
+function extractMentionsFromJSON(json: any): string[] {
+  const mentions: string[] = [];
+  
+  function traverse(node: any) {
+    if (!node) return;
+    if (node.type === "mention" && node.attrs?.id) {
+      mentions.push(node.attrs.id);
+    }
+    if (Array.isArray(node.content)) {
+      node.content.forEach(traverse);
+    }
+  }
+  
+  if (json?.content) {
+    json.content.forEach(traverse);
+  }
+  
+  return [...new Set(mentions)];
+}
+
 function MentionEditor({
   onSubmit,
   isSubmitting,
@@ -182,7 +202,12 @@ function MentionEditor({
   compact?: boolean;
   teamMembers: TeamMember[];
 }) {
-  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const [mentionCount, setMentionCount] = useState(0);
+  const teamMembersRef = useRef<TeamMember[]>(teamMembers);
+  
+  useEffect(() => {
+    teamMembersRef.current = teamMembers;
+  }, [teamMembers]);
 
   const editor = useEditor({
     extensions: [
@@ -203,7 +228,7 @@ function MentionEditor({
         },
         suggestion: {
           items: ({ query }) => {
-            return teamMembers.filter((member) => {
+            return teamMembersRef.current.filter((member) => {
               const searchQuery = query.toLowerCase();
               const firstName = member.user.firstName?.toLowerCase() || "";
               const lastName = member.user.lastName?.toLowerCase() || "";
@@ -274,10 +299,8 @@ function MentionEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      const mentions = editor.getJSON().content?.flatMap((node) =>
-        node.content?.filter((n) => n.type === "mention").map((m) => m.attrs?.id)
-      ).filter(Boolean) as string[];
-      setMentionedUserIds([...new Set(mentions || [])]);
+      const mentions = extractMentionsFromJSON(editor.getJSON());
+      setMentionCount(mentions.length);
     },
   });
 
@@ -285,9 +308,11 @@ function MentionEditor({
     if (!editor || editor.isEmpty) return;
     
     const content = editor.getHTML();
+    const mentionedUserIds = extractMentionsFromJSON(editor.getJSON());
+    
     onSubmit(content, mentionedUserIds);
     editor.commands.clearContent();
-    setMentionedUserIds([]);
+    setMentionCount(0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -307,10 +332,10 @@ function MentionEditor({
           editor={editor} 
           data-testid="textarea-new-note"
         />
-        {mentionedUserIds.length > 0 && (
+        {mentionCount > 0 && (
           <div className="px-3 pb-2 flex items-center gap-1 text-xs text-muted-foreground">
             <AtSign className="h-3 w-3" />
-            <span>Mentioning {mentionedUserIds.length} team member{mentionedUserIds.length > 1 ? 's' : ''}</span>
+            <span>Mentioning {mentionCount} team member{mentionCount > 1 ? 's' : ''}</span>
           </div>
         )}
       </div>

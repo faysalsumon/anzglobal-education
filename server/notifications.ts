@@ -12,6 +12,7 @@ export type NotificationType =
   | "institution_approval_request"
   | "institution_approved"
   | "institution_rejected"
+  | "internal_note_mention"
   | "general";
 
 interface CreateNotificationParams {

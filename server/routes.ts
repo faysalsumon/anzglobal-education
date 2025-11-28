@@ -7327,10 +7327,15 @@ Sitemap: ${baseUrl}/sitemap.xml
         ? `${author.firstName} ${author.lastName}` 
         : (author?.email || 'A team member');
       
-      // Send notifications to mentioned users (skip if author mentions themselves)
+      // Send notifications to mentioned users (validate against admin team members, skip self-mentions)
       if (note.mentionedUserIds && note.mentionedUserIds.length > 0) {
+        // Get all valid admin team member user IDs for validation
+        const allAdminMembers = await storage.getAllAdminTeamMembers();
+        const validAdminUserIds = new Set(allAdminMembers.filter(m => m.isActive).map(m => m.userId));
+        
         for (const mentionedUserId of note.mentionedUserIds) {
-          if (mentionedUserId !== userId) {
+          // Skip self-mentions and validate against actual admin team members
+          if (mentionedUserId !== userId && validAdminUserIds.has(mentionedUserId)) {
             try {
               await createNotification({
                 userId: mentionedUserId,
