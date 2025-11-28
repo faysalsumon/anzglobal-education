@@ -23,6 +23,7 @@ import { ApplicationInternalNotes } from "@/components/application-internal-note
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
+import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { ApplicationStage as StageType, STAGE_CONFIG, ALL_STAGES, ACTIVE_STAGES as CONFIG_ACTIVE_STAGES, TERMINAL_STAGES as CONFIG_TERMINAL_STAGES } from "@/lib/stage-config";
 
 type ApplicationStage = 
@@ -737,67 +738,30 @@ export function AdminApplicationsKanban() {
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-application-details">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-application-details">
           <DialogHeader>
-            <DialogTitle>Application Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Application Details
+              {selectedApplication && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  - {selectedApplication.student.firstName} {selectedApplication.student.lastName}
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {selectedApplication && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Student</p>
-                  <p className="text-sm">
-                    {selectedApplication.student.firstName} {selectedApplication.student.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{selectedApplication.student.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Course</p>
-                  <p className="text-sm">{selectedApplication.course.title}</p>
-                  <p className="text-xs text-muted-foreground">{selectedApplication.course.level}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">University</p>
-                  <p className="text-sm">{selectedApplication.university.name}</p>
-                  <p className="text-xs text-muted-foreground">{selectedApplication.university.country}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Current Stage</p>
-                  <ApplicationStageSelector
-                    applicationId={selectedApplication.application.id}
-                    currentStage={selectedApplication.application.currentStage as StageType}
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Consultant</p>
-                  <p className="text-sm">
-                    {selectedApplication.consultant
-                      ? `${selectedApplication.consultant.firstName} ${selectedApplication.consultant.lastName}`
-                      : "Unassigned"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Applied Date</p>
-                  <p className="text-sm">
-                    {new Date(selectedApplication.application.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <h3 className="font-semibold text-sm">Internal Notes</h3>
-                </div>
-                <ApplicationInternalNotes 
-                  applicationId={selectedApplication.application.id}
-                  currentUserId={user?.id}
-                  compact
-                />
-              </div>
-            </div>
+            <ApplicationDetailsPanel
+              application={selectedApplication.application as any}
+              course={selectedApplication.course}
+              university={selectedApplication.university}
+              student={selectedApplication.student}
+              consultant={selectedApplication.consultant}
+              currentUserId={user?.id}
+              onClose={() => setDetailsDialogOpen(false)}
+              onDeleted={() => {
+                setSelectedApplication(null);
+              }}
+            />
           )}
           <DialogFooter className="flex-row justify-between sm:justify-between">
             <Button 

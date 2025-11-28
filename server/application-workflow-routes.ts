@@ -861,6 +861,74 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     }
   });
 
+  // Get admin users (consultants) for assignment dropdown
+  app.get("/api/admin/consultants", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get all admin users who can be assigned as consultants
+      const adminUsers = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.userType, 'admin'));
+
+      res.json({ consultants: adminUsers });
+    } catch (error: any) {
+      console.error("Error fetching consultants:", error);
+      res.status(500).json({ error: "Failed to fetch consultants" });
+    }
+  });
+
+  // Get stage history for application (admin access)
+  app.get("/api/admin/applications/:id/history", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      // Verify application exists
+      const application = await db.query.applications.findFirst({
+        where: eq(applications.id, applicationId),
+      });
+
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      // Get stage history with user details
+      const history = await db
+        .select({
+          history: applicationStageHistory,
+          changedByUser: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+          },
+        })
+        .from(applicationStageHistory)
+        .leftJoin(users, eq(applicationStageHistory.changedBy, users.id))
+        .where(eq(applicationStageHistory.applicationId, applicationId))
+        .orderBy(desc(applicationStageHistory.createdAt));
+
+      res.json({ history });
+    } catch (error: any) {
+      console.error("Error fetching application history:", error);
+      res.status(500).json({ error: "Failed to fetch history" });
+    }
+  });
+
   // Get application statistics (for dashboard)
   app.get("/api/admin/applications/stats", isAuthenticated, async (req, res) => {
     try {
