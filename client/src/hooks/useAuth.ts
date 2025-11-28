@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { type User } from "@shared/schema";
+import { getQueryFn } from "@/lib/queryClient";
 
 interface UserWithAdminRole extends User {
   adminRole?: string | null;
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error, isFetched, isSuccess } = useQuery<UserWithAdminRole>({
+  const { data: user, isLoading, error, isFetched, isSuccess } = useQuery<UserWithAdminRole | null>({
     queryKey: ["/api/auth/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }), // Return null on 401 instead of throwing
     retry: false,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
