@@ -379,7 +379,19 @@ export function CrmLeadsPanel() {
                     {lead.courseName && (
                       <div className="flex items-center gap-1 text-sm text-primary mt-1" data-testid={`text-lead-course-${lead.id}`}>
                         <BookOpen className="h-3 w-3" />
-                        <span className="font-medium">{lead.courseName}</span>
+                        {lead.courseId ? (
+                          <a 
+                            href={`/courses/${lead.courseId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {lead.courseName}
+                          </a>
+                        ) : (
+                          <span className="font-medium">{lead.courseName}</span>
+                        )}
                       </div>
                     )}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
@@ -853,6 +865,18 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
                   <p className="text-sm text-muted-foreground mt-1">{lead.interestedIn}</p>
                 )}
               </div>
+              {lead.courseId && (
+                <a 
+                  href={`/courses/${lead.courseId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline" size="sm" data-testid="button-view-course">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Course
+                  </Button>
+                </a>
+              )}
             </div>
           </CardContent>
         </Card>
