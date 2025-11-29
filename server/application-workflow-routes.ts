@@ -22,7 +22,7 @@ import { sendStageTransitionNotification, sendDocumentRequestNotification } from
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
-  applicationId: z.string().uuid(),
+  applicationId: z.string().min(1),
   toStage: z.enum([
     'Assessment',
     'Collect Docs',
@@ -42,13 +42,13 @@ const stageTransitionSchema = z.object({
 
 // Application assignment schema
 const assignmentSchema = z.object({
-  applicationIds: z.array(z.string().uuid()),
-  consultantId: z.string().uuid(),
+  applicationIds: z.array(z.string().min(1)),
+  consultantId: z.string().min(1),
 });
 
 // Document upload schema
 const stageDocumentUploadSchema = z.object({
-  applicationId: z.string().uuid(),
+  applicationId: z.string().min(1),
   stage: z.enum([
     'Assessment',
     'Collect Docs',
@@ -70,7 +70,7 @@ const stageDocumentUploadSchema = z.object({
 
 // Document verification schema
 const documentVerificationSchema = z.object({
-  documentId: z.string().uuid(),
+  documentId: z.string().min(1),
   isVerified: z.boolean(),
   verificationNotes: z.string().optional(),
   rejectionReason: z.string().optional(),
