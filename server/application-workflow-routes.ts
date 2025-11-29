@@ -392,7 +392,35 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(applications.createdAt));
 
-      res.json({ applications: adminApplications });
+      // Get document progress for each application
+      const documentStats = await db
+        .select({
+          applicationId: applicationStageDocuments.applicationId,
+          totalDocs: sql<number>`count(*)::int`,
+          uploadedDocs: sql<number>`count(case when ${applicationStageDocuments.documentUrl} is not null then 1 end)::int`,
+          verifiedDocs: sql<number>`count(case when ${applicationStageDocuments.isVerified} = true then 1 end)::int`,
+          requiredDocs: sql<number>`count(case when ${applicationStageDocuments.isRequired} = true then 1 end)::int`,
+          requiredUploaded: sql<number>`count(case when ${applicationStageDocuments.isRequired} = true and ${applicationStageDocuments.documentUrl} is not null then 1 end)::int`,
+        })
+        .from(applicationStageDocuments)
+        .groupBy(applicationStageDocuments.applicationId);
+
+      // Create a map for quick lookup
+      const docStatsMap = new Map(documentStats.map(stat => [stat.applicationId, stat]));
+
+      // Add document progress to each application
+      const applicationsWithProgress = adminApplications.map(app => ({
+        ...app,
+        documentProgress: docStatsMap.get(app.application.id) || {
+          totalDocs: 0,
+          uploadedDocs: 0,
+          verifiedDocs: 0,
+          requiredDocs: 0,
+          requiredUploaded: 0,
+        },
+      }));
+
+      res.json({ applications: applicationsWithProgress });
     } catch (error: any) {
       console.error("Error fetching admin applications:", error);
       res.status(500).json({ error: "Failed to fetch applications" });
