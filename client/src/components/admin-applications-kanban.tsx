@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -796,8 +796,8 @@ export function AdminApplicationsKanban() {
             {/* Active Stages */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Active Stages</h3>
-              <ScrollArea className="w-full pb-4">
-                <div className="flex gap-4 min-w-max">
+              <ScrollArea className="w-full pb-4" type="scroll">
+                <div className="flex gap-4 min-w-max pb-4">
                   {STAGES.map((stage) => (
                     <DroppableStageColumn key={stage} stage={stage}>
                       <SortableContext
@@ -805,7 +805,7 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-80 flex-shrink-0">
+                        <div className="w-72 sm:w-80 flex-shrink-0">
                           <Card>
                             <CardHeader className="pb-3">
                               <div className="flex items-center justify-between">
@@ -852,62 +852,68 @@ export function AdminApplicationsKanban() {
                     </DroppableStageColumn>
                   ))}
                 </div>
+                <ScrollBar orientation="horizontal" className="h-3" />
               </ScrollArea>
             </div>
 
             {/* Terminal Stages */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Final Outcomes</h3>
-              <div className="grid gap-4 md:grid-cols-3">
-                {TERMINAL_STAGES.map((stage) => (
-                  <DroppableStageColumn key={stage} stage={stage}>
-                    <SortableContext
-                      id={stage}
-                      items={applicationsByStage[stage].map(app => app.application.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium">
-                              {stage}
-                            </CardTitle>
-                            <Badge variant="secondary" className="text-xs">
-                              {applicationsByStage[stage].length}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <ScrollArea className="h-64">
-                            <div className="space-y-2 pr-4">
-                              {applicationsByStage[stage].length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                  No applications
-                                </p>
-                              ) : (
-                                applicationsByStage[stage].map((app) => (
-                                  <DraggableApplicationCard
-                                    key={app.application.id}
-                                    app={app}
-                                    isSelected={selectedApplications.has(app.application.id)}
-                                    onToggleSelection={() => toggleSelection(app.application.id)}
-                                    onViewDetails={() => {
-                                      setSelectedApplication(app);
-                                      setDetailsDialogOpen(true);
-                                    }}
-                                    onAdvanceStage={() => {}}
-                                    nextStage={null}
-                                  />
-                                ))
-                              )}
-                            </div>
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
-                    </SortableContext>
-                  </DroppableStageColumn>
-                ))}
-              </div>
+              <ScrollArea className="w-full pb-4" type="scroll">
+                <div className="flex gap-4 min-w-max md:grid md:grid-cols-3 md:min-w-0 pb-4 md:pb-0">
+                  {TERMINAL_STAGES.map((stage) => (
+                    <DroppableStageColumn key={stage} stage={stage}>
+                      <SortableContext
+                        id={stage}
+                        items={applicationsByStage[stage].map(app => app.application.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="w-72 sm:w-80 md:w-auto flex-shrink-0 md:flex-shrink">
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-medium">
+                                  {stage}
+                                </CardTitle>
+                                <Badge variant="secondary" className="text-xs">
+                                  {applicationsByStage[stage].length}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <ScrollArea className="h-64">
+                                <div className="space-y-2 pr-4">
+                                  {applicationsByStage[stage].length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                      No applications
+                                    </p>
+                                  ) : (
+                                    applicationsByStage[stage].map((app) => (
+                                      <DraggableApplicationCard
+                                        key={app.application.id}
+                                        app={app}
+                                        isSelected={selectedApplications.has(app.application.id)}
+                                        onToggleSelection={() => toggleSelection(app.application.id)}
+                                        onViewDetails={() => {
+                                          setSelectedApplication(app);
+                                          setDetailsDialogOpen(true);
+                                        }}
+                                        onAdvanceStage={() => {}}
+                                        nextStage={null}
+                                      />
+                                    ))
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </SortableContext>
+                    </DroppableStageColumn>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" className="h-3 md:hidden" />
+              </ScrollArea>
             </div>
           </div>
         </DndContext>
