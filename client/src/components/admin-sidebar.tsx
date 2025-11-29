@@ -79,6 +79,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       value: "crm-contacts",
       show: true,
     },
+    {
+      icon: ClipboardList,
+      label: "Applications",
+      value: "applications",
+      show: true,
+    },
   ];
 
   // Content & workflow items (visible to all admins)
@@ -87,12 +93,6 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: BookOpen,
       label: "Courses",
       value: "courses",
-      show: true,
-    },
-    {
-      icon: ClipboardList,
-      label: "Applications",
-      value: "applications",
       show: true,
     },
     {

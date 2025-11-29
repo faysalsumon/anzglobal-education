@@ -13,11 +13,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, User, FileText, CheckCircle, XCircle, Clock, 
-  ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell
+  ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell,
+  List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye
 } from "lucide-react";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
@@ -25,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { ApplicationStage as StageType, STAGE_CONFIG, ALL_STAGES, ACTIVE_STAGES as CONFIG_ACTIVE_STAGES, TERMINAL_STAGES as CONFIG_TERMINAL_STAGES } from "@/lib/stage-config";
+import { format } from "date-fns";
 
 type ApplicationStage = 
   | "Assessment"
@@ -240,6 +243,8 @@ export function AdminApplicationsKanban() {
   const [searchQuery, setSearchQuery] = useState("");
   const [consultantFilter, setConsultantFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
+  const [stageFilter, setStageFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedConsultant, setSelectedConsultant] = useState<string | undefined>();
@@ -247,6 +252,8 @@ export function AdminApplicationsKanban() {
   const [selectedApplication, setSelectedApplication] = useState<AdminApplication | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -335,8 +342,31 @@ export function AdminApplicationsKanban() {
       countryFilter === "all" ||
       app.university.country === countryFilter;
 
-    return matchesSearch && matchesConsultant && matchesCountry;
+    const matchesStage =
+      stageFilter === "all" ||
+      app.application.currentStage === stageFilter;
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      app.application.status === statusFilter;
+
+    return matchesSearch && matchesConsultant && matchesCountry && matchesStage && matchesStatus;
   });
+
+  // Get unique universities
+  const universities = Array.from(new Set(applications.map(app => app.university.name).filter(Boolean)));
+  
+  // Check if any filters are active
+  const hasActiveFilters = consultantFilter !== "all" || countryFilter !== "all" || stageFilter !== "all" || statusFilter !== "all";
+  
+  // Clear all filters
+  const clearAllFilters = () => {
+    setConsultantFilter("all");
+    setCountryFilter("all");
+    setStageFilter("all");
+    setStatusFilter("all");
+    setSearchQuery("");
+  };
 
   // Group by stage
   const applicationsByStage: Record<ApplicationStage, AdminApplication[]> = {
@@ -518,8 +548,8 @@ export function AdminApplicationsKanban() {
               </Alert>
             )}
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* Filters Row 1 - Search, Stage Filter, View Toggle */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -530,39 +560,124 @@ export function AdminApplicationsKanban() {
                   data-testid="input-search-applications"
                 />
               </div>
-              <Select value={consultantFilter} onValueChange={setConsultantFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter-consultant">
-                  <SelectValue placeholder="All Consultants" />
+              <Select value={stageFilter} onValueChange={setStageFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-stage-filter">
+                  <SelectValue placeholder="All Stages" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Consultants</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {consultants.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName}
+                  <SelectItem value="all">All Stages</SelectItem>
+                  {STAGES.map((stage) => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
+                    </SelectItem>
+                  ))}
+                  {TERMINAL_STAGES.map((stage) => (
+                    <SelectItem key={stage} value={stage}>
+                      {stage}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={countryFilter} onValueChange={setCountryFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-country">
-                  <SelectValue placeholder="All Countries" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
-                  {countries.map((country) => (
-                    <SelectItem key={country} value={country!}>
-                      {country}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* View Toggle */}
+              <div className="flex items-center gap-1 border rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  data-testid="button-view-list"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('kanban')}
+                  data-testid="button-view-kanban"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+
+            {/* Collapsible Additional Filters */}
+            <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <div className="flex items-center gap-2">
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    data-testid="button-more-filters"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    More Filters
+                    {hasActiveFilters && (
+                      <Badge variant="secondary" className="ml-2">{[consultantFilter, countryFilter, statusFilter].filter(f => f !== "all").length}</Badge>
+                    )}
+                    <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFilters}
+                    className="text-muted-foreground hover:text-foreground"
+                    data-testid="button-clear-filters"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              <CollapsibleContent className="mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Select value={consultantFilter} onValueChange={setConsultantFilter}>
+                    <SelectTrigger data-testid="select-filter-consultant">
+                      <SelectValue placeholder="All Consultants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Consultants</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {consultants.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger data-testid="select-filter-country">
+                      <SelectValue placeholder="All Countries" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country!}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger data-testid="select-filter-status">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </CardContent>
       </Card>
 
-      {/* Kanban Board */}
+      {/* Loading State */}
       {isLoading ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -570,7 +685,107 @@ export function AdminApplicationsKanban() {
             <p className="mt-4 text-muted-foreground">Loading applications...</p>
           </CardContent>
         </Card>
+      ) : viewMode === 'list' ? (
+        /* List View */
+        <div className="space-y-4" data-testid="applications-list-view">
+          {filteredApplications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No applications found matching your filters.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredApplications.map((app) => (
+              <Card 
+                key={app.application.id} 
+                className="hover-elevate cursor-pointer"
+                onClick={() => {
+                  setSelectedApplication(app);
+                  setDetailsDialogOpen(true);
+                }}
+                data-testid={`card-application-${app.application.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    {/* Left: Checkbox and Student Info */}
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Checkbox
+                        checked={selectedApplications.has(app.application.id)}
+                        onCheckedChange={() => toggleSelection(app.application.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        data-testid={`checkbox-list-application-${app.application.id}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-medium truncate">
+                            {app.student.firstName} {app.student.lastName}
+                          </h4>
+                          <Badge className={STAGE_COLORS[app.application.currentStage]}>
+                            {app.application.currentStage}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 truncate">
+                          {app.student.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Center: Course and University */}
+                    <div className="flex-1 min-w-0 lg:text-center">
+                      <div className="flex items-center gap-2 lg:justify-center">
+                        <GraduationCap className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">{app.course.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 lg:justify-center">
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm text-muted-foreground truncate">{app.university.name}</span>
+                      </div>
+                    </div>
+
+                    {/* Right: Consultant and Actions */}
+                    <div className="flex items-center gap-4 justify-between lg:justify-end">
+                      <div className="text-sm">
+                        {app.consultant ? (
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span>{app.consultant.firstName} {app.consultant.lastName}</span>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300">
+                            Unassigned
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {app.application.createdAt && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(app.application.createdAt), "MMM d, yyyy")}
+                          </div>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedApplication(app);
+                            setDetailsDialogOpen(true);
+                          }}
+                          data-testid={`button-view-${app.application.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       ) : (
+        /* Kanban View */
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
