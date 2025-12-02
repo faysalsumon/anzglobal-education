@@ -1172,8 +1172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           max: scholarshipRanges.length > 0 ? Math.max(...scholarshipRanges.map(r => r.max || 0)) : 100,
         },
         tuitionRange: {
-          min: tuitionRanges.length > 0 ? Math.min(...tuitionRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
-          max: tuitionRanges.length > 0 ? Math.max(...tuitionRanges.map(r => r.max || 0)) : 100000,
+          min: tuitionRanges.length > 0 ? Math.min(...tuitionRanges.map(r => Number(r.min) || 0).filter(v => v > 0)) : 0,
+          max: tuitionRanges.length > 0 ? Math.max(...tuitionRanges.map(r => Number(r.max) || 0)) : 100000,
         },
         totalCount: approvedInstitutions.length,
       });
@@ -1659,13 +1659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const searchCity = normalizeCity(parsedParams.campusCity);
-          const hasCampusInCity = course.campuses?.some(campus => {
-            if (!campus.city) return false;
-            const campusCity = normalizeCity(campus.city);
+          // Check campusLocations array (string array of location names)
+          const hasCampusInCity = course.campusLocations?.some((location: string) => {
+            if (!location) return false;
+            const normalizedLocation = normalizeCity(location);
             // Flexible matching after normalization
-            return campusCity === searchCity || 
-                   campusCity.includes(searchCity) ||
-                   searchCity.includes(campusCity);
+            return normalizedLocation === searchCity || 
+                   normalizedLocation.includes(searchCity) ||
+                   searchCity.includes(normalizedLocation);
           });
           if (!hasCampusInCity) return false;
         }
@@ -2926,7 +2927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await fs.access(uploadsBase);
         }
       } catch {
-        uploadsBase = null;
+        uploadsBase = undefined;
       }
       
       // Fall back to local uploads directory if object storage not available
@@ -3755,7 +3756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvalStatus: 'approved',
         approvedAt: new Date(),
         approvedBy: userId,
-      });
+      } as any);
 
       // Log activity
       await logApprove({
@@ -3795,7 +3796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateCourse(req.params.id, {
         approvalStatus: 'rejected',
         rejectionReason: reason,
-      });
+      } as any);
 
       // Log activity
       await logReject({
@@ -4178,7 +4179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update institutions
       await db.update(universities)
-        .set({ status, updatedAt: new Date() })
+        .set({ approvalStatus: status, updatedAt: new Date() })
         .where(or(...institutionIds.map(id => eq(universities.id, id))));
 
       res.json({ 
@@ -4244,7 +4245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update courses
       await db.update(courses)
-        .set({ status, updatedAt: new Date() })
+        .set({ approvalStatus: status, updatedAt: new Date() })
         .where(or(...courseIds.map(id => eq(courses.id, id))));
 
       res.json({ 
@@ -5760,7 +5761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newBlog = await storage.createBlog({
         ...blogData,
         authorId: userId,
-      });
+      } as any);
       
       res.status(201).json(newBlog);
     } catch (error) {
@@ -6470,15 +6471,20 @@ Sitemap: ${baseUrl}/sitemap.xml
             // Import universities
             for (const row of validRows) {
               try {
-                const universityData = transformUniversityRow(row.data);
+                const universityData = transformUniversityRow(row.data, userId);
                 
-                // Skip if already exists (idempotency guard)
+                // Skip if name is missing or already exists (idempotency guard)
+                if (!universityData.name) {
+                  importErrors.push(`Row ${row.rowIndex}: University name is required`);
+                  continue;
+                }
+                
                 if (existingNames.has(universityData.name.toLowerCase())) {
                   console.log(`[CSV Import] Skipping duplicate university: ${universityData.name}`);
                   continue;
                 }
                 
-                await storage.createUniversity(universityData);
+                await storage.createUniversity(universityData as any);
                 existingNames.add(universityData.name.toLowerCase()); // Add to set for subsequent rows
                 importedCount++;
               } catch (error: any) {
@@ -6516,7 +6522,14 @@ Sitemap: ${baseUrl}/sitemap.xml
                 }
                 
                 const courseData = transformCourseRow(row.data, universityId);
-                const courseKey = `${courseData.title!.toLowerCase()}:${courseData.universityId}`;
+                
+                // Skip if title is missing
+                if (!courseData.title) {
+                  importErrors.push(`Row ${row.rowIndex}: Course title is required`);
+                  continue;
+                }
+                
+                const courseKey = `${courseData.title.toLowerCase()}:${courseData.universityId}`;
                 
                 // Skip if already exists (idempotency guard)
                 if (existingCourseKeys.has(courseKey)) {
@@ -6524,7 +6537,7 @@ Sitemap: ${baseUrl}/sitemap.xml
                   continue;
                 }
                 
-                await storage.createCourse(courseData);
+                await storage.createCourse(courseData as any);
                 existingCourseKeys.add(courseKey); // Add to set for subsequent rows
                 importedCount++;
               } catch (error: any) {
@@ -6692,7 +6705,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       console.log('[WS] Session ID after unsigning:', sessionId ? 'Valid' : 'Invalid');
       
-      if (!sessionId || sessionId === false) {
+      if (!sessionId || sessionId === 'false') {
         console.log('[WS] Rejecting: Invalid session signature');
         ws.close(1008, 'Unauthorized: Invalid session');
         return;
@@ -7179,7 +7192,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
       
       const user = await storage.getUser(userId);
-      const assignedByName = getUserDisplayName(user);
+      const assignedByName = getUserDisplayName(user || { email: 'Unknown' });
       
       const data = insertTaskSchema.parse({
         ...req.body,
@@ -7497,7 +7510,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       await storage.deleteNote(req.params.id);
       
       // Log activity
-      await logDelete(userId, 'internal_note', req.params.id, `Deleted internal note`);
+      await logDelete({
+        req,
+        entityType: 'notification',
+        entityId: req.params.id,
+        entityName: 'Internal note',
+      });
       
       res.json({ message: "Note deleted successfully" });
     } catch (error: any) {
