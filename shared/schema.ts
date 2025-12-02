@@ -1444,7 +1444,7 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
   id: true,
   createdAt: true,
 }).extend({
-  entityType: z.enum(['user', 'institution', 'course', 'application', 'student_lead', 'inquiry_lead', 'blog', 'document', 'scraped_course', 'import_batch', 'team_member', 'notification']),
+  entityType: z.enum(['user', 'institution', 'course', 'application', 'student_lead', 'inquiry_lead', 'blog', 'document', 'scraped_course', 'import_batch', 'team_member', 'notification', 'task', 'reminder']),
   action: z.enum(['created', 'updated', 'deleted', 'approved', 'rejected', 'activated', 'deactivated', 'assigned', 'unassigned', 'login', 'logout', 'status_changed', 'imported', 'exported']),
   entityId: z.string().min(1, "Entity ID is required"),
 });

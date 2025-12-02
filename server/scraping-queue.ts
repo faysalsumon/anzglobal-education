@@ -1,48 +1,29 @@
-import { Queue, Worker, Job } from "bullmq";
+import { Queue, Job } from "bullmq";
 import Redis from "ioredis";
 
 /**
- * Redis connection for BullMQ
- * Uses environment variables for configuration
+ * Track Redis availability
  */
-const connection = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  maxRetriesPerRequest: null, // Required for BullMQ
-  retryStrategy: () => null, // Don't retry in dev (suppress errors)
-  lazyConnect: true, // Don't connect immediately
-});
-
-// Suppress Redis connection errors in development
-connection.on("error", (err: any) => {
-  const isDev = process.env.NODE_ENV === "development";
-  const isRedisError = err.code === "ECONNREFUSED" || 
-                        err.message?.includes("Connection is closed") ||
-                        err.message?.includes("connect ECONNREFUSED");
-  
-  if (isDev && isRedisError) {
-    // Silent - Redis not available in dev, use direct scraping endpoint instead
-  } else {
-    console.error("Redis connection error:", err.message);
-  }
-});
+let redisAvailable = false;
+let scrapingQueueInstance: Queue<ScrapingJobData> | null = null;
+let connectionInstance: Redis | null = null;
 
 /**
  * Job data for scraping an institution
  */
 export interface ScrapingJobData {
-  jobId: string; // Database job ID
-  institutionId?: string; // Institution ID (if exists)
+  jobId: string;
+  institutionId?: string;
   institutionUrl: string;
   institutionName?: string;
-  templateId?: string; // Scraping template ID (drives browser settings)
+  templateId?: string;
 }
 
 /**
  * Job progress update data
  */
 export interface ScrapingJobProgress {
-  progress: number; // 0-100
+  progress: number;
   totalPages: number;
   scrapedPages: number;
   coursesFound: number;
@@ -52,32 +33,95 @@ export interface ScrapingJobProgress {
 }
 
 /**
- * Queue for scraping jobs
+ * Check if Redis is available
  */
-export const scrapingQueue = new Queue<ScrapingJobData>("scraping-jobs", {
-  connection,
-  defaultJobOptions: {
-    removeOnComplete: {
-      count: 100, // Keep last 100 completed jobs
-      age: 7 * 24 * 3600, // Keep for 7 days
-    },
-    removeOnFail: {
-      count: 50, // Keep last 50 failed jobs for debugging
-    },
-    attempts: 3, // Retry failed jobs up to 3 times
-    backoff: {
-      type: "exponential",
-      delay: 5000, // Start with 5 second delay, then exponentially increase
-    },
-  },
-});
+export function isRedisAvailable(): boolean {
+  return redisAvailable;
+}
+
+/**
+ * Get the Redis connection (creates if needed, only when Redis is available)
+ */
+export function getConnection(): Redis | null {
+  return connectionInstance;
+}
+
+/**
+ * Check Redis availability by attempting to connect
+ * Only creates connection if Redis is actually available
+ */
+export async function checkRedisAvailability(): Promise<boolean> {
+  if (redisAvailable && connectionInstance) {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    const testConnection = new Redis({
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379"),
+      maxRetriesPerRequest: null,
+      retryStrategy: () => null,
+      lazyConnect: true,
+      connectTimeout: 1500,
+      enableOfflineQueue: false,
+    });
+
+    // Suppress all errors during check
+    testConnection.on("error", () => {});
+
+    const timeout = setTimeout(() => {
+      testConnection.disconnect();
+      redisAvailable = false;
+      resolve(false);
+    }, 2000);
+
+    testConnection.connect()
+      .then(() => testConnection.ping())
+      .then(() => {
+        clearTimeout(timeout);
+        // Redis is available - keep this connection
+        connectionInstance = testConnection;
+        redisAvailable = true;
+        
+        // Now create the queue
+        scrapingQueueInstance = new Queue<ScrapingJobData>("scraping-jobs", {
+          connection: connectionInstance,
+          defaultJobOptions: {
+            removeOnComplete: { count: 100, age: 7 * 24 * 3600 },
+            removeOnFail: { count: 50 },
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+          },
+        });
+        
+        resolve(true);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        testConnection.disconnect();
+        redisAvailable = false;
+        resolve(false);
+      });
+  });
+}
+
+/**
+ * Get the scraping queue (only available if Redis is connected)
+ */
+export function getScrapingQueue(): Queue<ScrapingJobData> | null {
+  return scrapingQueueInstance;
+}
 
 /**
  * Add a new scraping job to the queue
  */
-export async function addScrapingJob(data: ScrapingJobData): Promise<Job<ScrapingJobData>> {
-  return await scrapingQueue.add("scrape-institution", data, {
-    jobId: data.jobId, // Use database job ID as queue job ID for tracking
+export async function addScrapingJob(data: ScrapingJobData): Promise<Job<ScrapingJobData> | null> {
+  if (!scrapingQueueInstance) {
+    console.warn("Cannot add scraping job: Redis not available");
+    return null;
+  }
+  return await scrapingQueueInstance.add("scrape-institution", data, {
+    jobId: data.jobId,
   });
 }
 
@@ -85,7 +129,9 @@ export async function addScrapingJob(data: ScrapingJobData): Promise<Job<Scrapin
  * Get job status from queue
  */
 export async function getJobStatus(jobId: string): Promise<any> {
-  const job = await scrapingQueue.getJob(jobId);
+  if (!scrapingQueueInstance) return null;
+  
+  const job = await scrapingQueueInstance.getJob(jobId);
   if (!job) return null;
 
   const state = await job.getState();
@@ -106,7 +152,9 @@ export async function getJobStatus(jobId: string): Promise<any> {
  * Cancel a running job
  */
 export async function cancelJob(jobId: string): Promise<boolean> {
-  const job = await scrapingQueue.getJob(jobId);
+  if (!scrapingQueueInstance) return false;
+  
+  const job = await scrapingQueueInstance.getJob(jobId);
   if (!job) return false;
 
   try {
@@ -122,7 +170,9 @@ export async function cancelJob(jobId: string): Promise<boolean> {
  * Get all active jobs
  */
 export async function getActiveJobs(): Promise<any[]> {
-  const jobs = await scrapingQueue.getActive();
+  if (!scrapingQueueInstance) return [];
+  
+  const jobs = await scrapingQueueInstance.getActive();
   return Promise.all(
     jobs.map(async (job) => ({
       id: job.id,
@@ -138,7 +188,9 @@ export async function getActiveJobs(): Promise<any[]> {
  * Get all waiting jobs
  */
 export async function getWaitingJobs(): Promise<any[]> {
-  const jobs = await scrapingQueue.getWaiting();
+  if (!scrapingQueueInstance) return [];
+  
+  const jobs = await scrapingQueueInstance.getWaiting();
   return jobs.map((job) => ({
     id: job.id,
     data: job.data,
@@ -149,6 +201,15 @@ export async function getWaitingJobs(): Promise<any[]> {
  * Clean up old jobs
  */
 export async function cleanOldJobs(): Promise<void> {
-  await scrapingQueue.clean(7 * 24 * 3600 * 1000, 100, "completed");
-  await scrapingQueue.clean(14 * 24 * 3600 * 1000, 50, "failed");
+  if (!scrapingQueueInstance) return;
+  
+  await scrapingQueueInstance.clean(7 * 24 * 3600 * 1000, 100, "completed");
+  await scrapingQueueInstance.clean(14 * 24 * 3600 * 1000, 50, "failed");
 }
+
+// Legacy export for backwards compatibility (will be null if Redis not available)
+export const scrapingQueue = {
+  get instance() {
+    return scrapingQueueInstance;
+  }
+};

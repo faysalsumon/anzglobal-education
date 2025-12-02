@@ -7571,7 +7571,7 @@ Sitemap: ${baseUrl}/sitemap.xml
             entityType: 'task',
             entityId: reminder.taskId,
             entityName: 'Follow-up reminder',
-            metadata: { reminderId: reminder.id, reminderDate: reminder.reminderDate },
+            metadata: { reminderId: reminder.id, reminderAt: reminder.reminderAt },
           });
         } else if (reminder.applicationId) {
           await logCreate({
@@ -7579,7 +7579,7 @@ Sitemap: ${baseUrl}/sitemap.xml
             entityType: 'application',
             entityId: reminder.applicationId,
             entityName: 'Follow-up reminder',
-            metadata: { reminderId: reminder.id, reminderDate: reminder.reminderDate },
+            metadata: { reminderId: reminder.id, reminderAt: reminder.reminderAt },
           });
         }
         // Note: Reminders without task or application links are not logged (standalone reminders)
@@ -7711,10 +7711,18 @@ Sitemap: ${baseUrl}/sitemap.xml
   // END CRM SYSTEM API ENDPOINTS
   // ============================================
 
-  // Start scraping worker
-  const { startScrapingWorker } = await import('./scraping-worker');
-  startScrapingWorker();
-  console.log('Scraping worker started for background job processing');
+  // Start scraping worker only if Redis is available
+  const { checkRedisAvailability } = await import('./scraping-queue');
+  const redisAvailable = await checkRedisAvailability();
+  
+  if (redisAvailable) {
+    const { startScrapingWorker } = await import('./scraping-worker');
+    startScrapingWorker();
+    console.log('Background job processing enabled (Redis connected)');
+  } else {
+    console.log('Background job processing disabled (Redis not available)');
+    console.log('Use POST /api/admin/scraping/jobs/:jobId/process for manual scraping');
+  }
   
   return httpServer;
 }

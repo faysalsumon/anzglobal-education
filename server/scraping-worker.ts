@@ -21,30 +21,8 @@ import {
   type ExtractionResult,
 } from "./ai-extractor-service";
 import type { ScrapingJobData, ScrapingJobProgress } from "./scraping-queue";
+import { getConnection } from "./scraping-queue";
 import { WebsiteCrawlerService } from "./website-crawler-service";
-import Redis from "ioredis";
-
-const connection = new Redis({
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  maxRetriesPerRequest: null,
-  retryStrategy: () => null, // Don't retry in dev
-  lazyConnect: true,
-});
-
-// Suppress Redis connection errors in development
-connection.on("error", (err: any) => {
-  const isDev = process.env.NODE_ENV === "development";
-  const isRedisError = err.code === "ECONNREFUSED" || 
-                        err.message?.includes("Connection is closed") ||
-                        err.message?.includes("connect ECONNREFUSED");
-  
-  if (isDev && isRedisError) {
-    // Silent - use direct scraping endpoint instead
-  } else {
-    console.error("Worker Redis error:", err.message);
-  }
-});
 
 /**
  * Sanitize numeric fields to convert string "null" to actual null
@@ -626,8 +604,16 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
 
 /**
  * Create and start the scraping worker
+ * Only call this after Redis availability has been confirmed
  */
-export function startScrapingWorker(): Worker {
+export function startScrapingWorker(): Worker | null {
+  const connection = getConnection();
+  
+  if (!connection) {
+    console.warn("Cannot start scraping worker: Redis connection not available");
+    return null;
+  }
+  
   const worker = new Worker<ScrapingJobData>(
     "scraping-jobs",
     async (job: Job<ScrapingJobData>) => {
@@ -635,9 +621,9 @@ export function startScrapingWorker(): Worker {
     },
     {
       connection,
-      concurrency: 1, // Process one job at a time to avoid overloading
+      concurrency: 1,
       limiter: {
-        max: 10, // Max 10 jobs per minute
+        max: 10,
         duration: 60000,
       },
     }
@@ -652,18 +638,11 @@ export function startScrapingWorker(): Worker {
   });
 
   worker.on("error", (err: any) => {
-    const isDev = process.env.NODE_ENV === "development";
-    const isRedisError = err.code === "ECONNREFUSED" || 
-                          err.message?.includes("Connection is closed") ||
-                          err.message?.includes("connect ECONNREFUSED");
-    
-    if (isDev && isRedisError) {
-      // Silent - Redis not available in dev, use direct scraping endpoint instead
-    } else {
+    // Only log non-Redis errors (Redis availability already confirmed at startup)
+    if (err.code !== "ECONNREFUSED" && !err.message?.includes("Connection is closed")) {
       console.error("Worker error:", err.message);
     }
   });
 
-  console.log("Scraping worker started for background job processing");
   return worker;
 }
