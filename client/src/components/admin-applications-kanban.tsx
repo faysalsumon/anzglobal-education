@@ -28,7 +28,6 @@ import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
-import { ApplicationStage as StageType, STAGE_CONFIG, ALL_STAGES, ACTIVE_STAGES as CONFIG_ACTIVE_STAGES, TERMINAL_STAGES as CONFIG_TERMINAL_STAGES } from "@/lib/stage-config";
 import { format, differenceInDays } from "date-fns";
 
 type ApplicationStage = 

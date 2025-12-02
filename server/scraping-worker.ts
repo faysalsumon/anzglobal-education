@@ -34,7 +34,12 @@ const connection = new Redis({
 
 // Suppress Redis connection errors in development
 connection.on("error", (err: any) => {
-  if (process.env.NODE_ENV === "development" && err.code === "ECONNREFUSED") {
+  const isDev = process.env.NODE_ENV === "development";
+  const isRedisError = err.code === "ECONNREFUSED" || 
+                        err.message?.includes("Connection is closed") ||
+                        err.message?.includes("connect ECONNREFUSED");
+  
+  if (isDev && isRedisError) {
     // Silent - use direct scraping endpoint instead
   } else {
     console.error("Worker Redis error:", err.message);
@@ -647,13 +652,18 @@ export function startScrapingWorker(): Worker {
   });
 
   worker.on("error", (err: any) => {
-    if (process.env.NODE_ENV === "development" && err.code === "ECONNREFUSED") {
-      // Silent - Redis not available
+    const isDev = process.env.NODE_ENV === "development";
+    const isRedisError = err.code === "ECONNREFUSED" || 
+                          err.message?.includes("Connection is closed") ||
+                          err.message?.includes("connect ECONNREFUSED");
+    
+    if (isDev && isRedisError) {
+      // Silent - Redis not available in dev, use direct scraping endpoint instead
     } else {
       console.error("Worker error:", err.message);
     }
   });
 
-  console.log("Scraping worker started");
+  console.log("Scraping worker started for background job processing");
   return worker;
 }
