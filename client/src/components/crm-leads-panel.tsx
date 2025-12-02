@@ -342,7 +342,7 @@ export function CrmLeadsPanel() {
   const activeFiltersCount = [statusFilter, ratingFilter, branchFilter, sourceFilter, countryFilter, assignedFilter]
     .filter(f => f !== 'all').length;
 
-  const uniqueCountries = [...new Set(leadsData?.leads?.map(l => l.country).filter(Boolean) || [])];
+  const uniqueCountries = Array.from(new Set(leadsData?.leads?.map(l => l.country).filter(Boolean) || []));
 
   return (
     <div className="space-y-4">
