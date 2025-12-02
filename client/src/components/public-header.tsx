@@ -56,25 +56,25 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             ))}
           </nav>
 
-          {/* Desktop Login Button */}
+          {/* Desktop Student Login Button */}
           <div className="hidden md:flex items-center gap-3">
             {onStudentLoginClick ? (
               <Button
                 variant="default"
                 size="sm"
                 onClick={onStudentLoginClick}
-                data-testid="button-login"
+                data-testid="button-student-login"
               >
-                Login
+                Student Login
               </Button>
             ) : (
               <Button
                 variant="default"
                 size="sm"
                 asChild
-                data-testid="button-login"
+                data-testid="button-student-login"
               >
-                <a href="/api/login?type=student">Login</a>
+                <a href="/api/login?type=student">Student Login</a>
               </Button>
             )}
           </div>
@@ -117,18 +117,18 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                           setMobileMenuOpen(false);
                           onStudentLoginClick();
                         }}
-                        data-testid="button-mobile-login"
+                        data-testid="button-mobile-student-login"
                       >
-                        Login
+                        Student Login
                       </Button>
                     ) : (
                       <Button
                         variant="default"
                         className="w-full"
                         asChild
-                        data-testid="button-mobile-login"
+                        data-testid="button-mobile-student-login"
                       >
-                        <a href="/api/login?type=student">Login</a>
+                        <a href="/api/login?type=student">Student Login</a>
                       </Button>
                     )}
                   </div>

@@ -89,9 +89,9 @@ export default function AdminLogin() {
               <div className="text-xs text-muted-foreground">Central Login Portal</div>
             </div>
           </div>
-          <CardTitle className="text-2xl">Sign In</CardTitle>
+          <CardTitle className="text-2xl">Platform Admin Access</CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard
+            Authorized personnel only. Enter your admin credentials.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -173,7 +173,7 @@ export default function AdminLogin() {
           </div>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Access for: Admin • University • Student</p>
+            <p>Platform administration access only</p>
           </div>
         </CardContent>
       </Card>

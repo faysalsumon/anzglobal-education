@@ -47,12 +47,11 @@ const footerSections: FooterSection[] = [
     ],
   },
   {
-    title: "TOP INSTITUTES",
+    title: "FOR INSTITUTIONS",
     links: [
-      { label: "Southern Cross University", href: "/institutions?search=Southern+Cross" },
-      { label: "Engineer Institute of Technology", href: "/institutions?search=Engineer+Institute" },
-      { label: "Holmes Institute", href: "/institutions?search=Holmes" },
-      { label: "Federation University", href: "/institutions?search=Federation" },
+      { label: "Institution Login", href: "/institution/login" },
+      { label: "Become a Partner", href: "/partner-with-us" },
+      { label: "Partner Support", href: "/contact?topic=partner" },
     ],
   },
   {

@@ -41,6 +41,7 @@ import StudentReviews from "@/pages/student-reviews";
 import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
+import InstitutionLogin from "@/pages/institution-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
@@ -61,6 +62,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/institution/login" component={InstitutionLogin} />
       <Route path="/compare-courses" component={CompareCourses} />
       <Route path="/contact" component={Contact} />
       <Route path="/partner-with-us" component={PartnerWithUs} />
