@@ -6,6 +6,31 @@ import { eq, and } from 'drizzle-orm';
 
 const PINECONE_INDEX_NAME = 'anz-global-education';
 
+// Sanitize metadata for Pinecone - removes null/undefined values and converts arrays to strings
+function sanitizeMetadata(metadata: Record<string, any>): Record<string, string | number | boolean | string[]> {
+  const sanitized: Record<string, string | number | boolean | string[]> = {};
+  
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value === null || value === undefined) {
+      continue; // Skip null/undefined values
+    }
+    
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[key] = value;
+    } else if (Array.isArray(value)) {
+      // Convert array to string array (Pinecone only supports string arrays in metadata)
+      sanitized[key] = value.map(v => String(v));
+    } else if (typeof value === 'object') {
+      // Convert objects to JSON strings
+      sanitized[key] = JSON.stringify(value);
+    } else {
+      sanitized[key] = String(value);
+    }
+  }
+  
+  return sanitized;
+}
+
 // Initialize OpenAI for embeddings
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -570,15 +595,17 @@ export async function buildKnowledgeBase() {
       
       for (let i = 0; i < chunks.length; i++) {
         const embedding = await createEmbedding(chunks[i]);
+        // Sanitize metadata to remove null values (Pinecone requirement)
+        const rawMetadata = {
+          ...doc.metadata,
+          content: chunks[i],
+          chunkIndex: i,
+          totalChunks: chunks.length,
+        };
         vectors.push({
           id: `${doc.id}-chunk-${i}`,
           values: embedding,
-          metadata: {
-            ...doc.metadata,
-            content: chunks[i],
-            chunkIndex: i,
-            totalChunks: chunks.length,
-          }
+          metadata: sanitizeMetadata(rawMetadata)
         });
       }
     }

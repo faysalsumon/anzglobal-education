@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Minimize2 } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { MessageCircle, X, Send, Minimize2, ExternalLink, Search, UserPlus, Building2, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,9 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useLocation } from "wouter";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.png";
+
+// CTA button icon mapping based on link path
+const getCTAIcon = (href: string) => {
+  if (href.includes('/courses')) return Search;
+  if (href.includes('/register')) return UserPlus;
+  if (href.includes('/institutions')) return Building2;
+  if (href.includes('/contact')) return Mail;
+  return ArrowRight;
+};
 
 type Message = {
   id: number;
@@ -36,6 +46,51 @@ export function ChatWidget() {
   const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  // Custom markdown components for CTA buttons
+  const markdownComponents: Components = useMemo(() => ({
+    a: ({ href, children }) => {
+      if (!href) return <span>{children}</span>;
+      
+      const isInternalLink = href.startsWith('/');
+      const Icon = getCTAIcon(href);
+      
+      if (isInternalLink) {
+        return (
+          <button
+            onClick={() => {
+              setLocation(href);
+              setIsOpen(false);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 my-1 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            data-testid={`cta-link-${href.replace(/\//g, '-')}`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {children}
+          </button>
+        );
+      }
+      
+      // External link
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80"
+        >
+          {children}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      );
+    },
+    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+    ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+    li: ({ children }) => <li className="text-sm">{children}</li>,
+    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  }), [setLocation]);
 
   // Create or get conversation mutation
   const createConversationMutation = useMutation({
@@ -292,8 +347,11 @@ export function ChatWidget() {
                       }`}
                     >
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={markdownComponents}
+                          >
                             {msg.content}
                           </ReactMarkdown>
                         </div>
