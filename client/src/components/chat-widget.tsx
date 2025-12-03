@@ -10,7 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AnimatedBooksIcon } from "./animated-books-icon";
+import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.png";
 
 type Message = {
   id: number;
@@ -135,49 +135,91 @@ export function ChatWidget() {
     setIsMinimized(!isMinimized);
   };
 
-  // Floating chat button
+  // Floating chat button with human avatar - ATO style
   if (!isOpen) {
     return (
-      <div className="fixed bottom-20 right-3 md:bottom-24 md:right-4 z-40">
-        <Button
-          size="icon"
+      <div 
+        className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-40 flex items-end gap-2"
+        data-testid="chat-widget-trigger"
+      >
+        {/* Floating avatar with gentle animation */}
+        <button
           onClick={toggleOpen}
-          className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+          className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full"
           data-testid="button-open-chat"
+          aria-label="Open chat assistant"
         >
-          <AnimatedBooksIcon className="text-primary-foreground" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
-              data-testid="badge-unread-count"
-            >
-              {unreadCount}
-            </Badge>
-          )}
+          {/* Avatar container with floating animation */}
+          <div 
+            className="relative transition-transform duration-300 group-hover:scale-105"
+            style={{
+              animation: "float 3s ease-in-out infinite",
+            }}
+          >
+            {/* Avatar image */}
+            <img
+              src={chatAvatarImage}
+              alt="ANZ Education Assistant"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-2 border-white dark:border-slate-800"
+            />
+            
+            {/* Online indicator */}
+            <span className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
+            
+            {/* Unread badge */}
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
+                data-testid="badge-unread-count"
+              >
+                {unreadCount}
+              </Badge>
+            )}
+          </div>
+        </button>
+        
+        {/* Ask button pill */}
+        <Button
+          onClick={toggleOpen}
+          className="rounded-full px-5 py-2 h-auto shadow-lg bg-primary hover:bg-primary/90 text-sm font-medium"
+          data-testid="button-ask-chat"
+        >
+          Ask
         </Button>
+        
+        {/* CSS for floating animation */}
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+          }
+        `}</style>
       </div>
     );
   }
 
   // Chat window
   return (
-    <div className="fixed bottom-20 right-3 md:bottom-24 md:right-4 z-50 flex flex-col bg-card border border-border rounded-lg shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[360px]"
+    <div className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
       style={{ 
-        height: isMinimized ? "52px" : "min(480px, calc(100vh - 180px))",
+        height: isMinimized ? "60px" : "min(500px, calc(100vh - 120px))",
       }}
       data-testid="chat-widget"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-primary text-primary-foreground rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src="/chat-bot-avatar.png" alt="Chat Assistant" />
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-primary text-primary-foreground rounded-t-xl">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9 border-2 border-primary-foreground/20">
+            <AvatarImage src={chatAvatarImage} alt="ANZ Education Assistant" />
             <AvatarFallback className="bg-primary-foreground text-primary text-xs">AI</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold text-xs leading-tight">ANZ Education Assistant</h3>
-            <p className="text-[10px] opacity-80 leading-tight">Ask about courses</p>
+            <h3 className="font-semibold text-sm leading-tight">ANZ Education Assistant</h3>
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full" />
+              <p className="text-[11px] opacity-90 leading-tight">Online - Ready to help</p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -229,7 +271,8 @@ export function ChatWidget() {
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
                     {msg.role === "assistant" && (
-                      <Avatar className="h-8 w-8 flex-shrink-0">
+                      <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
+                        <AvatarImage src={chatAvatarImage} alt="Assistant" />
                         <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                           AI
                         </AvatarFallback>
@@ -280,7 +323,8 @@ export function ChatWidget() {
                 ))}
                 {sendMessageMutation.isPending && (
                   <div className="flex gap-3 justify-start" data-testid="typing-indicator">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
+                    <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
+                      <AvatarImage src={chatAvatarImage} alt="Assistant" />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                         AI
                       </AvatarFallback>
