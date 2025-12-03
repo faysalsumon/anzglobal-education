@@ -15,7 +15,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Accessibility**: WCAG AA standards.
 - **Navigation**: Dual navigation system.
 - **Admin Dashboard**: 3-column layout with dark mode support.
-- **AI Chat Agent**: Floating human avatar design (ATO.gov.au style) with friendly education consultant character, gentle floating animation (3s translateY), "Ask Zan" pill button, green online indicator, and accessible keyboard focus states. Chat window features consistent avatar across header, messages, and typing indicator with WCAG-compliant interactions.
+- **AI Chat Agent**: Floating human avatar design (ATO.gov.au style) with friendly education consultant character named "Zan from ANZ Global Education", gentle floating animation (3s translateY), "Ask Zan" pill button, green online indicator, and accessible keyboard focus states. Chat window features consistent avatar across header, messages, and typing indicator with WCAG-compliant interactions. **Sales-focused personality** guides users toward registration and course search with inline CTA buttons (Search Courses, Register Now, View Institutions, Contact Us). **Topic guardrails** restrict discussions to international education topics only (courses, visas, PR pathways, studying in Australia). Off-topic questions are politely redirected. No private company information disclosed. **RAG-powered knowledge base** auto-rebuilds with fresh platform data (courses, institutions, statistics) on server restart.
 
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
