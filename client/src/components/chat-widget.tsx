@@ -159,7 +159,7 @@ export function ChatWidget() {
             {/* Avatar image */}
             <img
               src={chatAvatarImage}
-              alt="ANZ Education Assistant"
+              alt="Zan - Education Assistant"
               className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-2 border-white dark:border-slate-800"
             />
             
@@ -211,14 +211,14 @@ export function ChatWidget() {
       <div className="flex items-center justify-between px-4 py-3 border-b bg-primary text-primary-foreground rounded-t-xl">
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border-2 border-primary-foreground/20">
-            <AvatarImage src={chatAvatarImage} alt="ANZ Education Assistant" />
-            <AvatarFallback className="bg-primary-foreground text-primary text-xs">AI</AvatarFallback>
+            <AvatarImage src={chatAvatarImage} alt="Zan" />
+            <AvatarFallback className="bg-primary-foreground text-primary text-xs">Z</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-semibold text-sm leading-tight">ANZ Education Assistant</h3>
+            <h3 className="font-semibold text-sm leading-tight">Zan</h3>
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full" />
-              <p className="text-[11px] opacity-90 leading-tight">Online - Ready to help</p>
+              <p className="text-[11px] opacity-90 leading-tight">Your Education Assistant</p>
             </div>
           </div>
         </div>
@@ -255,7 +255,7 @@ export function ChatWidget() {
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <MessageCircle className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <h4 className="font-semibold text-sm mb-1">Welcome to ANZ Global Education!</h4>
+                <h4 className="font-semibold text-sm mb-1">Hi, I'm Zan!</h4>
                 <p className="text-xs text-muted-foreground">
                   Ask me about courses, universities, admission requirements, or anything else about studying abroad.
                 </p>
