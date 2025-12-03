@@ -235,8 +235,9 @@ async function extractInstitutionDocuments(): Promise<KnowledgeDocument[]> {
 
   for (const university of allUniversities) {
     // Get campus locations from institution's campusAddresses array
-    const campusLocations = university.campusAddresses
-      ?.map(campus => `${campus.city}, ${campus.state}`)
+    const campusAddresses = university.campusAddresses as Array<{ city?: string; state?: string }> | null;
+    const campusLocations = campusAddresses
+      ?.map((campus: { city?: string; state?: string }) => `${campus.city || ''}, ${campus.state || ''}`)
       .join('; ') || 'Not specified';
 
     const content = `
@@ -271,9 +272,94 @@ International Support: ${university.internationalStudentSupport ? 'Yes' : 'Not s
   return documents;
 }
 
-// Extract platform guide documents
-function extractPlatformGuides(): KnowledgeDocument[] {
+// Extract platform guide documents with dynamic statistics
+async function extractPlatformGuides(): Promise<KnowledgeDocument[]> {
+  // Get dynamic platform statistics
+  const [courseStats, institutionStats] = await Promise.all([
+    db.select().from(courses).where(eq(courses.approvalStatus, 'approved')),
+    db.select().from(universities),
+  ]);
+
+  const totalCourses = courseStats.length;
+  const totalInstitutions = institutionStats.length;
+  
+  // Calculate disciplines and levels from course stats
+  const disciplineCounts: Record<string, number> = {};
+  const levelCounts: Record<string, number> = {};
+  let prPathwayCourses = 0;
+  
+  for (const course of courseStats) {
+    if (course.discipline) {
+      disciplineCounts[course.discipline] = (disciplineCounts[course.discipline] || 0) + 1;
+    }
+    if (course.level) {
+      levelCounts[course.level] = (levelCounts[course.level] || 0) + 1;
+    }
+    if (course.prPathway) {
+      prPathwayCourses++;
+    }
+  }
+  
+  const disciplines = Object.entries(disciplineCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => `${name} (${count} courses)`)
+    .join(', ') || 'Various disciplines';
+    
+  const levels = Object.entries(levelCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => `${name} (${count})`)
+    .join(', ') || 'Various levels';
+    
+  const institutionNames = institutionStats.map(u => u.name).join(', ');
+
   const guides = [
+    {
+      id: 'guide-platform-statistics',
+      title: 'ANZ Global Education Platform Statistics',
+      content: `
+ANZ Global Education Platform Current Statistics:
+
+Total Courses Available: ${totalCourses} courses
+Total Institutions Listed: ${totalInstitutions} institutions
+PR Pathway Courses: ${prPathwayCourses} courses offer Permanent Residency pathways
+
+Institutions on our platform: ${institutionNames}
+
+Disciplines Available: ${disciplines}
+
+Course Levels Available: ${levels}
+
+Our platform connects international students with quality Australian education providers. Browse our courses at /courses to explore all options.
+      `.trim(),
+      metadata: { type: 'guide', topic: 'platform-statistics' }
+    },
+    {
+      id: 'guide-pr-pathway',
+      title: 'Understanding PR Pathway Courses',
+      content: `
+What is a PR Pathway Course?
+
+A PR (Permanent Residency) Pathway course is a qualification that can help international students gain points toward Australian permanent residency.
+
+Key Points about PR Pathway Courses:
+- These courses align with occupations on Australia's Skilled Occupation List (SOL)
+- Completing such a course may qualify you for a skilled migration visa
+- Common PR pathway disciplines include: Engineering, Nursing, Accounting, IT, Teaching, Trade qualifications
+- The course must be at least 2 years in duration (CRICOS registered)
+- You need to meet additional requirements like English proficiency and skills assessment
+
+Benefits of PR Pathway Courses:
+1. Pathway to permanent residency in Australia
+2. Better employment prospects post-graduation
+3. Access to post-study work visa (subclass 485)
+4. Opportunity to build a career in Australia
+
+Currently, we have ${prPathwayCourses} PR pathway courses available on our platform. Use the "PR Pathway" filter when searching courses to find them.
+
+Note: Immigration policies change frequently. Always verify current requirements with the Department of Home Affairs or a registered migration agent.
+      `.trim(),
+      metadata: { type: 'guide', topic: 'pr-pathway' }
+    },
     {
       id: 'guide-applications',
       title: 'How to Apply for Courses',
@@ -383,7 +469,7 @@ For Students:
 - Track application status
 - Upload and manage documents
 - Receive notifications about applications
-- Chat with AI assistant for instant help
+- Chat with Zan, our AI assistant, for instant help
 
 For Institutions:
 - Manage course listings
@@ -399,6 +485,46 @@ Search Tips:
 - Save favorite courses for later
       `.trim(),
       metadata: { type: 'guide', topic: 'platform-features' }
+    },
+    {
+      id: 'guide-course-components',
+      title: 'Understanding Course Components',
+      content: `
+Each course on ANZ Global Education includes detailed information:
+
+Course Details:
+- Course Title: The name of the qualification
+- Course Code: Official identification code (e.g., CRICOS code)
+- Discipline: Subject area (IT, Business, Engineering, etc.)
+- Level: Qualification level (Diploma, Bachelor, Masters, etc.)
+- Duration: How long the course takes to complete
+- Delivery Mode: On-campus, online, or blended learning
+
+Fees & Costs:
+- Tuition Fees: Course fees per year or total
+- Application Fees: One-time application cost
+- Cost of Living: Estimated living expenses in the area
+
+Location:
+- Country: Where the institution is located
+- Campus Locations: Specific cities and campuses available
+- Study Options: Full-time, part-time availability
+
+Entry Requirements:
+- Academic Requirements: Previous qualifications needed
+- English Requirements: IELTS/PTE/TOEFL scores required
+- Work Experience: If relevant experience is needed
+
+Career Outcomes:
+- Career Path: Potential job opportunities after graduation
+- PR Pathway: Whether the course helps with permanent residency
+- Scholarship Range: Available financial assistance
+
+Intakes:
+- Start Dates: When you can begin the course
+- Application Deadlines: When to submit applications
+      `.trim(),
+      metadata: { type: 'guide', topic: 'course-components' }
     }
   ];
 
@@ -418,7 +544,7 @@ export async function buildKnowledgeBase() {
     const [coursesDocs, institutionsDocs, guidesDocs] = await Promise.all([
       extractCourseDocuments(),
       extractInstitutionDocuments(),
-      Promise.resolve(extractPlatformGuides()),
+      extractPlatformGuides(),
     ]);
 
     const allDocuments = [
@@ -481,33 +607,47 @@ export async function buildKnowledgeBase() {
 
 // Track if knowledge base has been auto-initialized
 let autoInitializationAttempted = false;
+let lastBuildTime: Date | null = null;
 
-// Check if knowledge base is empty
-async function isKnowledgeBaseEmpty(): Promise<boolean> {
+// Force a knowledge base rebuild (resets the auto-init flag)
+export function resetKnowledgeBaseInitialization(): void {
+  autoInitializationAttempted = false;
+  lastBuildTime = null;
+  console.log('[Knowledge Base] Initialization flag reset - will rebuild on next query');
+}
+
+// Check if knowledge base is empty or stale (older than 1 hour)
+async function isKnowledgeBaseStale(): Promise<boolean> {
   try {
+    // If never built or built more than 1 hour ago, consider stale
+    if (!lastBuildTime || (Date.now() - lastBuildTime.getTime()) > 60 * 60 * 1000) {
+      return true;
+    }
+    
     const index = await getPineconeIndex();
     const stats = await index.describeIndexStats();
     const totalVectors = stats.totalRecordCount || 0;
     console.log(`[Knowledge Base] Current vector count: ${totalVectors}`);
     return totalVectors === 0;
   } catch (error) {
-    console.error('[Knowledge Base] Error checking if empty:', error);
-    return true; // Assume empty on error
+    console.error('[Knowledge Base] Error checking if stale:', error);
+    return true; // Assume stale on error
   }
 }
 
 // Query knowledge base
-export async function queryKnowledgeBase(query: string, topK = 3): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
+export async function queryKnowledgeBase(query: string, topK = 5): Promise<Array<{ content: string; metadata: Record<string, any>; score: number }>> {
   try {
-    // Auto-initialize knowledge base if empty (one-time check)
+    // Auto-initialize knowledge base if empty or stale (one-time per server restart)
     if (!autoInitializationAttempted) {
       autoInitializationAttempted = true;
-      const isEmpty = await isKnowledgeBaseEmpty();
+      const isStale = await isKnowledgeBaseStale();
       
-      if (isEmpty) {
-        console.log('[Knowledge Base] Empty knowledge base detected, auto-initializing with platform data...');
+      if (isStale) {
+        console.log('[Knowledge Base] Stale or empty knowledge base detected, rebuilding with fresh platform data...');
         try {
           await buildKnowledgeBase();
+          lastBuildTime = new Date();
           console.log('[Knowledge Base] Auto-initialization completed successfully');
         } catch (error) {
           console.error('[Knowledge Base] Auto-initialization failed:', error);
