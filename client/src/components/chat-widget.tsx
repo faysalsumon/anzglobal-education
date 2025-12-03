@@ -254,11 +254,17 @@ export function ChatWidget() {
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <MessageCircle className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <h4 className="font-semibold text-sm mb-1">Hi, I'm Zan!</h4>
-                <p className="text-xs text-muted-foreground">
+                <Avatar className="h-16 w-16 mb-3 border-2 border-primary/20">
+                  <AvatarImage src={chatAvatarImage} alt="Zan" />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">Z</AvatarFallback>
+                </Avatar>
+                <h4 className="font-semibold text-sm mb-1">Hi, I'm Zan from ANZ Global Education!</h4>
+                <p className="text-xs text-muted-foreground mb-3">
                   Ask me about courses, universities, admission requirements, or anything else about studying abroad.
                 </p>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+                  <strong>Please note:</strong> I'm continuously learning. We recommend verifying all information (fees, requirements, dates) with the institution or our support team before making decisions.
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -290,23 +296,6 @@ export function ChatWidget() {
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.content}
                           </ReactMarkdown>
-                          {msg.sources && msg.sources.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-border">
-                              <p className="text-xs font-semibold mb-1">Sources:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {msg.sources.map((source, idx) => (
-                                  <Badge
-                                    key={idx}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    data-testid={`source-${source.type}-${source.id}`}
-                                  >
-                                    {source.title}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       ) : (
                         <p>{msg.content}</p>
