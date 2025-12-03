@@ -185,7 +185,7 @@ export function ChatWidget() {
           className="rounded-full px-5 py-2 h-auto shadow-lg bg-primary hover:bg-primary/90 text-sm font-medium"
           data-testid="button-ask-chat"
         >
-          Ask
+          Ask Zan
         </Button>
         
         {/* CSS for floating animation */}
