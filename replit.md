@@ -15,7 +15,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Accessibility**: WCAG AA standards.
 - **Navigation**: Dual navigation system.
 - **Admin Dashboard**: 3-column layout with dark mode support.
-- **AI Chat Agent**: Compact, Replit-style animated icon (ribbons/bookmarks with diagonal pencil) positioned to prevent header overlap, with dynamic sizing and a compact chat window using a small avatar and reduced text sizes.
+- **AI Chat Agent**: Floating human avatar design (ATO.gov.au style) with friendly education consultant character, gentle floating animation (3s translateY), "Ask" pill button, green online indicator, and accessible keyboard focus states. Chat window features consistent avatar across header, messages, and typing indicator with WCAG-compliant interactions.
 
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
