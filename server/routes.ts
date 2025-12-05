@@ -312,6 +312,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
   app.use('/admins', express.static(path.join(process.cwd(), 'public', 'admins')));
+  
+  // Serve attached assets (stock images, generated images, etc.)
+  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
   // Get current authenticated user
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
