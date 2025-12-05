@@ -228,7 +228,7 @@ export function MyTasksPanel() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="shrink-0"
           onClick={() => onEdit(task)}
           data-testid={`button-edit-task-${task.id}`}
         >
@@ -257,64 +257,64 @@ export function MyTasksPanel() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Tasks</CardTitle>
+    <div className="space-y-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Active Tasks</p>
+              <p className="text-xl font-bold">{tasks.filter(t => t.status !== "completed" && t.status !== "cancelled").length}</p>
+            </div>
             <ListTodo className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter(t => t.status !== "completed" && t.status !== "cancelled").length}</div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+        <Card className="p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Overdue</p>
+              <p className="text-xl font-bold text-red-600">{overdueTasks.length}</p>
+            </div>
             <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{overdueTasks.length}</div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Due Today</CardTitle>
+        <Card className="p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Due Today</p>
+              <p className="text-xl font-bold text-orange-600">{todayTasks.length}</p>
+            </div>
             <Calendar className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{todayTasks.length}</div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reminders</CardTitle>
+        <Card className="p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Reminders</p>
+              <p className="text-xl font-bold">{reminders.length}</p>
+            </div>
             <Bell className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reminders.length}</div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
       {reminders.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Bell className="h-4 w-4" />
               Upcoming Reminders
             </CardTitle>
-            <CardDescription>Your scheduled follow-ups</CardDescription>
+            <CardDescription className="text-xs">Your scheduled follow-ups</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="px-4 pb-3">
+            <div className="space-y-2">
               {reminders.slice(0, 5).map(reminder => (
                 <div 
                   key={reminder.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                  className="flex items-center gap-2 p-2 rounded-md border bg-card"
                   data-testid={`reminder-item-${reminder.id}`}
                 >
                   <Checkbox
@@ -323,12 +323,12 @@ export function MyTasksPanel() {
                     disabled={completeReminderMutation.isPending}
                     data-testid={`checkbox-reminder-${reminder.id}`}
                   />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{reminder.message}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{reminder.message}</p>
                     <p className="text-xs text-muted-foreground">
                       <Clock className="h-3 w-3 inline mr-1" />
                       {reminder.reminderAt 
-                        ? format(new Date(reminder.reminderAt), "MMM d, yyyy 'at' h:mm a")
+                        ? format(new Date(reminder.reminderAt), "MMM d 'at' h:mm a")
                         : "No date set"}
                     </p>
                   </div>
@@ -340,14 +340,14 @@ export function MyTasksPanel() {
       )}
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <CardHeader className="py-3 px-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <ListTodo className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <ListTodo className="h-4 w-4" />
                 My Tasks
               </CardTitle>
-              <CardDescription>Tasks assigned to you</CardDescription>
+              <CardDescription className="text-xs">Tasks assigned to you</CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
@@ -362,8 +362,8 @@ export function MyTasksPanel() {
                 New Task
               </Button>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger className="w-[110px] h-8 text-xs" data-testid="select-status-filter">
+                  <Filter className="h-3 w-3 mr-1" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -375,7 +375,7 @@ export function MyTasksPanel() {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[130px]" data-testid="select-priority-filter">
+                <SelectTrigger className="w-[110px] h-8 text-xs" data-testid="select-priority-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -389,15 +389,15 @@ export function MyTasksPanel() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-3">
           {sortedTasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
-              <p className="font-medium">All caught up!</p>
-              <p className="text-sm">No tasks match the current filters</p>
+            <div className="text-center py-6 text-muted-foreground">
+              <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-green-500" />
+              <p className="text-sm font-medium">All caught up!</p>
+              <p className="text-xs">No tasks match the current filters</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {overdueTasks.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-red-600 flex items-center gap-1">

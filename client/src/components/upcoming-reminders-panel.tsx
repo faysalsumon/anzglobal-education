@@ -232,7 +232,6 @@ export function UpcomingRemindersPanel({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
                           onClick={() => completeMutation.mutate(reminder.id)}
                           disabled={completeMutation.isPending}
                           title="Mark as complete"
@@ -243,7 +242,6 @@ export function UpcomingRemindersPanel({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
                           onClick={() => deleteMutation.mutate(reminder.id)}
                           disabled={deleteMutation.isPending}
                           title="Delete reminder"
