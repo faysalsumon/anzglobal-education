@@ -224,7 +224,8 @@ export function AdminBlogManagement() {
   // Seed sample blogs mutation
   const seedBlogsMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/admin/blogs/seed", "POST", {});
+      const response = await apiRequest("POST", "/api/admin/blogs/seed", {});
+      return await response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
