@@ -2,9 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { Users, ArrowLeft, Gift, Calendar, User } from "lucide-react";
+import { Users, Gift, Calendar, User } from "lucide-react";
 import { Link } from "wouter";
 import type { Referral, StudentProfile } from "@shared/schema";
+import { StudentLayout } from "@/components/student-layout";
 
 interface ReferralWithStudent extends Referral {
   referredStudent: StudentProfile;
@@ -17,7 +18,7 @@ interface ReferralStats {
   totalBonus: number;
 }
 
-export default function StudentReferrals() {
+function StudentReferralsContent() {
   const { data: referrals = [], isLoading } = useQuery<ReferralWithStudent[]>({
     queryKey: ["/api/student/referral/list"],
   });
@@ -28,17 +29,9 @@ export default function StudentReferrals() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild data-testid="button-back">
-          <Link href="/">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">My Referrals</h1>
-          <p className="text-muted-foreground">Track all your referred friends and rewards</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">My Referrals</h1>
+        <p className="text-muted-foreground">Track all your referred friends and rewards</p>
       </div>
 
       {/* Stats Summary */}
@@ -162,5 +155,13 @@ export default function StudentReferrals() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function StudentReferrals() {
+  return (
+    <StudentLayout breadcrumbTitle="My Referrals">
+      <StudentReferralsContent />
+    </StudentLayout>
   );
 }

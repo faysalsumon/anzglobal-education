@@ -15,19 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Home, Heart, MapPin, Eye } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye } from "lucide-react";
 import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type Favorite, type University, type Course } from "@shared/schema";
 import { z } from "zod";
+import { StudentLayout } from "@/components/student-layout";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -231,7 +224,7 @@ interface ProfileCompletionResult {
   };
 }
 
-export default function StudentProfilePage() {
+function StudentProfileContent() {
   const { toast } = useToast();
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = urlParams.get('tab') || "personal";
@@ -1816,5 +1809,13 @@ export default function StudentProfilePage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function StudentProfilePage() {
+  return (
+    <StudentLayout breadcrumbTitle="My Profile">
+      <StudentProfileContent />
+    </StudentLayout>
   );
 }

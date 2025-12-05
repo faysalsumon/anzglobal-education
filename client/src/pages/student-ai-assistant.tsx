@@ -2,8 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Sparkles, User, Briefcase } from "lucide-react";
 import { Link } from "wouter";
+import { StudentLayout } from "@/components/student-layout";
 
-export default function StudentAIAssistant() {
+function StudentAIAssistantContent() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
@@ -115,5 +116,13 @@ export default function StudentAIAssistant() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function StudentAIAssistant() {
+  return (
+    <StudentLayout breadcrumbTitle="AI Assistant">
+      <StudentAIAssistantContent />
+    </StudentLayout>
   );
 }

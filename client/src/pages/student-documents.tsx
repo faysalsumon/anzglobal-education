@@ -57,6 +57,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StudentLayout } from "@/components/student-layout";
 
 interface DocumentFolder {
   id: string;
@@ -100,7 +101,7 @@ const statusConfig = {
   rejected: { label: "Rejected", icon: XCircle, color: "text-red-600" },
 };
 
-export default function StudentDocuments() {
+function StudentDocumentsContent() {
   const { toast } = useToast();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -699,5 +700,13 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+export default function StudentDocuments() {
+  return (
+    <StudentLayout breadcrumbTitle="My Documents">
+      <StudentDocumentsContent />
+    </StudentLayout>
   );
 }

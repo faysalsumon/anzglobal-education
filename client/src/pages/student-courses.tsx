@@ -17,10 +17,11 @@ import { Link, useLocation } from "wouter";
 import type { Course, University, Favorite, CourseComparison } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { StudentLayout } from "@/components/student-layout";
 
 type CourseWithUniversity = Course & { university?: University };
 
-export default function StudentCourses() {
+function StudentCoursesContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [subject, setSubject] = useState<string>("");
   const [level, setLevel] = useState<string>("");
@@ -567,5 +568,13 @@ export default function StudentCourses() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StudentCourses() {
+  return (
+    <StudentLayout breadcrumbTitle="Browse Courses">
+      <StudentCoursesContent />
+    </StudentLayout>
   );
 }

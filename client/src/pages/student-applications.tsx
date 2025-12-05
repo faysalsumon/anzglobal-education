@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileText, AlertCircle, RefreshCw } from "lucide-react";
 import { ApplicationCard } from "@/components/application-card";
+import { StudentLayout } from "@/components/student-layout";
 
 type ApplicationStage = 
   | "Assessment"
@@ -56,7 +57,7 @@ interface ApplicationWithDetails {
   } | null;
 }
 
-export default function StudentApplications() {
+function StudentApplicationsContent() {
   const { data, isLoading, isError, error, refetch} = useQuery<{ applications: ApplicationWithDetails[] }>({
     queryKey: ["/api/student/applications"],
   });
@@ -121,5 +122,13 @@ export default function StudentApplications() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StudentApplications() {
+  return (
+    <StudentLayout breadcrumbTitle="My Applications">
+      <StudentApplicationsContent />
+    </StudentLayout>
   );
 }
