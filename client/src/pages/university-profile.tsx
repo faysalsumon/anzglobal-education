@@ -10,21 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, Upload, Image as ImageIcon, Home } from "lucide-react";
+import { Sparkles, Loader2, Upload, Image as ImageIcon } from "lucide-react";
 import { insertUniversitySchema, type InsertUniversity, type University } from "@shared/schema";
 import { z } from "zod";
 import { GoogleAddressAutocomplete, type AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { GalleryManager } from "@/components/gallery-manager";
+import { UniversityLayout } from "@/components/university-layout";
 
 // Note: insertUniversitySchema already has validation including refine(), so we can use it directly
 // We just need to ensure required fields are validated
@@ -38,7 +31,7 @@ const PROVIDER_TYPES = [
   "School",
 ];
 
-export default function UniversityProfile() {
+function UniversityProfileContent() {
   const { toast } = useToast();
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -1036,5 +1029,13 @@ export default function UniversityProfile() {
         </form>
       </Form>
     </div>
+  );
+}
+
+export default function UniversityProfile() {
+  return (
+    <UniversityLayout breadcrumbTitle="Institution Profile">
+      <UniversityProfileContent />
+    </UniversityLayout>
   );
 }

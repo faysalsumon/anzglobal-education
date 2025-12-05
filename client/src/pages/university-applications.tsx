@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { Application } from "@shared/schema";
+import { UniversityLayout } from "@/components/university-layout";
 
 type ApplicationStage = 
   | "Assessment"
@@ -61,7 +62,7 @@ const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
-export default function UniversityApplications() {
+function UniversityApplicationsContent() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -587,5 +588,13 @@ export default function UniversityApplications() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UniversityApplications() {
+  return (
+    <UniversityLayout breadcrumbTitle="Applications">
+      <UniversityApplicationsContent />
+    </UniversityLayout>
   );
 }

@@ -2,8 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Sparkles, Building2, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
+import { UniversityLayout } from "@/components/university-layout";
 
-export default function UniversityAIAssistant() {
+function UniversityAIAssistantContent() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
@@ -115,5 +116,13 @@ export default function UniversityAIAssistant() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function UniversityAIAssistant() {
+  return (
+    <UniversityLayout breadcrumbTitle="AI Assistant">
+      <UniversityAIAssistantContent />
+    </UniversityLayout>
   );
 }

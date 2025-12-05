@@ -18,6 +18,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GooglePlacesAutocomplete } from "@/components/ui/google-places-autocomplete";
+import { UniversityLayout } from "@/components/university-layout";
 
 interface Institution {
   id: string;
@@ -50,7 +51,7 @@ const institutionSchema = z.object({
   scholarshipPercentage: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
 });
 
-export default function UniversityInstitutions() {
+function UniversityInstitutionsContent() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -725,5 +726,13 @@ export default function UniversityInstitutions() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function UniversityInstitutions() {
+  return (
+    <UniversityLayout breadcrumbTitle="Institutions">
+      <UniversityInstitutionsContent />
+    </UniversityLayout>
   );
 }

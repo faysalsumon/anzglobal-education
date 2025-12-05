@@ -2,41 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Plus, MapPin, DollarSign, Clock, Edit, Eye, Home } from "lucide-react";
+import { Plus, MapPin, DollarSign, Clock, Edit, Eye } from "lucide-react";
 import { Link } from "wouter";
 import type { Course } from "@shared/schema";
+import { UniversityLayout } from "@/components/university-layout";
 
-export default function UniversityCourses() {
+function UniversityCoursesContent() {
   const { data: courses = [], isLoading } = useQuery<Course[]>({
     queryKey: ["/api/university/courses"],
   });
 
   return (
     <div className="space-y-6">
-      <Breadcrumb data-testid="breadcrumb">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/" data-testid="breadcrumb-home">
-                <Home className="h-4 w-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage data-testid="breadcrumb-current">Courses</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">My Courses</h1>
@@ -136,5 +113,13 @@ export default function UniversityCourses() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UniversityCourses() {
+  return (
+    <UniversityLayout breadcrumbTitle="Courses">
+      <UniversityCoursesContent />
+    </UniversityLayout>
   );
 }

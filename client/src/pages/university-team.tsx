@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, AlertCircle, RefreshCw, UserPlus, Trash2, Mail, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { UniversityLayout } from "@/components/university-layout";
 
 interface TeamMember {
   id: string;
@@ -61,7 +62,7 @@ const roleColors: Record<string, "default" | "secondary" | "destructive" | "outl
   application_manager: "outline",
 };
 
-export default function UniversityTeam() {
+function UniversityTeamContent() {
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -368,5 +369,13 @@ export default function UniversityTeam() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function UniversityTeam() {
+  return (
+    <UniversityLayout breadcrumbTitle="Team">
+      <UniversityTeamContent />
+    </UniversityLayout>
   );
 }
