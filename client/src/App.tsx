@@ -26,8 +26,6 @@ import StudentApplications from "@/pages/student-applications";
 import StudentAIAssistant from "@/pages/student-ai-assistant";
 import StudentReferrals from "@/pages/student-referrals";
 import StudentDocuments from "@/pages/student-documents";
-import StudentHome from "@/pages/student-home";
-import UniversityHome from "@/pages/university-home";
 import PublicCourses from "@/pages/public-courses";
 import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
@@ -45,7 +43,6 @@ import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
 import InstitutionLogin from "@/pages/institution-login";
 import AdminDashboard from "@/pages/admin-dashboard";
-import AdminHome from "@/pages/admin-home";
 import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
 import ScrapingJobDetail from "@/pages/scraping-job-detail";
@@ -84,7 +81,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/dashboard" component={Home} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/home" component={AdminHome} />
       <Route path="/admin/profile" component={AdminProfile} />
       <Route path="/admin/csv-import" component={AdminCSVImport} />
       <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
@@ -93,13 +89,11 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/university/dashboard" component={Home} />
       <Route path="/university/institutions" component={UniversityInstitutions} />
       <Route path="/university/courses" component={UniversityCourses} />
-      <Route path="/university/home" component={UniversityHome} />
       <Route path="/university/courses/new" component={CourseForm} />
       <Route path="/university/courses/:id/edit" component={CourseForm} />
       <Route path="/university/applications" component={UniversityApplications} />
       <Route path="/university/team" component={UniversityTeam} />
       <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
-      <Route path="/student/home" component={StudentHome} />
       <Route path="/student/courses" component={StudentCourses} />
       <Route path="/student/courses/:id" component={CourseDetail} />
       <Route path="/student/profile" component={StudentProfilePage} />
@@ -130,12 +124,7 @@ function AppContent() {
   // Admin dashboard has its own sidebar layout - don't show TopNavBar/MobileBottomNav
   // Only for authenticated admin users on dashboard pages (not login)
   const isAdminDashboard = location === '/admin' || 
-    location === '/admin/home' ||
     (location.startsWith('/admin/') && location !== '/admin/login');
-
-  // Student and University home use their own layout like admin
-  const isStudentHome = location === '/student/home';
-  const isUniversityHome = location === '/university/home';
 
   // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
   const internalDashboardRoutes = [
@@ -178,8 +167,8 @@ function AppContent() {
     );
   }
 
-  // Admin dashboard, Student home, and University home use their own full layout with sidebar (no footer)
-  if (isAdminDashboard || isStudentHome || isUniversityHome) {
+  // Admin dashboard uses its own full layout with sidebar (no footer)
+  if (isAdminDashboard) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
