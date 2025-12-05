@@ -25,7 +25,9 @@ import {
   ChevronRight,
   Menu,
   X,
+  User,
 } from "lucide-react";
+import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -221,6 +223,27 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
               })}
             </div>
           </ScrollArea>
+
+          {/* Profile Link at Bottom */}
+          <div className="p-2 border-t border-border">
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Link href="/admin/profile">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-12 h-12 rounded-xl transition-all text-gray-600 bg-gray-50 dark:bg-gray-950 dark:text-gray-400"
+                    data-testid="button-admin-profile"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                My Profile
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Submenu Panel - Column 2 */}
