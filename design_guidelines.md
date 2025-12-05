@@ -177,3 +177,82 @@ Use Heroicons (outline style) throughout for UI icons. Specific icons needed:
 **Visual Treatment**: AI-powered features indicated with sparkle icon, subtle animated gradient border on AI assistant panels, "AI" badge on generated content with option to regenerate
 
 **Interaction Pattern**: Click "AI Assistant" → Modal/sidebar opens → User enters prompt or context → Loading state → Generated content appears → User can edit, regenerate, or apply
+
+---
+
+## Zoho One-Inspired Dashboard System
+
+### Dashboard Shell (`DashboardShell`)
+A unified layout component for all user types (Admin, Student, University) featuring:
+
+**Dark Collapsible Sidebar** (left, 256px expanded / 64px collapsed):
+- Dark background (bg-slate-900) with subtle borders
+- Logo/brand at top with collapse toggle
+- "Pinned" section for frequently used items
+- Tree navigation with icon + label + optional badge
+- User profile section at bottom with avatar, name, role
+- Smooth expand/collapse animation
+
+**Top Bar**:
+- Module tabs for switching between major sections
+- Global search input
+- Notification bell with badge
+- Settings and user menu dropdowns
+
+**Main Content Area**:
+- DashboardWelcome component: Personalized greeting with logo
+- Widget grid layout with responsive columns
+- Consistent spacing (gap-6)
+
+### Widget Components
+
+**WidgetCard**: Base container for all dashboard widgets
+- Consistent header with title, icon, and action buttons
+- Loading skeleton state
+- Empty state with icon, message, and optional CTA
+- Optional noPadding variant for tables
+
+**CompactTable**: Dense data table for widgets
+- Density presets: compact, normal, relaxed
+- Stage badges with color-coded workflow states
+- Priority/Status badges
+- Row click handlers
+- Responsive column hiding
+
+**StatsWidget**: Summary statistics display
+- 2-4 column grid layout
+- Icon + value + label pattern
+- Color-coded categories (primary, success, warning, danger)
+- Trending indicators
+
+**Role-Specific Widgets**:
+- **Admin**: ApplicationsWidget, LeadsWidget, TasksWidget, MeetingsWidget, InboxWidget
+- **Student**: StudentApplicationsWidget, StudentDocumentsWidget, StudentSavedCoursesWidget, StudentProgressWidget, StudentUpcomingWidget
+- **University**: UniversityApplicationsWidget, UniversityCoursesWidget, UniversityTeamWidget, UniversityPendingActionsWidget
+
+### Widget Grid Layout
+
+**WidgetGrid**: Full-width responsive grid
+- Desktop: 4 columns
+- Tablet: 2 columns
+- Mobile: 1 column
+
+**WidgetRow**: Two-column layout for paired widgets
+- Desktop: 2 columns, equal width
+- Mobile: Stack to single column
+
+### Stage Badges Color Scheme
+- Assessment: Blue
+- Documents Verification: Yellow
+- Offer-Letter: Purple
+- GS-Clearance: Cyan
+- COE: Indigo
+- Visa-Lodgment: Orange
+- Application Won: Green
+- Refusal/Refunds: Red
+
+### Route Structure
+- `/admin/home`: Admin dashboard with Zoho layout
+- `/student/home`: Student dashboard with Zoho layout
+- `/university/home`: University dashboard with Zoho layout
+- Original routes (`/admin/dashboard`, `/`) preserved for gradual migration
