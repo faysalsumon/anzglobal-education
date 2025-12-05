@@ -154,8 +154,14 @@ function AppContent() {
     );
   }
 
-  // Unauthenticated or no user type - show public layout with header and footer
-  if (!isAuthenticated || !user?.userType) {
+  // Admin dashboard uses its own full layout with sidebar (no footer)
+  if (isAdminDashboard && isAuthenticated) {
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
+  }
+
+  // Public routes - use PublicHeader for both authenticated and unauthenticated users
+  // The PublicHeader component now shows profile dropdown for logged-in users
+  if (isPublicRoute || !isAuthenticated || !user?.userType) {
     return (
       <div className="flex flex-col min-h-screen w-full">
         <PublicHeader />
@@ -163,19 +169,17 @@ function AppContent() {
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
         {shouldShowFooter && <Footer />}
+        {/* ChatWidget only for authenticated users */}
+        {isAuthenticated && <ChatWidget />}
       </div>
     );
   }
 
-  // Admin dashboard uses its own full layout with sidebar (no footer)
-  if (isAdminDashboard) {
-    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
-  }
-
+  // Internal dashboard/portal routes - use TopNavBar for authenticated users
   return (
     <div className="flex flex-col min-h-screen w-full">
       <TopNavBar />
-      <main className={`flex-1 overflow-y-auto ${isPublicRoute ? 'pb-20 md:pb-6' : 'p-4 md:p-6 pb-20 md:pb-6'}`}>
+      <main className={`flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6`}>
         <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
       </main>
       {shouldShowFooter && <Footer />}
