@@ -17,6 +17,7 @@ import {
   FileText,
   Filter,
 } from "lucide-react";
+import { AdminLayout } from "@/components/admin-layout";
 
 interface ScrapedCourse {
   id: string;
@@ -181,36 +182,37 @@ export default function ScrapingReviewDashboard() {
   const rejectedCount = stats?.scrapedCourses.rejected || 0;
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation(`/admin/scraping/jobs/${jobId}`)}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Job
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6" />
-              Review Scraped Courses
-            </h1>
-            <p className="text-sm text-muted-foreground">Job ID: {jobId}</p>
+    <AdminLayout activeTab="scraping" breadcrumbTitle="Review Scraped Courses">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation(`/admin/scraping/jobs/${jobId}`)}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Job
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                Review Scraped Courses
+              </h1>
+              <p className="text-sm text-muted-foreground">Job ID: {jobId}</p>
+            </div>
           </div>
+          {pendingCount > 0 && (
+            <Button
+              onClick={handleBatchApprove}
+              disabled={batchApproveMutation.isPending}
+              data-testid="button-batch-approve"
+            >
+              {batchApproveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Approve All Pending ({pendingCount})
+            </Button>
+          )}
         </div>
-        {pendingCount > 0 && (
-          <Button
-            onClick={handleBatchApprove}
-            disabled={batchApproveMutation.isPending}
-            data-testid="button-batch-approve"
-          >
-            {batchApproveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Approve All Pending ({pendingCount})
-          </Button>
-        )}
-      </div>
 
       <Card>
         <CardHeader>
@@ -397,6 +399,7 @@ export default function ScrapingReviewDashboard() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

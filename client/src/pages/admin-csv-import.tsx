@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,18 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Upload, FileText, CheckCircle2, XCircle, Clock, AlertTriangle, Download, Home } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, Clock, AlertTriangle, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AdminLayout } from "@/components/admin-layout";
 
 export interface ValidationError {
   row: number;
@@ -506,35 +498,20 @@ export function AdminCsvImportPanel() {
   );
 }
 
-// Page wrapper with breadcrumb
+// Page wrapper with AdminLayout
 export default function AdminCSVImport() {
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/" data-testid="link-admin-home">
-                <Home className="w-4 h-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>CSV Data Import</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <AdminLayout activeTab="data-import" breadcrumbTitle="CSV Data Import">
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold">Bulk Data Import</h1>
+          <p className="text-muted-foreground mt-1">Import universities and courses from CSV files</p>
+        </div>
 
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Bulk Data Import</h1>
-        <p className="text-muted-foreground mt-1">Import universities and courses from CSV files</p>
+        {/* Reusable panel */}
+        <AdminCsvImportPanel />
       </div>
-
-      {/* Reusable panel */}
-      <AdminCsvImportPanel />
-    </div>
+    </AdminLayout>
   );
 }
