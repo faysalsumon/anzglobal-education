@@ -26,7 +26,10 @@ import {
   UserPlus,
   Contact,
   FileText,
+  Home,
+  Sparkles,
 } from "lucide-react";
+import { Link } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 interface AdminSidebarProps {
@@ -156,6 +159,28 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       </SidebarHeader>
       
       <SidebarContent className="px-1.5 py-3">
+        {/* New Dashboard Link */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="New Dashboard"
+                  size="default"
+                  data-testid="sidebar-new-dashboard"
+                  className="h-9 text-sm bg-primary/10 hover:bg-primary/20 text-primary"
+                >
+                  <Link href="/admin/home">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span className="truncate">New Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* CRM Section - My Work */}
         {visibleCRM.length > 0 && (
           <SidebarGroup>
