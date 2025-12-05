@@ -1477,7 +1477,6 @@ export default function AdminDashboard() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="h-7 text-xs"
                       onClick={() => {
                         if (confirm(`Delete ${selectedUsers.size} selected user(s)?`)) {
                           bulkDeleteUsersMutation.mutate(Array.from(selectedUsers));
@@ -1486,13 +1485,12 @@ export default function AdminDashboard() {
                       disabled={bulkDeleteUsersMutation.isPending}
                       data-testid="button-bulk-delete-users"
                     >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete Selected
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs"
                       onClick={() => setSelectedUsers(new Set())}
                       data-testid="button-clear-selection-users"
                     >
@@ -1606,7 +1604,6 @@ export default function AdminDashboard() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-xs px-2"
                               onClick={() => updateStatusMutation.mutate({
                                 userId: user.id,
                                 isActive: !user.isActive,
@@ -1614,9 +1611,9 @@ export default function AdminDashboard() {
                               data-testid={`button-toggle-status-${user.id}`}
                             >
                               {user.isActive ? (
-                                <><ShieldCheck className="h-3 w-3 mr-1 text-green-600" /> Active</>
+                                <><ShieldCheck className="h-4 w-4 mr-1 text-green-600" /> Active</>
                               ) : (
-                                <><ShieldOff className="h-3 w-3 mr-1 text-red-600" /> Inactive</>
+                                <><ShieldOff className="h-4 w-4 mr-1 text-red-600" /> Inactive</>
                               )}
                             </Button>
                           </TableCell>
@@ -1625,20 +1622,18 @@ export default function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
                                 onClick={() => handleEditUser(user)}
                                 data-testid={`button-edit-user-${user.id}`}
                               >
-                                <Edit className="h-3.5 w-3.5" />
+                                <Edit className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
                                 onClick={() => setDeletingUser(user)}
                                 data-testid={`button-delete-user-${user.id}`}
                               >
-                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1659,35 +1654,33 @@ export default function AdminDashboard() {
 
         {/* Institutions Tab */}
         {activeTab === "institutions" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <CardHeader className="py-3 px-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div>
-                  <CardTitle>Institution Management</CardTitle>
-                  <CardDescription>View and manage all institutions</CardDescription>
+                  <CardTitle className="text-base">Institution Management</CardTitle>
+                  <CardDescription className="text-xs">View and manage all institutions</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => setAiExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract">
-                    <Sparkles className="h-4 w-4 mr-2" />
+                  <Button size="sm" onClick={() => setAiExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract">
+                    <Sparkles className="h-4 w-4 mr-1" />
                     AI Extract
                   </Button>
-                  <Button onClick={handleCreateInstitution} data-testid="button-create-institution">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Institution
+                  <Button size="sm" onClick={handleCreateInstitution} data-testid="button-create-institution">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-4 py-3">
               {/* Bulk Actions Toolbar */}
               {selectedInstitutions.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {selectedInstitutions.size} institution(s) selected
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span className="text-xs font-medium">
+                    {selectedInstitutions.size} selected
+                  </span>
                   <div className="flex gap-2">
                     <Button
                       variant="destructive"
@@ -1700,7 +1693,7 @@ export default function AdminDashboard() {
                       disabled={bulkDeleteInstitutionsMutation.isPending}
                       data-testid="button-bulk-delete-institutions"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Delete Selected
                     </Button>
                     <Button
@@ -1709,7 +1702,7 @@ export default function AdminDashboard() {
                       onClick={() => setSelectedInstitutions(new Set())}
                       data-testid="button-clear-selection-institutions"
                     >
-                      Clear Selection
+                      Clear
                     </Button>
                   </div>
                 </div>
@@ -1717,75 +1710,72 @@ export default function AdminDashboard() {
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name or country..."
                   value={institutionSearchQuery}
                   onChange={(e) => setInstitutionSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-8 h-8 text-sm"
                   data-testid="input-search-institutions"
                 />
               </div>
 
-              {/* Institutions Table */}
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
+              {/* Institutions Table - Compact */}
+              <div className="overflow-x-auto border rounded-md">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-10 py-2">
                         <Checkbox
                           checked={filteredInstitutions && filteredInstitutions.length > 0 && selectedInstitutions.size === filteredInstitutions.length}
                           onCheckedChange={() => filteredInstitutions && toggleSelectAllInstitutions(filteredInstitutions)}
                           data-testid="checkbox-select-all-institutions"
                         />
                       </TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Provider Type</TableHead>
-                      <TableHead>Approval Status</TableHead>
-                      <TableHead>Active Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Name</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Location</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Provider Type</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Status</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {institutionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={7} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
-                        <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`}>
-                          <TableCell>
+                        <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`} className="hover:bg-muted/50">
+                          <TableCell className="py-2">
                             <Checkbox
                               checked={selectedInstitutions.has(institution.id)}
                               onCheckedChange={() => toggleSelectInstitution(institution.id)}
                               data-testid={`checkbox-institution-${institution.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">{institution.name}</TableCell>
-                          <TableCell>{institution.country}</TableCell>
-                          <TableCell>{institution.providerType || "N/A"}</TableCell>
-                          <TableCell>
+                          <TableCell className="py-2 font-medium text-sm">{institution.name}</TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground">{institution.country}</TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground">{institution.providerType || "N/A"}</TableCell>
+                          <TableCell className="py-2">
                             {institution.approvalStatus === "approved" && (
-                              <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                              <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs">
                                 Approved
                               </Badge>
                             )}
                             {institution.approvalStatus === "pending" && (
-                              <Badge variant="secondary">
-                                <Clock className="h-3 w-3 mr-1" />
+                              <Badge variant="secondary" className="text-xs">
                                 Pending
                               </Badge>
                             )}
                             {institution.approvalStatus === "rejected" && (
-                              <Badge variant="destructive">
-                                <XCircle className="h-3 w-3 mr-1" />
+                              <Badge variant="destructive" className="text-xs">
                                 Rejected
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-2">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1797,25 +1787,23 @@ export default function AdminDashboard() {
                             >
                               {institution.isActive ? (
                                 <Badge variant="default" className="cursor-pointer">
-                                  <ShieldCheck className="h-3 w-3 mr-1" />
                                   Active
                                 </Badge>
                               ) : (
                                 <Badge variant="secondary" className="cursor-pointer">
-                                  <ShieldOff className="h-3 w-3 mr-1" />
                                   Inactive
                                 </Badge>
                               )}
                             </Button>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-2">
+                          <TableCell className="py-2">
+                            <div className="flex justify-end gap-1">
                               {/* Approve/Reject buttons for pending institutions */}
                               {hasFullAdminAccess && institution.approvalStatus === "pending" && (
                                 <>
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => approveInstitutionMutation.mutate(institution.id)}
                                     disabled={approveInstitutionMutation.isPending}
                                     data-testid={`button-approve-institution-${institution.id}`}
@@ -1824,7 +1812,7 @@ export default function AdminDashboard() {
                                   </Button>
                                   <Button
                                     variant="ghost"
-                                    size="sm"
+                                    size="icon"
                                     onClick={() => setRejectingInstitution(institution)}
                                     data-testid={`button-reject-institution-${institution.id}`}
                                   >
@@ -1836,7 +1824,7 @@ export default function AdminDashboard() {
                               {hasFullAdminAccess && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => handleEditInstitution(institution)}
                                   data-testid={`button-edit-institution-${institution.id}`}
                                 >
@@ -1847,7 +1835,7 @@ export default function AdminDashboard() {
                               {hasFullAdminAccess && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => setDeletingInstitution(institution)}
                                   data-testid={`button-delete-institution-${institution.id}`}
                                 >
@@ -1873,50 +1861,50 @@ export default function AdminDashboard() {
 
         {/* Courses Tab */}
         {activeTab === "courses" && (
-          <div className="space-y-6 md:space-y-8">
-          {/* Stats */}
-          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{courseStats.total}</div>
-                <p className="text-xs text-muted-foreground">
-                  {courseStats.active} active, {courseStats.inactive} inactive
-                </p>
-              </CardContent>
+          <div className="space-y-4">
+          {/* Stats - Compact Cards */}
+          <div className="grid gap-3 grid-cols-3">
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Courses</p>
+                  <p className="text-xl font-bold">{courseStats.total}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {courseStats.active} active, {courseStats.inactive} inactive
+                  </p>
+                </div>
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{courseStats.active}</div>
-              </CardContent>
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Active</p>
+                  <p className="text-xl font-bold">{courseStats.active}</p>
+                </div>
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inactive Courses</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{courseStats.inactive}</div>
-              </CardContent>
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Inactive</p>
+                  <p className="text-xl font-bold">{courseStats.inactive}</p>
+                </div>
+                <BookOpen className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
           </div>
 
           {/* Course Management */}
           <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <CardHeader className="py-3 px-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div>
-                  <CardTitle>Course Management</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base">Course Management</CardTitle>
+                  <CardDescription className="text-xs">
                     {isConsultant ? "View all courses" : "View and manage all courses"}
                   </CardDescription>
                 </div>
@@ -1924,28 +1912,26 @@ export default function AdminDashboard() {
                 {hasFullAdminAccess && (
                   <div className="flex gap-2">
                     {isSuperAdmin && (
-                      <Button onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
-                        <Sparkles className="h-4 w-4 mr-2" />
+                      <Button size="sm" onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
+                        <Sparkles className="h-4 w-4 mr-1" />
                         AI Extract
                       </Button>
                     )}
-                    <Button onClick={handleCreateCourse} data-testid="button-create-course">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Course
+                    <Button size="sm" onClick={handleCreateCourse} data-testid="button-create-course">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Create
                     </Button>
                   </div>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-4 py-3">
               {/* Bulk Actions Toolbar */}
               {selectedCourses.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {selectedCourses.size} course(s) selected
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span className="text-xs font-medium">
+                    {selectedCourses.size} selected
+                  </span>
                   <div className="flex gap-2">
                     <Button
                       variant="destructive"
@@ -1958,7 +1944,7 @@ export default function AdminDashboard() {
                       disabled={bulkDeleteCoursesMutation.isPending}
                       data-testid="button-bulk-delete-courses"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Delete Selected
                     </Button>
                     <Button
@@ -1967,26 +1953,26 @@ export default function AdminDashboard() {
                       onClick={() => setSelectedCourses(new Set())}
                       data-testid="button-clear-selection-courses"
                     >
-                      Clear Selection
+                      Clear
                     </Button>
                   </div>
                 </div>
               )}
 
               {/* Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by course title or institution..."
                     value={courseSearchQuery}
                     onChange={(e) => setCourseSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 h-8 text-sm"
                     data-testid="input-search-courses"
                   />
                 </div>
                 <Select value={courseStatusFilter} onValueChange={setCourseStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-course-status">
+                  <SelectTrigger className="w-full sm:w-[120px] h-8 text-sm" data-testid="select-filter-course-status">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1997,67 +1983,64 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
-              {/* Courses Table */}
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
+              {/* Courses Table - Compact */}
+              <div className="overflow-x-auto border rounded-md">
                 <Table className="min-w-full">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-10 py-2">
                         <Checkbox
                           checked={filteredCourses && filteredCourses.length > 0 && selectedCourses.size === filteredCourses.length}
                           onCheckedChange={() => filteredCourses && toggleSelectAllCourses(filteredCourses)}
                           data-testid="checkbox-select-all-courses"
                         />
                       </TableHead>
-                      <TableHead className="min-w-[200px]">Title</TableHead>
-                      <TableHead className="hidden md:table-cell">Institution</TableHead>
-                      <TableHead className="hidden lg:table-cell">Level</TableHead>
-                      <TableHead className="hidden xl:table-cell">Duration</TableHead>
-                      <TableHead className="hidden sm:table-cell">Fees</TableHead>
-                      <TableHead>Approval</TableHead>
-                      <TableHead className="hidden md:table-cell">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold min-w-[200px]">Title</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden md:table-cell">Institution</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden lg:table-cell">Level</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden xl:table-cell">Duration</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden sm:table-cell">Fees</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden md:table-cell">Status</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {coursesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={9} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredCourses && filteredCourses.length > 0 ? (
                       filteredCourses.map((course) => (
-                        <TableRow key={course.id} data-testid={`row-course-${course.id}`}>
-                          <TableCell>
+                        <TableRow key={course.id} data-testid={`row-course-${course.id}`} className="hover:bg-muted/50">
+                          <TableCell className="py-2">
                             <Checkbox
                               checked={selectedCourses.has(course.id)}
                               onCheckedChange={() => toggleSelectCourse(course.id)}
                               data-testid={`checkbox-course-${course.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium min-w-[200px]">{course.title}</TableCell>
-                          <TableCell className="hidden md:table-cell">{course.institutionName}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{course.level || "-"}</TableCell>
-                          <TableCell className="hidden xl:table-cell">{course.duration || "-"}</TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          <TableCell className="py-2 font-medium text-sm min-w-[200px]">{course.title}</TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground hidden md:table-cell">{course.institutionName}</TableCell>
+                          <TableCell className="py-2 text-sm hidden lg:table-cell">{course.level || "-"}</TableCell>
+                          <TableCell className="py-2 text-sm hidden xl:table-cell">{course.duration || "-"}</TableCell>
+                          <TableCell className="py-2 text-sm hidden sm:table-cell">
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-2">
                             {/* Approval Status Badge */}
                             {course.approvalStatus === 'pending' && (
-                              <Badge variant="secondary" data-testid={`badge-course-approval-${course.id}`}>
-                                <Clock className="h-3 w-3 mr-1" />
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-course-approval-${course.id}`}>
                                 Pending
                               </Badge>
                             )}
                             {course.approvalStatus === 'approved' && (
-                              <Badge variant="default" className="bg-green-600 hover:bg-green-700" data-testid={`badge-course-approval-${course.id}`}>
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                              <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs" data-testid={`badge-course-approval-${course.id}`}>
                                 Approved
                               </Badge>
                             )}
                             {course.approvalStatus === 'rejected' && (
-                              <Badge variant="destructive" data-testid={`badge-course-approval-${course.id}`}>
-                                <XCircle className="h-3 w-3 mr-1" />
+                              <Badge variant="destructive" className="text-xs" data-testid={`badge-course-approval-${course.id}`}>
                                 Rejected
                               </Badge>
                             )}
@@ -2154,39 +2137,39 @@ export default function AdminDashboard() {
 
         {/* Applications Tab */}
         {activeTab === "applications" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <AdminApplicationsKanban />
           </div>
         )}
 
         {/* Data Import Tab */}
         {activeTab === "blogs" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <AdminBlogManagement />
           </div>
         )}
 
         {activeTab === "website-content" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <AdminCmsPanel />
           </div>
         )}
 
         {activeTab === "data-import" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <AdminCsvImportPanel />
           </div>
         )}
 
         {activeTab === "web-scraping" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <AdminScrapingPanel />
           </div>
         )}
 
         {/* Activity Logs Tab */}
         {activeTab === "activity-logs" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <ActivityFeed
               title="Platform Activity Feed"
               showFilters={true}
