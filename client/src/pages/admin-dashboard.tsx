@@ -53,6 +53,7 @@ import { TeamWorkloadPanel } from "@/components/team-workload-panel";
 import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
 import { CrmLeadsPanel } from "@/components/crm-leads-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
+import { AdminCmsPanel } from "@/components/admin-cms-panel";
 
 interface User {
   id: string;
@@ -2159,6 +2160,12 @@ export default function AdminDashboard() {
         {activeTab === "blogs" && (
           <div className="space-y-6 md:space-y-8">
             <AdminBlogManagement />
+          </div>
+        )}
+
+        {activeTab === "website-content" && (
+          <div className="space-y-6 md:space-y-8">
+            <AdminCmsPanel />
           </div>
         )}
 

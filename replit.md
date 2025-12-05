@@ -51,6 +51,17 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators (50% stage position + 50% verified documents), color-coded SLA badges (7-day at-risk, 14-day overdue thresholds), quick filter chips for SLA status, bulk actions toolbar (select all, batch consultant assignment, batch stage transitions), and fully responsive design. Terminal stages (Application Won, Refusal/Refunds, Application Lost) display 100% progress and always show on-track SLA status.
 - **Filtering & Search**: Discipline-based course filtering, course level filtering, dynamic animated typing for natural language search, and location-based course filtering with interactive campus badges.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers, and normalized campus data.
+- **Level 2 Content Blocks CMS**: Admin-facing content management system for static website content with 5 content types:
+  - **Testimonials**: Student success stories with ratings (1-5), institution/course info, student photos, draft/published status, display ordering.
+  - **FAQs**: Categorized Q&A (general, applications, courses, visas, fees) with rich text answers and display ordering.
+  - **Team Members**: Public-facing team profiles with name, role, bio, photos, social links (LinkedIn, Twitter), and visibility controls.
+  - **Site Settings**: Key-value configuration (strings, numbers, booleans, JSON) with labels and categories (general, contact, social, branding, SEO).
+  - **Content Snippets**: Reusable content blocks keyed by page location and section name for consistent messaging.
+  Database: 5 CMS tables (testimonials, faqs, publicTeamMembers, siteSettings, contentSnippets) with draft/published workflow, audit trails (createdById, updatedById), and display ordering.
+  Storage: 22 CRUD methods supporting filtering, pagination, and status-based queries.
+  API: RESTful endpoints at `/api/admin/cms/...` with role-based access (Super Admin: full CRUD, Platform Admin/Support Manager: create/update, Super Admin only: delete).
+  UI: AdminCmsPanel component with 5 tabbed sections accessible via "Website Content" in admin sidebar.
+  Activity Logging: All CMS operations logged with entity type, action, and user attribution.
 
 ### System Design Choices
 - **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini structured outputs for data extraction, Playwright/Cheerio for web scraping, and BullMQ for job queuing. Features an auto-approval system for high-confidence courses and batch operations for review. **Course detection** uses intelligent heuristics including Australian Training Package Code pattern matching (regex for codes like BSB60720, CHC52021, RII50520), qualification keyword detection (diploma, certificate, advanced-diploma, degree), and comprehensive exclusion filters (blogs, galleries, PDFs, images) to accurately identify course pages during website crawling. **Redis handling**: Queue and worker components use lazy connection with graceful fallback - Redis availability is checked at startup, and if unavailable, background job processing is disabled with clear logging. Manual processing endpoint (`POST /api/admin/scraping/jobs/:jobId/process`) serves as fallback when Redis/BullMQ unavailable in dev environment.

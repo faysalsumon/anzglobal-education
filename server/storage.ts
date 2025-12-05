@@ -70,6 +70,27 @@ import {
   type InsertFollowUpReminder,
   type TaskWithRelations,
   type WorkloadSummary,
+  // CMS imports
+  testimonials,
+  faqs,
+  publicTeamMembers,
+  siteSettings,
+  contentSnippets,
+  type Testimonial,
+  type InsertTestimonial,
+  type UpdateTestimonial,
+  type Faq,
+  type InsertFaq,
+  type UpdateFaq,
+  type PublicTeamMember,
+  type InsertPublicTeamMember,
+  type UpdatePublicTeamMember,
+  type SiteSetting,
+  type InsertSiteSetting,
+  type UpdateSiteSetting,
+  type ContentSnippet,
+  type InsertContentSnippet,
+  type UpdateContentSnippet,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
@@ -263,6 +284,51 @@ export interface IStorage {
   
   // Workload summary operations
   getTeamWorkloadSummary(): Promise<WorkloadSummary[]>;
+  
+  // ============================================
+  // CMS CONTENT BLOCKS OPERATIONS
+  // ============================================
+  
+  // Testimonial operations
+  getTestimonialById(id: string): Promise<Testimonial | undefined>;
+  getAllTestimonials(filters?: { status?: string; isFeatured?: boolean; showOnPage?: string }): Promise<Testimonial[]>;
+  getPublishedTestimonials(page?: string): Promise<Testimonial[]>;
+  createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  updateTestimonial(id: string, data: UpdateTestimonial): Promise<Testimonial>;
+  deleteTestimonial(id: string): Promise<void>;
+  
+  // FAQ operations
+  getFaqById(id: string): Promise<Faq | undefined>;
+  getAllFaqs(filters?: { status?: string; category?: string; showOnPage?: string }): Promise<Faq[]>;
+  getPublishedFaqs(category?: string, page?: string): Promise<Faq[]>;
+  createFaq(faq: InsertFaq): Promise<Faq>;
+  updateFaq(id: string, data: UpdateFaq): Promise<Faq>;
+  deleteFaq(id: string): Promise<void>;
+  
+  // Public team member operations
+  getPublicTeamMemberById(id: string): Promise<PublicTeamMember | undefined>;
+  getAllPublicTeamMembers(filters?: { status?: string; isFeatured?: boolean }): Promise<PublicTeamMember[]>;
+  getPublishedPublicTeamMembers(): Promise<PublicTeamMember[]>;
+  createPublicTeamMember(member: InsertPublicTeamMember): Promise<PublicTeamMember>;
+  updatePublicTeamMember(id: string, data: UpdatePublicTeamMember): Promise<PublicTeamMember>;
+  deletePublicTeamMember(id: string): Promise<void>;
+  
+  // Site settings operations
+  getSiteSettingByKey(key: string): Promise<SiteSetting | undefined>;
+  getAllSiteSettings(category?: string): Promise<SiteSetting[]>;
+  getPublicSiteSettings(): Promise<SiteSetting[]>;
+  createSiteSetting(setting: InsertSiteSetting): Promise<SiteSetting>;
+  updateSiteSetting(key: string, data: UpdateSiteSetting): Promise<SiteSetting>;
+  deleteSiteSetting(id: string): Promise<void>;
+  
+  // Content snippet operations
+  getContentSnippetById(id: string): Promise<ContentSnippet | undefined>;
+  getContentSnippetByKey(key: string): Promise<ContentSnippet | undefined>;
+  getAllContentSnippets(filters?: { status?: string; pageLocation?: string }): Promise<ContentSnippet[]>;
+  getPublishedContentSnippets(pageLocation?: string): Promise<ContentSnippet[]>;
+  createContentSnippet(snippet: InsertContentSnippet): Promise<ContentSnippet>;
+  updateContentSnippet(id: string, data: UpdateContentSnippet): Promise<ContentSnippet>;
+  deleteContentSnippet(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1697,6 +1763,295 @@ export class DatabaseStorage implements IStorage {
     );
 
     return workloadSummaries;
+  }
+
+  // ============================================
+  // CMS CONTENT BLOCKS IMPLEMENTATIONS
+  // ============================================
+
+  // Testimonial operations
+  async getTestimonialById(id: string): Promise<Testimonial | undefined> {
+    const [testimonial] = await db.select().from(testimonials).where(eq(testimonials.id, id));
+    return testimonial;
+  }
+
+  async getAllTestimonials(filters?: { status?: string; isFeatured?: boolean; showOnPage?: string }): Promise<Testimonial[]> {
+    let query = db.select().from(testimonials);
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(testimonials.status, filters.status as any));
+    }
+    if (filters?.isFeatured !== undefined) {
+      conditions.push(eq(testimonials.isFeatured, filters.isFeatured));
+    }
+    if (filters?.showOnPage) {
+      conditions.push(sql`${filters.showOnPage} = ANY(${testimonials.showOnPage})`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(testimonials.displayOrder);
+  }
+
+  async getPublishedTestimonials(page?: string): Promise<Testimonial[]> {
+    let query = db.select().from(testimonials).where(eq(testimonials.status, 'published'));
+    
+    if (page) {
+      query = query.where(
+        and(
+          eq(testimonials.status, 'published'),
+          sql`${page} = ANY(${testimonials.showOnPage})`
+        )
+      ) as any;
+    }
+    
+    return await query.orderBy(testimonials.displayOrder);
+  }
+
+  async createTestimonial(testimonialData: InsertTestimonial): Promise<Testimonial> {
+    const [testimonial] = await db.insert(testimonials).values(testimonialData).returning();
+    return testimonial;
+  }
+
+  async updateTestimonial(id: string, data: UpdateTestimonial): Promise<Testimonial> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+    const [testimonial] = await db
+      .update(testimonials)
+      .set(updateData)
+      .where(eq(testimonials.id, id))
+      .returning();
+    return testimonial;
+  }
+
+  async deleteTestimonial(id: string): Promise<void> {
+    await db.delete(testimonials).where(eq(testimonials.id, id));
+  }
+
+  // FAQ operations
+  async getFaqById(id: string): Promise<Faq | undefined> {
+    const [faq] = await db.select().from(faqs).where(eq(faqs.id, id));
+    return faq;
+  }
+
+  async getAllFaqs(filters?: { status?: string; category?: string; showOnPage?: string }): Promise<Faq[]> {
+    let query = db.select().from(faqs);
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(faqs.status, filters.status as any));
+    }
+    if (filters?.category) {
+      conditions.push(eq(faqs.category, filters.category as any));
+    }
+    if (filters?.showOnPage) {
+      conditions.push(sql`${filters.showOnPage} = ANY(${faqs.showOnPage})`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(faqs.displayOrder);
+  }
+
+  async getPublishedFaqs(category?: string, page?: string): Promise<Faq[]> {
+    const conditions = [eq(faqs.status, 'published')];
+    
+    if (category) {
+      conditions.push(eq(faqs.category, category as any));
+    }
+    if (page) {
+      conditions.push(sql`${page} = ANY(${faqs.showOnPage})`);
+    }
+    
+    return await db
+      .select()
+      .from(faqs)
+      .where(and(...conditions))
+      .orderBy(faqs.displayOrder);
+  }
+
+  async createFaq(faqData: InsertFaq): Promise<Faq> {
+    const [faq] = await db.insert(faqs).values(faqData).returning();
+    return faq;
+  }
+
+  async updateFaq(id: string, data: UpdateFaq): Promise<Faq> {
+    const [faq] = await db
+      .update(faqs)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(faqs.id, id))
+      .returning();
+    return faq;
+  }
+
+  async deleteFaq(id: string): Promise<void> {
+    await db.delete(faqs).where(eq(faqs.id, id));
+  }
+
+  // Public team member operations
+  async getPublicTeamMemberById(id: string): Promise<PublicTeamMember | undefined> {
+    const [member] = await db.select().from(publicTeamMembers).where(eq(publicTeamMembers.id, id));
+    return member;
+  }
+
+  async getAllPublicTeamMembers(filters?: { status?: string; isFeatured?: boolean }): Promise<PublicTeamMember[]> {
+    let query = db.select().from(publicTeamMembers);
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(publicTeamMembers.status, filters.status as any));
+    }
+    if (filters?.isFeatured !== undefined) {
+      conditions.push(eq(publicTeamMembers.isFeatured, filters.isFeatured));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(publicTeamMembers.displayOrder);
+  }
+
+  async getPublishedPublicTeamMembers(): Promise<PublicTeamMember[]> {
+    return await db
+      .select()
+      .from(publicTeamMembers)
+      .where(eq(publicTeamMembers.status, 'published'))
+      .orderBy(publicTeamMembers.displayOrder);
+  }
+
+  async createPublicTeamMember(memberData: InsertPublicTeamMember): Promise<PublicTeamMember> {
+    const [member] = await db.insert(publicTeamMembers).values(memberData).returning();
+    return member;
+  }
+
+  async updatePublicTeamMember(id: string, data: UpdatePublicTeamMember): Promise<PublicTeamMember> {
+    const [member] = await db
+      .update(publicTeamMembers)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(publicTeamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deletePublicTeamMember(id: string): Promise<void> {
+    await db.delete(publicTeamMembers).where(eq(publicTeamMembers.id, id));
+  }
+
+  // Site settings operations
+  async getSiteSettingByKey(key: string): Promise<SiteSetting | undefined> {
+    const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.settingKey, key));
+    return setting;
+  }
+
+  async getAllSiteSettings(category?: string): Promise<SiteSetting[]> {
+    if (category) {
+      return await db.select().from(siteSettings).where(eq(siteSettings.category, category));
+    }
+    return await db.select().from(siteSettings);
+  }
+
+  async getPublicSiteSettings(): Promise<SiteSetting[]> {
+    return await db.select().from(siteSettings).where(eq(siteSettings.isPublic, true));
+  }
+
+  async createSiteSetting(settingData: InsertSiteSetting): Promise<SiteSetting> {
+    const [setting] = await db.insert(siteSettings).values(settingData).returning();
+    return setting;
+  }
+
+  async updateSiteSetting(key: string, data: UpdateSiteSetting): Promise<SiteSetting> {
+    const [setting] = await db
+      .update(siteSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(siteSettings.settingKey, key))
+      .returning();
+    return setting;
+  }
+
+  async deleteSiteSetting(id: string): Promise<void> {
+    await db.delete(siteSettings).where(eq(siteSettings.id, id));
+  }
+
+  // Content snippet operations
+  async getContentSnippetById(id: string): Promise<ContentSnippet | undefined> {
+    const [snippet] = await db.select().from(contentSnippets).where(eq(contentSnippets.id, id));
+    return snippet;
+  }
+
+  async getContentSnippetByKey(key: string): Promise<ContentSnippet | undefined> {
+    const [snippet] = await db.select().from(contentSnippets).where(eq(contentSnippets.snippetKey, key));
+    return snippet;
+  }
+
+  async getAllContentSnippets(filters?: { status?: string; pageLocation?: string }): Promise<ContentSnippet[]> {
+    let query = db.select().from(contentSnippets);
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(contentSnippets.status, filters.status as any));
+    }
+    if (filters?.pageLocation) {
+      conditions.push(eq(contentSnippets.pageLocation, filters.pageLocation));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getPublishedContentSnippets(pageLocation?: string): Promise<ContentSnippet[]> {
+    const conditions = [eq(contentSnippets.status, 'published')];
+    
+    if (pageLocation) {
+      conditions.push(eq(contentSnippets.pageLocation, pageLocation));
+    }
+    
+    return await db
+      .select()
+      .from(contentSnippets)
+      .where(and(...conditions));
+  }
+
+  async createContentSnippet(snippetData: InsertContentSnippet): Promise<ContentSnippet> {
+    const [snippet] = await db.insert(contentSnippets).values(snippetData).returning();
+    return snippet;
+  }
+
+  async updateContentSnippet(id: string, data: UpdateContentSnippet): Promise<ContentSnippet> {
+    // Get current snippet for version tracking
+    const [current] = await db.select().from(contentSnippets).where(eq(contentSnippets.id, id));
+    
+    const updateData: any = { 
+      ...data, 
+      updatedAt: new Date(),
+      version: (current?.version || 0) + 1,
+      previousVersionId: current?.id
+    };
+    
+    if (data.status === 'published') {
+      updateData.publishedAt = new Date();
+    }
+    
+    const [snippet] = await db
+      .update(contentSnippets)
+      .set(updateData)
+      .where(eq(contentSnippets.id, id))
+      .returning();
+    return snippet;
+  }
+
+  async deleteContentSnippet(id: string): Promise<void> {
+    await db.delete(contentSnippets).where(eq(contentSnippets.id, id));
   }
 }
 

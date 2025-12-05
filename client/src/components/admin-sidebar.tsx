@@ -25,6 +25,7 @@ import {
   BarChart3,
   UserPlus,
   Contact,
+  FileText,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -99,6 +100,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: Newspaper,
       label: "Blogs",
       value: "blogs",
+      show: true,
+    },
+    {
+      icon: FileText,
+      label: "Website Content",
+      value: "website-content",
       show: true,
     },
   ];

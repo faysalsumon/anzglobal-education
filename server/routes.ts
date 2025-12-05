@@ -51,6 +51,17 @@ import {
   adminTeamMembers,
   crmLeads,
   leadStatusHistory,
+  // CMS imports
+  insertTestimonialSchema,
+  updateTestimonialSchema,
+  insertFaqSchema,
+  updateFaqSchema,
+  insertPublicTeamMemberSchema,
+  updatePublicTeamMemberSchema,
+  insertSiteSettingSchema,
+  updateSiteSettingSchema,
+  insertContentSnippetSchema,
+  updateContentSnippetSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
@@ -174,7 +185,7 @@ async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
-type AdminRole = 'super_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
+type AdminRole = 'super_admin' | 'platform_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
 
 const addAdminTeamMemberSchema = z.object({
   email: z.string().email(),
@@ -225,7 +236,7 @@ export async function checkAdminAccess(
   // Check if user has role directly in users table (for direct admin creation)
   // Note: This supports admins created directly in DB (e.g., for testing) without admin_team_members entries.
   // Production admins should ideally have admin_team_members entries for full team management features.
-  if (user.role && ['super_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+  if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
     const userRole = user.role as AdminRole;
     if (requiredRoles && !requiredRoles.includes(userRole)) {
       return null;
@@ -7727,6 +7738,860 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END CRM SYSTEM API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // CMS CONTENT BLOCKS API ENDPOINTS
+  // ============================================
+
+  // ----- TESTIMONIALS -----
+  
+  // Get all testimonials (admin)
+  app.get("/api/admin/cms/testimonials", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, isFeatured, showOnPage } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (isFeatured !== undefined) filters.isFeatured = isFeatured === 'true';
+      if (showOnPage) filters.showOnPage = showOnPage;
+      
+      const testimonials = await storage.getAllTestimonials(filters);
+      res.json(testimonials);
+    } catch (error: any) {
+      console.error("Error fetching testimonials:", error);
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  // Get single testimonial (admin)
+  app.get("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const testimonial = await storage.getTestimonialById(req.params.id);
+      if (!testimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      
+      res.json(testimonial);
+    } catch (error: any) {
+      console.error("Error fetching testimonial:", error);
+      res.status(500).json({ message: "Failed to fetch testimonial" });
+    }
+  });
+
+  // Create testimonial
+  app.post("/api/admin/cms/testimonials", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertTestimonialSchema.parse({
+        ...req.body,
+        createdById: userId,
+        updatedById: userId,
+      });
+      
+      const testimonial = await storage.createTestimonial(data);
+      
+      // Log activity
+      await logCreate({
+        req,
+        entityType: 'testimonial' as any,
+        entityId: testimonial.id,
+        entityName: testimonial.title,
+      });
+      
+      res.json(testimonial);
+    } catch (error: any) {
+      console.error("Error creating testimonial:", error);
+      res.status(400).json({ message: error.message || "Failed to create testimonial" });
+    }
+  });
+
+  // Update testimonial
+  app.patch("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingTestimonial = await storage.getTestimonialById(req.params.id);
+      if (!existingTestimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      
+      const data = updateTestimonialSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      const testimonial = await storage.updateTestimonial(req.params.id, data);
+      
+      // Log activity
+      await logUpdate({
+        req,
+        entityType: 'testimonial' as any,
+        entityId: testimonial.id,
+        entityName: testimonial.title,
+        oldData: existingTestimonial,
+        newData: testimonial,
+      });
+      
+      res.json(testimonial);
+    } catch (error: any) {
+      console.error("Error updating testimonial:", error);
+      res.status(400).json({ message: error.message || "Failed to update testimonial" });
+    }
+  });
+
+  // Delete testimonial
+  app.delete("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      
+      const testimonial = await storage.getTestimonialById(req.params.id);
+      if (!testimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      
+      await storage.deleteTestimonial(req.params.id);
+      
+      // Log activity
+      await logDelete({
+        req,
+        entityType: 'testimonial' as any,
+        entityId: req.params.id,
+        entityName: testimonial.title,
+      });
+      
+      res.json({ message: "Testimonial deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting testimonial:", error);
+      res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
+  // Public endpoint for testimonials
+  app.get("/api/public/testimonials", async (req, res) => {
+    try {
+      const { page } = req.query;
+      const testimonials = await storage.getPublishedTestimonials(page as string);
+      res.json(testimonials);
+    } catch (error: any) {
+      console.error("Error fetching public testimonials:", error);
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  // ----- FAQs -----
+
+  // Get all FAQs (admin)
+  app.get("/api/admin/cms/faqs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, category, showOnPage } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (category) filters.category = category;
+      if (showOnPage) filters.showOnPage = showOnPage;
+      
+      const faqs = await storage.getAllFaqs(filters);
+      res.json(faqs);
+    } catch (error: any) {
+      console.error("Error fetching FAQs:", error);
+      res.status(500).json({ message: "Failed to fetch FAQs" });
+    }
+  });
+
+  // Get single FAQ (admin)
+  app.get("/api/admin/cms/faqs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const faq = await storage.getFaqById(req.params.id);
+      if (!faq) {
+        return res.status(404).json({ message: "FAQ not found" });
+      }
+      
+      res.json(faq);
+    } catch (error: any) {
+      console.error("Error fetching FAQ:", error);
+      res.status(500).json({ message: "Failed to fetch FAQ" });
+    }
+  });
+
+  // Create FAQ
+  app.post("/api/admin/cms/faqs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertFaqSchema.parse({
+        ...req.body,
+        createdById: userId,
+        updatedById: userId,
+      });
+      
+      const faq = await storage.createFaq(data);
+      
+      // Log activity
+      await logCreate({
+        req,
+        entityType: 'faq' as any,
+        entityId: faq.id,
+        entityName: faq.question.substring(0, 50),
+      });
+      
+      res.json(faq);
+    } catch (error: any) {
+      console.error("Error creating FAQ:", error);
+      res.status(400).json({ message: error.message || "Failed to create FAQ" });
+    }
+  });
+
+  // Update FAQ
+  app.patch("/api/admin/cms/faqs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingFaq = await storage.getFaqById(req.params.id);
+      if (!existingFaq) {
+        return res.status(404).json({ message: "FAQ not found" });
+      }
+      
+      const data = updateFaqSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      const faq = await storage.updateFaq(req.params.id, data);
+      
+      // Log activity
+      await logUpdate({
+        req,
+        entityType: 'faq' as any,
+        entityId: faq.id,
+        entityName: faq.question.substring(0, 50),
+        oldData: existingFaq,
+        newData: faq,
+      });
+      
+      res.json(faq);
+    } catch (error: any) {
+      console.error("Error updating FAQ:", error);
+      res.status(400).json({ message: error.message || "Failed to update FAQ" });
+    }
+  });
+
+  // Delete FAQ
+  app.delete("/api/admin/cms/faqs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      
+      const faq = await storage.getFaqById(req.params.id);
+      if (!faq) {
+        return res.status(404).json({ message: "FAQ not found" });
+      }
+      
+      await storage.deleteFaq(req.params.id);
+      
+      // Log activity
+      await logDelete({
+        req,
+        entityType: 'faq' as any,
+        entityId: req.params.id,
+        entityName: faq.question.substring(0, 50),
+      });
+      
+      res.json({ message: "FAQ deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting FAQ:", error);
+      res.status(500).json({ message: "Failed to delete FAQ" });
+    }
+  });
+
+  // Public endpoint for FAQs
+  app.get("/api/public/faqs", async (req, res) => {
+    try {
+      const { category, page } = req.query;
+      const faqs = await storage.getPublishedFaqs(category as string, page as string);
+      res.json(faqs);
+    } catch (error: any) {
+      console.error("Error fetching public FAQs:", error);
+      res.status(500).json({ message: "Failed to fetch FAQs" });
+    }
+  });
+
+  // ----- PUBLIC TEAM MEMBERS -----
+
+  // Get all public team members (admin)
+  app.get("/api/admin/cms/team-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, isFeatured } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (isFeatured !== undefined) filters.isFeatured = isFeatured === 'true';
+      
+      const members = await storage.getAllPublicTeamMembers(filters);
+      res.json(members);
+    } catch (error: any) {
+      console.error("Error fetching public team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // Get single public team member (admin)
+  app.get("/api/admin/cms/team-members/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const member = await storage.getPublicTeamMemberById(req.params.id);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      res.json(member);
+    } catch (error: any) {
+      console.error("Error fetching public team member:", error);
+      res.status(500).json({ message: "Failed to fetch team member" });
+    }
+  });
+
+  // Create public team member
+  app.post("/api/admin/cms/team-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertPublicTeamMemberSchema.parse({
+        ...req.body,
+        createdById: userId,
+        updatedById: userId,
+      });
+      
+      const member = await storage.createPublicTeamMember(data);
+      
+      // Log activity
+      await logCreate({
+        req,
+        entityType: 'public_team_member' as any,
+        entityId: member.id,
+        entityName: member.name,
+      });
+      
+      res.json(member);
+    } catch (error: any) {
+      console.error("Error creating public team member:", error);
+      res.status(400).json({ message: error.message || "Failed to create team member" });
+    }
+  });
+
+  // Update public team member
+  app.patch("/api/admin/cms/team-members/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingMember = await storage.getPublicTeamMemberById(req.params.id);
+      if (!existingMember) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      const data = updatePublicTeamMemberSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      const member = await storage.updatePublicTeamMember(req.params.id, data);
+      
+      // Log activity
+      await logUpdate({
+        req,
+        entityType: 'public_team_member' as any,
+        entityId: member.id,
+        entityName: member.name,
+        oldData: existingMember,
+        newData: member,
+      });
+      
+      res.json(member);
+    } catch (error: any) {
+      console.error("Error updating public team member:", error);
+      res.status(400).json({ message: error.message || "Failed to update team member" });
+    }
+  });
+
+  // Delete public team member
+  app.delete("/api/admin/cms/team-members/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      
+      const member = await storage.getPublicTeamMemberById(req.params.id);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      
+      await storage.deletePublicTeamMember(req.params.id);
+      
+      // Log activity
+      await logDelete({
+        req,
+        entityType: 'public_team_member' as any,
+        entityId: req.params.id,
+        entityName: member.name,
+      });
+      
+      res.json({ message: "Team member deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting public team member:", error);
+      res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
+  // Public endpoint for team members
+  app.get("/api/public/team-members", async (_req, res) => {
+    try {
+      const members = await storage.getPublishedPublicTeamMembers();
+      res.json(members);
+    } catch (error: any) {
+      console.error("Error fetching public team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  // ----- SITE SETTINGS -----
+
+  // Get all site settings (admin)
+  app.get("/api/admin/cms/site-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { category } = req.query;
+      const settings = await storage.getAllSiteSettings(category as string);
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Error fetching site settings:", error);
+      res.status(500).json({ message: "Failed to fetch site settings" });
+    }
+  });
+
+  // Get single site setting by key (admin)
+  app.get("/api/admin/cms/site-settings/:key", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const setting = await storage.getSiteSettingByKey(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Site setting not found" });
+      }
+      
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error fetching site setting:", error);
+      res.status(500).json({ message: "Failed to fetch site setting" });
+    }
+  });
+
+  // Create site setting
+  app.post("/api/admin/cms/site-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertSiteSettingSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      // Check if setting already exists
+      const existing = await storage.getSiteSettingByKey(data.settingKey);
+      if (existing) {
+        return res.status(400).json({ message: "Setting with this key already exists" });
+      }
+      
+      const setting = await storage.createSiteSetting(data);
+      
+      // Log activity
+      await logCreate({
+        req,
+        entityType: 'site_setting' as any,
+        entityId: setting.id,
+        entityName: setting.settingKey,
+      });
+      
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error creating site setting:", error);
+      res.status(400).json({ message: error.message || "Failed to create site setting" });
+    }
+  });
+
+  // Update site setting
+  app.patch("/api/admin/cms/site-settings/:key", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingSetting = await storage.getSiteSettingByKey(req.params.key);
+      if (!existingSetting) {
+        return res.status(404).json({ message: "Site setting not found" });
+      }
+      
+      const data = updateSiteSettingSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      const setting = await storage.updateSiteSetting(req.params.key, data);
+      
+      // Log activity
+      await logUpdate({
+        req,
+        entityType: 'site_setting' as any,
+        entityId: setting.id,
+        entityName: setting.settingKey,
+        oldData: existingSetting,
+        newData: setting,
+      });
+      
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error updating site setting:", error);
+      res.status(400).json({ message: error.message || "Failed to update site setting" });
+    }
+  });
+
+  // Delete site setting
+  app.delete("/api/admin/cms/site-settings/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      
+      const setting = await storage.getSiteSettingByKey(req.params.id);
+      if (!setting) {
+        return res.status(404).json({ message: "Site setting not found" });
+      }
+      
+      await storage.deleteSiteSetting(setting.id);
+      
+      // Log activity
+      await logDelete({
+        req,
+        entityType: 'site_setting' as any,
+        entityId: setting.id,
+        entityName: setting.settingKey,
+      });
+      
+      res.json({ message: "Site setting deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting site setting:", error);
+      res.status(500).json({ message: "Failed to delete site setting" });
+    }
+  });
+
+  // Public endpoint for site settings
+  app.get("/api/public/site-settings", async (_req, res) => {
+    try {
+      const settings = await storage.getPublicSiteSettings();
+      // Convert to key-value pairs for easy consumption
+      const settingsMap: Record<string, any> = {};
+      settings.forEach(s => {
+        settingsMap[s.settingKey] = s.settingValue;
+      });
+      res.json(settingsMap);
+    } catch (error: any) {
+      console.error("Error fetching public site settings:", error);
+      res.status(500).json({ message: "Failed to fetch site settings" });
+    }
+  });
+
+  // ----- CONTENT SNIPPETS -----
+
+  // Get all content snippets (admin)
+  app.get("/api/admin/cms/content-snippets", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { status, pageLocation } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (pageLocation) filters.pageLocation = pageLocation;
+      
+      const snippets = await storage.getAllContentSnippets(filters);
+      res.json(snippets);
+    } catch (error: any) {
+      console.error("Error fetching content snippets:", error);
+      res.status(500).json({ message: "Failed to fetch content snippets" });
+    }
+  });
+
+  // Get single content snippet (admin)
+  app.get("/api/admin/cms/content-snippets/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const snippet = await storage.getContentSnippetById(req.params.id);
+      if (!snippet) {
+        return res.status(404).json({ message: "Content snippet not found" });
+      }
+      
+      res.json(snippet);
+    } catch (error: any) {
+      console.error("Error fetching content snippet:", error);
+      res.status(500).json({ message: "Failed to fetch content snippet" });
+    }
+  });
+
+  // Create content snippet
+  app.post("/api/admin/cms/content-snippets", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const data = insertContentSnippetSchema.parse({
+        ...req.body,
+        createdById: userId,
+        updatedById: userId,
+      });
+      
+      // Check if snippet with same key exists
+      const existing = await storage.getContentSnippetByKey(data.snippetKey);
+      if (existing) {
+        return res.status(400).json({ message: "Content snippet with this key already exists" });
+      }
+      
+      const snippet = await storage.createContentSnippet(data);
+      
+      // Log activity
+      await logCreate({
+        req,
+        entityType: 'content_snippet' as any,
+        entityId: snippet.id,
+        entityName: snippet.title,
+      });
+      
+      res.json(snippet);
+    } catch (error: any) {
+      console.error("Error creating content snippet:", error);
+      res.status(400).json({ message: error.message || "Failed to create content snippet" });
+    }
+  });
+
+  // Update content snippet
+  app.patch("/api/admin/cms/content-snippets/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const existingSnippet = await storage.getContentSnippetById(req.params.id);
+      if (!existingSnippet) {
+        return res.status(404).json({ message: "Content snippet not found" });
+      }
+      
+      const data = updateContentSnippetSchema.parse({
+        ...req.body,
+        updatedById: userId,
+      });
+      
+      const snippet = await storage.updateContentSnippet(req.params.id, data);
+      
+      // Log activity
+      await logUpdate({
+        req,
+        entityType: 'content_snippet' as any,
+        entityId: snippet.id,
+        entityName: snippet.title,
+        oldData: existingSnippet,
+        newData: snippet,
+      });
+      
+      res.json(snippet);
+    } catch (error: any) {
+      console.error("Error updating content snippet:", error);
+      res.status(400).json({ message: error.message || "Failed to update content snippet" });
+    }
+  });
+
+  // Delete content snippet
+  app.delete("/api/admin/cms/content-snippets/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      
+      const snippet = await storage.getContentSnippetById(req.params.id);
+      if (!snippet) {
+        return res.status(404).json({ message: "Content snippet not found" });
+      }
+      
+      await storage.deleteContentSnippet(req.params.id);
+      
+      // Log activity
+      await logDelete({
+        req,
+        entityType: 'content_snippet' as any,
+        entityId: req.params.id,
+        entityName: snippet.title,
+      });
+      
+      res.json({ message: "Content snippet deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting content snippet:", error);
+      res.status(500).json({ message: "Failed to delete content snippet" });
+    }
+  });
+
+  // Public endpoint for content snippets
+  app.get("/api/public/content-snippets", async (req, res) => {
+    try {
+      const { pageLocation } = req.query;
+      const snippets = await storage.getPublishedContentSnippets(pageLocation as string);
+      // Convert to key-value pairs for easy consumption
+      const snippetsMap: Record<string, { content: string; title: string }> = {};
+      snippets.forEach(s => {
+        snippetsMap[s.snippetKey] = { content: s.content, title: s.title };
+      });
+      res.json(snippetsMap);
+    } catch (error: any) {
+      console.error("Error fetching public content snippets:", error);
+      res.status(500).json({ message: "Failed to fetch content snippets" });
+    }
+  });
+
+  // Get content snippet by key (public)
+  app.get("/api/public/content-snippets/:key", async (req, res) => {
+    try {
+      const snippet = await storage.getContentSnippetByKey(req.params.key);
+      if (!snippet || snippet.status !== 'published') {
+        return res.status(404).json({ message: "Content snippet not found" });
+      }
+      res.json({ content: snippet.content, title: snippet.title });
+    } catch (error: any) {
+      console.error("Error fetching public content snippet:", error);
+      res.status(500).json({ message: "Failed to fetch content snippet" });
+    }
+  });
+
+  // ============================================
+  // END CMS CONTENT BLOCKS API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available

@@ -117,6 +117,30 @@ export const activityEntityTypeEnum = pgEnum('activity_entity_type', [
   'reminder',
   'crm_lead',
   'crm_contact',
+  'testimonial',
+  'faq',
+  'site_setting',
+  'content_snippet',
+  'public_team_member',
+]);
+
+// CMS content status enum
+export const cmsStatusEnum = pgEnum('cms_status', [
+  'draft',
+  'published',
+  'archived',
+]);
+
+// FAQ category enum
+export const faqCategoryEnum = pgEnum('faq_category', [
+  'general',
+  'students',
+  'institutions',
+  'applications',
+  'visas',
+  'fees',
+  'scholarships',
+  'accommodation',
 ]);
 
 // CRM Task priority enum
@@ -1959,6 +1983,219 @@ export const insertBlogSchema = createInsertSchema(blogs).omit({
 
 export type Blog = typeof blogs.$inferSelect;
 export type InsertBlog = z.infer<typeof insertBlogSchema>;
+
+// ============================================
+// CMS CONTENT BLOCKS TABLES
+// ============================================
+
+// Testimonials table - Student success stories for public display
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentName: varchar("student_name", { length: 255 }).notNull(),
+  studentLocation: varchar("student_location", { length: 255 }), // e.g., "Melbourne, Australia"
+  studentCountry: varchar("student_country", { length: 100 }), // Origin country
+  institution: varchar("institution", { length: 255 }), // Where they study
+  course: varchar("course", { length: 255 }), // What they study
+  title: varchar("title", { length: 255 }).notNull(), // Quote headline
+  content: text("content").notNull(), // Full testimonial text
+  imageUrl: text("image_url"), // Student photo
+  rating: integer("rating").default(5), // 1-5 star rating
+  status: cmsStatusEnum("status").notNull().default("draft"),
+  displayOrder: integer("display_order").default(0), // For sorting on frontend
+  isFeatured: boolean("is_featured").default(false), // Show on landing page
+  showOnPage: text("show_on_page").array(), // Which pages to show on: ['landing', 'study-australia', 'reviews']
+  
+  // Audit fields
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("testimonials_status_idx").on(table.status),
+  featuredIdx: index("testimonials_featured_idx").on(table.isFeatured),
+  orderIdx: index("testimonials_order_idx").on(table.displayOrder),
+}));
+
+// FAQs table - Frequently asked questions
+export const faqs = pgTable("faqs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(), // Supports markdown
+  category: faqCategoryEnum("category").notNull().default("general"),
+  status: cmsStatusEnum("status").notNull().default("draft"),
+  displayOrder: integer("display_order").default(0),
+  showOnPage: text("show_on_page").array(), // Which pages to show on
+  
+  // Audit fields
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("faqs_status_idx").on(table.status),
+  categoryIdx: index("faqs_category_idx").on(table.category),
+  orderIdx: index("faqs_order_idx").on(table.displayOrder),
+}));
+
+// Public team members table - For about page (founders, leadership)
+export const publicTeamMembers = pgTable("public_team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 255 }).notNull(), // e.g., "Co-Founder & CEO"
+  bio: text("bio"), // Short biography
+  imageUrl: text("image_url"),
+  linkedinUrl: text("linkedin_url"),
+  twitterUrl: text("twitter_url"),
+  emailAddress: varchar("email_address", { length: 255 }),
+  displayOrder: integer("display_order").default(0),
+  status: cmsStatusEnum("status").notNull().default("draft"),
+  isFeatured: boolean("is_featured").default(false), // Show prominently
+  
+  // Audit fields
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  statusIdx: index("public_team_members_status_idx").on(table.status),
+  orderIdx: index("public_team_members_order_idx").on(table.displayOrder),
+}));
+
+// Site settings table - Global configuration (contact info, social links, etc.)
+export const siteSettings = pgTable("site_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  settingKey: varchar("setting_key", { length: 100 }).notNull().unique(),
+  settingValue: text("setting_value"),
+  settingType: varchar("setting_type", { length: 50 }).notNull().default("text"), // text, html, json, image, boolean
+  category: varchar("category", { length: 100 }).notNull().default("general"), // contact, social, branding, seo
+  label: varchar("label", { length: 255 }).notNull(), // Human-readable label
+  description: text("description"), // Help text for admins
+  isPublic: boolean("is_public").default(true), // Whether to expose via public API
+  
+  // Audit fields
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  keyIdx: uniqueIndex("site_settings_key_idx").on(table.settingKey),
+  categoryIdx: index("site_settings_category_idx").on(table.category),
+}));
+
+// Content snippets table - Reusable text blocks (mission statement, taglines, etc.)
+export const contentSnippets = pgTable("content_snippets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  snippetKey: varchar("snippet_key", { length: 100 }).notNull().unique(), // e.g., "mission_statement", "hero_headline"
+  title: varchar("title", { length: 255 }).notNull(), // Display name for admins
+  content: text("content").notNull(), // Supports markdown
+  contentHtml: text("content_html"), // Pre-rendered HTML (optional)
+  status: cmsStatusEnum("status").notNull().default("draft"),
+  pageLocation: varchar("page_location", { length: 100 }), // e.g., "landing", "about", "study-australia"
+  sectionName: varchar("section_name", { length: 100 }), // e.g., "hero", "features", "cta"
+  
+  // Version tracking
+  version: integer("version").default(1),
+  previousVersionId: varchar("previous_version_id"),
+  
+  // Audit fields
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  keyIdx: uniqueIndex("content_snippets_key_idx").on(table.snippetKey),
+  statusIdx: index("content_snippets_status_idx").on(table.status),
+  pageIdx: index("content_snippets_page_idx").on(table.pageLocation),
+}));
+
+// Insert schemas for CMS tables
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  studentName: z.string().min(2).max(255),
+  title: z.string().min(5).max(255),
+  content: z.string().min(20).max(5000),
+  rating: z.number().int().min(1).max(5).optional(),
+  showOnPage: z.array(z.string()).optional(),
+});
+
+export const updateTestimonialSchema = insertTestimonialSchema.partial();
+
+export const insertFaqSchema = createInsertSchema(faqs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  question: z.string().min(10).max(500),
+  answer: z.string().min(20).max(5000),
+  showOnPage: z.array(z.string()).optional(),
+});
+
+export const updateFaqSchema = insertFaqSchema.partial();
+
+export const insertPublicTeamMemberSchema = createInsertSchema(publicTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(2).max(255),
+  role: z.string().min(2).max(255),
+  bio: z.string().max(2000).optional(),
+  linkedinUrl: z.string().url().optional().or(z.literal("")),
+  twitterUrl: z.string().url().optional().or(z.literal("")),
+  emailAddress: z.string().email().optional().or(z.literal("")),
+});
+
+export const updatePublicTeamMemberSchema = insertPublicTeamMemberSchema.partial();
+
+export const insertSiteSettingSchema = createInsertSchema(siteSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  settingKey: z.string().min(1).max(100).regex(/^[a-z0-9_]+$/, "Key must be lowercase with underscores"),
+  label: z.string().min(1).max(255),
+});
+
+export const updateSiteSettingSchema = insertSiteSettingSchema.partial().omit({ settingKey: true });
+
+export const insertContentSnippetSchema = createInsertSchema(contentSnippets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  version: true,
+  previousVersionId: true,
+}).extend({
+  snippetKey: z.string().min(1).max(100).regex(/^[a-z0-9_]+$/, "Key must be lowercase with underscores"),
+  title: z.string().min(1).max(255),
+  content: z.string().min(1),
+});
+
+export const updateContentSnippetSchema = insertContentSnippetSchema.partial().omit({ snippetKey: true });
+
+// CMS Types
+export type Testimonial = typeof testimonials.$inferSelect;
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type UpdateTestimonial = z.infer<typeof updateTestimonialSchema>;
+
+export type Faq = typeof faqs.$inferSelect;
+export type InsertFaq = z.infer<typeof insertFaqSchema>;
+export type UpdateFaq = z.infer<typeof updateFaqSchema>;
+
+export type PublicTeamMember = typeof publicTeamMembers.$inferSelect;
+export type InsertPublicTeamMember = z.infer<typeof insertPublicTeamMemberSchema>;
+export type UpdatePublicTeamMember = z.infer<typeof updatePublicTeamMemberSchema>;
+
+export type SiteSetting = typeof siteSettings.$inferSelect;
+export type InsertSiteSetting = z.infer<typeof insertSiteSettingSchema>;
+export type UpdateSiteSetting = z.infer<typeof updateSiteSettingSchema>;
+
+export type ContentSnippet = typeof contentSnippets.$inferSelect;
+export type InsertContentSnippet = z.infer<typeof insertContentSnippetSchema>;
+export type UpdateContentSnippet = z.infer<typeof updateContentSnippetSchema>;
 
 // Contact inquiry type enum
 export const contactInquiryTypeEnum = pgEnum("contact_inquiry_type", ["student", "institution"]);
