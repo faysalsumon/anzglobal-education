@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Eye, Edit, Trash2, FileText, Calendar, User } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, FileText, Calendar, User, Sparkles } from "lucide-react";
 import type { Blog } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -221,6 +221,27 @@ export function AdminBlogManagement() {
     }
   };
 
+  // Seed sample blogs mutation
+  const seedBlogsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/admin/blogs/seed", "POST", {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/blogs"] });
+      toast({
+        title: "Sample blogs seeded",
+        description: `Created ${data.created} blogs, skipped ${data.skipped} (already exist)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to seed blogs",
+      });
+    },
+  });
+
   // Generate slug from title
   const generateSlug = (title: string) => {
     return title
@@ -239,10 +260,21 @@ export function AdminBlogManagement() {
             Create and manage blog posts for your platform
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} data-testid="button-create-blog">
-          <Plus className="mr-2 h-4 w-4" />
-          New Blog Post
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => seedBlogsMutation.mutate()} 
+            disabled={seedBlogsMutation.isPending}
+            data-testid="button-seed-blogs"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            {seedBlogsMutation.isPending ? "Seeding..." : "Seed Sample Blogs"}
+          </Button>
+          <Button onClick={() => handleOpenDialog()} data-testid="button-create-blog">
+            <Plus className="mr-2 h-4 w-4" />
+            New Blog Post
+          </Button>
+        </div>
       </div>
 
       {/* Filter */}

@@ -5884,6 +5884,1455 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed blog posts (admin only) - Creates 10 SEO-friendly blog posts about International Education
+  app.post("/api/admin/blogs/seed", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const blogPosts = [
+        {
+          title: "Top 10 Reasons Why International Students Choose Australia for Higher Education",
+          slug: "top-reasons-international-students-choose-australia",
+          excerpt: "Discover why over 750,000 international students choose Australia as their study destination. From world-class universities to post-study work opportunities.",
+          content: `# Top 10 Reasons Why International Students Choose Australia for Higher Education
+
+Australia has become one of the world's most popular destinations for international students, hosting over 750,000 students from across the globe. But what makes Australia so attractive for higher education?
+
+## 1. World-Class Universities
+
+Australia is home to 43 universities, with 7 consistently ranked in the global top 100. Institutions like the University of Melbourne, Australian National University, and the University of Sydney offer cutting-edge research and teaching excellence.
+
+## 2. Globally Recognized Qualifications
+
+Australian degrees are recognized and respected worldwide. The Australian Qualifications Framework (AQF) ensures that all qualifications meet rigorous quality standards.
+
+## 3. Diverse Range of Courses
+
+From engineering to healthcare, business to creative arts, Australian institutions offer over 22,000 courses across all fields of study. Whether you're pursuing undergraduate, postgraduate, or vocational training, you'll find the right program.
+
+## 4. Post-Study Work Opportunities
+
+The Temporary Graduate visa (subclass 485) allows international graduates to work in Australia for 2-4 years after completing their studies. This valuable work experience enhances your career prospects globally.
+
+## 5. Multicultural Society
+
+Australia is one of the world's most multicultural nations, with residents from over 200 countries. International students feel welcome and find communities that share their cultural background.
+
+## 6. High Quality of Life
+
+Australian cities consistently rank among the world's most liveable. With excellent healthcare, low crime rates, and beautiful natural environments, students enjoy a high quality of life.
+
+## 7. Support Services for Students
+
+Australian institutions provide comprehensive support services including academic assistance, career counseling, mental health support, and accommodation services specifically designed for international students.
+
+## 8. Work While You Study
+
+International students can work up to 48 hours per fortnight during semester, with unlimited hours during breaks. This helps offset living costs while gaining valuable work experience.
+
+## 9. Pathway to Permanent Residency
+
+Australia offers clear pathways from student visa to permanent residency for skilled graduates. Many courses are aligned with occupations on the skilled occupation list.
+
+## 10. Beautiful Climate and Lifestyle
+
+From Sydney's beaches to Melbourne's culture, Brisbane's sunshine to Perth's natural beauty, Australia offers an incredible lifestyle that combines study with adventure.
+
+## Start Your Australian Education Journey
+
+Ready to take the next step? Contact ANZ Global Education to explore courses and universities that match your goals and aspirations.`,
+          category: "Study in Australia",
+          tags: ["international students", "australian universities", "study abroad", "higher education", "student visa"],
+          metaTitle: "Top 10 Reasons International Students Choose Australia | Study in Australia",
+          metaDescription: "Discover why 750,000+ international students choose Australia. World-class universities, work opportunities, and pathways to residency await.",
+          featuredImageUrl: "/attached_assets/stock_images/international_studen_c500be12.jpg",
+          ogImageUrl: "/attached_assets/stock_images/international_studen_c500be12.jpg",
+          status: "published" as const,
+          publishedAt: new Date(),
+          authorId: userId,
+        },
+        {
+          title: "Complete Guide to Australian Student Visa (Subclass 500) Application Process",
+          slug: "australian-student-visa-subclass-500-guide",
+          excerpt: "Step-by-step guide to applying for an Australian Student Visa. Learn about requirements, documents needed, and tips for a successful application.",
+          content: `# Complete Guide to Australian Student Visa (Subclass 500) Application Process
+
+Applying for an Australian Student Visa can seem overwhelming, but with proper preparation, the process is straightforward. This comprehensive guide walks you through everything you need to know.
+
+## What is the Student Visa Subclass 500?
+
+The Student Visa (subclass 500) allows international students to study full-time at registered education providers in Australia. It's the primary visa for international students at all education levels.
+
+## Eligibility Requirements
+
+### Basic Requirements
+- Enrolled in a full-time course at a CRICOS-registered institution
+- Genuine Temporary Entrant (GTE) requirement
+- English language proficiency
+- Financial capacity to support your stay
+- Health insurance (OSHC)
+- Good character and health requirements
+
+### Age Requirements
+- At least 6 years old to study in Australia
+- No maximum age for student visa applications
+
+## Required Documents
+
+### Essential Documents
+1. **Confirmation of Enrolment (CoE)** - From your education provider
+2. **Passport** - Valid for at least 6 months
+3. **Genuine Temporary Entrant Statement** - Explaining your study intentions
+4. **English Test Results** - IELTS, TOEFL, PTE, or equivalent
+5. **Financial Evidence** - Showing AU$21,041 per year for living costs
+
+### Supporting Documents
+- Academic transcripts and certificates
+- Proof of previous employment (if applicable)
+- Evidence of family ties to home country
+- Health insurance confirmation
+
+## Financial Requirements 2024
+
+| Expense | Annual Amount (AUD) |
+|---------|---------------------|
+| Living costs | $21,041 |
+| Course fees | As per institution |
+| School-age dependents | $8,000 per child |
+| Partner accompaniment | Additional funds required |
+
+## Application Process
+
+### Step 1: Receive Your CoE
+After accepting your offer and paying the required deposit, your institution will issue a Confirmation of Enrolment.
+
+### Step 2: Create an ImmiAccount
+Register for an ImmiAccount on the Department of Home Affairs website.
+
+### Step 3: Complete the Application
+Fill out the online application form accurately and upload all required documents.
+
+### Step 4: Pay the Visa Fee
+The current visa application charge is AUD 710 (subject to change).
+
+### Step 5: Health Examination
+Complete any required health examinations at approved clinics.
+
+### Step 6: Wait for Decision
+Processing times vary but typically range from 4-6 weeks.
+
+## Tips for a Successful Application
+
+1. **Apply early** - Allow plenty of time for processing
+2. **Be honest** - Provide accurate information throughout
+3. **Organize documents** - Keep everything clearly labeled and accessible
+4. **Demonstrate genuine intentions** - Be clear about your study and return plans
+5. **Meet English requirements** - Prepare well for language tests
+
+## Common Mistakes to Avoid
+
+- Incomplete applications
+- Inconsistent information
+- Missing documents
+- Insufficient financial evidence
+- Weak GTE statement
+
+## Need Help with Your Visa Application?
+
+ANZ Global Education provides comprehensive visa guidance. Our experts can help you prepare a strong application and avoid common pitfalls.`,
+          category: "Student Visa",
+          tags: ["student visa", "subclass 500", "visa application", "immigration", "australia visa"],
+          metaTitle: "Australian Student Visa 500 Guide 2024 | Complete Application Process",
+          metaDescription: "Step-by-step guide to Australian Student Visa subclass 500. Requirements, documents, costs & tips for successful application.",
+          featuredImageUrl: "/attached_assets/stock_images/international_studen_536b236a.jpg",
+          ogImageUrl: "/attached_assets/stock_images/international_studen_536b236a.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "How to Choose the Right Course and University in Australia: A Comprehensive Guide",
+          slug: "how-to-choose-course-university-australia",
+          excerpt: "Making the right choice for your education is crucial. Learn how to evaluate universities, compare courses, and find the perfect fit for your career goals.",
+          content: `# How to Choose the Right Course and University in Australia
+
+Choosing where and what to study in Australia is one of the most important decisions you'll make. This guide helps you navigate the options and find your perfect match.
+
+## Understanding the Australian Education System
+
+Australia offers education at multiple levels:
+- **Vocational Education and Training (VET)** - Practical, job-focused training
+- **Undergraduate Studies** - Bachelor's degrees (3-4 years)
+- **Postgraduate Studies** - Master's and doctoral programs
+- **Research Degrees** - PhD and research-based programs
+
+## Step 1: Define Your Career Goals
+
+Before looking at courses, consider:
+- What career do you envision?
+- What skills do you need to develop?
+- What industry interests you?
+- What are the job prospects in your field?
+
+## Step 2: Research Course Options
+
+### Key Factors to Consider
+
+**Course Content**
+- Examine the curriculum and subjects
+- Look for practical components like internships
+- Check if the course is industry-accredited
+
+**Course Duration**
+- Bachelor's degrees: 3-4 years
+- Master's degrees: 1-2 years
+- Diplomas: 1-2 years
+- Certificates: 6 months - 1 year
+
+**Entry Requirements**
+- Academic qualifications needed
+- English language requirements
+- Any prerequisite subjects
+
+## Step 3: Evaluate Universities
+
+### Ranking Considerations
+- QS World University Rankings
+- Times Higher Education Rankings
+- Subject-specific rankings
+
+### Beyond Rankings
+- Industry connections and partnerships
+- Research opportunities
+- Graduate employment rates
+- Student support services
+
+### Location Factors
+- Cost of living in the city
+- Climate and lifestyle
+- Employment opportunities
+- Cultural communities
+
+## Step 4: Compare Costs
+
+### Tuition Fees by Study Level
+| Level | Annual Fee Range (AUD) |
+|-------|------------------------|
+| Undergraduate | $20,000 - $45,000 |
+| Postgraduate | $22,000 - $50,000 |
+| VET Courses | $4,000 - $22,000 |
+| Research Degrees | $20,000 - $45,000 |
+
+### Living Cost Variations
+- Sydney/Melbourne: Higher costs
+- Adelaide/Brisbane: Moderate costs
+- Regional areas: Lower costs
+
+## Step 5: Check Pathway Options
+
+Many students use pathway programs:
+- **Foundation Programs** - Prepare for undergraduate study
+- **Pathway Programs** - Guaranteed entry upon completion
+- **Package Offers** - English course + degree program
+
+## Step 6: Consider Post-Study Opportunities
+
+Look for courses that offer:
+- Work-integrated learning
+- Industry placements
+- Networking opportunities
+- Skills in demand for Australian jobs
+
+## Red Flags to Watch For
+
+- Institutions without CRICOS registration
+- Courses not recognized by professional bodies
+- Unusually low fees that seem too good to be true
+- Limited student support services
+
+## Make an Informed Decision
+
+At ANZ Global Education, we help students find their perfect course match. Our counselors provide personalized guidance based on your goals, budget, and preferences.`,
+          category: "Course Selection",
+          tags: ["university selection", "course guide", "australian courses", "career planning", "education advice"],
+          metaTitle: "How to Choose the Right Course & University in Australia 2024",
+          metaDescription: "Expert guide to selecting the best Australian university and course. Compare rankings, costs, and career outcomes to make the right choice.",
+          featuredImageUrl: "/attached_assets/stock_images/international_studen_5bf0ade5.jpg",
+          ogImageUrl: "/attached_assets/stock_images/international_studen_5bf0ade5.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Cost of Living in Australia for International Students: 2024 Budget Guide",
+          slug: "cost-of-living-australia-international-students-2024",
+          excerpt: "Plan your finances effectively with our comprehensive guide to living costs in Australia. From accommodation to groceries, learn how to budget smartly.",
+          content: `# Cost of Living in Australia for International Students: 2024 Budget Guide
+
+Understanding living costs is essential for planning your Australian education. This guide provides realistic estimates and money-saving tips to help you budget effectively.
+
+## Official Living Cost Requirement
+
+The Australian government requires students to show access to:
+- **$21,041 per year** for the primary student
+- **$7,362 additional** for a partner
+- **$3,152 additional** per child
+
+## Monthly Budget Breakdown
+
+### Sydney & Melbourne (Higher Cost Cities)
+
+| Expense | Monthly Cost (AUD) |
+|---------|-------------------|
+| Accommodation | $1,200 - $2,000 |
+| Food & Groceries | $400 - $600 |
+| Transportation | $150 - $200 |
+| Utilities | $100 - $150 |
+| Mobile & Internet | $70 - $100 |
+| Entertainment | $150 - $300 |
+| Books & Supplies | $50 - $100 |
+| **Total** | **$2,120 - $3,450** |
+
+### Brisbane, Perth & Adelaide (Moderate Cost Cities)
+
+| Expense | Monthly Cost (AUD) |
+|---------|-------------------|
+| Accommodation | $800 - $1,500 |
+| Food & Groceries | $350 - $500 |
+| Transportation | $100 - $150 |
+| Utilities | $80 - $120 |
+| Mobile & Internet | $60 - $90 |
+| Entertainment | $100 - $200 |
+| Books & Supplies | $50 - $100 |
+| **Total** | **$1,540 - $2,660** |
+
+## Accommodation Options
+
+### Types of Accommodation
+
+**On-Campus Student Housing**
+- Cost: $200-$500 per week
+- Pros: Convenient, inclusive of utilities, social environment
+- Cons: Limited availability, may require early application
+
+**Off-Campus Shared Housing**
+- Cost: $150-$350 per week
+- Pros: More affordable, independence
+- Cons: Need to manage utilities and housemates
+
+**Homestay**
+- Cost: $250-$350 per week
+- Pros: Includes meals, cultural immersion
+- Cons: Less independence, house rules
+
+**Private Rental**
+- Cost: $300-$600 per week
+- Pros: Complete privacy and independence
+- Cons: Higher cost, lease commitments
+
+## Money-Saving Tips
+
+### Accommodation
+- Consider living further from city center
+- Share with other students
+- Look for student-specific housing providers
+
+### Food
+- Cook at home instead of eating out
+- Shop at budget supermarkets (Aldi, Costco)
+- Use student discount apps
+
+### Transportation
+- Get a student concession card
+- Walk or cycle when possible
+- Use monthly travel passes
+
+### General Savings
+- Use student discounts (UNiDAYS, Student Edge)
+- Buy second-hand textbooks
+- Take advantage of free campus events
+
+## Working While Studying
+
+International students can work:
+- **Up to 48 hours per fortnight** during semester
+- **Unlimited hours** during scheduled breaks
+
+### Average Hourly Wages
+- Hospitality: $23-$28
+- Retail: $22-$27
+- Tutoring: $30-$50
+- Administration: $25-$35
+
+## Banking in Australia
+
+### Setting Up a Bank Account
+- Open an account before arriving if possible
+- Major banks: Commonwealth, Westpac, NAB, ANZ
+- Many offer student accounts with no monthly fees
+
+### Transferring Money
+- Use international transfer services (Wise, OFX)
+- Compare exchange rates
+- Set up direct debits for rent
+
+## Plan Your Budget Today
+
+Contact ANZ Global Education for personalized financial planning advice and help finding affordable study options in Australia.`,
+          category: "Student Life",
+          tags: ["cost of living", "budget", "student finance", "accommodation", "money saving"],
+          metaTitle: "Cost of Living in Australia 2024 | International Student Budget Guide",
+          metaDescription: "Complete 2024 guide to living costs in Australia for students. Accommodation, food, transport costs with city comparisons and saving tips.",
+          featuredImageUrl: "/attached_assets/stock_images/international_studen_30cc3d7f.jpg",
+          ogImageUrl: "/attached_assets/stock_images/international_studen_30cc3d7f.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Pathways to Permanent Residency in Australia After Graduation",
+          slug: "permanent-residency-australia-after-graduation",
+          excerpt: "Explore the various pathways from student visa to permanent residency in Australia. Understand skilled migration, state sponsorship, and employer nomination options.",
+          content: `# Pathways to Permanent Residency in Australia After Graduation
+
+For many international students, studying in Australia is not just about education—it's the first step toward building a life in this beautiful country. Understanding your options for permanent residency helps you plan strategically.
+
+## Post-Study Work Rights
+
+### Temporary Graduate Visa (Subclass 485)
+
+After completing your studies, you may be eligible for:
+
+**Graduate Work Stream**
+- 18 months for qualification related to skilled occupation
+- Must apply within 6 months of completing studies
+
+**Post-Study Work Stream**
+- 2 years for Bachelor's or Master's (coursework)
+- 3 years for Master's (research)
+- 4 years for Doctoral degree
+
+**Extended Post-Study Work Rights**
+Graduates from regional areas may be eligible for additional 1-2 years.
+
+## Skilled Migration Options
+
+### Skilled Independent Visa (Subclass 189)
+
+**Key Features**
+- Points-based visa
+- No sponsorship required
+- Permanent residency from grant
+
+**Points Required:** Minimum 65 points
+
+### Points Test Components
+
+| Factor | Maximum Points |
+|--------|---------------|
+| Age | 30 |
+| English | 20 |
+| Skilled Employment | 20 |
+| Australian Study | 10 |
+| Education | 20 |
+| Specialist Education | 10 |
+| NAATI Credentials | 5 |
+| Partner Skills | 10 |
+| State/Regional Nomination | 15 |
+
+## State Nominated Visas
+
+### Subclass 190 (State Nominated)
+- Requires nomination by an Australian state
+- 5 additional points for invitation
+- 2-year commitment to live in nominating state
+- Immediate permanent residency
+
+### Subclass 491 (Skilled Regional)
+- Requires nomination by state or relative sponsorship
+- 15 additional points
+- 3-year provisional visa leading to PR (subclass 191)
+- Must live in regional Australia
+
+## Employer Sponsored Pathways
+
+### Temporary Skill Shortage (Subclass 482)
+- Employer sponsors you for a skilled role
+- Medium-term stream: Up to 4 years
+- Pathway to PR through subclass 186 after 3 years
+
+### Employer Nomination Scheme (Subclass 186)
+- Direct permanent residency through employer
+- Requires 3 years of work experience
+- Or transition from 482 visa
+
+## Courses That Lead to PR
+
+High-demand occupations often include:
+
+**Engineering**
+- Civil, Mechanical, Electrical, Mining
+
+**Healthcare**
+- Nursing, Medicine, Pharmacy, Allied Health
+
+**IT**
+- Software Development, Cybersecurity, Data Science
+
+**Trades**
+- Electrical, Plumbing, Carpentry
+
+**Accounting**
+- With CA/CPA accreditation
+
+## Regional Study Benefits
+
+Studying in regional Australia provides advantages:
+- Additional 5 points for regional study
+- Extended post-study work rights
+- Priority processing for some visas
+- Lower competition for state nomination
+
+## Timeline to PR
+
+| Pathway | Typical Timeline |
+|---------|-----------------|
+| 189 (Skilled Independent) | 2-4 years after study |
+| 190 (State Nominated) | 2-3 years after study |
+| 186 (Employer Sponsored) | 3-4 years after study |
+| 491/191 (Regional) | 3-5 years after study |
+
+## Tips for Success
+
+1. **Choose courses on skilled occupation lists**
+2. **Maximize your English score** (aim for 8+ bands)
+3. **Gain relevant work experience** during and after study
+4. **Consider regional study locations**
+5. **Get professional skills assessed** early
+6. **Stay informed** about policy changes
+
+## Start Your Migration Journey
+
+ANZ Global Education helps students choose courses aligned with their migration goals. Our advisors understand the connection between education and immigration pathways.`,
+          category: "Immigration",
+          tags: ["permanent residency", "skilled migration", "PR pathway", "graduate visa", "australian immigration"],
+          metaTitle: "Pathways to PR in Australia After Graduation | Immigration Guide 2024",
+          metaDescription: "Complete guide to permanent residency after studying in Australia. Skilled migration, employer sponsorship & state nomination explained.",
+          featuredImageUrl: "/attached_assets/stock_images/international_studen_8f925c25.jpg",
+          ogImageUrl: "/attached_assets/stock_images/international_studen_8f925c25.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Best Cities in Australia for International Students: Where Should You Study?",
+          slug: "best-cities-australia-international-students",
+          excerpt: "Compare Australia's top study destinations. From vibrant Melbourne to sunny Brisbane, discover which city matches your lifestyle and academic goals.",
+          content: `# Best Cities in Australia for International Students: Where Should You Study?
+
+Australia offers diverse cities, each with unique characteristics. This guide compares the top study destinations to help you find your perfect match.
+
+## Sydney: The Global City
+
+**Population:** 5.3 million
+**International Students:** 250,000+
+
+### Universities
+- University of Sydney (World Rank: 19)
+- UNSW Sydney (World Rank: 19)
+- University of Technology Sydney
+- Macquarie University
+
+### Pros
+- Iconic landmarks and harbor lifestyle
+- Strong job market and business hub
+- Excellent public transport
+- Diverse cultural communities
+
+### Cons
+- Highest living costs in Australia
+- Competitive housing market
+- Traffic congestion
+
+### Cost of Living
+**Average monthly budget:** $2,500-$3,500
+
+## Melbourne: The Cultural Capital
+
+**Population:** 5.1 million
+**International Students:** 220,000+
+
+### Universities
+- University of Melbourne (World Rank: 14)
+- Monash University (World Rank: 42)
+- RMIT University
+- Deakin University
+
+### Pros
+- World's most liveable city reputation
+- Thriving arts and food scene
+- Four seasons climate
+- Excellent coffee culture
+
+### Cons
+- Unpredictable weather
+- Growing living costs
+- Urban sprawl
+
+### Cost of Living
+**Average monthly budget:** $2,200-$3,200
+
+## Brisbane: The Sunshine State Capital
+
+**Population:** 2.5 million
+**International Students:** 90,000+
+
+### Universities
+- University of Queensland (World Rank: 43)
+- Queensland University of Technology
+- Griffith University
+
+### Pros
+- Subtropical climate year-round
+- More affordable than Sydney/Melbourne
+- Friendly, relaxed atmosphere
+- Growing job market
+
+### Cons
+- Fewer entertainment options
+- Hot, humid summers
+- Limited public transport in some areas
+
+### Cost of Living
+**Average monthly budget:** $1,800-$2,500
+
+## Perth: The West Coast Gem
+
+**Population:** 2.1 million
+**International Students:** 60,000+
+
+### Universities
+- University of Western Australia (World Rank: 72)
+- Curtin University
+- Murdoch University
+
+### Pros
+- Beautiful beaches and nature
+- Lower population density
+- Strong mining/resources industry
+- Same timezone as Asia
+
+### Cons
+- Geographic isolation
+- Limited nightlife options
+- Hot, dry summers
+
+### Cost of Living
+**Average monthly budget:** $1,700-$2,400
+
+## Adelaide: The Festival City
+
+**Population:** 1.4 million
+**International Students:** 40,000+
+
+### Universities
+- University of Adelaide (World Rank: 89)
+- University of South Australia
+- Flinders University
+
+### Pros
+- Most affordable major city
+- Relaxed pace of life
+- Famous wine regions nearby
+- Strong regional migration pathways
+
+### Cons
+- Smaller job market
+- Less diverse food options
+- Fewer entertainment venues
+
+### Cost of Living
+**Average monthly budget:** $1,500-$2,200
+
+## Comparison Table
+
+| City | Livability | Affordability | Job Market | Climate | Universities |
+|------|-----------|---------------|------------|---------|--------------|
+| Sydney | ★★★★★ | ★★☆☆☆ | ★★★★★ | ★★★★☆ | ★★★★★ |
+| Melbourne | ★★★★★ | ★★★☆☆ | ★★★★★ | ★★★☆☆ | ★★★★★ |
+| Brisbane | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★★ | ★★★★☆ |
+| Perth | ★★★★☆ | ★★★★☆ | ★★★★☆ | ★★★★★ | ★★★★☆ |
+| Adelaide | ★★★★☆ | ★★★★★ | ★★★☆☆ | ★★★★☆ | ★★★★☆ |
+
+## Making Your Choice
+
+Consider these factors:
+- Your budget and financial situation
+- Career goals and industry preferences
+- Climate preferences
+- Lifestyle priorities
+- Migration goals (regional benefits)
+
+## Let Us Help You Decide
+
+ANZ Global Education counselors have firsthand knowledge of all Australian cities. Contact us for personalized advice on choosing your study destination.`,
+          category: "Study in Australia",
+          tags: ["australian cities", "study destination", "sydney", "melbourne", "brisbane", "perth", "adelaide"],
+          metaTitle: "Best Cities in Australia for Students 2024 | City Comparison Guide",
+          metaDescription: "Compare Sydney, Melbourne, Brisbane, Perth & Adelaide for international students. Cost of living, universities, and lifestyle compared.",
+          featuredImageUrl: "/attached_assets/stock_images/australian_education_86689ef6.jpg",
+          ogImageUrl: "/attached_assets/stock_images/australian_education_86689ef6.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "IELTS vs PTE vs TOEFL: Which English Test is Best for Australian Universities?",
+          slug: "ielts-pte-toefl-comparison-australian-universities",
+          excerpt: "Choosing the right English proficiency test can impact your study abroad journey. Compare IELTS, PTE, and TOEFL to find the best option for your needs.",
+          content: `# IELTS vs PTE vs TOEFL: Which English Test is Best for Australian Universities?
+
+English proficiency tests are a crucial requirement for studying in Australia. This guide compares the three most accepted tests to help you make the right choice.
+
+## Overview of Tests
+
+### IELTS (International English Language Testing System)
+- **Format:** Paper or computer-based
+- **Duration:** 2 hours 45 minutes
+- **Scoring:** 0-9 band scale
+- **Validity:** 2 years
+
+### PTE Academic (Pearson Test of English)
+- **Format:** Computer-based only
+- **Duration:** 2 hours
+- **Scoring:** 10-90 scale
+- **Validity:** 2 years
+
+### TOEFL iBT (Test of English as a Foreign Language)
+- **Format:** Computer-based only
+- **Duration:** 3 hours
+- **Scoring:** 0-120 total
+- **Validity:** 2 years
+
+## Score Comparison Chart
+
+| IELTS | PTE | TOEFL iBT | Level |
+|-------|-----|-----------|-------|
+| 9.0 | 89-90 | 118-120 | Expert |
+| 8.5 | 83-88 | 115-117 | Very High |
+| 8.0 | 79-82 | 110-114 | High |
+| 7.5 | 73-78 | 102-109 | Good |
+| 7.0 | 65-72 | 94-101 | Competent |
+| 6.5 | 58-64 | 79-93 | Modest |
+| 6.0 | 50-57 | 60-78 | Limited |
+
+## Typical University Requirements
+
+### Undergraduate Programs
+- IELTS: 6.0-6.5 overall
+- PTE: 50-58 overall
+- TOEFL: 60-79 overall
+
+### Postgraduate Programs
+- IELTS: 6.5-7.0 overall
+- PTE: 58-65 overall
+- TOEFL: 79-94 overall
+
+### Professional Courses (Medicine, Law)
+- IELTS: 7.0-7.5 overall
+- PTE: 65-79 overall
+- TOEFL: 94-109 overall
+
+## IELTS: Detailed Analysis
+
+### Advantages
+- Most widely recognized globally
+- Available in both paper and computer formats
+- Human interaction in speaking test
+- Well-established preparation materials
+
+### Disadvantages
+- Speaking test conducted separately
+- Longer wait for results (13 days paper, 3-5 days computer)
+- Subjective speaking assessment
+- Limited test dates in some locations
+
+### Best For
+- Students who prefer face-to-face speaking tests
+- Those with strong handwriting skills (paper test)
+- Students applying to UK and European institutions too
+
+## PTE Academic: Detailed Analysis
+
+### Advantages
+- Fastest results (typically 48 hours)
+- Fully computer-based, including speaking
+- AI scoring reduces bias
+- More test dates and locations
+- Multiple attempts allow improvement
+
+### Disadvantages
+- Requires comfort with computer-based testing
+- Speaking recorded, not live interaction
+- Less traditional format may feel unfamiliar
+- Some find the integrated tasks challenging
+
+### Best For
+- Tech-savvy students comfortable with computers
+- Those who need quick results
+- Students who may need multiple attempts
+- Those applying primarily to Australian institutions
+
+## TOEFL iBT: Detailed Analysis
+
+### Advantages
+- Widely accepted in USA and Canada too
+- Integrated tasks test multiple skills simultaneously
+- Extensive preparation resources available
+- Consistent global scoring
+
+### Disadvantages
+- Longest test duration (3 hours)
+- American English focused
+- Speaking recorded on computer
+- Higher fee in some countries
+
+### Best For
+- Students also considering USA/Canada
+- Those familiar with American English
+- Academic researchers and scholars
+
+## Factors to Consider
+
+### 1. University Acceptance
+Check which tests your target universities accept. Most Australian universities accept all three.
+
+### 2. Test Availability
+Consider test dates and locations in your area.
+
+### 3. Your Strengths
+- Strong typist? → PTE or TOEFL
+- Better with handwriting? → IELTS Paper
+- Prefer live conversation? → IELTS
+
+### 4. Time Constraints
+- Need results fast? → PTE
+- Can wait 2 weeks? → IELTS or TOEFL
+
+### 5. Budget
+Average test fees:
+- IELTS: AUD $395
+- PTE: AUD $410
+- TOEFL: AUD $330
+
+## Preparation Tips
+
+1. **Take practice tests** to identify your level
+2. **Focus on weaknesses** revealed by practice
+3. **Maintain consistent study schedule**
+4. **Use official preparation materials**
+5. **Simulate real test conditions**
+
+## Our Recommendation
+
+For Australian university applications, **PTE Academic** often provides the most convenience with quick results and frequent test dates. However, if you're also applying to UK or US universities, IELTS or TOEFL may offer broader acceptance.
+
+## Get Expert Guidance
+
+ANZ Global Education helps students prepare for English tests and choose the right option for their goals. Contact us for personalized advice.`,
+          category: "Admissions",
+          tags: ["IELTS", "PTE", "TOEFL", "english test", "university admission", "test preparation"],
+          metaTitle: "IELTS vs PTE vs TOEFL 2024 | Best English Test for Australia",
+          metaDescription: "Compare IELTS, PTE Academic & TOEFL iBT for Australian universities. Score comparison, pros/cons & expert recommendations.",
+          featuredImageUrl: "/attached_assets/stock_images/australian_education_35baf418.jpg",
+          ogImageUrl: "/attached_assets/stock_images/australian_education_35baf418.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Scholarships for International Students in Australia: Complete 2024 Guide",
+          slug: "scholarships-international-students-australia-2024",
+          excerpt: "Discover funding opportunities to reduce your study costs. From government scholarships to university grants, learn how to secure financial support.",
+          content: `# Scholarships for International Students in Australia: Complete 2024 Guide
+
+Scholarships can significantly reduce the cost of studying in Australia. This comprehensive guide covers major funding opportunities available to international students.
+
+## Types of Scholarships
+
+### 1. Australian Government Scholarships
+### 2. University-Specific Scholarships
+### 3. External/Private Scholarships
+### 4. Country-Specific Scholarships
+
+## Australian Government Scholarships
+
+### Australia Awards Scholarships
+
+**Value:** Full tuition, living expenses, airfare, health insurance
+**Duration:** Full course duration
+**Eligibility:**
+- Citizens of participating countries
+- Not hold Australian citizenship
+- Meet academic and English requirements
+
+**Application:** Through your country's Australian diplomatic mission
+
+### Research Training Program (RTP)
+
+**Value:** Tuition fees + living allowance (approx. $32,192/year)
+**For:** Domestic and international research students
+**Eligibility:** High academic achievement, research proposal
+
+### Destination Australia Program
+
+**Value:** Up to $15,000 per year
+**For:** Students studying in regional Australia
+**Eligibility:** Enrolled at regional campus
+
+## Top University Scholarships
+
+### University of Melbourne
+
+**Melbourne International Undergraduate Scholarship**
+- Value: 50% or 100% fee remission
+- Based on academic excellence
+
+**Graduate Research Scholarships**
+- Full tuition + living allowance
+- For Master's and PhD research students
+
+### University of Sydney
+
+**Sydney Scholars Award**
+- Value: $6,000-$40,000
+- Based on academic achievement
+
+**Vice-Chancellor's International Scholarships**
+- Value: Up to $40,000 per year
+
+### UNSW Sydney
+
+**UNSW International Scientia Coursework Scholarship**
+- Value: Up to $20,000 per year
+- Based on academic merit
+
+**International Academic Excellence Award**
+- Value: $10,000 one-time payment
+
+### Monash University
+
+**Monash International Leadership Scholarship**
+- Value: $10,000 per year
+- Based on academic and leadership qualities
+
+**Monash International Merit Scholarship**
+- Value: $10,000 partial tuition
+
+### University of Queensland
+
+**UQ International Excellence Scholarship**
+- Value: Up to $20,000 per year
+- Duration: Full program length
+
+## Scholarship by Study Level
+
+### Undergraduate Scholarships
+
+| University | Scholarship | Value |
+|------------|------------|-------|
+| ANU | International Student Scholarship | Up to 50% tuition |
+| UQ | UQ Excellence Scholarship | $12,000/year |
+| UNSW | Academic Excellence Award | $10,000 |
+| Deakin | Merit Scholarship | 20% fee reduction |
+
+### Postgraduate Scholarships
+
+| University | Scholarship | Value |
+|------------|------------|-------|
+| Melbourne | Melbourne International Fee Remission | 25-100% tuition |
+| Sydney | International Postgraduate Award | Full tuition |
+| Monash | Faculty International Scholarships | $10,000 |
+| UWA | Global Excellence Scholarship | Up to $48,000 |
+
+### Research Scholarships
+
+| Program | Value | Duration |
+|---------|-------|----------|
+| RTP Scholarship | Full tuition + $32,192 stipend | 3-4 years |
+| University PhD Scholarships | Full tuition + living allowance | Program length |
+
+## Country-Specific Opportunities
+
+### For Indian Students
+- Australia India Institute Scholarships
+- Tata Scholarships
+- Various state government schemes
+
+### For Chinese Students
+- China Scholarship Council Partnership
+- Confucius Institute Scholarships
+- University partnerships with Chinese institutions
+
+### For Southeast Asian Students
+- Australia-ASEAN Scholarships
+- Country-specific bilateral agreements
+
+## Application Tips
+
+### 1. Start Early
+Many scholarships have deadlines 6-12 months before course start.
+
+### 2. Prepare Strong Applications
+- Academic transcripts with high grades
+- Well-written personal statement
+- Strong recommendation letters
+- Evidence of leadership/community service
+
+### 3. Apply to Multiple Scholarships
+Increase your chances by applying to several opportunities.
+
+### 4. Meet All Requirements
+Carefully check eligibility criteria and submit complete applications.
+
+### 5. Highlight Unique Qualities
+Stand out by showcasing what makes you special.
+
+## Common Mistakes to Avoid
+
+- Missing deadlines
+- Incomplete applications
+- Generic personal statements
+- Ignoring eligibility requirements
+- Not proofreading applications
+
+## Timeline for Applications
+
+| Month | Action |
+|-------|--------|
+| 12 months before | Research scholarship options |
+| 10 months before | Prepare documents, get references |
+| 8 months before | Submit early applications |
+| 6 months before | Submit remaining applications |
+| 4 months before | Follow up on applications |
+| 2 months before | Accept offers, plan travel |
+
+## Get Help Finding Scholarships
+
+ANZ Global Education maintains a database of scholarship opportunities matched to student profiles. Contact us to discover scholarships you may qualify for.`,
+          category: "Scholarships",
+          tags: ["scholarships", "financial aid", "funding", "university scholarships", "government scholarships"],
+          metaTitle: "Scholarships for International Students Australia 2024 | Complete Guide",
+          metaDescription: "Discover $10,000-$40,000 scholarships for international students in Australia. Government, university & private funding opportunities.",
+          featuredImageUrl: "/attached_assets/stock_images/australian_education_da32e024.jpg",
+          ogImageUrl: "/attached_assets/stock_images/australian_education_da32e024.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Working While Studying in Australia: Rights, Rules, and Opportunities",
+          slug: "working-while-studying-australia-guide",
+          excerpt: "Learn about your work rights as an international student in Australia. Understand the rules, find job opportunities, and balance work with studies effectively.",
+          content: `# Working While Studying in Australia: Rights, Rules, and Opportunities
+
+Working part-time while studying is a valuable way to gain experience, supplement your income, and build networks in Australia. This guide covers everything you need to know.
+
+## Work Rights for International Students
+
+### Current Work Conditions (2024)
+
+**During Semester**
+- Up to 48 hours per fortnight
+- Measured from Monday of each fortnight
+
+**During Scheduled Breaks**
+- Unlimited working hours
+- Includes semester breaks and summer holidays
+
+**Research Students**
+- May have unlimited work rights
+- Check your visa conditions
+
+## Understanding Work Limits
+
+### What Counts Toward 48 Hours?
+
+**Included:**
+- Paid employment
+- Self-employment
+- Volunteer work with token payment
+- Internships with compensation
+
+**Not Included:**
+- Unpaid volunteering
+- Work as part of course requirements
+- Unpaid internships (genuine placements)
+
+### Fortnightly Calculation
+
+Your work hours reset every fortnight starting Monday. For example:
+- Week 1: Work 30 hours
+- Week 2: Work 18 hours (reaching 48 hours total)
+- Week 3 (new fortnight): Reset to 0
+
+## Finding Part-Time Jobs
+
+### Popular Job Types for Students
+
+**Hospitality**
+- Cafes, restaurants, bars
+- Average pay: $23-$28/hour
+- Flexible hours, tips possible
+
+**Retail**
+- Supermarkets, clothing stores
+- Average pay: $22-$27/hour
+- Weekend and evening shifts
+
+**Tutoring**
+- Language tutoring, academic subjects
+- Average pay: $30-$50/hour
+- Flexible, uses your expertise
+
+**Administrative Work**
+- Reception, data entry, office support
+- Average pay: $25-$35/hour
+- Regular business hours
+
+**On-Campus Jobs**
+- Library assistant, lab assistant
+- Average pay: $25-$32/hour
+- Convenient location, understanding employers
+
+## Where to Find Jobs
+
+### Online Platforms
+- **Seek.com.au** - Australia's largest job site
+- **Indeed.com.au** - Global job platform
+- **LinkedIn** - Professional networking
+- **Jora** - Entry-level positions
+- **Gumtree** - Local classifieds
+
+### University Resources
+- Career services job boards
+- On-campus employment portals
+- Career fairs and networking events
+
+### Direct Applications
+- Walk-in applications at local businesses
+- Shopping center job days
+- Hospitality precincts
+
+## Your Rights as a Worker
+
+### Minimum Wage (2024)
+- **National Minimum Wage:** $23.23/hour
+- Casual employees receive additional 25% loading
+- Penalty rates apply for weekends and public holidays
+
+### Workplace Protections
+- Fair treatment regardless of visa status
+- Safe working conditions
+- Superannuation contributions (if earning $450+/month)
+- Leave entitlements for permanent employees
+
+### Warning Signs of Exploitation
+- Cash-in-hand payments below minimum wage
+- Threats about visa status
+- Excessive unpaid work trials
+- No payslips provided
+
+## Tax and Superannuation
+
+### Tax File Number (TFN)
+- Apply online through ATO
+- Required before starting work
+- Prevents higher tax withholding
+
+### Tax Rates for Students
+- First $18,200 = Tax-free threshold
+- $18,201-$45,000 = 19% tax rate
+- Most students pay little or no tax
+
+### Superannuation
+- Employer contributes 11.5% of salary
+- You can access when leaving Australia permanently
+- Or transfer to home country pension (if applicable)
+
+## Balancing Work and Study
+
+### Recommended Hours by Study Load
+
+| Course Type | Recommended Work Hours |
+|-------------|------------------------|
+| Full-time coursework | 15-20 hours/week |
+| Research degree | 10-15 hours/week |
+| Intensive programs | 10-15 hours/week |
+
+### Tips for Balance
+1. **Prioritize study** - Grades matter for your future
+2. **Choose flexible employers** - Who understand student commitments
+3. **Work near campus** - Reduce commute time
+4. **Use break periods** - Work more during holidays
+5. **Communicate with employers** - Be upfront about exam periods
+
+## Building Career Experience
+
+### Beyond Part-Time Work
+- **Internships** - Industry-specific experience
+- **Volunteering** - Build networks and skills
+- **Industry events** - Networking opportunities
+- **Professional associations** - Join student chapters
+
+### Transferable Skills
+Every job teaches valuable skills:
+- Customer service
+- Communication
+- Time management
+- Teamwork
+- Problem-solving
+
+## Get Support
+
+ANZ Global Education provides career guidance and can connect you with employers who value international students. Contact us for assistance.`,
+          category: "Student Life",
+          tags: ["part-time work", "student employment", "work rights", "jobs australia", "work visa"],
+          metaTitle: "Working While Studying in Australia 2024 | Student Work Rights Guide",
+          metaDescription: "Complete guide to working as an international student in Australia. Work rights, finding jobs, tax requirements & balancing study.",
+          featuredImageUrl: "/attached_assets/stock_images/australian_education_c53ef220.jpg",
+          ogImageUrl: "/attached_assets/stock_images/australian_education_c53ef220.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+        {
+          title: "Life in Australia: What International Students Need to Know Before Arriving",
+          slug: "life-in-australia-international-students-guide",
+          excerpt: "Prepare for your Australian adventure with this comprehensive guide. From culture to daily life, learn what to expect before you arrive.",
+          content: `# Life in Australia: What International Students Need to Know Before Arriving
+
+Moving to Australia is an exciting adventure. This guide helps you understand Australian life and culture so you can hit the ground running.
+
+## Australian Culture and Values
+
+### Core Values
+- **Equality** - Everyone is treated the same
+- **Mateship** - Friendship and loyalty are valued
+- **Fair go** - Everyone deserves a chance
+- **Laid-back attitude** - Relaxed approach to life
+- **Directness** - Australians say what they mean
+
+### Communication Style
+- Informal and friendly
+- First names commonly used (even with professors)
+- Humor and sarcasm are common
+- "No worries" means "you're welcome"
+
+### Social Etiquette
+- Punctuality is expected
+- Queue (line up) properly
+- Personal space is valued
+- Tipping is not expected but appreciated
+
+## Weather and Climate
+
+### Climate Zones
+Australia has diverse climates:
+
+**Northern Australia (Tropical)**
+- Wet and dry seasons
+- Hot year-round
+- Monsoon rains December-March
+
+**Southern Australia (Temperate)**
+- Four distinct seasons
+- Warm summers, cool winters
+- Melbourne known for changeable weather
+
+**Central Australia (Arid)**
+- Desert climate
+- Very hot summers, cold nights
+
+### Seasons (Remember: Southern Hemisphere!)
+- **Summer:** December-February
+- **Autumn:** March-May
+- **Winter:** June-August
+- **Spring:** September-November
+
+## Health and Safety
+
+### Health Insurance (OSHC)
+- **Mandatory** for all student visa holders
+- Must maintain throughout your stay
+- Covers doctor visits, hospital, and some extras
+
+### Staying Safe
+Australia is generally very safe, but:
+- Be sun-smart (high UV levels)
+- Swim between the flags at beaches
+- Be aware of wildlife (spiders, snakes in rural areas)
+- Stay hydrated in hot weather
+
+### Emergency Numbers
+- **000** - Police, Fire, Ambulance
+- **131 444** - Non-emergency police
+- **1800 022 222** - Healthdirect (24/7 health advice)
+
+## Transportation
+
+### Getting Around
+
+**Public Transport**
+- Each city has its own system
+- Get a transport card (Opal, Myki, go card)
+- Student concessions available
+
+**Cycling**
+- Popular in many cities
+- Helmets are mandatory
+- Bike lanes in urban areas
+
+**Driving**
+- Drive on the LEFT side
+- International license valid for 3 months
+- Then convert to Australian license
+
+### City Transport Cards
+| City | Card Name |
+|------|-----------|
+| Sydney | Opal |
+| Melbourne | Myki |
+| Brisbane | go card |
+| Perth | SmartRider |
+| Adelaide | MetroCard |
+
+## Shopping and Daily Life
+
+### Supermarkets
+- **Coles and Woolworths** - Major chains
+- **Aldi** - Budget-friendly
+- **IGA** - Local/convenient
+- **Asian groceries** - In most suburbs
+
+### Shopping Hours
+- Generally 9am-5:30pm weekdays
+- Extended hours Thursday/Friday
+- Sunday hours vary by state
+
+### Mobile Phones
+- Major providers: Telstra, Optus, Vodafone
+- Prepaid and contract options
+- Student plans available
+
+## Food and Dining
+
+### Australian Food Culture
+- Multicultural cuisine
+- Café culture is huge
+- BBQ (barbie) is a social tradition
+- Fresh produce and seafood
+
+### Budget Eating Tips
+- Cook at home
+- Student meal deals
+- Lunch specials at restaurants
+- Food courts offer variety
+
+### Must-Try Australian Foods
+- Vegemite (spread)
+- Meat pies
+- Tim Tams (chocolate biscuit)
+- Pavlova (dessert)
+- Fish and chips
+
+## Making Friends
+
+### Meeting People
+- Join university clubs and societies
+- Attend orientation events
+- Participate in sports
+- Volunteer in your community
+- Language exchange programs
+
+### Australian Social Life
+- BBQs and outdoor gatherings
+- Coffee catch-ups
+- Beach activities
+- Sporting events
+- Pub culture
+
+## Useful Australian Slang
+
+| Slang | Meaning |
+|-------|---------|
+| Arvo | Afternoon |
+| Brekkie | Breakfast |
+| Cheers | Thanks |
+| Mate | Friend |
+| Reckon | Think/believe |
+| Servo | Gas station |
+| Uni | University |
+
+## Before You Arrive Checklist
+
+- [ ] Valid passport and visa
+- [ ] OSHC confirmation
+- [ ] Accommodation booking (first few weeks)
+- [ ] Some Australian dollars
+- [ ] Important documents (copies stored online)
+- [ ] Power adapter (Type I plugs)
+- [ ] Weather-appropriate clothing
+
+## We're Here to Help
+
+ANZ Global Education provides pre-departure orientations and ongoing support for international students. Contact us with any questions about life in Australia.`,
+          category: "Student Life",
+          tags: ["australian culture", "student life", "living in australia", "preparation", "international students"],
+          metaTitle: "Life in Australia for International Students | Pre-Arrival Guide 2024",
+          metaDescription: "Everything international students need to know before arriving in Australia. Culture, climate, safety, transport & daily life guide.",
+          featuredImageUrl: "/attached_assets/stock_images/australian_education_bbee3bb8.jpg",
+          ogImageUrl: "/attached_assets/stock_images/australian_education_bbee3bb8.jpg",
+          status: "published" as const,
+          publishedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+          authorId: userId,
+        },
+      ];
+
+      // Create blogs one by one, skipping any that already exist
+      const createdBlogs = [];
+      const skippedBlogs = [];
+
+      for (const blogData of blogPosts) {
+        // Check if slug already exists
+        const existing = await storage.getBlogBySlug(blogData.slug);
+        if (existing) {
+          skippedBlogs.push(blogData.slug);
+          continue;
+        }
+
+        const newBlog = await storage.createBlog(blogData as any);
+        createdBlogs.push(newBlog);
+      }
+
+      res.json({
+        message: "Blog posts seeded successfully",
+        created: createdBlogs.length,
+        skipped: skippedBlogs.length,
+        skippedSlugs: skippedBlogs,
+        blogs: createdBlogs,
+      });
+    } catch (error) {
+      console.error("Error seeding blogs:", error);
+      res.status(500).json({ message: "Failed to seed blogs", error: String(error) });
+    }
+  });
+
   // Public routes for viewing published blogs
   // Get published blogs with pagination
   app.get("/api/blogs", async (req, res) => {
