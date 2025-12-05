@@ -29,7 +29,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -43,7 +42,7 @@ import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/go
 import { AIInstitutionExtractor } from "@/components/ai-institution-extractor";
 import { AICourseExtractor } from "@/components/ai-course-extractor";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { AdminBlogManagement } from "@/components/admin-blog-management";
 import { AdminScrapingPanel } from "@/components/admin-scraping-panel";
 import { ActivityFeed } from "@/components/activity-feed";
@@ -1307,26 +1306,24 @@ export default function AdminDashboard() {
   };
 
   return (
-    <SidebarProvider style={sidebarStyle}>
-      <div className="flex min-h-screen w-full">
-        {/* Left Sidebar */}
-        <AdminSidebar 
-          activeTab={activeTab} 
-          onTabChange={handleTabChange} 
-          hasFullAdminAccess={hasFullAdminAccess} 
-        />
+    <div className="flex min-h-screen w-full bg-muted/30">
+      {/* Left Mega Sidebar (3-column navigation) */}
+      <AdminMegaSidebar 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+        hasFullAdminAccess={hasFullAdminAccess} 
+      />
 
-        {/* Main Content Area */}
-        <div className="flex flex-col flex-1">
-          {/* Top Header with Breadcrumb */}
-          <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
-            <SidebarTrigger className="lg:hidden" data-testid="button-sidebar-toggle" />
-            <div className="flex flex-1 items-center justify-between gap-4">
-              <Breadcrumb data-testid="breadcrumb">
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link href="/admin/dashboard" data-testid="breadcrumb-home">
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 lg:ml-0">
+        {/* Top Header with Breadcrumb */}
+        <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
+          <div className="flex flex-1 items-center justify-between gap-4 lg:pl-0 pl-10">
+            <Breadcrumb data-testid="breadcrumb">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/admin/dashboard" data-testid="breadcrumb-home">
                         <Home className="h-4 w-4" />
                       </Link>
                     </BreadcrumbLink>
@@ -3662,7 +3659,6 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
-    </SidebarProvider>
+    </div>
   );
 }
