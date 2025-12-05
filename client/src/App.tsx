@@ -126,6 +126,10 @@ function AppContent() {
   const isAdminDashboard = location === '/admin' || 
     (location.startsWith('/admin/') && location !== '/admin/login');
 
+  // Student and University portal pages now have their own 3-column layouts
+  const isStudentPortal = location.startsWith('/student/');
+  const isUniversityPortal = location.startsWith('/university/');
+
   // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
   const internalDashboardRoutes = [
     '/dashboard',
@@ -156,6 +160,11 @@ function AppContent() {
 
   // Admin dashboard uses its own full layout with sidebar (no footer)
   if (isAdminDashboard && isAuthenticated) {
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
+  }
+
+  // Student and University portals now have their own 3-column layouts with sidebars
+  if ((isStudentPortal || isUniversityPortal) && isAuthenticated) {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
