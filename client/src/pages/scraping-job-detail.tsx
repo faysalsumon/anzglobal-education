@@ -30,6 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AdminLayout } from "@/components/admin-layout";
 
 interface ScrapingJob {
   id: string;
@@ -198,41 +199,42 @@ export default function ScrapingJobDetail() {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/admin/dashboard")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              {getStatusIcon()}
-              Scraping Job
-            </h1>
-            <p className="text-sm text-muted-foreground">{job.id}</p>
+    <AdminLayout activeTab="scraping" breadcrumbTitle="Scraping Job Details">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/admin/dashboard")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                {getStatusIcon()}
+                Scraping Job
+              </h1>
+              <p className="text-sm text-muted-foreground">{job.id}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {getStatusBadge()}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleteMutation.isPending}
+              data-testid="button-delete-job"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Job
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {getStatusBadge()}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-            disabled={deleteMutation.isPending}
-            data-testid="button-delete-job"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Job
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -412,40 +414,41 @@ export default function ScrapingJobDetail() {
         </Card>
       )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scraping Job?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this scraping job and all associated data (discovered URLs, scraped courses, etc.). 
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                deleteMutation.mutate();
-                setShowDeleteDialog(false);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Job
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Scraping Job?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this scraping job and all associated data (discovered URLs, scraped courses, etc.). 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  deleteMutation.mutate();
+                  setShowDeleteDialog(false);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Job
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </AdminLayout>
   );
 }
