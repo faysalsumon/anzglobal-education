@@ -1348,30 +1348,30 @@ export default function AdminDashboard() {
 
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4 md:py-6">
+            <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-3 md:py-4">
               {/* Simple single-column layout */}
-              <main className="space-y-4 md:space-y-6">
+              <main className="space-y-3 md:space-y-4">
                 {/* Dashboard Header */}
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-dashboard-title">
+                  <h1 className="text-xl md:text-2xl font-bold" data-testid="text-dashboard-title">
                     {isConsultant 
                       ? "Consultant Dashboard" 
                       : isSuperAdmin 
                         ? "Super Admin Dashboard" 
                         : "Admin Dashboard"}
                   </h1>
-                  <p className="text-muted-foreground text-sm md:text-base mt-1">
+                  <p className="text-muted-foreground text-xs md:text-sm">
                     {isConsultant 
                       ? "Manage student applications and leads" 
                       : "Manage all platform users, institutions, and courses"}
                   </p>
                 </div>
 
-                <div className="space-y-6 md:space-y-8">
+                <div className="space-y-4 md:space-y-5">
         {/* My Tasks Tab */}
         {activeTab === "my-tasks" && (
-          <div className="space-y-6 md:space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
                 <MyTasksPanel />
               </div>
@@ -1384,101 +1384,100 @@ export default function AdminDashboard() {
 
         {/* Team Workload Tab */}
         {activeTab === "team-workload" && hasFullAdminAccess && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <TeamWorkloadPanel />
           </div>
         )}
 
         {/* CRM Leads Tab */}
         {activeTab === "crm-leads" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <CrmLeadsPanel />
           </div>
         )}
 
         {/* CRM Contacts Tab */}
         {activeTab === "crm-contacts" && (
-          <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4">
             <CrmContactsPanel />
           </div>
         )}
 
         {/* Users Tab */}
         {activeTab === "users" && (
-          <div className="space-y-6 md:space-y-8">
-          {/* Stats */}
-          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userStats.total}</div>
-                <p className="text-xs text-muted-foreground">
-                  {userStats.active} active, {userStats.inactive} inactive
-                </p>
-              </CardContent>
+          <div className="space-y-4">
+          {/* Stats - Compact Cards */}
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Users</p>
+                  <p className="text-xl font-bold">{userStats.total}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {userStats.active} active, {userStats.inactive} inactive
+                  </p>
+                </div>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Students</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userStats.students}</div>
-              </CardContent>
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Students</p>
+                  <p className="text-xl font-bold">{userStats.students}</p>
+                </div>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Universities</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userStats.universities}</div>
-              </CardContent>
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Universities</p>
+                  <p className="text-xl font-bold">{userStats.universities}</p>
+                </div>
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Admins</CardTitle>
-                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{userStats.admins}</div>
-              </CardContent>
+            <Card className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Admins</p>
+                  <p className="text-xl font-bold">{userStats.admins}</p>
+                </div>
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+              </div>
             </Card>
           </div>
 
           {/* Filters and Create Button */}
           <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <CardHeader className="py-3 px-4">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div>
-                  <CardTitle>User Management</CardTitle>
-                  <CardDescription>View and manage all platform users</CardDescription>
+                  <CardTitle className="text-base">User Management</CardTitle>
+                  <CardDescription className="text-xs">View and manage all platform users</CardDescription>
                 </div>
-                <Button onClick={handleCreateUser} data-testid="button-create-user">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="sm" onClick={handleCreateUser} data-testid="button-create-user">
+                  <Plus className="h-4 w-4 mr-1" />
                   Create User
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-4 py-3">
               {/* Bulk Actions Toolbar */}
               {selectedUsers.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {selectedUsers.size} user(s) selected
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span className="text-xs font-medium">
+                    {selectedUsers.size} selected
+                  </span>
                   <div className="flex gap-2">
                     <Button
                       variant="destructive"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => {
                         if (confirm(`Delete ${selectedUsers.size} selected user(s)?`)) {
                           bulkDeleteUsersMutation.mutate(Array.from(selectedUsers));
@@ -1487,35 +1486,36 @@ export default function AdminDashboard() {
                       disabled={bulkDeleteUsersMutation.isPending}
                       data-testid="button-bulk-delete-users"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Selected
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setSelectedUsers(new Set())}
                       data-testid="button-clear-selection-users"
                     >
-                      Clear Selection
+                      Clear
                     </Button>
                   </div>
                 </div>
               )}
 
               {/* Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by name or email..."
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 h-8 text-sm"
                     data-testid="input-search-users"
                   />
                 </div>
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-type">
+                  <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm" data-testid="select-filter-type">
                     <SelectValue placeholder="User Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1526,7 +1526,7 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-filter-status">
+                  <SelectTrigger className="w-full sm:w-[120px] h-8 text-sm" data-testid="select-filter-status">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1537,51 +1537,51 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
-              {/* Users Table */}
-              <div className="overflow-x-auto border rounded-md sm:rounded-lg">
+              {/* Users Table - Compact */}
+              <div className="overflow-x-auto border rounded-md">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-10 py-2">
                         <Checkbox
                           checked={filteredUsers && filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
                           onCheckedChange={() => filteredUsers && toggleSelectAllUsers(filteredUsers)}
                           data-testid="checkbox-select-all-users"
                         />
                       </TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Name</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Email</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Type</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Role</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Status</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                        <TableCell colSpan={7} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredUsers && filteredUsers.length > 0 ? (
                       filteredUsers.map((user) => (
-                        <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                          <TableCell>
+                        <TableRow key={user.id} data-testid={`row-user-${user.id}`} className="hover:bg-muted/50">
+                          <TableCell className="py-2">
                             <Checkbox
                               checked={selectedUsers.has(user.id)}
                               onCheckedChange={() => toggleSelectUser(user.id)}
                               data-testid={`checkbox-user-${user.id}`}
                             />
                           </TableCell>
-                          <TableCell className="font-medium">
+                          <TableCell className="py-2 font-medium text-sm">
                             {user.firstName} {user.lastName}
                           </TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={user.userType === "admin" ? "default" : "secondary"}>
+                          <TableCell className="py-2 text-sm text-muted-foreground">{user.email}</TableCell>
+                          <TableCell className="py-2">
+                            <Badge variant={user.userType === "admin" ? "default" : "secondary"} className="text-xs">
                               {formatUserType(user.userType)}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-2">
                             <Select
                               value={user.role || "user"}
                               onValueChange={(value) => updateRoleMutation.mutate({
@@ -1590,7 +1590,7 @@ export default function AdminDashboard() {
                                 role: value,
                               })}
                             >
-                              <SelectTrigger className="w-[140px]">
+                              <SelectTrigger className="w-[130px] h-7 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1602,10 +1602,11 @@ export default function AdminDashboard() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-2">
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="h-7 text-xs px-2"
                               onClick={() => updateStatusMutation.mutate({
                                 userId: user.id,
                                 isActive: !user.isActive,
@@ -1613,29 +1614,31 @@ export default function AdminDashboard() {
                               data-testid={`button-toggle-status-${user.id}`}
                             >
                               {user.isActive ? (
-                                <><ShieldCheck className="h-4 w-4 mr-1 text-green-600" /> Active</>
+                                <><ShieldCheck className="h-3 w-3 mr-1 text-green-600" /> Active</>
                               ) : (
-                                <><ShieldOff className="h-4 w-4 mr-1 text-red-600" /> Inactive</>
+                                <><ShieldOff className="h-3 w-3 mr-1 text-red-600" /> Inactive</>
                               )}
                             </Button>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell className="py-2 text-right">
+                            <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => handleEditUser(user)}
                                 data-testid={`button-edit-user-${user.id}`}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-3.5 w-3.5" />
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => setDeletingUser(user)}
                                 data-testid={`button-delete-user-${user.id}`}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
                               </Button>
                             </div>
                           </TableCell>
