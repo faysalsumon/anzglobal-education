@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -20,25 +19,65 @@ interface AdminLayoutProps {
   showPublicSiteButton?: boolean;
 }
 
+const TAB_TO_ROUTE_MAP: Record<string, string> = {
+  "profile": "/admin/profile",
+  "data-import": "/admin/csv-import",
+  "overview": "/admin/dashboard",
+  "my-tasks": "/admin/dashboard?tab=my-tasks",
+  "team-workload": "/admin/dashboard?tab=team-workload",
+  "crm-leads": "/admin/dashboard?tab=crm-leads",
+  "crm-contacts": "/admin/dashboard?tab=crm-contacts",
+  "applications": "/admin/dashboard?tab=applications",
+  "courses": "/admin/dashboard?tab=courses",
+  "blogs": "/admin/dashboard?tab=blogs",
+  "website-content": "/admin/dashboard?tab=website-content",
+  "users": "/admin/dashboard?tab=users",
+  "institutions": "/admin/dashboard?tab=institutions",
+  "web-scraping": "/admin/dashboard?tab=web-scraping",
+  "activity-logs": "/admin/dashboard?tab=activity-logs",
+  "scraping": "/admin/dashboard?tab=web-scraping",
+};
+
+function getTabFromPath(pathname: string): string {
+  if (pathname.includes("/admin/profile")) return "profile";
+  if (pathname.includes("/admin/scraping")) return "web-scraping";
+  if (pathname.includes("/admin/csv-import")) return "data-import";
+  if (pathname.includes("/admin/dashboard")) return "overview";
+  return "overview";
+}
+
 export function AdminLayout({ 
   children, 
-  activeTab = "overview",
+  activeTab,
   breadcrumbTitle,
   showPublicSiteButton = true
 }: AdminLayoutProps) {
   const { user } = useAuth();
-  const [currentTab, setCurrentTab] = useState(activeTab);
+  const [location, setLocation] = useLocation();
+  
+  const derivedTab = activeTab || getTabFromPath(location);
 
   const hasFullAdminAccess = user?.role === "super_admin" || user?.role === "support_manager";
 
   const handleTabChange = (tab: string) => {
-    setCurrentTab(tab);
+    const route = TAB_TO_ROUTE_MAP[tab];
+    if (route) {
+      if (route.includes("?tab=")) {
+        const [path, query] = route.split("?");
+        const tabValue = new URLSearchParams(query).get("tab");
+        setLocation(`${path}?tab=${tabValue}`);
+      } else {
+        setLocation(route);
+      }
+    } else {
+      setLocation(`/admin/dashboard?tab=${tab}`);
+    }
   };
 
   return (
     <div className="flex min-h-screen w-full bg-muted/30">
       <AdminMegaSidebar 
-        activeTab={currentTab} 
+        activeTab={derivedTab} 
         onTabChange={handleTabChange} 
         hasFullAdminAccess={hasFullAdminAccess} 
       />
