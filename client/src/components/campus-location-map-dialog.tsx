@@ -22,7 +22,23 @@ export function CampusLocationMapDialog({
   const markerRef = useRef<google.maps.Marker | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    let timer: NodeJS.Timeout | null = null;
+
+    const cleanup = () => {
+      if (markerRef.current) {
+        google.maps.event.clearInstanceListeners(markerRef.current);
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+      if (mapInstanceRef.current) {
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
+      }
+    };
+
     if (!isOpen) {
+      cleanup();
       setIsLoading(true);
       setError(null);
       return;
@@ -43,8 +59,14 @@ export function CampusLocationMapDialog({
     });
 
     const initMap = async () => {
+      if (!isMounted || !isOpen || !mapRef.current) return;
+      
+      cleanup();
+      
       try {
         await importLibrary("maps");
+        
+        if (!isMounted || !isOpen || !mapRef.current) return;
         
         const geocoder = new google.maps.Geocoder();
         const defaultCenter = { lat: -33.8688, lng: 151.2093 };
@@ -61,6 +83,8 @@ export function CampusLocationMapDialog({
         mapInstanceRef.current = mapInstance;
 
         const result = await geocoder.geocode({ address: location });
+        
+        if (!isMounted || !isOpen) return;
         
         if (result.results[0]) {
           const position = result.results[0].geometry.location;
@@ -122,14 +146,20 @@ export function CampusLocationMapDialog({
 
         setIsLoading(false);
       } catch (err) {
+        if (!isMounted) return;
         console.error("Error initializing map:", err);
         setError("Failed to load map");
         setIsLoading(false);
       }
     };
 
-    const timer = setTimeout(initMap, 100);
-    return () => clearTimeout(timer);
+    timer = setTimeout(initMap, 100);
+    
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+      cleanup();
+    };
   }, [isOpen, location]);
 
   const handleGetDirections = () => {
