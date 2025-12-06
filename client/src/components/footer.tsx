@@ -275,7 +275,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-4">
               <Link
-                href="/contact?topic=terms"
+                href="/terms"
                 className="hover:underline transition-all"
                 data-testid="footer-link-terms"
               >
@@ -283,7 +283,7 @@ export function Footer() {
               </Link>
               <span className="text-primary-foreground/60">|</span>
               <Link
-                href="/contact?topic=privacy"
+                href="/privacy"
                 className="hover:underline transition-all"
                 data-testid="footer-link-privacy"
               >

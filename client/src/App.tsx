@@ -48,6 +48,8 @@ import AdminCSVImport from "@/pages/admin-csv-import";
 import ScrapingJobDetail from "@/pages/scraping-job-detail";
 import ScrapingReviewDashboard from "@/pages/scraping-review-dashboard";
 import ChatPage from "@/pages/chat";
+import TermsOfService from "@/pages/terms-of-service";
+import PrivacyPolicy from "@/pages/privacy-policy";
 
 interface RouterProps {
   user: any;
@@ -75,6 +77,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/institutions" component={PublicInstitutions} />
       <Route path="/blog/:slug" component={PublicBlogDetail} />
       <Route path="/blog" component={PublicBlogArchive} />
+      <Route path="/terms" component={TermsOfService} />
+      <Route path="/privacy" component={PrivacyPolicy} />
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
