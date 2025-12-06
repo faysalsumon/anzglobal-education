@@ -18,6 +18,7 @@ import {
   LogOut,
   Home,
   MessageSquare,
+  LayoutDashboard,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -157,9 +158,29 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
       {/* Icon panel - always visible */}
       <div className="fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background">
-        <Link href="/" className="mb-6" data-testid="link-logo">
+        <Link href="/" className="mb-4" data-testid="link-logo">
           <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
         </Link>
+
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-10 w-10 rounded-lg transition-all mb-2",
+                location === "/student/dashboard" && "text-primary bg-primary/10"
+              )}
+              onClick={() => setLocation("/student/dashboard")}
+              data-testid="nav-dashboard"
+            >
+              <LayoutDashboard className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            Dashboard
+          </TooltipContent>
+        </Tooltip>
 
         <ScrollArea className="flex-1 w-full">
           <div className="flex flex-col items-center gap-2 px-2">
