@@ -66,12 +66,6 @@ interface ExtractedData {
   thumbnailUrl: string | null;
   curriculumUrl: string | null;
   images: string[] | null;
-  
-  // Work & Pathways
-  prPathway: boolean | null;
-  workRights: boolean | null;
-  internshipAvailable: boolean | null;
-  internshipDetails: string | null;
 }
 
 interface EditableField {
@@ -575,24 +569,20 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                 </div>
               )}
 
-              {/* Scholarships & Pathways */}
-              {(editableFields.scholarshipPercentageMin || editableFields.prPathway) && (
+              {/* Scholarships */}
+              {editableFields.scholarshipPercentageMin && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Scholarships & Pathways</h4>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Scholarships</h4>
                   {renderField("Scholarship Min %", "scholarshipPercentageMin", extractedData.scholarshipPercentageMin, "number")}
                   {renderField("Scholarship Max %", "scholarshipPercentageMax", extractedData.scholarshipPercentageMax, "number")}
-                  {renderField("PR Pathway", "prPathway", extractedData.prPathway, "boolean")}
                 </div>
               )}
 
-              {/* Delivery & Work */}
-              {(editableFields.deliveryMode || editableFields.workRights) && (
+              {/* Delivery */}
+              {editableFields.deliveryMode && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Delivery & Work</h4>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Delivery</h4>
                   {renderField("Delivery Mode", "deliveryMode", extractedData.deliveryMode)}
-                  {renderField("Work Rights", "workRights", extractedData.workRights, "boolean")}
-                  {renderField("Internship Available", "internshipAvailable", extractedData.internshipAvailable, "boolean")}
-                  {renderField("Internship Details", "internshipDetails", extractedData.internshipDetails, "textarea")}
                 </div>
               )}
 

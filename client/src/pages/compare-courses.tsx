@@ -218,27 +218,6 @@ export default function CompareCourses() {
                     </div>
                   )}
 
-                  {/* PR Pathway */}
-                  <div>
-                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <Award className="h-4 w-4" />
-                      PR Pathway
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {course.prPathway ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <span className="text-sm text-green-600">Available</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Not available</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Scholarship */}
                   {course.scholarshipPercentage && (
                     <div>

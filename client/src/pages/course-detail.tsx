@@ -735,54 +735,6 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {/* Immigration & Work Rights */}
-            {(course.prPathway || course.workRights || course.internshipAvailable) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Plane className="h-5 w-5 text-primary" />
-                    Immigration & Work Opportunities
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  {course.prPathway && (
-                    <div className="p-4 bg-gradient-to-r from-primary/10 to-transparent rounded-lg border border-primary/20">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-primary/20 rounded-lg">
-                          <Sparkles className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold mb-1">Permanent Residency Pathway</h4>
-                          <p className="text-sm text-muted-foreground">
-                            This course provides a pathway to Permanent Residency, helping you build a future in your study destination.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {course.workRights && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
-                      <span className="font-medium">Work rights available during and after study</span>
-                    </div>
-                  )}
-                  {course.internshipAvailable && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Briefcase className="h-5 w-5 text-primary flex-shrink-0" />
-                        <span className="font-medium">Internship opportunities included</span>
-                      </div>
-                      {course.internshipDetails && (
-                        <p className="text-sm text-muted-foreground pl-4" data-testid="text-internship-details">
-                          {course.internshipDetails}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
             {/* Course Details */}
             {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">

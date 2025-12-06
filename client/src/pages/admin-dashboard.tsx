@@ -254,7 +254,6 @@ const courseSchema = z.object({
   
   // Additional Details
   courseCode: z.string().optional(),
-  prPathway: z.boolean().optional(),
   scholarshipPercentageMin: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
   scholarshipPercentageMax: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
   thumbnailUrl: z.string().url().optional().or(z.literal("")),
@@ -403,7 +402,6 @@ export default function AdminDashboard() {
       eligibilityRequirements: "",
       englishRequirements: "",
       courseCode: "",
-      prPathway: false,
       scholarshipPercentageMin: "" as any,
       scholarshipPercentageMax: "" as any,
       thumbnailUrl: "",
@@ -1261,7 +1259,6 @@ export default function AdminDashboard() {
       
       // Additional Details
       courseCode: course.courseCode || "",
-      prPathway: course.prPathway || false,
       scholarshipPercentageMin: course.scholarshipPercentageMin || ("" as any),
       scholarshipPercentageMax: course.scholarshipPercentageMax || ("" as any),
       thumbnailUrl: course.thumbnailUrl || "",
@@ -2881,7 +2878,6 @@ export default function AdminDashboard() {
                 englishRequirements: approvedData.englishRequirements || "",
                 
                 // Additional Details
-                prPathway: approvedData.prPathway || false,
                 scholarshipPercentageMin: approvedData.scholarshipPercentageMin !== null && approvedData.scholarshipPercentageMin !== undefined ? approvedData.scholarshipPercentageMin : ("" as any),
                 scholarshipPercentageMax: approvedData.scholarshipPercentageMax !== null && approvedData.scholarshipPercentageMax !== undefined ? approvedData.scholarshipPercentageMax : ("" as any),
                 thumbnailUrl: approvedData.thumbnailUrl || "",
@@ -3363,22 +3359,6 @@ export default function AdminDashboard() {
 
                 {/* Additional Details Tab */}
                 <TabsContent value="additional" className="space-y-4 mt-4">
-                  <FormField
-                    control={courseForm.control}
-                    name="prPathway"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <div>
-                          <FormLabel>PR Pathway</FormLabel>
-                          <FormDescription>Does this course lead to permanent residency?</FormDescription>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={courseForm.control}
