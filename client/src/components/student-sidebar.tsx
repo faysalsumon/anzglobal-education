@@ -102,7 +102,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       color: "text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400",
       routes: [
         { icon: Search, label: "Browse Courses", path: "/student/courses" },
-        { icon: Heart, label: "My Favorites", path: "/student/favorites" },
       ],
     },
     {
@@ -210,7 +209,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
               variant="ghost"
               size="icon"
               className={cn(
-                "h-10 w-10 rounded-lg transition-all mb-2",
+                "h-10 w-10 rounded-lg transition-all",
                 location === "/student/dashboard" && "text-primary bg-primary/10"
               )}
               onClick={() => setLocation("/student/dashboard")}
@@ -221,6 +220,26 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             Dashboard
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-10 w-10 rounded-lg transition-all mb-2",
+                location === "/student/favorites" && "text-rose-600 bg-rose-50 dark:bg-rose-950 dark:text-rose-400"
+              )}
+              onClick={() => setLocation("/student/favorites")}
+              data-testid="nav-favorites"
+            >
+              <Heart className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            Favourites
           </TooltipContent>
         </Tooltip>
 
