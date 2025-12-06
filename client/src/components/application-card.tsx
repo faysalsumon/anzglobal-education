@@ -301,7 +301,17 @@ export function ApplicationCard({ application, course, university, consultant }:
           <div className="flex-1 min-w-0">
             <CardTitle className="flex items-center gap-2 flex-wrap">
               <Building2 className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">{course?.title || "Course Application"}</span>
+              {course?.id ? (
+                <Link 
+                  href={`/courses/${course.id}`}
+                  className="truncate hover:text-primary hover:underline transition-colors cursor-pointer"
+                  data-testid={`link-course-${course.id}`}
+                >
+                  {course.title}
+                </Link>
+              ) : (
+                <span className="truncate">Course Application</span>
+              )}
             </CardTitle>
             <CardDescription className="mt-1">
               {university?.name || "University"} • {course?.country || "Unknown Location"}
