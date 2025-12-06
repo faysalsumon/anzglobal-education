@@ -74,49 +74,143 @@ Write in an engaging, informative tone that attracts prospective students.`;
   return content;
 }
 
+interface StudentProfileData {
+  personalInfo?: {
+    firstName?: string;
+    lastName?: string;
+    nationality?: string;
+    countryOfResidence?: string;
+    preferredStudyDestination?: string;
+    intakePreference?: string;
+  };
+  educationHistory?: Array<{
+    level?: string;
+    institution?: string;
+    fieldOfStudy?: string;
+    country?: string;
+    gpa?: string;
+  }>;
+  languageTests?: Array<{
+    testType?: string;
+    overallScore?: string;
+  }>;
+  bioFormData?: {
+    educationLevel?: string;
+    fieldOfStudy?: string;
+    previousEducation?: string;
+  };
+}
+
 export async function generateStudentBio(
-  educationLevel?: string,
-  fieldOfStudy?: string
+  profileData: StudentProfileData
 ): Promise<string> {
   checkAIConfigured();
   
-  const context = [educationLevel, fieldOfStudy].filter(Boolean).join(", ");
-  const prompt = `Generate a compelling personal bio for a student${context ? ` studying ${context}` : ""}. 
+  const contextParts: string[] = [];
+  
+  if (profileData.personalInfo?.firstName) {
+    contextParts.push(`Student name: ${profileData.personalInfo.firstName} ${profileData.personalInfo.lastName || ''}`);
+  }
+  if (profileData.personalInfo?.nationality) {
+    contextParts.push(`From: ${profileData.personalInfo.nationality}`);
+  }
+  if (profileData.personalInfo?.preferredStudyDestination) {
+    contextParts.push(`Wants to study in: ${profileData.personalInfo.preferredStudyDestination}`);
+  }
+  
+  if (profileData.educationHistory && profileData.educationHistory.length > 0) {
+    const eduDetails = profileData.educationHistory.map(edu => {
+      const parts = [edu.level, edu.fieldOfStudy, edu.institution, edu.country].filter(Boolean);
+      if (edu.gpa) parts.push(`GPA: ${edu.gpa}`);
+      return parts.join(' - ');
+    }).join('; ');
+    contextParts.push(`Education background: ${eduDetails}`);
+  }
+  
+  if (profileData.languageTests && profileData.languageTests.length > 0) {
+    const langDetails = profileData.languageTests.map(test => 
+      `${test.testType?.toUpperCase()}: ${test.overallScore}`
+    ).join(', ');
+    contextParts.push(`Language proficiency: ${langDetails}`);
+  }
+  
+  if (profileData.bioFormData?.educationLevel) {
+    contextParts.push(`Current level: ${profileData.bioFormData.educationLevel}`);
+  }
+  if (profileData.bioFormData?.fieldOfStudy) {
+    contextParts.push(`Field of study: ${profileData.bioFormData.fieldOfStudy}`);
+  }
+  
+  const context = contextParts.length > 0 ? contextParts.join('\n') : 'an international student';
+  
+  const prompt = `Generate a compelling personal bio for an international student applying to universities. Use the following profile information to personalize it:
+
+${context}
+
 The bio should be 1-2 paragraphs and include:
-- Their academic interests and passions
-- What drives their educational journey
+- Their academic journey and achievements
+- Their interests and what drives their educational journey
+- Why they're pursuing international education
 - Their approach to learning and growth
 
-Write in first person, professional yet personable tone.`;
+Write in first person, professional yet personable tone. Make it genuine and specific based on the provided information.`;
 
   const response = await openai.chat.completions.create({
     model: MODEL,
     messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 300,
+    max_completion_tokens: 400,
   });
 
   return response.choices[0]?.message?.content || "";
 }
 
 export async function generateCareerGoals(
-  educationLevel?: string,
-  fieldOfStudy?: string
+  profileData: StudentProfileData
 ): Promise<string> {
   checkAIConfigured();
   
-  const context = [educationLevel, fieldOfStudy].filter(Boolean).join(", ");
-  const prompt = `Generate career goals for a student${context ? ` studying ${context}` : ""}. 
-The goals should be 1-2 paragraphs and include:
-- Short-term and long-term career aspirations
-- How their education aligns with these goals
-- The impact they hope to make in their field
+  const contextParts: string[] = [];
+  
+  if (profileData.personalInfo?.preferredStudyDestination) {
+    contextParts.push(`Planning to study in: ${profileData.personalInfo.preferredStudyDestination}`);
+  }
+  
+  if (profileData.educationHistory && profileData.educationHistory.length > 0) {
+    const fields = profileData.educationHistory.map(edu => edu.fieldOfStudy).filter(Boolean);
+    if (fields.length > 0) {
+      contextParts.push(`Background in: ${fields.join(', ')}`);
+    }
+    const levels = profileData.educationHistory.map(edu => edu.level).filter(Boolean);
+    if (levels.length > 0) {
+      contextParts.push(`Education levels: ${levels.join(', ')}`);
+    }
+  }
+  
+  if (profileData.bioFormData?.fieldOfStudy) {
+    contextParts.push(`Studying: ${profileData.bioFormData.fieldOfStudy}`);
+  }
+  if (profileData.bioFormData?.educationLevel) {
+    contextParts.push(`Current level: ${profileData.bioFormData.educationLevel}`);
+  }
+  
+  const context = contextParts.length > 0 ? contextParts.join('\n') : 'an international student';
+  
+  const prompt = `Generate career goals for an international student applying to universities. Use the following profile information:
 
-Write in first person, ambitious yet realistic tone.`;
+${context}
+
+The goals should be 1-2 paragraphs and include:
+- Short-term career aspirations (immediately after graduation)
+- Long-term career goals (5-10 years)
+- How their education and international experience will help achieve these goals
+- The impact they hope to make in their field or community
+
+Write in first person, ambitious yet realistic tone. Make it specific based on the provided information.`;
 
   const response = await openai.chat.completions.create({
     model: MODEL,
     messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 300,
+    max_completion_tokens: 400,
   });
 
   return response.choices[0]?.message?.content || "";

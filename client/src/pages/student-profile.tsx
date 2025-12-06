@@ -581,13 +581,51 @@ function StudentProfileContent() {
   };
 
   const generateContent = async (field: "bio" | "careerGoals") => {
-    const educationLevel = bioForm.getValues("educationLevel");
-    const fieldOfStudy = bioForm.getValues("fieldOfStudy");
+    // Gather all existing profile data to create a richer, personalized bio
+    const personalInfo = {
+      firstName: profile?.firstName || personalForm.getValues("firstName"),
+      lastName: profile?.lastName || personalForm.getValues("lastName"),
+      nationality: profile?.nationality || personalForm.getValues("nationality"),
+      countryOfResidence: profile?.countryOfResidence || personalForm.getValues("countryOfResidence"),
+      preferredStudyDestination: profile?.preferredStudyDestination || personalForm.getValues("preferredStudyDestination"),
+      intakePreference: profile?.intakePreference || personalForm.getValues("intakePreference"),
+    };
 
-    if (!educationLevel && !fieldOfStudy) {
+    // Get education history from fetched data
+    const educationHistory = educations.map(edu => ({
+      level: edu.level,
+      institution: edu.institution,
+      fieldOfStudy: edu.fieldOfStudy,
+      country: edu.country,
+      gpa: edu.gpa,
+    }));
+
+    // Get language scores from fetched data
+    const languageTests = languageScores.map(score => ({
+      testType: score.testType,
+      overallScore: score.overallScore,
+      listeningScore: score.listeningScore,
+      readingScore: score.readingScore,
+      writingScore: score.writingScore,
+      speakingScore: score.speakingScore,
+    }));
+
+    // Also get any bio form fields already filled
+    const bioFormData = {
+      educationLevel: bioForm.getValues("educationLevel"),
+      fieldOfStudy: bioForm.getValues("fieldOfStudy"),
+      previousEducation: bioForm.getValues("previousEducation"),
+    };
+
+    // Check if we have enough data to generate
+    const hasPersonalInfo = personalInfo.firstName || personalInfo.nationality;
+    const hasEducation = educationHistory.length > 0 || bioFormData.educationLevel;
+    const hasLanguageScores = languageTests.length > 0;
+
+    if (!hasPersonalInfo && !hasEducation && !hasLanguageScores) {
       toast({
         title: "Missing information",
-        description: "Please enter your education level or field of study first.",
+        description: "Please add some personal info, education history, or language scores first to generate personalized content.",
         variant: "destructive",
       });
       return;
@@ -598,13 +636,15 @@ function StudentProfileContent() {
     try {
       const response: any = await apiRequest("POST", "/api/ai/generate-student-content", {
         field,
-        educationLevel,
-        fieldOfStudy,
+        personalInfo,
+        educationHistory,
+        languageTests,
+        bioFormData,
       });
       bioForm.setValue(field, response.content);
       toast({
         title: "Content generated",
-        description: `AI has created ${field === "bio" ? "a bio" : "career goals"} for you.`,
+        description: `AI has created ${field === "bio" ? "a personalized bio" : "career goals"} based on your profile.`,
       });
     } catch (error: any) {
       toast({

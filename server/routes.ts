@@ -3534,13 +3534,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ai/generate-student-content", isAuthenticated, async (req, res) => {
     try {
-      const { field, educationLevel, fieldOfStudy } = req.body;
+      const { field, personalInfo, educationHistory, languageTests, bioFormData } = req.body;
+
+      // Build profile data object from all sources
+      const profileData = {
+        personalInfo,
+        educationHistory,
+        languageTests,
+        bioFormData,
+      };
 
       let content = "";
       if (field === "bio") {
-        content = await generateStudentBio(educationLevel, fieldOfStudy);
+        content = await generateStudentBio(profileData);
       } else if (field === "careerGoals") {
-        content = await generateCareerGoals(educationLevel, fieldOfStudy);
+        content = await generateCareerGoals(profileData);
       } else {
         return res.status(400).json({ message: "Invalid field" });
       }
@@ -3548,6 +3556,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ content });
     } catch (error: any) {
       console.error("Error generating content:", error);
+      
+      // Handle AI configuration errors
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
       
       // Handle OpenAI-specific errors with user-friendly messages
       if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
