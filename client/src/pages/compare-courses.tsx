@@ -94,13 +94,6 @@ export default function CompareCourses() {
   if (courses.length < 2) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card sticky top-0 z-40 backdrop-blur">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto" />
-            </div>
-          </div>
-        </header>
         <div className="container mx-auto px-4 py-12">
           <Card>
             <CardContent className="py-12 text-center">
