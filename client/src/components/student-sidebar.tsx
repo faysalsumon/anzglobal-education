@@ -211,7 +211,11 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                 "h-10 w-10 rounded-lg transition-all",
                 location === "/student/dashboard" && "text-primary bg-primary/10"
               )}
-              onClick={() => setLocation("/student/dashboard")}
+              onClick={() => {
+                setIsSubmenuOpen(false);
+                setActiveSection(null);
+                setLocation("/student/dashboard");
+              }}
               data-testid="nav-dashboard"
             >
               <LayoutDashboard className="h-5 w-5" />
@@ -231,7 +235,11 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                 "h-10 w-10 rounded-lg transition-all mb-2",
                 location === "/student/favorites" && "text-rose-600 bg-rose-50 dark:bg-rose-950 dark:text-rose-400"
               )}
-              onClick={() => setLocation("/student/favorites")}
+              onClick={() => {
+                setIsSubmenuOpen(false);
+                setActiveSection(null);
+                setLocation("/student/favorites");
+              }}
               data-testid="nav-favorites"
             >
               <Heart className="h-5 w-5" />
