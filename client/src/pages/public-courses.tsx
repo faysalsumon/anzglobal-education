@@ -992,15 +992,6 @@ export default function PublicCourses() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t bg-card py-8 mt-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} ANZ Global Education. All rights reserved.
-          </p>
-        </div>
-      </footer>
-
       {/* Login Modal */}
       <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
         <DialogContent data-testid="dialog-login-required">
