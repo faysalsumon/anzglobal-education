@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   User, GraduationCap, Building, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
-  AlertTriangle, Plus, Calendar, UserCheck, ExternalLink, Send
+  AlertTriangle, Plus, Calendar, UserCheck, ExternalLink, Send, Layers
 } from "lucide-react";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
@@ -167,10 +167,17 @@ export function ApplicationDetailsPanel({
 
   const [verifyNotes, setVerifyNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  const [slotsDialogOpen, setSlotsDialogOpen] = useState(false);
+  const [newMaxSlots, setNewMaxSlots] = useState<number>(3);
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
     enabled: isEditing,
+  });
+
+  // Fetch student application slots
+  const { data: slotsData } = useQuery<{ maxSlots: number; usedSlots: number; availableSlots: number }>({
+    queryKey: ["/api/admin/students", student.id, "application-slots"],
   });
   
   const consultants = consultantsData?.consultants || [];
@@ -215,6 +222,20 @@ export function ApplicationDetailsPanel({
     },
     onError: (error: any) => {
       toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateSlotsMutation = useMutation({
+    mutationFn: async (maxSlots: number) => {
+      return apiRequest("PATCH", `/api/admin/students/${student.id}/application-slots`, { maxSlots });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/students", student.id, "application-slots"] });
+      toast({ title: "Slots Updated", description: "Student application slots have been updated" });
+      setSlotsDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Update Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -363,6 +384,27 @@ export function ApplicationDetailsPanel({
                 <div>
                   <p className="text-sm font-medium">{student.firstName} {student.lastName}</p>
                   <p className="text-xs text-muted-foreground">{student.email}</p>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Application Slots</p>
+                    <p className="text-sm font-medium">
+                      {slotsData?.usedSlots || 0} / {slotsData?.maxSlots || 3} used
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setNewMaxSlots(slotsData?.maxSlots || 3);
+                      setSlotsDialogOpen(true);
+                    }}
+                    data-testid="button-manage-slots"
+                  >
+                    <Layers className="h-3 w-3 mr-1" />
+                    Manage
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -716,6 +758,53 @@ export function ApplicationDetailsPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={slotsDialogOpen} onOpenChange={setSlotsDialogOpen}>
+        <DialogContent data-testid="dialog-manage-slots">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Manage Application Slots
+            </DialogTitle>
+            <DialogDescription>
+              Increase application slots for {student.firstName} {student.lastName}. Default is 3 slots.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Current Usage:</span>
+              <span className="font-medium">{slotsData?.usedSlots || 0} / {slotsData?.maxSlots || 3} slots used</span>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-slots">Maximum Slots</Label>
+              <Input
+                id="max-slots"
+                type="number"
+                min={Math.max(1, slotsData?.usedSlots || 1)}
+                max={20}
+                value={newMaxSlots}
+                onChange={(e) => setNewMaxSlots(parseInt(e.target.value) || 3)}
+                data-testid="input-max-slots"
+              />
+              <p className="text-xs text-muted-foreground">
+                Minimum: {Math.max(1, slotsData?.usedSlots || 1)} (current usage), Maximum: 20
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSlotsDialogOpen(false)} data-testid="button-cancel-slots">
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => updateSlotsMutation.mutate(newMaxSlots)}
+              disabled={updateSlotsMutation.isPending || newMaxSlots < (slotsData?.usedSlots || 1)}
+              data-testid="button-save-slots"
+            >
+              {updateSlotsMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={requestDocDialogOpen} onOpenChange={setRequestDocDialogOpen}>
         <DialogContent data-testid="dialog-request-document">
