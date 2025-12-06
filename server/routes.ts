@@ -2507,7 +2507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         referralCode: profile.referralCode,
-        referralLink: `${req.protocol}://${req.get('host')}/affiliate?ref=${profile.referralCode}`
+        referralLink: `${req.protocol}://${req.get('host')}/login?ref=${profile.referralCode}`
       });
     } catch (error) {
       console.error("Error fetching referral code:", error);

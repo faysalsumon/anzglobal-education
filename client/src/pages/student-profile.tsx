@@ -358,6 +358,8 @@ function StudentProfileContent() {
       if (profile) {
         return await apiRequest("PUT", "/api/student/profile", data);
       } else {
+        // Check for referral code in localStorage (from referral link)
+        const referredByCode = localStorage.getItem('referralCode');
         const payload = {
           ...data,
           bio: data.bio || "",
@@ -365,8 +367,14 @@ function StudentProfileContent() {
           educationLevel: data.educationLevel || "",
           fieldOfStudy: data.fieldOfStudy || "",
           previousEducation: data.previousEducation || "",
+          referredByCode: referredByCode || undefined,
         };
-        return await apiRequest("POST", "/api/student/profile", payload);
+        const result = await apiRequest("POST", "/api/student/profile", payload);
+        // Clear referral code after successful profile creation
+        if (referredByCode) {
+          localStorage.removeItem('referralCode');
+        }
+        return result;
       }
     },
     onSuccess: () => {
