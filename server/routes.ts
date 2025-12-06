@@ -2719,8 +2719,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
-      // Get notes with author info
-      const notes = await db
+      // Get notes with author info (join with both users and studentProfiles for profile pictures)
+      const rawNotes = await db
         .select({
           id: applicationNotes.id,
           content: applicationNotes.content,
@@ -2731,12 +2731,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           authorId: applicationNotes.authorId,
           authorFirstName: users.firstName,
           authorLastName: users.lastName,
-          authorProfilePicture: users.profileImageUrl,
+          userProfilePicture: users.profileImageUrl,
+          studentProfilePicture: studentProfiles.profileImageUrl,
         })
         .from(applicationNotes)
         .leftJoin(users, eq(applicationNotes.authorId, users.id))
+        .leftJoin(studentProfiles, eq(users.id, studentProfiles.userId))
         .where(eq(applicationNotes.applicationId, applicationId))
         .orderBy(desc(applicationNotes.createdAt));
+
+      // Use student profile picture if available, otherwise user profile picture
+      const notes = rawNotes.map(note => ({
+        ...note,
+        authorProfilePicture: note.studentProfilePicture || note.userProfilePicture,
+      }));
 
       // Mark notes as read by student
       await db
@@ -2816,8 +2824,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
-      // Get notes with author info
-      const notes = await db
+      // Get notes with author info (join with both users and studentProfiles for profile pictures)
+      const rawNotes = await db
         .select({
           id: applicationNotes.id,
           content: applicationNotes.content,
@@ -2828,12 +2836,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           authorId: applicationNotes.authorId,
           authorFirstName: users.firstName,
           authorLastName: users.lastName,
-          authorProfilePicture: users.profileImageUrl,
+          userProfilePicture: users.profileImageUrl,
+          studentProfilePicture: studentProfiles.profileImageUrl,
         })
         .from(applicationNotes)
         .leftJoin(users, eq(applicationNotes.authorId, users.id))
+        .leftJoin(studentProfiles, eq(users.id, studentProfiles.userId))
         .where(eq(applicationNotes.applicationId, applicationId))
         .orderBy(desc(applicationNotes.createdAt));
+
+      // Use student profile picture if available, otherwise user profile picture
+      const notes = rawNotes.map(note => ({
+        ...note,
+        authorProfilePicture: note.studentProfilePicture || note.userProfilePicture,
+      }));
 
       // Mark notes as read by consultant
       await db
