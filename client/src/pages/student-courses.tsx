@@ -502,16 +502,12 @@ function StudentCoursesContent() {
                 
                 <div 
                   className="flex items-center gap-3 w-full pt-3 border-t-2 rounded-lg px-3 py-2.5 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors duration-300"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleComparisonToggle(course.id);
-                  }}
+                  onClick={() => handleComparisonToggle(course.id)}
                   data-testid={`checkbox-compare-${course.id}`}
                 >
                   <Checkbox 
                     checked={isInComparison(course.id)}
-                    onCheckedChange={() => handleComparisonToggle(course.id)}
-                    className="cursor-pointer h-5 w-5"
+                    className="pointer-events-none h-5 w-5"
                   />
                   <label className="text-sm font-semibold cursor-pointer flex items-center gap-2 flex-1">
                     <GitCompare className="h-4 w-4" />

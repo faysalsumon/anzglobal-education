@@ -967,16 +967,12 @@ export default function PublicCourses() {
                       </Button>
                       <div 
                         className="flex items-center gap-2 w-full pt-2 border-t hover-elevate rounded-md px-2 py-1.5 cursor-pointer"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleComparisonToggle(course.id);
-                        }}
+                        onClick={() => handleComparisonToggle(course.id)}
                         data-testid={`checkbox-compare-${course.id}`}
                       >
                         <Checkbox 
                           checked={isInComparison(course.id)}
-                          onCheckedChange={() => handleComparisonToggle(course.id)}
-                          className="cursor-pointer"
+                          className="pointer-events-none"
                         />
                         <label className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
                           <GitCompare className="h-3.5 w-3.5" />
