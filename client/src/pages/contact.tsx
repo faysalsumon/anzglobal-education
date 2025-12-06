@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import {
   Building2,
   GraduationCap,
@@ -18,7 +19,36 @@ import {
   BookOpen,
   Users,
   Briefcase,
+  Navigation,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
+
+// Office locations data
+const officeLocations = {
+  australia: {
+    name: "Australia Office",
+    country: "Australia",
+    address: "Level 2, 3/94 Eucumbene Drive",
+    city: "Ravenhall, VIC 3023",
+    phone: "+61 401 125 380",
+    email: "info@anzglobaleducation.com.au",
+    hours: "Mon-Fri: 9AM-6PM AEDT",
+    coordinates: { lat: -37.7655, lng: 144.7765 },
+    googleMapsUrl: "https://maps.google.com/?q=3/94+Eucumbene+Drive+Ravenhall+VIC+3023+Australia",
+  },
+  bangladesh: {
+    name: "Bangladesh Office",
+    country: "Bangladesh",
+    address: "Block E, NI Tower, Level 4, Road 10",
+    city: "Banani, Dhaka 1213",
+    phone: "+880 1602-122338",
+    email: "info@anzglobal.com.bd",
+    hours: "Sun-Thu: 9AM-6PM BST",
+    coordinates: { lat: 23.7937, lng: 90.4066 },
+    googleMapsUrl: "https://maps.google.com/?q=NI+Tower+Road+10+Banani+Dhaka+1213+Bangladesh",
+  },
+};
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -68,6 +98,228 @@ const institutionContactSchema = z.object({
 type StudentContactData = z.infer<typeof studentContactSchema>;
 type InstitutionContactData = z.infer<typeof institutionContactSchema>;
 type ContactData = StudentContactData | InstitutionContactData;
+
+// Office Finder Component with Google Maps
+function OfficeFinder() {
+  const [selectedCountry, setSelectedCountry] = useState<"australia" | "bangladesh">("australia");
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+
+  const selectedOffice = officeLocations[selectedCountry];
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initMap = async () => {
+      if (!mapRef.current) return;
+
+      try {
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          console.error("Google Maps API key not found");
+          setIsMapLoading(false);
+          return;
+        }
+
+        setOptions({ key: apiKey });
+        await importLibrary("maps");
+
+        if (!isMounted || !mapRef.current) return;
+
+        const map = new google.maps.Map(mapRef.current, {
+          center: selectedOffice.coordinates,
+          zoom: 15,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          zoomControl: true,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        });
+
+        mapInstanceRef.current = map;
+
+        const marker = new google.maps.Marker({
+          position: selectedOffice.coordinates,
+          map,
+          title: selectedOffice.name,
+          animation: google.maps.Animation.DROP,
+        });
+
+        markerRef.current = marker;
+
+        // Add info window
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px; max-width: 200px;">
+              <h3 style="font-weight: 600; margin-bottom: 4px;">${selectedOffice.name}</h3>
+              <p style="font-size: 12px; color: #666; margin: 0;">${selectedOffice.address}</p>
+              <p style="font-size: 12px; color: #666; margin: 0;">${selectedOffice.city}</p>
+            </div>
+          `,
+        });
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker);
+        });
+
+        setIsMapLoading(false);
+      } catch (error) {
+        console.error("Error initializing map:", error);
+        setIsMapLoading(false);
+      }
+    };
+
+    initMap();
+
+    return () => {
+      isMounted = false;
+      if (markerRef.current && typeof google !== "undefined" && google.maps) {
+        markerRef.current.setMap(null);
+      }
+    };
+  }, []);
+
+  // Update map when country changes
+  useEffect(() => {
+    if (mapInstanceRef.current && markerRef.current) {
+      const office = officeLocations[selectedCountry];
+      mapInstanceRef.current.panTo(office.coordinates);
+      markerRef.current.setPosition(office.coordinates);
+      markerRef.current.setTitle(office.name);
+    }
+  }, [selectedCountry]);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+          <Navigation className="w-8 h-8 inline-block mr-2 text-primary" />
+          Find Our Offices
+        </h2>
+        <p className="text-muted-foreground">
+          We have offices in Australia and Bangladesh to serve you better
+        </p>
+      </div>
+
+      {/* Country Selector */}
+      <div className="flex justify-center gap-4 mb-8">
+        <Button
+          variant={selectedCountry === "australia" ? "default" : "outline"}
+          onClick={() => setSelectedCountry("australia")}
+          className="min-w-[140px]"
+          data-testid="button-select-australia"
+        >
+          <Globe className="w-4 h-4 mr-2" />
+          Australia
+        </Button>
+        <Button
+          variant={selectedCountry === "bangladesh" ? "default" : "outline"}
+          onClick={() => setSelectedCountry("bangladesh")}
+          className="min-w-[140px]"
+          data-testid="button-select-bangladesh"
+        >
+          <Globe className="w-4 h-4 mr-2" />
+          Bangladesh
+        </Button>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Map */}
+        <Card className="overflow-hidden">
+          <div 
+            ref={mapRef} 
+            className="h-[400px] w-full bg-muted"
+            data-testid="office-map"
+          >
+            {isMapLoading && (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading map...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Office Details */}
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
+              {selectedOffice.name}
+            </CardTitle>
+            <CardDescription>
+              {selectedOffice.country} Headquarters
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium">Address</p>
+                <p className="text-sm text-muted-foreground">{selectedOffice.address}</p>
+                <p className="text-sm text-muted-foreground">{selectedOffice.city}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Phone className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium">Phone</p>
+                <a 
+                  href={`tel:${selectedOffice.phone}`}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {selectedOffice.phone}
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Mail className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium">Email</p>
+                <a 
+                  href={`mailto:${selectedOffice.email}`}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {selectedOffice.email}
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium">Business Hours</p>
+                <p className="text-sm text-muted-foreground">{selectedOffice.hours}</p>
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              className="w-full mt-4"
+              onClick={() => window.open(selectedOffice.googleMapsUrl, "_blank")}
+              data-testid="button-get-directions"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Get Directions
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 export default function Contact() {
   const [contactType, setContactType] = useState<"student" | "institution" | null>(null);
@@ -675,36 +927,91 @@ export default function Contact() {
             </div>
           )}
 
-          {/* Contact Information */}
+          {/* Office Finder with Map */}
           {!contactType && (
-            <div className="mt-16 max-w-4xl mx-auto">
+            <div className="mt-16">
+              <OfficeFinder />
+            </div>
+          )}
+
+          {/* All Offices Quick Reference */}
+          {!contactType && (
+            <div className="mt-16 max-w-6xl mx-auto">
               <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">
-                Other Ways to Reach Us
+                All Our Offices
               </h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">Email</h3>
-                    <p className="text-sm text-muted-foreground">info@anzglobaleducation.com.au</p>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Australia Office Card */}
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Globe className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Australia Office</CardTitle>
+                        <CardDescription>Headquarters</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a href="tel:+61401125380" className="hover:text-primary transition-colors">
+                        +61 401 125 380
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <a href="mailto:info@anzglobaleducation.com.au" className="hover:text-primary transition-colors">
+                        info@anzglobaleducation.com.au
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>Mon-Fri: 9AM-6PM AEDT</span>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <Phone className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">Phone</h3>
-                    <p className="text-sm text-muted-foreground">+61 401 125 380</p>
-                    <p className="text-sm text-muted-foreground">Mon-Fri: 9AM-6PM AEDT</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6 text-center">
-                    <MapPin className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">Office</h3>
-                    <p className="text-sm text-muted-foreground">Level 2, 3/94 Eucumbene Drive</p>
-                    <p className="text-sm text-muted-foreground">Ravenhall, VIC 3023</p>
+                {/* Bangladesh Office Card */}
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
+                        <Globe className="w-6 h-6 text-accent" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Bangladesh Office</CardTitle>
+                        <CardDescription>South Asia Regional Office</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>Block E, NI Tower, Level 4, Road 10, Banani, Dhaka 1213</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a href="tel:+8801602122338" className="hover:text-primary transition-colors">
+                        +880 1602-122338
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <a href="mailto:info@anzglobal.com.bd" className="hover:text-primary transition-colors">
+                        info@anzglobal.com.bd
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>Sun-Thu: 9AM-6PM BST</span>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
