@@ -641,7 +641,11 @@ function StudentProfileContent() {
         languageTests,
         bioFormData,
       });
-      bioForm.setValue(field, response.content);
+      bioForm.setValue(field, response.content, { 
+        shouldDirty: true, 
+        shouldTouch: true,
+        shouldValidate: true 
+      });
       toast({
         title: "Content generated",
         description: `AI has created ${field === "bio" ? "a personalized bio" : "career goals"} based on your profile.`,
