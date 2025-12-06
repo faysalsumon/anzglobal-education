@@ -125,12 +125,11 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       ],
     },
     {
-      id: "applications",
-      label: "Applications",
-      icon: FileText,
+      id: "documents",
+      label: "Documents",
+      icon: FolderOpen,
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
       routes: [
-        { icon: FileText, label: "My Applications", path: "/student/applications" },
         { icon: FolderOpen, label: "My Documents", path: "/student/documents" },
       ],
     },
