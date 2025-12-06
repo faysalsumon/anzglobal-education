@@ -36,9 +36,10 @@ export default function StudentFavorites() {
     queryKey: ["/api/courses"],
   });
 
-  const { data: universities = [] } = useQuery<University[]>({
+  const { data: universitiesData } = useQuery<{ universities: University[] }>({
     queryKey: ["/api/universities"],
   });
+  const universities = universitiesData?.universities || [];
 
   const removeFavoriteMutation = useMutation({
     mutationFn: async (favoriteId: string) => {
