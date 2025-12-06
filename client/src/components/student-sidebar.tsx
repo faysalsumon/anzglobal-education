@@ -92,7 +92,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       routes: [
         { icon: MessageSquare, label: "Messages", path: "/chat" },
         { icon: Sparkles, label: "AI Assistant", path: "/student/ai-assistant" },
-        { icon: Users, label: "Referrals", path: "/student/referrals" },
+        { icon: Users, label: "Affiliate Program", path: "/affiliate" },
       ],
     },
   ];

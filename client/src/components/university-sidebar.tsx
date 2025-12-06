@@ -99,6 +99,7 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
       routes: [
         { icon: Sparkles, label: "AI Assistant", path: "/university/ai-assistant" },
         { icon: MessageSquare, label: "Messages", path: "/chat" },
+        { icon: Users, label: "Affiliate Program", path: "/affiliate" },
       ],
     },
     {
