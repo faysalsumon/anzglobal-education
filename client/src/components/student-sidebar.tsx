@@ -15,12 +15,9 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  X,
   LogOut,
   Home,
   MessageSquare,
-  Bell,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -50,7 +47,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("discover");
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
 
   const navConfig: NavSection[] = [
@@ -125,7 +121,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
   const handleRouteClick = (path: string) => {
     setLocation(path);
-    setIsMobileMenuOpen(false);
   };
 
   const currentSection = navConfig.find(s => s.id === activeSection);
@@ -152,86 +147,75 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-3 left-3 z-50 lg:hidden"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        data-testid="button-mobile-menu-toggle"
-      >
-        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
-
-      {isMobileMenuOpen && (
+      {/* Overlay for mobile when submenu is open */}
+      {isSubmenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={() => setIsSubmenuOpen(false)}
         />
       )}
 
+      {/* Icon panel - always visible */}
+      <div className="fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background">
+        <Link href="/" className="mb-6" data-testid="link-logo">
+          <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
+        </Link>
+
+        <ScrollArea className="flex-1 w-full">
+          <div className="flex flex-col items-center gap-2 px-2">
+            {navConfig.map((section) => {
+              const isActive = activeSection === section.id;
+              return (
+                <Tooltip key={section.id} delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "h-10 w-10 rounded-lg transition-all",
+                        isActive && section.color
+                      )}
+                      onClick={() => handleSectionClick(section.id)}
+                      data-testid={`nav-section-${section.id}`}
+                    >
+                      <section.icon className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {section.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </ScrollArea>
+
+        <div className="mt-auto flex flex-col items-center gap-2 pt-4 border-t w-full px-2">
+          <NotificationBell />
+          
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleLogout}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Logout</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Submenu panel - slides in from left of icon panel */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex bg-background border-r transition-transform duration-300 lg:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+        "fixed inset-y-0 left-16 z-40 w-56 flex flex-col bg-background border-r transition-transform duration-300",
+        isSubmenuOpen ? "translate-x-0" : "-translate-x-full",
         className
       )}>
-        <div className="w-16 flex flex-col items-center py-4 border-r bg-muted/30">
-          <Link href="/" className="mb-6" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
-          </Link>
-
-          <ScrollArea className="flex-1 w-full">
-            <div className="flex flex-col items-center gap-2 px-2">
-              {navConfig.map((section) => {
-                const isActive = activeSection === section.id;
-                return (
-                  <Tooltip key={section.id} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          "h-10 w-10 rounded-lg transition-all",
-                          isActive && section.color
-                        )}
-                        onClick={() => handleSectionClick(section.id)}
-                        data-testid={`nav-section-${section.id}`}
-                      >
-                        <section.icon className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="font-medium">
-                      {section.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </ScrollArea>
-
-          <div className="mt-auto flex flex-col items-center gap-2 pt-4 border-t">
-            <NotificationBell />
-            
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Logout</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-
-        <div className={cn(
-          "w-56 flex flex-col bg-background transition-all duration-300",
-          isSubmenuOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-        )}>
           <div className="h-16 flex items-center px-4 border-b">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
@@ -288,24 +272,23 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
             </div>
           </ScrollArea>
 
-          <div className="p-3 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full gap-2"
-              onClick={() => setLocation("/")}
-              data-testid="button-public-site"
-            >
-              <Home className="h-4 w-4" />
-              Public Site
-            </Button>
-          </div>
+        <div className="p-3 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2"
+            onClick={() => setLocation("/")}
+            data-testid="button-public-site"
+          >
+            <Home className="h-4 w-4" />
+            Public Site
+          </Button>
         </div>
 
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-background border shadow-sm hidden lg:flex"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-background border shadow-sm"
           onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
           data-testid="button-toggle-submenu"
         >

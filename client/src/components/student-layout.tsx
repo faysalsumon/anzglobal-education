@@ -11,7 +11,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
     <div className="flex min-h-screen w-full bg-muted/30">
       <StudentSidebar />
 
-      <div className="flex flex-col flex-1 lg:ml-[288px] ml-0">
+      <div className="flex flex-col flex-1 ml-16">
         <main className="flex-1 p-4 lg:p-6 overflow-auto">
           {children}
         </main>
