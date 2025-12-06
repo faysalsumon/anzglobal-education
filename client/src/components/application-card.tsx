@@ -146,16 +146,24 @@ const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
-// Main stages to show in progress bar (excluding terminal stages)
-const MAIN_STAGES: ApplicationStage[] = [
-  "Assessment",
-  "Collect Docs", 
-  "Documents Verification",
-  "Offer-Letter",
-  "GS-Clearance",
-  "COE",
-  "Visa Lodgment",
-];
+// Student-facing simplified stages (5 main milestones)
+const STUDENT_STAGES = [
+  { id: "assessment", name: "Initial Assessment", internalStages: ["Assessment", "Collect Docs", "Documents Verification"] },
+  { id: "applied", name: "Applied to Institution", internalStages: ["Offer-Letter"] },
+  { id: "offer", name: "Offer Letter", internalStages: ["GS-Clearance"] },
+  { id: "payment", name: "Payment", internalStages: ["COE"] },
+  { id: "coe", name: "COE Issued", internalStages: ["Health Cover", "Visa Lodgment", "Application Won"] },
+] as const;
+
+// Helper to map internal stage to student stage index
+const getStudentStageIndex = (internalStage: ApplicationStage): number => {
+  for (let i = 0; i < STUDENT_STAGES.length; i++) {
+    if ((STUDENT_STAGES[i].internalStages as readonly string[]).includes(internalStage)) {
+      return i;
+    }
+  }
+  return -1; // Terminal or unknown stage
+};
 
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
   const { toast } = useToast();
@@ -194,26 +202,31 @@ export function ApplicationCard({ application, course, university, consultant }:
   
   const hasMissingDocuments = missingRequiredDocs.length > 0;
 
-  // Calculate progress percentage based on current stage
-  const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
-  const totalMainStages = MAIN_STAGES.length;
-  const currentMainStageIndex = MAIN_STAGES.indexOf(application.currentStage);
+  // Calculate progress based on student-facing stages
+  const currentStudentStageIndex = getStudentStageIndex(application.currentStage);
+  const totalStudentStages = STUDENT_STAGES.length;
   
-  // Calculate percentage (terminal stages = 100%)
+  // Calculate percentage (terminal stages = 100% for won, 0% for lost/refunds)
   const progressPercentage = application.currentStage === "Application Won" 
     ? 100 
     : application.currentStage === "Refusal/Refunds" || application.currentStage === "Application Lost"
     ? 0
-    : Math.round(((currentMainStageIndex + 1) / totalMainStages) * 100);
+    : currentStudentStageIndex >= 0 
+    ? Math.round(((currentStudentStageIndex + 1) / totalStudentStages) * 100)
+    : 0;
   
-  // Get current stage number (1-based)
-  const currentStageNumber = currentMainStageIndex >= 0 ? currentMainStageIndex + 1 : currentIndex + 1;
+  // Get current student stage number (1-based)
+  const currentStageNumber = currentStudentStageIndex >= 0 ? currentStudentStageIndex + 1 : 1;
   
-  // Get next stage
-  const nextStageIndex = currentIndex + 1;
-  const nextStage = nextStageIndex < STAGE_ORDER.length && 
-    !["Application Won", "Refusal/Refunds", "Application Lost"].includes(STAGE_ORDER[nextStageIndex])
-    ? STAGE_ORDER[nextStageIndex] 
+  // Get current student stage name
+  const currentStudentStage = currentStudentStageIndex >= 0 
+    ? STUDENT_STAGES[currentStudentStageIndex] 
+    : STUDENT_STAGES[0];
+  
+  // Get next student stage
+  const nextStudentStageIndex = currentStudentStageIndex + 1;
+  const nextStudentStage = nextStudentStageIndex < totalStudentStages 
+    ? STUDENT_STAGES[nextStudentStageIndex] 
     : null;
 
   const uploadDocumentMutation = useMutation({
@@ -365,11 +378,10 @@ export function ApplicationCard({ application, course, university, consultant }:
                 style={{ width: `${progressPercentage}%` }}
               >
                 {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" 
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" 
                   style={{ 
-                    animation: 'shimmer 2s infinite',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                    transform: 'translateX(-100%)',
+                    animation: 'shimmer 2s infinite linear',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
                   }} 
                 />
               </div>
@@ -377,23 +389,21 @@ export function ApplicationCard({ application, course, university, consultant }:
             
             {/* Stage markers on progress bar */}
             <div className="absolute top-0 left-0 right-0 h-3 flex items-center">
-              {MAIN_STAGES.map((stage, index) => {
-                const position = ((index + 1) / MAIN_STAGES.length) * 100;
-                const stageIndex = STAGE_ORDER.indexOf(stage);
-                const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
-                const isCompleted = stageIndex < currentIndex;
-                const isActive = stageIndex === currentIndex;
+              {STUDENT_STAGES.map((stage, index) => {
+                const position = ((index + 1) / STUDENT_STAGES.length) * 100;
+                const isCompleted = index < currentStudentStageIndex;
+                const isActive = index === currentStudentStageIndex;
                 
                 return (
                   <div 
-                    key={stage}
+                    key={stage.id}
                     className="absolute -translate-x-1/2"
                     style={{ left: `${position}%` }}
                   >
-                    <div className={`w-2 h-2 rounded-full ${
-                      isCompleted ? 'bg-white' : 
-                      isActive ? 'bg-white ring-2 ring-primary ring-offset-1' : 
-                      'bg-muted-foreground/30'
+                    <div className={`w-2.5 h-2.5 rounded-full border-2 ${
+                      isCompleted ? 'bg-white border-white' : 
+                      isActive ? 'bg-white border-primary ring-2 ring-primary/30' : 
+                      'bg-muted border-muted-foreground/30'
                     }`} />
                   </div>
                 );
@@ -401,33 +411,41 @@ export function ApplicationCard({ application, course, university, consultant }:
             </div>
           </div>
 
-          {/* Stage Labels */}
-          <div className="flex justify-between text-xs">
-            {MAIN_STAGES.map((stage, index) => {
-              const stageIndex = STAGE_ORDER.indexOf(stage);
-              const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
-              const isCompleted = stageIndex < currentIndex;
-              const isActive = stageIndex === currentIndex;
+          {/* Stage Labels - 5 Main Student Stages */}
+          <div className="flex justify-between text-xs gap-1">
+            {STUDENT_STAGES.map((stage, index) => {
+              const isCompleted = index < currentStudentStageIndex;
+              const isActive = index === currentStudentStageIndex;
               
               return (
                 <div 
-                  key={stage}
-                  className={`flex flex-col items-center text-center max-w-[60px] ${
+                  key={stage.id}
+                  className={`flex flex-col items-center text-center flex-1 ${
                     isActive ? 'text-primary font-medium' : 
                     isCompleted ? 'text-foreground' : 
                     'text-muted-foreground'
                   }`}
-                  data-testid={`stage-label-${stage}`}
+                  data-testid={`stage-label-${stage.id}`}
                 >
                   {isActive && (
                     <div className="relative mb-1">
                       <span className="absolute -inset-1 rounded-full bg-primary/20 animate-ping" />
-                      <CheckCircle className="h-4 w-4 text-primary relative" />
+                      <div className="relative w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                        {index + 1}
+                      </div>
                     </div>
                   )}
-                  {isCompleted && <CheckCircle className="h-4 w-4 text-green-600 mb-1" />}
-                  {!isActive && !isCompleted && <Clock className="h-4 w-4 mb-1 opacity-50" />}
-                  <span className="leading-tight">{STAGE_DISPLAY_NAMES[stage].split(' ')[0]}</span>
+                  {isCompleted && (
+                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-1">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </div>
+                  )}
+                  {!isActive && !isCompleted && (
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mb-1">
+                      <span className="text-xs text-muted-foreground">{index + 1}</span>
+                    </div>
+                  )}
+                  <span className="leading-tight text-[10px] sm:text-xs">{stage.name}</span>
                 </div>
               );
             })}
@@ -436,21 +454,27 @@ export function ApplicationCard({ application, course, university, consultant }:
           {/* Current Stage Highlight */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground">
-                <span className="text-sm font-bold">{currentStageNumber}</span>
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground">
+                <span className="text-lg font-bold">{currentStageNumber}</span>
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-xs text-muted-foreground">Current Stage</p>
-              <p className="font-semibold text-primary">{STAGE_DISPLAY_NAMES[application.currentStage]}</p>
+              <p className="font-semibold text-primary truncate">{currentStudentStage.name}</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Next</p>
-              <p className="text-sm font-medium">
-                {nextStage ? STAGE_DISPLAY_NAMES[nextStage] : 'Final Stage'}
-              </p>
-            </div>
+            {nextStudentStage && (
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs text-muted-foreground">Next</p>
+                <p className="text-sm font-medium truncate">{nextStudentStage.name}</p>
+              </div>
+            )}
+            {!nextStudentStage && currentStudentStageIndex === STUDENT_STAGES.length - 1 && (
+              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <CheckCircle className="h-5 w-5" />
+                <span className="text-sm font-medium">Final Stage</span>
+              </div>
+            )}
           </div>
         </div>
 
