@@ -105,10 +105,13 @@ function OfficeFinder() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const selectedOffice = officeLocations[selectedCountry];
 
+  // Initialize map once
   useEffect(() => {
     let isMounted = true;
 
@@ -128,8 +131,11 @@ function OfficeFinder() {
 
         if (!isMounted || !mapRef.current) return;
 
+        // Get the current selected office at map creation time
+        const currentOffice = officeLocations["australia"]; // Start with Australia
+
         const map = new google.maps.Map(mapRef.current, {
-          center: selectedOffice.coordinates,
+          center: currentOffice.coordinates,
           zoom: 15,
           mapTypeControl: false,
           streetViewControl: false,
@@ -147,30 +153,35 @@ function OfficeFinder() {
         mapInstanceRef.current = map;
 
         const marker = new google.maps.Marker({
-          position: selectedOffice.coordinates,
+          position: currentOffice.coordinates,
           map,
-          title: selectedOffice.name,
+          title: currentOffice.name,
           animation: google.maps.Animation.DROP,
         });
 
         markerRef.current = marker;
 
-        // Add info window
+        // Create info window
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div style="padding: 8px; max-width: 200px;">
-              <h3 style="font-weight: 600; margin-bottom: 4px;">${selectedOffice.name}</h3>
-              <p style="font-size: 12px; color: #666; margin: 0;">${selectedOffice.address}</p>
-              <p style="font-size: 12px; color: #666; margin: 0;">${selectedOffice.city}</p>
+              <h3 style="font-weight: 600; margin-bottom: 4px;">${currentOffice.name}</h3>
+              <p style="font-size: 12px; color: #666; margin: 0;">${currentOffice.address}</p>
+              <p style="font-size: 12px; color: #666; margin: 0;">${currentOffice.city}</p>
             </div>
           `,
         });
 
+        infoWindowRef.current = infoWindow;
+
         marker.addListener("click", () => {
-          infoWindow.open(map, marker);
+          if (infoWindowRef.current && mapInstanceRef.current && markerRef.current) {
+            infoWindowRef.current.open(mapInstanceRef.current, markerRef.current);
+          }
         });
 
         setIsMapLoading(false);
+        setIsMapReady(true);
       } catch (error) {
         console.error("Error initializing map:", error);
         setIsMapLoading(false);
@@ -187,15 +198,30 @@ function OfficeFinder() {
     };
   }, []);
 
-  // Update map when country changes
+  // Update map when country changes (only when map is ready)
   useEffect(() => {
-    if (mapInstanceRef.current && markerRef.current) {
-      const office = officeLocations[selectedCountry];
-      mapInstanceRef.current.panTo(office.coordinates);
-      markerRef.current.setPosition(office.coordinates);
-      markerRef.current.setTitle(office.name);
+    if (!isMapReady || !mapInstanceRef.current || !markerRef.current) return;
+
+    const office = officeLocations[selectedCountry];
+    
+    // Update map center with smooth animation
+    mapInstanceRef.current.panTo(office.coordinates);
+    
+    // Update marker position
+    markerRef.current.setPosition(office.coordinates);
+    markerRef.current.setTitle(office.name);
+
+    // Update info window content
+    if (infoWindowRef.current) {
+      infoWindowRef.current.setContent(`
+        <div style="padding: 8px; max-width: 200px;">
+          <h3 style="font-weight: 600; margin-bottom: 4px;">${office.name}</h3>
+          <p style="font-size: 12px; color: #666; margin: 0;">${office.address}</p>
+          <p style="font-size: 12px; color: #666; margin: 0;">${office.city}</p>
+        </div>
+      `);
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, isMapReady]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -234,13 +260,14 @@ function OfficeFinder() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Map */}
         <Card className="overflow-hidden">
-          <div 
-            ref={mapRef} 
-            className="h-[400px] w-full bg-muted"
-            data-testid="office-map"
-          >
+          <div className="h-[400px] w-full bg-muted relative">
+            <div 
+              ref={mapRef} 
+              className="h-full w-full"
+              data-testid="office-map"
+            />
             {isMapLoading && (
-              <div className="h-full w-full flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center bg-muted">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
                   <p className="text-sm text-muted-foreground">Loading map...</p>
