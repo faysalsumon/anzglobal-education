@@ -125,21 +125,13 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       ],
     },
     {
-      id: "documents",
-      label: "Documents",
-      icon: FolderOpen,
-      color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
-      routes: [
-        { icon: FolderOpen, label: "My Documents", path: "/student/documents" },
-      ],
-    },
-    {
       id: "applications",
       label: "My Applications",
       icon: FileText,
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
       routes: [
         { icon: FileText, label: "View Applications", path: "/student/applications" },
+        { icon: FolderOpen, label: "My Documents", path: "/student/documents" },
       ],
     },
     {
