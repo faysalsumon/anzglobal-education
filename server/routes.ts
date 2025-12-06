@@ -2493,15 +2493,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/student/referral/code", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const profile = await storage.getStudentProfileByUserId(userId);
+      let profile = await storage.getStudentProfileByUserId(userId);
 
       if (!profile) {
         return res.status(404).json({ message: "Student profile not found" });
       }
 
+      // Auto-generate referral code for existing profiles that don't have one
+      if (!profile.referralCode) {
+        const referralCode = await storage.generateReferralCode();
+        profile = await storage.updateStudentProfile(profile.id, { referralCode });
+      }
+
       res.json({ 
         referralCode: profile.referralCode,
-        referralLink: `${req.protocol}://${req.get('host')}/signup?ref=${profile.referralCode}`
+        referralLink: `${req.protocol}://${req.get('host')}/affiliate?ref=${profile.referralCode}`
       });
     } catch (error) {
       console.error("Error fetching referral code:", error);
