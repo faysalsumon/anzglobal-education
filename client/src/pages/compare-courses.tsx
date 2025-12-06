@@ -123,26 +123,6 @@ export default function CompareCourses() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-40 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto cursor-pointer" />
-              </Link>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/courses" data-testid="button-back-to-courses">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Courses
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <Breadcrumb className="mb-6">
