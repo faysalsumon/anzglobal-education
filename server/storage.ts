@@ -1118,7 +1118,10 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(documents)
-      .where(eq(documents.studentProfileId, studentProfileId))
+      .where(and(
+        eq(documents.studentProfileId, studentProfileId),
+        eq(documents.isActive, true)
+      ))
       .orderBy(desc(documents.createdAt));
   }
 
