@@ -207,7 +207,7 @@ export default function TermsOfService() {
                   <p>If you have any questions about these Terms, please contact us:</p>
                   <ul className="list-none space-y-2">
                     <li><strong>Email:</strong> legal@anzglobaleducation.com</li>
-                    <li><strong>Address:</strong> Level 5, 123 Pitt Street, Sydney NSW 2000, Australia</li>
+                    <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
                     <li><strong>Phone:</strong> +61 2 9999 8888</li>
                   </ul>
                 </div>
