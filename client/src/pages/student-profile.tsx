@@ -17,8 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye } from "lucide-react";
-import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type Favorite, type University, type Course } from "@shared/schema";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase } from "lucide-react";
+import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type Favorite, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 
@@ -213,6 +213,20 @@ const languageScoreFormSchema = z.object({
   }
 });
 
+const employmentFormSchema = z.object({
+  jobTitle: z.string().min(1, "Job title is required"),
+  company: z.string().min(1, "Company name is required"),
+  industry: z.string().optional(),
+  employmentType: z.string().optional(),
+  country: z.string().optional(),
+  city: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  isCurrentlyWorking: z.boolean().default(false),
+  responsibilities: z.string().optional(),
+  achievements: z.string().optional(),
+});
+
 interface ProfileCompletionResult {
   isComplete: boolean;
   percentage: number;
@@ -238,6 +252,8 @@ function StudentProfileContent() {
   const [languageDialogOpen, setLanguageDialogOpen] = useState(false);
   const [editingEducation, setEditingEducation] = useState<StudentEducation | null>(null);
   const [editingLanguageScore, setEditingLanguageScore] = useState<StudentLanguageScore | null>(null);
+  const [employmentDialogOpen, setEmploymentDialogOpen] = useState(false);
+  const [editingEmployment, setEditingEmployment] = useState<StudentEmployment | null>(null);
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -253,6 +269,10 @@ function StudentProfileContent() {
 
   const { data: languageScores = [] } = useQuery<any[]>({
     queryKey: ["/api/student/language-scores"],
+  });
+
+  const { data: employments = [] } = useQuery<StudentEmployment[]>({
+    queryKey: ["/api/student/employments"],
   });
 
   const { data: favorites = [] } = useQuery<Favorite[]>({
@@ -329,6 +349,23 @@ function StudentProfileContent() {
       speakingScore: "",
       testDate: "",
       expiryDate: "",
+    },
+  });
+
+  const employmentForm = useForm<z.infer<typeof employmentFormSchema>>({
+    resolver: zodResolver(employmentFormSchema),
+    defaultValues: {
+      jobTitle: "",
+      company: "",
+      industry: "",
+      employmentType: "",
+      country: "",
+      city: "",
+      startDate: "",
+      endDate: "",
+      isCurrentlyWorking: false,
+      responsibilities: "",
+      achievements: "",
     },
   });
 
@@ -515,6 +552,54 @@ function StudentProfileContent() {
     },
   });
 
+  // Employment mutations
+  const createEmploymentMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof employmentFormSchema>) => {
+      const method = editingEmployment ? "PUT" : "POST";
+      const url = editingEmployment 
+        ? `/api/student/employments/${editingEmployment.id}`
+        : "/api/student/employments";
+      return await apiRequest(method, url, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/employments"] });
+      setEmploymentDialogOpen(false);
+      setEditingEmployment(null);
+      employmentForm.reset();
+      toast({
+        title: "Success",
+        description: editingEmployment ? "Employment updated" : "Employment added",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEmploymentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/student/employments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/employments"] });
+      toast({
+        title: "Success",
+        description: "Employment deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -610,6 +695,19 @@ function StudentProfileContent() {
       speakingScore: score.speakingScore,
     }));
 
+    // Get employment history from fetched data (optional)
+    const employmentHistory = employments.map(emp => ({
+      jobTitle: emp.jobTitle,
+      company: emp.company,
+      industry: emp.industry,
+      employmentType: emp.employmentType,
+      country: emp.country,
+      city: emp.city,
+      isCurrentlyWorking: emp.isCurrentlyWorking,
+      responsibilities: emp.responsibilities,
+      achievements: emp.achievements,
+    }));
+
     // Also get any bio form fields already filled
     const bioFormData = {
       educationLevel: bioForm.getValues("educationLevel"),
@@ -621,6 +719,7 @@ function StudentProfileContent() {
     const hasPersonalInfo = personalInfo.firstName || personalInfo.nationality;
     const hasEducation = educationHistory.length > 0 || bioFormData.educationLevel;
     const hasLanguageScores = languageTests.length > 0;
+    const hasEmployment = employmentHistory.length > 0;
 
     if (!hasPersonalInfo && !hasEducation && !hasLanguageScores) {
       toast({
@@ -639,6 +738,7 @@ function StudentProfileContent() {
         personalInfo,
         educationHistory,
         languageTests,
+        employmentHistory,
         bioFormData,
       });
       const data = await response.json();
@@ -712,6 +812,34 @@ function StudentProfileContent() {
     setEditingLanguageScore(null);
     languageScoreForm.reset();
     setLanguageDialogOpen(true);
+  };
+
+  const handleEmploymentSubmit = employmentForm.handleSubmit((data) => {
+    createEmploymentMutation.mutate(data);
+  });
+
+  const handleEditEmployment = (employment: StudentEmployment) => {
+    setEditingEmployment(employment);
+    employmentForm.reset({
+      jobTitle: employment.jobTitle || "",
+      company: employment.company || "",
+      industry: employment.industry || "",
+      employmentType: employment.employmentType || "",
+      country: employment.country || "",
+      city: employment.city || "",
+      startDate: employment.startDate || "",
+      endDate: employment.endDate || "",
+      isCurrentlyWorking: employment.isCurrentlyWorking || false,
+      responsibilities: employment.responsibilities || "",
+      achievements: employment.achievements || "",
+    });
+    setEmploymentDialogOpen(true);
+  };
+
+  const handleAddEmployment = () => {
+    setEditingEmployment(null);
+    employmentForm.reset();
+    setEmploymentDialogOpen(true);
   };
 
   const handlePersonalSubmit = personalForm.handleSubmit(
@@ -853,6 +981,10 @@ function StudentProfileContent() {
           <TabsTrigger value="language" data-testid="tab-language" className="flex items-center gap-2">
             <Languages className="h-4 w-4" />
             <span className="hidden sm:inline">Language</span>
+          </TabsTrigger>
+          <TabsTrigger value="employment" data-testid="tab-employment" className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            <span className="hidden sm:inline">Employment</span>
           </TabsTrigger>
           <TabsTrigger value="bio" data-testid="tab-bio" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
@@ -1542,6 +1674,320 @@ function StudentProfileContent() {
                               }}
                               disabled={deleteLanguageScoreMutation.isPending}
                               data-testid={`button-delete-language-${score.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="employment">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <div>
+                <CardTitle>Employment History</CardTitle>
+                <CardDescription>Add your work experience (optional but improves AI-generated content)</CardDescription>
+              </div>
+              <Dialog open={employmentDialogOpen} onOpenChange={setEmploymentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleAddEmployment} data-testid="button-add-employment">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Employment
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingEmployment ? "Edit Employment" : "Add Employment"}</DialogTitle>
+                    <DialogDescription>
+                      {editingEmployment ? "Update your employment details" : "Add a new employment record"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...employmentForm}>
+                    <form onSubmit={handleEmploymentSubmit} className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={employmentForm.control}
+                          name="jobTitle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Job Title *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., Software Developer" data-testid="input-employment-job-title" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={employmentForm.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Company name" data-testid="input-employment-company" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={employmentForm.control}
+                          name="industry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Industry</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., Technology" data-testid="input-employment-industry" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={employmentForm.control}
+                          name="employmentType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Employment Type</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-employment-type">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="full-time">Full-time</SelectItem>
+                                  <SelectItem value="part-time">Part-time</SelectItem>
+                                  <SelectItem value="contract">Contract</SelectItem>
+                                  <SelectItem value="internship">Internship</SelectItem>
+                                  <SelectItem value="freelance">Freelance</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={employmentForm.control}
+                          name="country"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., Australia" data-testid="input-employment-country" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={employmentForm.control}
+                          name="city"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>City</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} placeholder="e.g., Melbourne" data-testid="input-employment-city" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={employmentForm.control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Start Date</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value || ""} type="date" data-testid="input-employment-start-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={employmentForm.control}
+                          name="endDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  value={field.value || ""} 
+                                  type="date" 
+                                  disabled={employmentForm.watch("isCurrentlyWorking")}
+                                  data-testid="input-employment-end-date" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={employmentForm.control}
+                        name="isCurrentlyWorking"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-currently-working"
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">I am currently working here</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={employmentForm.control}
+                        name="responsibilities"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Key Responsibilities</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                value={field.value || ""} 
+                                placeholder="Describe your main responsibilities and duties..."
+                                className="min-h-[80px]"
+                                data-testid="textarea-employment-responsibilities" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={employmentForm.control}
+                        name="achievements"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Key Achievements</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                value={field.value || ""} 
+                                placeholder="Highlight any notable achievements or accomplishments..."
+                                className="min-h-[80px]"
+                                data-testid="textarea-employment-achievements" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEmploymentDialogOpen(false)}
+                          data-testid="button-cancel-employment"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={createEmploymentMutation.isPending}
+                          data-testid="button-save-employment"
+                        >
+                          {createEmploymentMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Employment"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {employments.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Briefcase className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No employment history yet</p>
+                  <p className="text-sm mb-4">Adding work experience helps generate more personalized AI content</p>
+                  <Button onClick={handleAddEmployment} data-testid="button-add-employment-empty">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Job
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employments.map((emp: StudentEmployment) => (
+                      <TableRow key={emp.id} data-testid={`row-employment-${emp.id}`}>
+                        <TableCell data-testid={`text-employment-title-${emp.id}`}>
+                          <div className="font-medium">{emp.jobTitle}</div>
+                          {emp.employmentType && (
+                            <Badge variant="secondary" className="mt-1">
+                              {emp.employmentType.replace('-', ' ')}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell data-testid={`text-employment-company-${emp.id}`}>
+                          <div>{emp.company}</div>
+                          {emp.industry && <span className="text-sm text-muted-foreground">{emp.industry}</span>}
+                        </TableCell>
+                        <TableCell data-testid={`text-employment-duration-${emp.id}`}>
+                          <div className="text-sm">
+                            {emp.startDate || "N/A"} - {emp.isCurrentlyWorking ? "Present" : emp.endDate || "N/A"}
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`text-employment-location-${emp.id}`}>
+                          {[emp.city, emp.country].filter(Boolean).join(", ") || "N/A"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditEmployment(emp)}
+                              data-testid={`button-edit-employment-${emp.id}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this employment record?")) {
+                                  deleteEmploymentMutation.mutate(emp.id);
+                                }
+                              }}
+                              disabled={deleteEmploymentMutation.isPending}
+                              data-testid={`button-delete-employment-${emp.id}`}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

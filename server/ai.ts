@@ -94,6 +94,17 @@ interface StudentProfileData {
     testType?: string;
     overallScore?: string;
   }>;
+  employmentHistory?: Array<{
+    jobTitle?: string;
+    company?: string;
+    industry?: string;
+    employmentType?: string;
+    country?: string;
+    city?: string;
+    isCurrentlyWorking?: boolean;
+    responsibilities?: string;
+    achievements?: string;
+  }>;
   bioFormData?: {
     educationLevel?: string;
     fieldOfStudy?: string;
@@ -134,6 +145,16 @@ export async function generateStudentBio(
     contextParts.push(`Language proficiency: ${langDetails}`);
   }
   
+  if (profileData.employmentHistory && profileData.employmentHistory.length > 0) {
+    const empDetails = profileData.employmentHistory.map(emp => {
+      const parts = [emp.jobTitle, emp.company, emp.industry].filter(Boolean);
+      if (emp.isCurrentlyWorking) parts.push('(current)');
+      if (emp.responsibilities) parts.push(`Responsibilities: ${emp.responsibilities}`);
+      return parts.join(' - ');
+    }).join('; ');
+    contextParts.push(`Work experience: ${empDetails}`);
+  }
+  
   if (profileData.bioFormData?.educationLevel) {
     contextParts.push(`Current level: ${profileData.bioFormData.educationLevel}`);
   }
@@ -149,6 +170,7 @@ ${context}
 
 The bio should be 1-2 paragraphs and include:
 - Their academic journey and achievements
+- Their professional experience and skills (if applicable)
 - Their interests and what drives their educational journey
 - Why they're pursuing international education
 - Their approach to learning and growth
@@ -186,6 +208,16 @@ export async function generateCareerGoals(
     }
   }
   
+  if (profileData.employmentHistory && profileData.employmentHistory.length > 0) {
+    const empDetails = profileData.employmentHistory.map(emp => {
+      const parts = [emp.jobTitle, emp.company, emp.industry].filter(Boolean);
+      if (emp.isCurrentlyWorking) parts.push('(current)');
+      if (emp.achievements) parts.push(`Achievements: ${emp.achievements}`);
+      return parts.join(' - ');
+    }).join('; ');
+    contextParts.push(`Work experience: ${empDetails}`);
+  }
+  
   if (profileData.bioFormData?.fieldOfStudy) {
     contextParts.push(`Studying: ${profileData.bioFormData.fieldOfStudy}`);
   }
@@ -202,10 +234,10 @@ ${context}
 The goals should be 1-2 paragraphs and include:
 - Short-term career aspirations (immediately after graduation)
 - Long-term career goals (5-10 years)
-- How their education and international experience will help achieve these goals
+- How their education, professional experience, and international experience will help achieve these goals
 - The impact they hope to make in their field or community
 
-Write in first person, ambitious yet realistic tone. Make it specific based on the provided information.`;
+Write in first person, ambitious yet realistic tone. Make it specific based on the provided information, especially leveraging any work experience mentioned.`;
 
   const response = await openai.chat.completions.create({
     model: MODEL,

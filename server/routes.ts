@@ -16,6 +16,7 @@ import {
   insertAdminTeamMemberSchema,
   insertStudentEducationSchema,
   insertStudentLanguageScoreSchema,
+  insertStudentEmploymentSchema,
   insertFavoriteSchema,
   insertCourseComparisonSchema,
   insertNotificationSchema,
@@ -2437,6 +2438,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employment history routes (optional)
+  app.get("/api/student/employments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.json([]);
+      }
+
+      const employments = await storage.getEmploymentsByStudentProfileId(profile.id);
+      res.json(employments);
+    } catch (error) {
+      console.error("Error fetching employments:", error);
+      res.status(500).json({ message: "Failed to fetch employment history" });
+    }
+  });
+
+  app.post("/api/student/employments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const data = insertStudentEmploymentSchema.parse({
+        ...req.body,
+        studentProfileId: profile.id,
+      });
+
+      const employment = await storage.createEmployment(data);
+      res.json(employment);
+    } catch (error: any) {
+      console.error("Error creating employment:", error);
+      res.status(400).json({ message: error.message || "Failed to create employment record" });
+    }
+  });
+
+  app.put("/api/student/employments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const employment = await storage.getEmploymentById(req.params.id);
+      if (!employment || employment.studentProfileId !== profile.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { studentProfileId, ...sanitizedBody } = req.body;
+      const data = insertStudentEmploymentSchema.partial().parse(sanitizedBody);
+      const updated = await storage.updateEmployment(req.params.id, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating employment:", error);
+      res.status(400).json({ message: error.message || "Failed to update employment record" });
+    }
+  });
+
+  app.delete("/api/student/employments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const employment = await storage.getEmploymentById(req.params.id);
+      if (!employment || employment.studentProfileId !== profile.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await storage.deleteEmployment(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting employment:", error);
+      res.status(400).json({ message: error.message || "Failed to delete employment record" });
+    }
+  });
+
   // Application routes
   app.get("/api/student/applications", isAuthenticated, async (req: any, res) => {
     try {
@@ -3534,13 +3621,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ai/generate-student-content", isAuthenticated, async (req, res) => {
     try {
-      const { field, personalInfo, educationHistory, languageTests, bioFormData } = req.body;
+      const { field, personalInfo, educationHistory, languageTests, employmentHistory, bioFormData } = req.body;
 
       // Build profile data object from all sources
       const profileData = {
         personalInfo,
         educationHistory,
         languageTests,
+        employmentHistory,
         bioFormData,
       };
 

@@ -9,6 +9,7 @@ import {
   adminTeamMembers,
   studentEducations,
   studentLanguageScores,
+  studentEmployments,
   referrals,
   type User,
   type UpsertUser,
@@ -31,6 +32,8 @@ import {
   type InsertStudentEducation,
   type StudentLanguageScore,
   type InsertStudentLanguageScore,
+  type StudentEmployment,
+  type InsertStudentEmployment,
   type Referral,
   type InsertReferral,
   studentLeads,
@@ -169,6 +172,13 @@ export interface IStorage {
   createLanguageScore(score: InsertStudentLanguageScore): Promise<StudentLanguageScore>;
   updateLanguageScore(id: string, data: Partial<InsertStudentLanguageScore>): Promise<StudentLanguageScore>;
   deleteLanguageScore(id: string): Promise<void>;
+  
+  // Student employment operations (optional)
+  getEmploymentsByStudentProfileId(studentProfileId: string): Promise<StudentEmployment[]>;
+  getEmploymentById(id: string): Promise<StudentEmployment | undefined>;
+  createEmployment(employment: InsertStudentEmployment): Promise<StudentEmployment>;
+  updateEmployment(id: string, data: Partial<InsertStudentEmployment>): Promise<StudentEmployment>;
+  deleteEmployment(id: string): Promise<void>;
   
   // Student lead operations
   getAllLeads(filters?: { status?: string; courseId?: string; universityId?: string }): Promise<StudentLead[]>;
@@ -911,6 +921,40 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLanguageScore(id: string): Promise<void> {
     await db.delete(studentLanguageScores).where(eq(studentLanguageScores.id, id));
+  }
+  
+  // Student employment operations (optional)
+  async getEmploymentsByStudentProfileId(studentProfileId: string): Promise<StudentEmployment[]> {
+    return await db
+      .select()
+      .from(studentEmployments)
+      .where(eq(studentEmployments.studentProfileId, studentProfileId));
+  }
+
+  async getEmploymentById(id: string): Promise<StudentEmployment | undefined> {
+    const [employment] = await db
+      .select()
+      .from(studentEmployments)
+      .where(eq(studentEmployments.id, id));
+    return employment;
+  }
+
+  async createEmployment(employment: InsertStudentEmployment): Promise<StudentEmployment> {
+    const [created] = await db.insert(studentEmployments).values(employment).returning();
+    return created;
+  }
+
+  async updateEmployment(id: string, data: Partial<InsertStudentEmployment>): Promise<StudentEmployment> {
+    const [updated] = await db
+      .update(studentEmployments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(studentEmployments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEmployment(id: string): Promise<void> {
+    await db.delete(studentEmployments).where(eq(studentEmployments.id, id));
   }
   
   // Student lead operations

@@ -809,6 +809,25 @@ export const studentLanguageScores = pgTable("student_language_scores", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Student Employment History table (optional)
+export const studentEmployments = pgTable("student_employments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  jobTitle: varchar("job_title", { length: 100 }).notNull(),
+  company: text("company").notNull(),
+  industry: varchar("industry", { length: 100 }),
+  employmentType: varchar("employment_type", { length: 30 }), // 'full_time', 'part_time', 'internship', 'contract', 'freelance'
+  country: text("country"),
+  city: text("city"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isCurrentlyWorking: boolean("is_currently_working").default(false),
+  responsibilities: text("responsibilities"),
+  achievements: text("achievements"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // University Team Members table
 export const universityTeamMembers = pgTable("university_team_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1252,6 +1271,7 @@ export const studentProfilesRelations = relations(studentProfiles, ({ one, many 
   applications: many(applications),
   educations: many(studentEducations),
   languageScores: many(studentLanguageScores),
+  employments: many(studentEmployments),
   favorites: many(favorites),
   courseComparisons: many(courseComparisons),
 }));
@@ -1275,6 +1295,13 @@ export const studentLanguageScoresRelations = relations(studentLanguageScores, (
   document: one(documents, {
     fields: [studentLanguageScores.documentId],
     references: [documents.id],
+  }),
+}));
+
+export const studentEmploymentsRelations = relations(studentEmployments, ({ one }) => ({
+  studentProfile: one(studentProfiles, {
+    fields: [studentEmployments.studentProfileId],
+    references: [studentProfiles.id],
   }),
 }));
 
@@ -1765,6 +1792,12 @@ export const insertStudentLanguageScoreSchema = createInsertSchema(studentLangua
   updatedAt: true,
 });
 
+export const insertStudentEmploymentSchema = createInsertSchema(studentEmployments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUniversityTeamMemberSchema = createInsertSchema(universityTeamMembers).omit({
   id: true,
   createdAt: true,
@@ -1899,6 +1932,9 @@ export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema
 
 export type StudentLanguageScore = typeof studentLanguageScores.$inferSelect;
 export type InsertStudentLanguageScore = z.infer<typeof insertStudentLanguageScoreSchema>;
+
+export type StudentEmployment = typeof studentEmployments.$inferSelect;
+export type InsertStudentEmployment = z.infer<typeof insertStudentEmploymentSchema>;
 
 export type UniversityTeamMember = typeof universityTeamMembers.$inferSelect;
 export type InsertUniversityTeamMember = z.infer<typeof insertUniversityTeamMemberSchema>;
