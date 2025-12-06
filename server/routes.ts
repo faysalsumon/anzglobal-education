@@ -45,9 +45,11 @@ import {
   insertTaskSchema,
   updateTaskSchema,
   insertApplicationInternalNoteSchema,
+  insertApplicationNoteSchema,
   insertFollowUpReminderSchema,
   tasks,
   applicationInternalNotes,
+  applicationNotes,
   followUpReminders,
   adminTeamMembers,
   crmLeads,
@@ -2687,6 +2689,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating bank details:", error);
       res.status(500).json({ message: "Failed to update bank details" });
+    }
+  });
+
+  // ============================================
+  // APPLICATION NOTES (Consultant-Student Communication)
+  // ============================================
+
+  // Get notes for an application (student view)
+  app.get("/api/student/applications/:applicationId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { applicationId } = req.params;
+      
+      const profile = await storage.getStudentProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      // Verify the application belongs to this student
+      const application = await db.query.applications.findFirst({
+        where: and(
+          eq(applications.id, applicationId),
+          eq(applications.studentId, profile.id)
+        ),
+      });
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Get notes with author info
+      const notes = await db
+        .select({
+          id: applicationNotes.id,
+          content: applicationNotes.content,
+          authorRole: applicationNotes.authorRole,
+          isReadByStudent: applicationNotes.isReadByStudent,
+          isReadByConsultant: applicationNotes.isReadByConsultant,
+          createdAt: applicationNotes.createdAt,
+          authorId: applicationNotes.authorId,
+          authorFirstName: users.firstName,
+          authorLastName: users.lastName,
+          authorProfilePicture: users.profileImageUrl,
+        })
+        .from(applicationNotes)
+        .leftJoin(users, eq(applicationNotes.authorId, users.id))
+        .where(eq(applicationNotes.applicationId, applicationId))
+        .orderBy(desc(applicationNotes.createdAt));
+
+      // Mark notes as read by student
+      await db
+        .update(applicationNotes)
+        .set({ isReadByStudent: true })
+        .where(and(
+          eq(applicationNotes.applicationId, applicationId),
+          eq(applicationNotes.isReadByStudent, false)
+        ));
+
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching application notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
+
+  // Add a note to an application (student)
+  app.post("/api/student/applications/:applicationId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { applicationId } = req.params;
+      const { content } = req.body;
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Note content is required" });
+      }
+      
+      const profile = await storage.getStudentProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      // Verify the application belongs to this student
+      const application = await db.query.applications.findFirst({
+        where: and(
+          eq(applications.id, applicationId),
+          eq(applications.studentId, profile.id)
+        ),
+      });
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Create the note
+      const [note] = await db
+        .insert(applicationNotes)
+        .values({
+          applicationId,
+          authorId: userId,
+          content: content.trim(),
+          authorRole: "student",
+          isReadByStudent: true,
+          isReadByConsultant: false,
+        })
+        .returning();
+
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating application note:", error);
+      res.status(500).json({ message: "Failed to create note" });
+    }
+  });
+
+  // Get notes for an application (admin/consultant view)
+  app.get("/api/admin/applications/:applicationId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { applicationId } = req.params;
+      
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      if (!user || (user.userType !== "admin" && user.userType !== "university")) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Get notes with author info
+      const notes = await db
+        .select({
+          id: applicationNotes.id,
+          content: applicationNotes.content,
+          authorRole: applicationNotes.authorRole,
+          isReadByStudent: applicationNotes.isReadByStudent,
+          isReadByConsultant: applicationNotes.isReadByConsultant,
+          createdAt: applicationNotes.createdAt,
+          authorId: applicationNotes.authorId,
+          authorFirstName: users.firstName,
+          authorLastName: users.lastName,
+          authorProfilePicture: users.profileImageUrl,
+        })
+        .from(applicationNotes)
+        .leftJoin(users, eq(applicationNotes.authorId, users.id))
+        .where(eq(applicationNotes.applicationId, applicationId))
+        .orderBy(desc(applicationNotes.createdAt));
+
+      // Mark notes as read by consultant
+      await db
+        .update(applicationNotes)
+        .set({ isReadByConsultant: true })
+        .where(and(
+          eq(applicationNotes.applicationId, applicationId),
+          eq(applicationNotes.isReadByConsultant, false)
+        ));
+
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching application notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
+    }
+  });
+
+  // Add a note to an application (admin/consultant)
+  app.post("/api/admin/applications/:applicationId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { applicationId } = req.params;
+      const { content } = req.body;
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Note content is required" });
+      }
+      
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
+      if (!user || (user.userType !== "admin" && user.userType !== "university")) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Create the note
+      const [note] = await db
+        .insert(applicationNotes)
+        .values({
+          applicationId,
+          authorId: userId,
+          content: content.trim(),
+          authorRole: user.userType,
+          isReadByStudent: false,
+          isReadByConsultant: true,
+        })
+        .returning();
+
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating application note:", error);
+      res.status(500).json({ message: "Failed to create note" });
     }
   });
 

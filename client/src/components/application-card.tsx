@@ -8,10 +8,27 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock, MessageSquare, Send, ChevronDown, User } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+
+interface ApplicationNote {
+  id: string;
+  content: string;
+  authorRole: string;
+  isReadByStudent: boolean;
+  isReadByConsultant: boolean;
+  createdAt: string;
+  authorId: string;
+  authorFirstName: string | null;
+  authorLastName: string | null;
+  authorProfilePicture: string | null;
+}
 
 // Required documents that students must upload
 const REQUIRED_DOCUMENTS = [
@@ -173,11 +190,48 @@ export function ApplicationCard({ application, course, university, consultant }:
     documentUrl: "",
     documentType: undefined as string | undefined,
   });
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [newNote, setNewNote] = useState("");
 
   // Fetch pending document requests (always fetched to show alert)
   const { data: pendingDocuments } = useQuery<{ pendingRequests: any[] }>({
     queryKey: [`/api/student/applications/${application.id}/pending-documents`],
   });
+
+  // Fetch application notes
+  const { data: notes = [], isLoading: notesLoading, refetch: refetchNotes } = useQuery<ApplicationNote[]>({
+    queryKey: [`/api/student/applications/${application.id}/notes`],
+    enabled: notesOpen,
+  });
+
+  // Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", `/api/student/applications/${application.id}/notes`, { content });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Message Sent",
+        description: "Your message has been sent to your consultant.",
+      });
+      setNewNote("");
+      refetchNotes();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send message",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendNote = () => {
+    if (!newNote.trim()) return;
+    addNoteMutation.mutate(newNote.trim());
+  };
+
+  const unreadNotesCount = notes.filter(n => !n.isReadByStudent && n.authorRole !== 'student').length;
 
   // Fetch student's uploaded documents to check for required documents
   const { data: studentDocuments = [] } = useQuery<StudentDocument[]>({
@@ -542,6 +596,108 @@ export function ApplicationCard({ application, course, university, consultant }:
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Consultant Communication Notes */}
+        <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full justify-between"
+              data-testid={`button-toggle-notes-${application.id}`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span>Messages with Consultant</span>
+                {unreadNotesCount > 0 && (
+                  <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                    {unreadNotesCount}
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 transition-transform ${notesOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3">
+            <div className="border rounded-lg p-3 bg-muted/30">
+              {notesLoading ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Loading messages...
+                </div>
+              ) : notes.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No messages yet</p>
+                  <p className="text-xs mt-1">Start a conversation with your consultant</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[200px] pr-3">
+                  <div className="space-y-3">
+                    {notes.slice().reverse().map((note) => (
+                      <div 
+                        key={note.id} 
+                        className={`flex gap-2 ${note.authorRole === 'student' ? 'flex-row-reverse' : ''}`}
+                      >
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={note.authorProfilePicture || undefined} />
+                          <AvatarFallback className={note.authorRole === 'student' ? 'bg-primary text-primary-foreground' : 'bg-blue-500 text-white'}>
+                            {note.authorFirstName?.[0] || note.authorRole === 'student' ? 'Y' : 'C'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className={`flex-1 max-w-[80%] ${note.authorRole === 'student' ? 'text-right' : ''}`}>
+                          <div 
+                            className={`inline-block rounded-lg px-3 py-2 text-sm ${
+                              note.authorRole === 'student' 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'bg-background border'
+                            }`}
+                          >
+                            {note.content}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {note.authorFirstName && `${note.authorFirstName} ${note.authorLastName || ''}`}
+                            {note.authorFirstName && ' · '}
+                            {new Date(note.createdAt).toLocaleString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              
+              {/* New message input */}
+              <div className="flex gap-2 mt-3 pt-3 border-t">
+                <Textarea
+                  placeholder="Type a message..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[60px] flex-1 resize-none"
+                  data-testid={`input-note-${application.id}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendNote();
+                    }
+                  }}
+                />
+                <Button 
+                  size="icon" 
+                  onClick={handleSendNote}
+                  disabled={!newNote.trim() || addNoteMutation.isPending}
+                  data-testid={`button-send-note-${application.id}`}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">

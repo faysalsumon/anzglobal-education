@@ -669,6 +669,29 @@ export const applicationInternalNotes = pgTable("application_internal_notes", {
   index("internal_notes_created_at_idx").on(table.createdAt),
 ]);
 
+// Application notes for consultant-student communication (visible to both)
+export const applicationNotes = pgTable("application_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  content: text("content").notNull(),
+  
+  // Role of the author (student, admin, university)
+  authorRole: varchar("author_role", { length: 20 }).notNull(),
+  
+  // Read status for the recipient
+  isReadByStudent: boolean("is_read_by_student").default(false),
+  isReadByConsultant: boolean("is_read_by_consultant").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("app_notes_application_idx").on(table.applicationId),
+  index("app_notes_author_idx").on(table.authorId),
+  index("app_notes_created_at_idx").on(table.createdAt),
+]);
+
 // Follow-up reminders for tasks and applications
 export const followUpReminders = pgTable("follow_up_reminders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2662,6 +2685,16 @@ export const insertApplicationInternalNoteSchema = createInsertSchema(applicatio
 
 export type ApplicationInternalNote = typeof applicationInternalNotes.$inferSelect;
 export type InsertApplicationInternalNote = z.infer<typeof insertApplicationInternalNoteSchema>;
+
+// Application Notes (Consultant-Student Communication)
+export const insertApplicationNoteSchema = createInsertSchema(applicationNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ApplicationNote = typeof applicationNotes.$inferSelect;
+export type InsertApplicationNote = z.infer<typeof insertApplicationNoteSchema>;
 
 // Follow-up Reminders
 export const insertFollowUpReminderSchema = createInsertSchema(followUpReminders).omit({
