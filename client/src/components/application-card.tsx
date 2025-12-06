@@ -360,7 +360,22 @@ export function ApplicationCard({ application, course, university, consultant }:
           <div>
             <span className="text-muted-foreground">Consultant:</span>
             <span className="ml-2 font-medium">
-              {consultant ? `${consultant.firstName} ${consultant.lastName}` : "Unassigned"}
+              {consultant ? (
+                `${consultant.firstName} ${consultant.lastName}`
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-primary">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span className="animate-pulse">Assigning consultant</span>
+                  <span className="inline-flex">
+                    <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                    <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                    <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+                  </span>
+                </span>
+              )}
             </span>
           </div>
         </div>
