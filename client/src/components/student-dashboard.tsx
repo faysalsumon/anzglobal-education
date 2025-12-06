@@ -30,9 +30,11 @@ export function StudentDashboard() {
     queryKey: ["/api/student/profile"],
   });
 
-  const { data: applications = [] } = useQuery<Application[]>({
+  const { data: applicationsData } = useQuery<{ applications: { application: Application }[] }>({
     queryKey: ["/api/student/applications"],
   });
+  
+  const applications = applicationsData?.applications?.map(a => a.application) || [];
 
   const { data: referralStats } = useQuery<ReferralStats>({
     queryKey: ["/api/student/referral/stats"],
