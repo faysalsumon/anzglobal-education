@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -13,12 +14,14 @@ import {
 } from "lucide-react";
 import type { Course, University } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
+import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 
 type CourseWithUniversity = Course & { university?: University };
 
 export default function PublicCourseDetail() {
   const [, params] = useRoute("/courses/:id");
   const courseId = params?.id;
+  const [selectedCampusLocation, setSelectedCampusLocation] = useState<string | null>(null);
 
   const { data: course, isLoading } = useQuery<CourseWithUniversity>({
     queryKey: [`/api/courses/${courseId}`],
@@ -621,13 +624,35 @@ export default function PublicCourseDetail() {
                   )}
                   {course.campusLocations && course.campusLocations.length > 0 && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Available Campuses</p>
-                      <div className="flex flex-wrap gap-2">
+                      <p className="text-sm text-muted-foreground mb-3">Available Campuses</p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Study from vibrant campuses that offer access to industry networks, experienced faculty, and support services to help you succeed.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {course.campusLocations.map((location, index) => (
-                          <Badge key={index} variant="outline" className="px-3 py-1" data-testid={`badge-campus-${index}`}>
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {location}
-                          </Badge>
+                          <div 
+                            key={index} 
+                            className="p-4 border rounded-lg bg-muted/30 hover-elevate transition-all duration-200"
+                            data-testid={`campus-card-${index}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                                <MapPin className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm mb-1 leading-tight" data-testid={`text-campus-location-${index}`}>
+                                  {location}
+                                </p>
+                                <button
+                                  onClick={() => setSelectedCampusLocation(location)}
+                                  className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1"
+                                  data-testid={`button-view-map-${index}`}
+                                >
+                                  view on map
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -793,6 +818,13 @@ export default function PublicCourseDetail() {
           </div>
         </div>
       </div>
+
+      {/* Campus Location Map Dialog */}
+      <CampusLocationMapDialog
+        location={selectedCampusLocation || ""}
+        isOpen={!!selectedCampusLocation}
+        onClose={() => setSelectedCampusLocation(null)}
+      />
     </div>
   );
 }
