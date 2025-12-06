@@ -276,6 +276,31 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
         </ScrollArea>
 
         <div className="mt-auto flex flex-col items-center gap-2 pt-4 border-t w-full px-2">
+          {/* Quick Access: My Applications */}
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-10 w-10 rounded-lg transition-all",
+                  location === "/student/applications" && "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400"
+                )}
+                onClick={() => {
+                  setIsSubmenuOpen(false);
+                  setActiveSection(null);
+                  setLocation("/student/applications");
+                }}
+                data-testid="nav-quick-applications"
+              >
+                <FileText className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              My Applications
+            </TooltipContent>
+          </Tooltip>
+
           <NotificationBell />
           
           <Tooltip delayDuration={0}>
