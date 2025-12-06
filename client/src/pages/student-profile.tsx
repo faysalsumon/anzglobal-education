@@ -1418,13 +1418,79 @@ function StudentProfileContent() {
                     <form onSubmit={handleLanguageScoreSubmit} className="space-y-4">
                       {(() => {
                         const selectedTestType = languageScoreForm.watch("testType");
-                        const scoreConfig: Record<string, { range: string; overall: string; section: string; step: string }> = {
-                          ielts: { range: "0-9", overall: "e.g., 7.5", section: "e.g., 7.0", step: "0.5" },
-                          toefl: { range: "0-120", overall: "e.g., 100", section: "e.g., 25", step: "1" },
-                          pte: { range: "10-90", overall: "e.g., 75", section: "e.g., 70", step: "1" },
-                          duolingo: { range: "10-160", overall: "e.g., 120", section: "e.g., 115", step: "5" },
+                        const listeningScore = languageScoreForm.watch("listeningScore");
+                        const readingScore = languageScoreForm.watch("readingScore");
+                        const writingScore = languageScoreForm.watch("writingScore");
+                        const speakingScore = languageScoreForm.watch("speakingScore");
+                        const currentOverallScore = languageScoreForm.watch("overallScore");
+                        
+                        const scoreConfig: Record<string, { range: string; overall: string; section: string; sectionRange: string; step: string; supportsAutoCalc: boolean }> = {
+                          ielts: { range: "0-9", overall: "e.g., 7.5", section: "e.g., 7.0", sectionRange: "0-9", step: "0.5", supportsAutoCalc: true },
+                          toefl: { range: "0-120", overall: "e.g., 100", section: "e.g., 25", sectionRange: "0-30", step: "1", supportsAutoCalc: true },
+                          pte: { range: "10-90", overall: "e.g., 75", section: "e.g., 70", sectionRange: "10-90", step: "1", supportsAutoCalc: false },
+                          duolingo: { range: "10-160", overall: "e.g., 120", section: "e.g., 115", sectionRange: "10-160", step: "5", supportsAutoCalc: false },
                         };
                         const config = scoreConfig[selectedTestType] || scoreConfig.ielts;
+                        
+                        // Calculate IELTS overall score using official rounding rules:
+                        // - Fractions ending in .25 round UP to next .5 band (e.g., 6.25 → 6.5)
+                        // - Fractions ending in .75 round UP to next whole band (e.g., 6.75 → 7.0)
+                        // - Other fractions round to nearest .5 normally
+                        const calculateIeltsOverall = (l: number, r: number, w: number, s: number): string => {
+                          const avg = (l + r + w + s) / 4;
+                          const decimal = avg - Math.floor(avg);
+                          let rounded: number;
+                          
+                          if (decimal >= 0.75) {
+                            // .75 and above rounds up to next whole band
+                            rounded = Math.ceil(avg);
+                          } else if (decimal >= 0.25) {
+                            // .25 to .74 rounds to .5
+                            rounded = Math.floor(avg) + 0.5;
+                          } else {
+                            // Below .25 rounds down to whole band
+                            rounded = Math.floor(avg);
+                          }
+                          
+                          return rounded.toFixed(1);
+                        };
+                        
+                        // Calculate TOEFL overall score (sum of all sections)
+                        const calculateToeflOverall = (l: number, r: number, w: number, s: number): string => {
+                          const total = l + r + w + s;
+                          return total.toString();
+                        };
+                        
+                        // Check if all band scores are filled
+                        const hasAllBandScores = listeningScore && readingScore && writingScore && speakingScore;
+                        
+                        // Calculate auto score if applicable
+                        let autoCalculatedScore: string | null = null;
+                        let isAutoCalculated = false;
+                        
+                        if (hasAllBandScores && config.supportsAutoCalc) {
+                          const l = parseFloat(listeningScore);
+                          const r = parseFloat(readingScore);
+                          const w = parseFloat(writingScore);
+                          const s = parseFloat(speakingScore);
+                          
+                          if (!isNaN(l) && !isNaN(r) && !isNaN(w) && !isNaN(s)) {
+                            if (selectedTestType === "ielts") {
+                              autoCalculatedScore = calculateIeltsOverall(l, r, w, s);
+                            } else if (selectedTestType === "toefl") {
+                              autoCalculatedScore = calculateToeflOverall(l, r, w, s);
+                            }
+                            
+                            // Auto-update the overall score field if it matches calculated or is empty
+                            if (autoCalculatedScore && (currentOverallScore === autoCalculatedScore || !currentOverallScore)) {
+                              isAutoCalculated = true;
+                              // Set the value if not already set
+                              if (currentOverallScore !== autoCalculatedScore) {
+                                languageScoreForm.setValue("overallScore", autoCalculatedScore);
+                              }
+                            }
+                          }
+                        }
                         
                         return (
                           <>
@@ -1453,31 +1519,28 @@ function StudentProfileContent() {
                             />
                             
                             {selectedTestType && (
-                              <p className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
-                                Score range for {selectedTestType.toUpperCase()}: <strong>{config.range}</strong>
-                              </p>
+                              <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md space-y-1">
+                                <p>Score range for {selectedTestType.toUpperCase()}: <strong>{config.range}</strong></p>
+                                {config.supportsAutoCalc ? (
+                                  <p className="text-xs text-green-600 dark:text-green-400">
+                                    Overall score will be auto-calculated when you enter all band scores
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                                    {selectedTestType === "pte" ? "PTE uses a proprietary algorithm - enter your official overall score" : 
+                                     "Duolingo uses a proprietary algorithm - enter your official overall score"}
+                                  </p>
+                                )}
+                              </div>
                             )}
                             
-                            <FormField
-                              control={languageScoreForm.control}
-                              name="overallScore"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Overall Score * {selectedTestType && `(${config.range})`}</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder={config.overall} data-testid="input-language-overall-score" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
                             <div className="grid gap-4 md:grid-cols-2">
                               <FormField
                                 control={languageScoreForm.control}
                                 name="listeningScore"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Listening Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormLabel>Listening {selectedTestType && `(${config.sectionRange})`}</FormLabel>
                                     <FormControl>
                                       <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-listening" />
                                     </FormControl>
@@ -1490,7 +1553,7 @@ function StudentProfileContent() {
                                 name="readingScore"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Reading Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormLabel>Reading {selectedTestType && `(${config.sectionRange})`}</FormLabel>
                                     <FormControl>
                                       <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-reading" />
                                     </FormControl>
@@ -1505,7 +1568,7 @@ function StudentProfileContent() {
                                 name="writingScore"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Writing Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormLabel>Writing {selectedTestType && `(${config.sectionRange})`}</FormLabel>
                                     <FormControl>
                                       <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-writing" />
                                     </FormControl>
@@ -1518,7 +1581,7 @@ function StudentProfileContent() {
                                 name="speakingScore"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Speaking Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormLabel>Speaking {selectedTestType && `(${config.sectionRange})`}</FormLabel>
                                     <FormControl>
                                       <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-speaking" />
                                     </FormControl>
@@ -1527,6 +1590,38 @@ function StudentProfileContent() {
                                 )}
                               />
                             </div>
+                            
+                            <FormField
+                              control={languageScoreForm.control}
+                              name="overallScore"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center gap-2">
+                                    <FormLabel>Overall Score * {selectedTestType && `(${config.range})`}</FormLabel>
+                                    {isAutoCalculated && autoCalculatedScore && (
+                                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" data-testid="badge-auto-calculated">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Auto-calculated
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      placeholder={config.overall} 
+                                      data-testid="input-language-overall-score"
+                                      className={isAutoCalculated ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : ""}
+                                    />
+                                  </FormControl>
+                                  {config.supportsAutoCalc && autoCalculatedScore && currentOverallScore !== autoCalculatedScore && currentOverallScore && (
+                                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                      Calculated score: {autoCalculatedScore} (you entered a different value - this is allowed if your official score differs)
+                                    </p>
+                                  )}
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                           </>
                         );
                       })()}
