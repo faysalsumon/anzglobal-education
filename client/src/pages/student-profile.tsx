@@ -732,22 +732,6 @@ function StudentProfileContent() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Breadcrumb data-testid="breadcrumb">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/" data-testid="breadcrumb-home">
-                <Home className="h-4 w-4" />
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage data-testid="breadcrumb-current">Profile</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">
           Complete Your Profile
