@@ -883,10 +883,14 @@ function StudentProfileContent() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">
-          Complete Your Profile
+          {completion?.isComplete ? "Your Profile" : "Complete Your Profile"}
         </h1>
-        <p className="text-muted-foreground">
-          You must complete 100% of your profile before applying to courses
+        <p className={cn(
+          completion?.isComplete ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+        )}>
+          {completion?.isComplete 
+            ? "Congratulations! Your profile is 100% complete. You're ready to apply for courses."
+            : "You must complete 100% of your profile before applying to courses"}
         </p>
       </div>
 
