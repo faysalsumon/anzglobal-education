@@ -45,8 +45,8 @@ function AffiliateLanding() {
   const benefits = [
     {
       icon: DollarSign,
-      title: "Earn Commission",
-      description: "Earn competitive bonuses for every student you refer who enrolls"
+      title: "Earn Up to $500 AUD",
+      description: "Earn $100 to $500 AUD for every student who successfully enrolls through your referral"
     },
     {
       icon: LinkIcon,
@@ -60,8 +60,8 @@ function AffiliateLanding() {
     },
     {
       icon: Gift,
-      title: "Bonus Rewards",
-      description: "Earn extra bonuses when students complete their applications"
+      title: "Instant Payouts",
+      description: "Get paid when your referred students successfully enrol through our platform"
     }
   ];
 
@@ -93,10 +93,10 @@ function AffiliateLanding() {
             Affiliate Program
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Earn Money by Helping Students Study Abroad
+            Earn Up to $500 AUD Per Successful Referral
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join our affiliate program and earn commissions by referring students to ANZ Global Education. 
+            Join our affiliate program and earn $100 to $500 AUD for every student who successfully enrols through your referral. 
             No experience needed - just share your referral link!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -383,7 +383,7 @@ function AffiliateDashboard() {
                   Your Referral Link
                 </CardTitle>
                 <CardDescription>
-                  Share this link with students. When they sign up and apply, you earn a bonus!
+                  Share this link with students. Earn $100 to $500 AUD when they successfully enrol through our platform!
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
