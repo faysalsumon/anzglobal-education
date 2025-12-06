@@ -1979,58 +1979,6 @@ function StudentProfileContent() {
             <form onSubmit={handleBioSubmit} className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Education Background</CardTitle>
-                  <CardDescription>Optional information about your studies</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={bioForm.control}
-                      name="educationLevel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Education Level</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="High School / Bachelor's / etc." data-testid="input-education-level" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={bioForm.control}
-                      name="fieldOfStudy"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Field of Study</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="Computer Science, Business, etc." data-testid="input-field-of-study" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={bioForm.control}
-                    name="previousEducation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Previous Education</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} value={field.value || ""} placeholder="Brief description of your previous education..." className="min-h-[100px]" data-testid="textarea-previous-education" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
