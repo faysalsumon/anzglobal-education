@@ -44,6 +44,7 @@ const footerSections: FooterSection[] = [
       { label: "Our Story", href: "/our-story" },
       { label: "Student Reviews", href: "/student-reviews" },
       { label: "Contact Us", href: "/contact" },
+      { label: "Affiliate Program", href: "/affiliate" },
     ],
   },
   {

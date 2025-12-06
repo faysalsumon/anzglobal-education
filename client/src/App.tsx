@@ -50,6 +50,7 @@ import ScrapingReviewDashboard from "@/pages/scraping-review-dashboard";
 import ChatPage from "@/pages/chat";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import AffiliatePage from "@/pages/affiliate";
 
 interface RouterProps {
   user: any;
@@ -79,6 +80,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/blog" component={PublicBlogArchive} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/affiliate" component={AffiliatePage} />
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
@@ -117,7 +119,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/affiliate'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
