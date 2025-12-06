@@ -12,7 +12,6 @@ import {
   Target, MonitorPlay, Plane
 } from "lucide-react";
 import type { Course, University } from "@shared/schema";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 
 type CourseWithUniversity = Course & { university?: University };
@@ -111,25 +110,6 @@ export default function PublicCourseDetail() {
           {JSON.stringify(structuredData)}
         </script>
       </Helmet>
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Link href="/" className="flex items-center gap-2 md:gap-3">
-              <img src={logoUrl} alt="ANZ Global Education" className="h-8 sm:h-10 w-auto" />
-            </Link>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-            <Button variant="outline" asChild size="sm" data-testid="button-back-courses">
-              <Link href="/courses">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Back to Courses</span>
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
 
       {/* Modern AI-Style Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
@@ -813,18 +793,6 @@ export default function PublicCourseDetail() {
           </div>
         </div>
       </div>
-
-      {/* Modern Footer */}
-      <footer className="border-t bg-gradient-to-r from-background to-primary/5 py-12 mt-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-10 w-auto opacity-80" />
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} ANZ Global Education. Empowering students worldwide with AI-powered course discovery.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
