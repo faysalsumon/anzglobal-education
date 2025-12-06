@@ -101,7 +101,7 @@ function AffiliateLanding() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate("/login")}
               data-testid="button-affiliate-register"
             >
               Join as Affiliate
@@ -164,7 +164,7 @@ function AffiliateLanding() {
         <div className="text-center mt-12">
           <Button 
             size="lg" 
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/login")}
             data-testid="button-get-started"
           >
             Get Started Now
