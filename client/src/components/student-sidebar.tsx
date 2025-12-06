@@ -135,13 +135,12 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       ],
     },
     {
-      id: "connect",
-      label: "Connect",
-      icon: MessageSquare,
+      id: "ai-assistant",
+      label: "AI Assistant",
+      icon: Sparkles,
       color: "text-orange-600 bg-orange-50 dark:bg-orange-950 dark:text-orange-400",
       routes: [
-        { icon: MessageSquare, label: "Messages", path: "/chat" },
-        { icon: Sparkles, label: "AI Assistant", path: "/student/ai-assistant" },
+        { icon: Sparkles, label: "Ask Zan", path: "/student/ai-assistant" },
       ],
     },
     {
