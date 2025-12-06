@@ -142,6 +142,14 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       routes: [
         { icon: MessageSquare, label: "Messages", path: "/chat" },
         { icon: Sparkles, label: "AI Assistant", path: "/student/ai-assistant" },
+      ],
+    },
+    {
+      id: "affiliate",
+      label: "Affiliate",
+      icon: Users,
+      color: "text-pink-600 bg-pink-50 dark:bg-pink-950 dark:text-pink-400",
+      routes: [
         { icon: Users, label: "Affiliate Program", path: "/affiliate" },
       ],
     },
