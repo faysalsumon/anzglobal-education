@@ -634,14 +634,15 @@ function StudentProfileContent() {
     setAiField(field);
     setAiLoading(true);
     try {
-      const response: any = await apiRequest("POST", "/api/ai/generate-student-content", {
+      const response = await apiRequest("POST", "/api/ai/generate-student-content", {
         field,
         personalInfo,
         educationHistory,
         languageTests,
         bioFormData,
       });
-      bioForm.setValue(field, response.content, { 
+      const data = await response.json();
+      bioForm.setValue(field, data.content, { 
         shouldDirty: true, 
         shouldTouch: true,
         shouldValidate: true 
