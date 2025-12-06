@@ -641,7 +641,7 @@ export function ApplicationCard({ application, course, university, consultant }:
                         <Avatar className="h-8 w-8 flex-shrink-0">
                           <AvatarImage src={note.authorProfilePicture || undefined} />
                           <AvatarFallback className={note.authorRole === 'student' ? 'bg-primary text-primary-foreground' : 'bg-blue-500 text-white'}>
-                            {note.authorFirstName?.[0] || note.authorRole === 'student' ? 'Y' : 'C'}
+                            {note.authorFirstName?.[0] || (note.authorRole === 'student' ? 'S' : 'C')}
                           </AvatarFallback>
                         </Avatar>
                         <div className={`flex-1 max-w-[80%] ${note.authorRole === 'student' ? 'text-right' : ''}`}>
