@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   User,
+  Link2,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -90,6 +91,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
       routes: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess },
+        { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
       ],
     },
     {
