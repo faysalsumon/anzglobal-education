@@ -2531,11 +2531,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.getStudentProfileByUserId(userId);
 
       if (!profile) {
-        return res.json([]);
+        return res.json({ applications: [] });
       }
 
       const applications = await storage.getApplicationsByStudentId(profile.id);
-      res.json(applications);
+      
+      // Enrich applications with course and university details
+      const enrichedApplications = await Promise.all(
+        applications.map(async (app) => {
+          const course = await storage.getCourseById(app.courseId);
+          const university = course ? await storage.getUniversityById(course.universityId) : null;
+          
+          return {
+            application: app,
+            course: course || null,
+            university: university || null,
+            consultant: null,
+          };
+        })
+      );
+      
+      res.json({ applications: enrichedApplications });
     } catch (error) {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
