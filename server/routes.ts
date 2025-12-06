@@ -2934,6 +2934,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DOCUMENT MANAGEMENT ROUTES
   // ============================================================================
 
+  // Default folders for students with distinct colors
+  const defaultStudentFolders = [
+    { name: "Academics", color: "#3b82f6", sortOrder: 1 },        // Blue
+    { name: "Personal", color: "#8b5cf6", sortOrder: 2 },         // Purple
+    { name: "Visa", color: "#ec4899", sortOrder: 3 },             // Pink
+    { name: "Job", color: "#f59e0b", sortOrder: 4 },              // Amber
+    { name: "English Language", color: "#10b981", sortOrder: 5 }, // Green
+    { name: "Payments", color: "#ef4444", sortOrder: 6 },         // Red
+    { name: "Offer-Letter", color: "#06b6d4", sortOrder: 7 },     // Cyan
+    { name: "COE", color: "#84cc16", sortOrder: 8 },              // Lime
+    { name: "GS/GTE", color: "#6366f1", sortOrder: 9 },           // Indigo
+  ];
+
   // Document Folders - Student Routes
   app.get("/api/student/documents/folders", isAuthenticated, async (req: any, res) => {
     try {
@@ -2944,7 +2957,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Student profile not found" });
       }
 
-      const folders = await storage.getFoldersByOwnerId(userId); // Fixed: use userId, not profile.id
+      let folders = await storage.getFoldersByOwnerId(userId);
+      
+      // Auto-create default folders if no folders exist for this user
+      if (folders.length === 0) {
+        for (const defaultFolder of defaultStudentFolders) {
+          await storage.createFolder({
+            name: defaultFolder.name,
+            color: defaultFolder.color,
+            sortOrder: defaultFolder.sortOrder,
+            ownerId: userId,
+            ownerType: "student",
+            studentProfileId: profile.id,
+            isDefault: true,
+          });
+        }
+        // Fetch the newly created folders
+        folders = await storage.getFoldersByOwnerId(userId);
+      }
+      
       res.json(folders);
     } catch (error) {
       console.error("Error fetching folders:", error);
