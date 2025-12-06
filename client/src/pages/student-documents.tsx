@@ -55,7 +55,14 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Info,
+  AlertCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { StudentLayout } from "@/components/student-layout";
 
@@ -89,6 +96,7 @@ const documentTypes = [
   { value: "diploma", label: "Diploma/Degree" },
   { value: "language_test", label: "Language Test Results" },
   { value: "passport", label: "Passport Copy" },
+  { value: "visa", label: "Visa Copy" },
   { value: "cv", label: "CV/Resume" },
   { value: "recommendation", label: "Letter of Recommendation" },
   { value: "financial", label: "Financial Document" },
@@ -100,6 +108,39 @@ const statusConfig = {
   verified: { label: "Verified", icon: CheckCircle, color: "text-green-600" },
   rejected: { label: "Rejected", icon: XCircle, color: "text-red-600" },
 };
+
+const requiredDocuments = [
+  {
+    type: "passport",
+    name: "Passport Copy",
+    description: "A valid passport is required for identity verification and visa applications. Upload a clear scan of your passport's main page showing your photo and personal details.",
+    required: true,
+  },
+  {
+    type: "transcript",
+    name: "Academic Transcripts",
+    description: "Official transcripts from your previous qualifications are needed to assess your eligibility. Include transcripts from high school, undergraduate, or postgraduate studies as applicable.",
+    required: true,
+  },
+  {
+    type: "language_test",
+    name: "English Test Results",
+    description: "English proficiency test results (IELTS, PTE, TOEFL, or Duolingo) are mandatory for most courses. Upload your official score report.",
+    required: true,
+  },
+  {
+    type: "visa",
+    name: "Current Visa Copy",
+    description: "If you're already in Australia, upload a copy of your current visa. This helps determine your eligibility for student visa applications.",
+    required: false,
+  },
+  {
+    type: "diploma",
+    name: "Degree/Diploma Certificates",
+    description: "Completion certificates from your previous qualifications validate your academic history. Upload certified copies of all relevant degrees or diplomas.",
+    required: false,
+  },
+];
 
 function StudentDocumentsContent() {
   const { toast } = useToast();
@@ -295,6 +336,67 @@ function StudentDocumentsContent() {
                     </span>
                   </Button>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-primary" />
+                  Required Documents
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Prepare these documents before applying
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {requiredDocuments.map((doc) => {
+                  const isUploaded = allDocuments.some((d) => d.type === doc.type);
+                  return (
+                    <div
+                      key={doc.type}
+                      className="flex items-center justify-between py-2 border-b last:border-b-0"
+                      data-testid={`required-doc-${doc.type}`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {isUploaded ? (
+                          <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        ) : (
+                          <div className={cn(
+                            "h-4 w-4 rounded-full border-2 flex-shrink-0",
+                            doc.required ? "border-orange-400" : "border-muted-foreground/40"
+                          )} />
+                        )}
+                        <span className={cn(
+                          "text-sm truncate",
+                          isUploaded && "text-muted-foreground line-through"
+                        )}>
+                          {doc.name}
+                        </span>
+                        {doc.required && !isUploaded && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full flex-shrink-0">
+                            Required
+                          </span>
+                        )}
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 flex-shrink-0"
+                            data-testid={`info-${doc.type}`}
+                          >
+                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p className="text-sm">{doc.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           </aside>
