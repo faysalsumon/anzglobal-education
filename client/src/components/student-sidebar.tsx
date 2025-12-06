@@ -128,9 +128,18 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       id: "documents",
       label: "Documents",
       icon: FolderOpen,
-      color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
+      color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
       routes: [
         { icon: FolderOpen, label: "My Documents", path: "/student/documents" },
+      ],
+    },
+    {
+      id: "applications",
+      label: "My Applications",
+      icon: FileText,
+      color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
+      routes: [
+        { icon: FileText, label: "View Applications", path: "/student/applications" },
       ],
     },
     {
@@ -271,31 +280,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                 </Tooltip>
               );
             })}
-
-            {/* My Applications - Quick Access after main sections */}
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "h-10 w-10 rounded-lg transition-all",
-                    location === "/student/applications" && "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400"
-                  )}
-                  onClick={() => {
-                    setIsSubmenuOpen(false);
-                    setActiveSection(null);
-                    setLocation("/student/applications");
-                  }}
-                  data-testid="nav-quick-applications"
-                >
-                  <FileText className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                My Applications
-              </TooltipContent>
-            </Tooltip>
           </div>
         </ScrollArea>
 
