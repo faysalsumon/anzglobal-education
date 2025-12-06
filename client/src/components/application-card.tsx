@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, Calendar, Building2, Upload, CheckCircle, Clock, XCircle, Eye, ChevronRight, Download, ChevronDown, ChevronUp, AlertTriangle, FolderOpen } from "lucide-react";
+import { Calendar, Building2, Upload, AlertTriangle, FolderOpen } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -167,22 +167,11 @@ const getStudentStageIndex = (internalStage: ApplicationStage): number => {
 
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
   const { toast } = useToast();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [documentData, setDocumentData] = useState({
     documentName: "",
     documentUrl: "",
     documentType: undefined as string | undefined,
-  });
-
-  const { data: stageHistory } = useQuery<StageHistory[]>({
-    queryKey: [`/api/student/applications/${application.id}/history`],
-    enabled: isExpanded,
-  });
-
-  const { data: documents } = useQuery<StageDocument[]>({
-    queryKey: [`/api/student/applications/${application.id}/documents`],
-    enabled: isExpanded,
   });
 
   // Fetch pending document requests (always fetched to show alert)
@@ -546,15 +535,6 @@ export function ApplicationCard({ application, course, university, consultant }:
 
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            data-testid={`button-toggle-details-${application.id}`}
-          >
-            {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-            {isExpanded ? "Hide Details" : "View Details"}
-          </Button>
           <Link href="/student/documents">
             <Button
               variant="default"
@@ -566,101 +546,6 @@ export function ApplicationCard({ application, course, university, consultant }:
             </Button>
           </Link>
         </div>
-
-        {/* Stage History */}
-        {isExpanded && stageHistory && stageHistory.length > 0 && (
-          <div className="border-t pt-4">
-            <h4 className="text-sm font-medium mb-3">Stage History</h4>
-            <div className="space-y-2">
-              {stageHistory.map((history) => (
-                <div
-                  key={history.id}
-                  className="flex items-start gap-3 text-sm"
-                  data-testid={`history-item-${history.id}`}
-                >
-                  <ChevronRight className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1">
-                    <p>
-                      Moved to <span className="font-medium">{STAGE_DISPLAY_NAMES[history.toStage]}</span>
-                    </p>
-                    {history.notes && (
-                      <p className="text-muted-foreground text-xs mt-1">{history.notes}</p>
-                    )}
-                    <p className="text-muted-foreground text-xs mt-1">
-                      {new Date(history.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Documents */}
-        {isExpanded && documents && documents.filter(d => d.documentUrl).length > 0 && (
-          <div className="border-t pt-4">
-            <h4 className="text-sm font-medium mb-3">Uploaded Documents</h4>
-            <div className="space-y-2">
-              {documents.filter(d => d.documentUrl).map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border"
-                  data-testid={`document-item-${doc.id}`}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.documentName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {doc.isVerified === true && (
-                      <Badge variant="default" className="bg-green-100 text-green-800">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    )}
-                    {doc.isVerified === false && (
-                      <Badge variant="destructive">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Rejected
-                      </Badge>
-                    )}
-                    {doc.isVerified === null && (
-                      <Badge variant="secondary">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Pending
-                      </Badge>
-                    )}
-                    {doc.documentUrl && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                        data-testid={`button-download-${doc.id}`}
-                      >
-                        <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {isExpanded && documents && documents.length === 0 && (
-          <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No documents uploaded yet. Click "Upload Document" to add documents for this stage.
-            </p>
-          </div>
-        )}
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
           <Calendar className="h-4 w-4" />
