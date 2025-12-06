@@ -457,14 +457,14 @@ function StudentProfileContent() {
 
   const createLanguageScoreMutation = useMutation({
     mutationFn: async (data: z.infer<typeof languageScoreFormSchema>) => {
-      // Transform form data to match backend schema
+      // Transform form data to match backend schema - keep scores as strings for decimal fields
       const payload = {
         testType: data.testType.toLowerCase(),
-        overallScore: parseFloat(data.overallScore),
-        listeningScore: data.listeningScore && data.listeningScore !== "" ? parseFloat(data.listeningScore) : undefined,
-        readingScore: data.readingScore && data.readingScore !== "" ? parseFloat(data.readingScore) : undefined,
-        writingScore: data.writingScore && data.writingScore !== "" ? parseFloat(data.writingScore) : undefined,
-        speakingScore: data.speakingScore && data.speakingScore !== "" ? parseFloat(data.speakingScore) : undefined,
+        overallScore: data.overallScore,
+        listeningScore: data.listeningScore && data.listeningScore !== "" ? data.listeningScore : undefined,
+        readingScore: data.readingScore && data.readingScore !== "" ? data.readingScore : undefined,
+        writingScore: data.writingScore && data.writingScore !== "" ? data.writingScore : undefined,
+        speakingScore: data.speakingScore && data.speakingScore !== "" ? data.speakingScore : undefined,
         testDate: data.testDate || undefined,
         expiryDate: data.expiryDate || undefined,
       };
