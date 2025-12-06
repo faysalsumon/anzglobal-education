@@ -490,30 +490,80 @@ function AffiliateDashboard() {
 function BankDetailsForm({ profileId }: { profileId: string }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    accountHolderName: "",
+    bankAccountHolderName: "",
     bankName: "",
-    accountNumber: "",
-    bsbCode: "",
+    bankAccountNumber: "",
+    bankBsbCode: "",
+  });
+
+  // Load existing bank details
+  const { data: bankDetails, isLoading } = useQuery<{
+    bankAccountHolderName: string;
+    bankName: string;
+    bankBsbCode: string;
+    bankAccountNumber: string;
+  }>({
+    queryKey: ["/api/student/bank-details"],
+  });
+
+  // Update form when data loads
+  useState(() => {
+    if (bankDetails) {
+      setFormData({
+        bankAccountHolderName: bankDetails.bankAccountHolderName || "",
+        bankName: bankDetails.bankName || "",
+        bankBsbCode: bankDetails.bankBsbCode || "",
+        bankAccountNumber: bankDetails.bankAccountNumber || "",
+      });
+    }
+  });
+
+  // Mutation to save bank details
+  const saveBankDetails = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return apiRequest("PUT", "/api/student/bank-details", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/bank-details"] });
+      toast({
+        title: "Bank Details Saved",
+        description: "Your payout details have been saved securely. We'll use these for future payments.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save bank details. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Bank Details Saved",
-      description: "Your payout details have been saved securely. We'll use these for future payments.",
-    });
+    saveBankDetails.mutate(formData);
   };
+
+  // Update form when bank details are loaded
+  if (bankDetails && formData.bankAccountHolderName === "" && bankDetails.bankAccountHolderName) {
+    setFormData({
+      bankAccountHolderName: bankDetails.bankAccountHolderName,
+      bankName: bankDetails.bankName,
+      bankBsbCode: bankDetails.bankBsbCode,
+      bankAccountNumber: bankDetails.bankAccountNumber,
+    });
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="accountHolderName">Account Holder Name</Label>
+          <Label htmlFor="bankAccountHolderName">Account Holder Name</Label>
           <Input
-            id="accountHolderName"
+            id="bankAccountHolderName"
             placeholder="John Smith"
-            value={formData.accountHolderName}
-            onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
+            value={formData.bankAccountHolderName}
+            onChange={(e) => setFormData({ ...formData, bankAccountHolderName: e.target.value })}
             data-testid="input-account-holder"
           />
         </div>
@@ -528,22 +578,22 @@ function BankDetailsForm({ profileId }: { profileId: string }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bsbCode">BSB Code</Label>
+          <Label htmlFor="bankBsbCode">BSB Code</Label>
           <Input
-            id="bsbCode"
+            id="bankBsbCode"
             placeholder="123-456"
-            value={formData.bsbCode}
-            onChange={(e) => setFormData({ ...formData, bsbCode: e.target.value })}
+            value={formData.bankBsbCode}
+            onChange={(e) => setFormData({ ...formData, bankBsbCode: e.target.value })}
             data-testid="input-bsb"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="accountNumber">Account Number</Label>
+          <Label htmlFor="bankAccountNumber">Account Number</Label>
           <Input
-            id="accountNumber"
+            id="bankAccountNumber"
             placeholder="12345678"
-            value={formData.accountNumber}
-            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+            value={formData.bankAccountNumber}
+            onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
             data-testid="input-account-number"
           />
         </div>
@@ -552,8 +602,8 @@ function BankDetailsForm({ profileId }: { profileId: string }) {
         <Shield className="h-4 w-4 flex-shrink-0" />
         <p>Your bank details are encrypted and stored securely. We'll only use them for payout processing.</p>
       </div>
-      <Button type="submit" data-testid="button-save-bank-details">
-        Save Bank Details
+      <Button type="submit" disabled={saveBankDetails.isPending} data-testid="button-save-bank-details">
+        {saveBankDetails.isPending ? "Saving..." : "Save Bank Details"}
       </Button>
     </form>
   );

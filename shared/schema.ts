@@ -498,6 +498,12 @@ export const studentProfiles = pgTable("student_profiles", {
   referralCode: varchar("referral_code", { length: 10 }).unique(),
   referredByCode: varchar("referred_by_code", { length: 10 }),
   
+  // Bank details for affiliate payouts
+  bankAccountHolderName: text("bank_account_holder_name"),
+  bankName: text("bank_name"),
+  bankBsbCode: varchar("bank_bsb_code", { length: 10 }),
+  bankAccountNumber: varchar("bank_account_number", { length: 20 }),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

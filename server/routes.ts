@@ -2530,6 +2530,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bank details for affiliate payouts
+  app.get("/api/student/bank-details", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      res.json({
+        bankAccountHolderName: profile.bankAccountHolderName || "",
+        bankName: profile.bankName || "",
+        bankBsbCode: profile.bankBsbCode || "",
+        bankAccountNumber: profile.bankAccountNumber || "",
+      });
+    } catch (error) {
+      console.error("Error fetching bank details:", error);
+      res.status(500).json({ message: "Failed to fetch bank details" });
+    }
+  });
+
+  app.put("/api/student/bank-details", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const { bankAccountHolderName, bankName, bankBsbCode, bankAccountNumber } = req.body;
+
+      await db
+        .update(studentProfiles)
+        .set({
+          bankAccountHolderName,
+          bankName,
+          bankBsbCode,
+          bankAccountNumber,
+          updatedAt: new Date(),
+        })
+        .where(eq(studentProfiles.id, profile.id));
+
+      res.json({ message: "Bank details updated successfully" });
+    } catch (error) {
+      console.error("Error updating bank details:", error);
+      res.status(500).json({ message: "Failed to update bank details" });
+    }
+  });
+
   // Favorites routes
   app.get("/api/student/favorites", isAuthenticated, async (req: any, res) => {
     try {
@@ -7378,6 +7429,200 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
     } catch (error) {
       console.error("Error seeding blogs:", error);
       res.status(500).json({ message: "Failed to seed blogs", error: String(error) });
+    }
+  });
+
+  // ========================================
+  // ADMIN AFFILIATE MANAGEMENT ROUTES
+  // ========================================
+
+  // Get all affiliates (users with referral codes)
+  app.get("/api/admin/affiliates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get all student profiles with referral codes (affiliates)
+      const affiliates = await db
+        .select({
+          profile: studentProfiles,
+          user: users,
+        })
+        .from(studentProfiles)
+        .innerJoin(users, eq(studentProfiles.userId, users.id))
+        .where(dsql`${studentProfiles.referralCode} IS NOT NULL`);
+
+      // Get referral stats for each affiliate
+      const affiliatesWithStats = await Promise.all(
+        affiliates.map(async ({ profile, user }) => {
+          const stats = await storage.getReferralStats(profile.id);
+          return {
+            id: profile.id,
+            userId: profile.userId,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            email: user.email,
+            referralCode: profile.referralCode,
+            bankAccountHolderName: profile.bankAccountHolderName,
+            bankName: profile.bankName,
+            bankBsbCode: profile.bankBsbCode,
+            bankAccountNumber: profile.bankAccountNumber ? `****${profile.bankAccountNumber.slice(-4)}` : null,
+            createdAt: profile.createdAt,
+            stats,
+          };
+        })
+      );
+
+      res.json(affiliatesWithStats);
+    } catch (error) {
+      console.error("Error fetching affiliates:", error);
+      res.status(500).json({ message: "Failed to fetch affiliates" });
+    }
+  });
+
+  // Get affiliate details with their referrals
+  app.get("/api/admin/affiliates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const [profileResult] = await db
+        .select({
+          profile: studentProfiles,
+          user: users,
+        })
+        .from(studentProfiles)
+        .innerJoin(users, eq(studentProfiles.userId, users.id))
+        .where(eq(studentProfiles.id, req.params.id));
+
+      if (!profileResult) {
+        return res.status(404).json({ message: "Affiliate not found" });
+      }
+
+      const { profile, user } = profileResult;
+      const stats = await storage.getReferralStats(profile.id);
+      const referrals = await storage.getReferralsByReferrerId(profile.id);
+
+      res.json({
+        id: profile.id,
+        userId: profile.userId,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: user.email,
+        referralCode: profile.referralCode,
+        bankAccountHolderName: profile.bankAccountHolderName,
+        bankName: profile.bankName,
+        bankBsbCode: profile.bankBsbCode,
+        bankAccountNumber: profile.bankAccountNumber,
+        createdAt: profile.createdAt,
+        stats,
+        referrals,
+      });
+    } catch (error) {
+      console.error("Error fetching affiliate details:", error);
+      res.status(500).json({ message: "Failed to fetch affiliate details" });
+    }
+  });
+
+  // Mark referral bonus as paid
+  app.patch("/api/admin/affiliates/referrals/:referralId/pay", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { referralId } = req.params;
+      const { bonusAmount } = req.body;
+
+      // Import referrals table
+      const { referrals } = await import("@shared/schema");
+      
+      const [updatedReferral] = await db
+        .update(referrals)
+        .set({
+          bonusAmount: bonusAmount?.toString() || "50.00",
+          bonusPaidAt: new Date(),
+          status: "completed",
+        })
+        .where(eq(referrals.id, referralId))
+        .returning();
+
+      if (!updatedReferral) {
+        return res.status(404).json({ message: "Referral not found" });
+      }
+
+      // Log activity
+      await logActivity({
+        userId,
+        action: "updated",
+        entityType: "application", // Using application as closest entity type for referral tracking
+        entityId: referralId,
+        description: `Marked referral bonus as paid ($${bonusAmount || "50.00"})`,
+      });
+
+      res.json(updatedReferral);
+    } catch (error) {
+      console.error("Error marking referral as paid:", error);
+      res.status(500).json({ message: "Failed to update referral payment" });
+    }
+  });
+
+  // Batch mark referrals as paid
+  app.post("/api/admin/affiliates/referrals/batch-pay", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { referralIds, bonusAmount } = req.body;
+
+      if (!Array.isArray(referralIds) || referralIds.length === 0) {
+        return res.status(400).json({ message: "referralIds array is required" });
+      }
+
+      // Import referrals table
+      const { referrals } = await import("@shared/schema");
+
+      const updatedReferrals = await db
+        .update(referrals)
+        .set({
+          bonusAmount: bonusAmount?.toString() || "50.00",
+          bonusPaidAt: new Date(),
+          status: "completed",
+        })
+        .where(inArray(referrals.id, referralIds))
+        .returning();
+
+      // Log activity
+      await logActivity({
+        userId,
+        action: "updated",
+        entityType: "application", // Using application as closest entity type for referral tracking
+        entityId: referralIds.join(","),
+        description: `Batch marked ${updatedReferrals.length} referrals as paid ($${bonusAmount || "50.00"} each)`,
+      });
+
+      res.json({
+        message: `${updatedReferrals.length} referrals marked as paid`,
+        referrals: updatedReferrals,
+      });
+    } catch (error) {
+      console.error("Error batch marking referrals as paid:", error);
+      res.status(500).json({ message: "Failed to batch update referrals" });
     }
   });
 
