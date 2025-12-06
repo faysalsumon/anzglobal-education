@@ -379,7 +379,7 @@ function StudentDocumentsContent() {
                           </span>
                         )}
                       </div>
-                      <Tooltip>
+                      <Tooltip delayDuration={100}>
                         <TooltipTrigger asChild>
                           <Button
                             size="icon"
@@ -390,8 +390,8 @@ function StudentDocumentsContent() {
                             <Info className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          <p className="text-sm">{doc.description}</p>
+                        <TooltipContent side="right" className="max-w-[280px]" sideOffset={8}>
+                          <p className="text-sm leading-relaxed">{doc.description}</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
