@@ -146,6 +146,17 @@ const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
 
+// Main stages to show in progress bar (excluding terminal stages)
+const MAIN_STAGES: ApplicationStage[] = [
+  "Assessment",
+  "Collect Docs", 
+  "Documents Verification",
+  "Offer-Letter",
+  "GS-Clearance",
+  "COE",
+  "Visa Lodgment",
+];
+
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -182,6 +193,28 @@ export function ApplicationCard({ application, course, university, consultant }:
   );
   
   const hasMissingDocuments = missingRequiredDocs.length > 0;
+
+  // Calculate progress percentage based on current stage
+  const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
+  const totalMainStages = MAIN_STAGES.length;
+  const currentMainStageIndex = MAIN_STAGES.indexOf(application.currentStage);
+  
+  // Calculate percentage (terminal stages = 100%)
+  const progressPercentage = application.currentStage === "Application Won" 
+    ? 100 
+    : application.currentStage === "Refusal/Refunds" || application.currentStage === "Application Lost"
+    ? 0
+    : Math.round(((currentMainStageIndex + 1) / totalMainStages) * 100);
+  
+  // Get current stage number (1-based)
+  const currentStageNumber = currentMainStageIndex >= 0 ? currentMainStageIndex + 1 : currentIndex + 1;
+  
+  // Get next stage
+  const nextStageIndex = currentIndex + 1;
+  const nextStage = nextStageIndex < STAGE_ORDER.length && 
+    !["Application Won", "Refusal/Refunds", "Application Lost"].includes(STAGE_ORDER[nextStageIndex])
+    ? STAGE_ORDER[nextStageIndex] 
+    : null;
 
   const uploadDocumentMutation = useMutation({
     mutationFn: async (data: { applicationId: string; stage: ApplicationStage; documentName: string; documentUrl: string; documentType: string }) => {
@@ -313,33 +346,111 @@ export function ApplicationCard({ application, course, university, consultant }:
           </Alert>
         )}
 
-        {/* Progress Timeline */}
-        <div>
-          <h4 className="text-sm font-medium mb-4">Application Progress</h4>
-          <div className="space-y-3">
-            {STAGE_ORDER.filter(s => !["Application-Refusal", "Application-Lost"].includes(s)).slice(0, 5).map((stage) => {
-              const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
-              const stageIndex = STAGE_ORDER.indexOf(stage);
-              const isActive = stageIndex === currentIndex;
+        {/* Progress Timeline - Modern Horizontal Design */}
+        <div className="space-y-4">
+          {/* Progress Header with Percentage */}
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Application Progress</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
+              <span className="text-xs text-muted-foreground">complete</span>
+            </div>
+          </div>
 
-              return (
-                <div
-                  key={stage}
-                  className={`flex items-center gap-3 ${isActive ? "font-medium" : ""}`}
-                  data-testid={`stage-item-${stage}`}
-                >
-                  {getStageIcon(stage)}
-                  <div className="flex-1">
-                    <p className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                      {STAGE_DISPLAY_NAMES[stage]}
-                    </p>
+          {/* Animated Progress Bar */}
+          <div className="relative">
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full transition-all duration-1000 ease-out relative"
+                style={{ width: `${progressPercentage}%` }}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" 
+                  style={{ 
+                    animation: 'shimmer 2s infinite',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                    transform: 'translateX(-100%)',
+                  }} 
+                />
+              </div>
+            </div>
+            
+            {/* Stage markers on progress bar */}
+            <div className="absolute top-0 left-0 right-0 h-3 flex items-center">
+              {MAIN_STAGES.map((stage, index) => {
+                const position = ((index + 1) / MAIN_STAGES.length) * 100;
+                const stageIndex = STAGE_ORDER.indexOf(stage);
+                const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
+                const isCompleted = stageIndex < currentIndex;
+                const isActive = stageIndex === currentIndex;
+                
+                return (
+                  <div 
+                    key={stage}
+                    className="absolute -translate-x-1/2"
+                    style={{ left: `${position}%` }}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${
+                      isCompleted ? 'bg-white' : 
+                      isActive ? 'bg-white ring-2 ring-primary ring-offset-1' : 
+                      'bg-muted-foreground/30'
+                    }`} />
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stage Labels */}
+          <div className="flex justify-between text-xs">
+            {MAIN_STAGES.map((stage, index) => {
+              const stageIndex = STAGE_ORDER.indexOf(stage);
+              const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
+              const isCompleted = stageIndex < currentIndex;
+              const isActive = stageIndex === currentIndex;
+              
+              return (
+                <div 
+                  key={stage}
+                  className={`flex flex-col items-center text-center max-w-[60px] ${
+                    isActive ? 'text-primary font-medium' : 
+                    isCompleted ? 'text-foreground' : 
+                    'text-muted-foreground'
+                  }`}
+                  data-testid={`stage-label-${stage}`}
+                >
                   {isActive && (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <div className="relative mb-1">
+                      <span className="absolute -inset-1 rounded-full bg-primary/20 animate-ping" />
+                      <CheckCircle className="h-4 w-4 text-primary relative" />
+                    </div>
                   )}
+                  {isCompleted && <CheckCircle className="h-4 w-4 text-green-600 mb-1" />}
+                  {!isActive && !isCompleted && <Clock className="h-4 w-4 mb-1 opacity-50" />}
+                  <span className="leading-tight">{STAGE_DISPLAY_NAMES[stage].split(' ')[0]}</span>
                 </div>
               );
             })}
+          </div>
+
+          {/* Current Stage Highlight */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground">
+                <span className="text-sm font-bold">{currentStageNumber}</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Current Stage</p>
+              <p className="font-semibold text-primary">{STAGE_DISPLAY_NAMES[application.currentStage]}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Next</p>
+              <p className="text-sm font-medium">
+                {nextStage ? STAGE_DISPLAY_NAMES[nextStage] : 'Final Stage'}
+              </p>
+            </div>
           </div>
         </div>
 
