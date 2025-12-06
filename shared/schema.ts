@@ -504,6 +504,9 @@ export const studentProfiles = pgTable("student_profiles", {
   bankBsbCode: varchar("bank_bsb_code", { length: 10 }),
   bankAccountNumber: varchar("bank_account_number", { length: 20 }),
   
+  // Application slots (default 3, can be increased by consultant)
+  maxApplicationSlots: integer("max_application_slots").default(3).notNull(),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -2268,6 +2268,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/student/application-slots - Check available application slots
+  app.get("/api/student/application-slots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.json({ maxSlots: 3, usedSlots: 0, availableSlots: 3 });
+      }
+
+      const existingApplications = await db.query.applications.findMany({
+        where: eq(applications.studentId, profile.id),
+      });
+
+      const maxSlots = profile.maxApplicationSlots || 3;
+      res.json({
+        maxSlots,
+        usedSlots: existingApplications.length,
+        availableSlots: Math.max(0, maxSlots - existingApplications.length),
+      });
+    } catch (error) {
+      console.error("Error checking application slots:", error);
+      res.status(500).json({ message: "Failed to check application slots" });
+    }
+  });
+
   // Student education history routes
   app.get("/api/student/educations", isAuthenticated, async (req: any, res) => {
     try {
@@ -2903,6 +2929,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating application note:", error);
       res.status(500).json({ message: "Failed to create note" });
+    }
+  });
+
+  // Update student application slots (admin/consultant only)
+  app.patch("/api/admin/students/:studentProfileId/application-slots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { studentProfileId } = req.params;
+      const { maxSlots } = req.body;
+
+      if (!maxSlots || typeof maxSlots !== 'number' || maxSlots < 1 || maxSlots > 20) {
+        return res.status(400).json({ message: "Invalid slots value. Must be between 1 and 20." });
+      }
+
+      const [updated] = await db
+        .update(studentProfiles)
+        .set({ maxApplicationSlots: maxSlots, updatedAt: new Date() })
+        .where(eq(studentProfiles.id, studentProfileId))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      res.json({ success: true, maxApplicationSlots: updated.maxApplicationSlots });
+    } catch (error) {
+      console.error("Error updating application slots:", error);
+      res.status(500).json({ message: "Failed to update application slots" });
+    }
+  });
+
+  // Get student application slots info (for admin to see current status)
+  app.get("/api/admin/students/:studentProfileId/application-slots", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { studentProfileId } = req.params;
+      
+      const profile = await db.query.studentProfiles.findFirst({
+        where: eq(studentProfiles.id, studentProfileId),
+      });
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const existingApplications = await db.query.applications.findMany({
+        where: eq(applications.studentId, studentProfileId),
+      });
+
+      res.json({
+        maxSlots: profile.maxApplicationSlots || 3,
+        usedSlots: existingApplications.length,
+        availableSlots: Math.max(0, (profile.maxApplicationSlots || 3) - existingApplications.length),
+      });
+    } catch (error) {
+      console.error("Error fetching application slots:", error);
+      res.status(500).json({ message: "Failed to fetch application slots" });
     }
   });
 
@@ -3682,6 +3777,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!profile) {
         return res.status(400).json({ message: "Please create student profile first" });
+      }
+
+      // Check application slot limit
+      const existingApplications = await db.query.applications.findMany({
+        where: eq(applications.studentId, profile.id),
+      });
+      const maxSlots = profile.maxApplicationSlots || 3;
+      
+      if (existingApplications.length >= maxSlots) {
+        return res.status(403).json({
+          message: `You have reached your maximum of ${maxSlots} applications. Please contact your consultant to request additional application slots.`,
+          currentCount: existingApplications.length,
+          maxSlots: maxSlots,
+        });
       }
 
       // Calculate profile completion for informational purposes
