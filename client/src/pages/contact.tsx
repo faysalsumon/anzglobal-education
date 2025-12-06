@@ -39,8 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PublicHeader } from "@/components/public-header";
-import { Footer } from "@/components/footer";
 
 // Student contact form schema
 const studentContactSchema = z.object({
@@ -148,7 +146,6 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PublicHeader />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16 sm:py-24">
@@ -689,8 +686,7 @@ export default function Contact() {
                   <CardContent className="pt-6 text-center">
                     <Mail className="w-8 h-8 text-primary mx-auto mb-3" />
                     <h3 className="font-semibold mb-2">Email</h3>
-                    <p className="text-sm text-muted-foreground">info@anzglobal.education</p>
-                    <p className="text-sm text-muted-foreground">support@anzglobal.education</p>
+                    <p className="text-sm text-muted-foreground">info@anzglobaleducation.com.au</p>
                   </CardContent>
                 </Card>
 
@@ -698,7 +694,7 @@ export default function Contact() {
                   <CardContent className="pt-6 text-center">
                     <Phone className="w-8 h-8 text-primary mx-auto mb-3" />
                     <h3 className="font-semibold mb-2">Phone</h3>
-                    <p className="text-sm text-muted-foreground">+61 2 9876 5432</p>
+                    <p className="text-sm text-muted-foreground">+61 401 125 380</p>
                     <p className="text-sm text-muted-foreground">Mon-Fri: 9AM-6PM AEDT</p>
                   </CardContent>
                 </Card>
@@ -707,8 +703,8 @@ export default function Contact() {
                   <CardContent className="pt-6 text-center">
                     <MapPin className="w-8 h-8 text-primary mx-auto mb-3" />
                     <h3 className="font-semibold mb-2">Office</h3>
-                    <p className="text-sm text-muted-foreground">123 Education Street</p>
-                    <p className="text-sm text-muted-foreground">Sydney, NSW 2000</p>
+                    <p className="text-sm text-muted-foreground">Level 2, 3/94 Eucumbene Drive</p>
+                    <p className="text-sm text-muted-foreground">Ravenhall, VIC 3023</p>
                   </CardContent>
                 </Card>
               </div>
@@ -716,8 +712,6 @@ export default function Contact() {
           )}
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }
