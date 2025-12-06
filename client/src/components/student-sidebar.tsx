@@ -24,7 +24,9 @@ import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
+import type { StudentProfile } from "@shared/schema";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -48,7 +50,15 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("discover");
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+
+  // Fetch student profile for profile picture
+  const { data: studentProfile } = useQuery<StudentProfile>({
+    queryKey: ["/api/student/profile"],
+  });
+
+  // Get the profile image URL - prefer student profile picture
+  const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
 
   const navConfig: NavSection[] = [
     {
@@ -137,13 +147,8 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     return "ST";
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setLocation("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
   };
 
   return (
@@ -240,8 +245,8 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           <div className="h-16 flex items-center px-4 border-b">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                {user?.profileImageUrl && (
-                  <AvatarImage src={user.profileImageUrl} alt={user.email || "Student"} />
+                {profileImageUrl && (
+                  <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
                 )}
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {getUserInitials()}

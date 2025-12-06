@@ -20,7 +20,9 @@ import {
 import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
+import type { StudentProfile } from "@shared/schema";
 
 interface PublicHeaderProps {
   onStudentLoginClick?: () => void;
@@ -29,6 +31,22 @@ interface PublicHeaderProps {
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
+
+  // Fetch student profile for profile picture
+  const { data: studentProfile } = useQuery<StudentProfile>({
+    queryKey: ["/api/student/profile"],
+    enabled: isAuthenticated && isStudent,
+  });
+
+  // Get the profile image URL - prefer student profile picture, fallback to auth user picture
+  const getProfileImageUrl = () => {
+    if (isStudent && studentProfile?.profileImageUrl) {
+      return studentProfile.profileImageUrl;
+    }
+    return user?.profileImageUrl || null;
+  };
+
+  const profileImageUrl = getProfileImageUrl();
 
   const navItems = [
     { title: "Courses", href: "/courses", icon: BookOpen },
@@ -108,8 +126,8 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
                       <Avatar className="h-9 w-9">
-                        {user?.profileImageUrl && (
-                          <AvatarImage src={user.profileImageUrl} alt={user.email || "User"} />
+                        {profileImageUrl && (
+                          <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
                         )}
                         <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                           {getUserInitials()}
@@ -202,8 +220,8 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 {isAuthenticated && user ? (
                   <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-mobile-menu">
                     <Avatar className="h-8 w-8">
-                      {user?.profileImageUrl && (
-                        <AvatarImage src={user.profileImageUrl} alt={user.email || "User"} />
+                      {profileImageUrl && (
+                        <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
                       )}
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                         {getUserInitials()}
@@ -221,8 +239,8 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   {isAuthenticated && user ? (
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        {user?.profileImageUrl && (
-                          <AvatarImage src={user.profileImageUrl} alt={user.email || "User"} />
+                        {profileImageUrl && (
+                          <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
                         )}
                         <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
                           {getUserInitials()}
