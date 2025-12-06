@@ -135,15 +135,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       ],
     },
     {
-      id: "profile",
-      label: "Profile",
-      icon: User,
-      color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
-      routes: [
-        { icon: User, label: "My Profile", path: "/student/profile" },
-      ],
-    },
-    {
       id: "connect",
       label: "Connect",
       icon: MessageSquare,
@@ -156,8 +147,22 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     },
   ];
 
+  // Profile section (shown via bottom avatar, not in main nav)
+  const profileSection: NavSection = {
+    id: "profile",
+    label: "Profile",
+    icon: User,
+    color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
+    routes: [
+      { icon: User, label: "My Profile", path: "/student/profile" },
+    ],
+  };
+
+  // All sections including profile for lookups
+  const allSections = [...navConfig, profileSection];
+
   const findSectionForPath = (path: string) => {
-    for (const section of navConfig) {
+    for (const section of allSections) {
       if (section.routes.some(route => path.startsWith(route.path.split('#')[0]))) {
         return section.id;
       }
@@ -189,7 +194,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     }
   };
 
-  const currentSection = navConfig.find(s => s.id === activeSection);
+  const currentSection = allSections.find(s => s.id === activeSection);
   const visibleRoutes = currentSection?.routes || [];
 
   const getUserInitials = () => {
