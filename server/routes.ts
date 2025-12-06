@@ -4883,7 +4883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseId = req.params.id;
       const rawData = req.body;
       
-      // Sanitize data: convert empty strings to null for numeric fields
+      // Sanitize data: convert empty strings to null for all typed fields
       const integerFields = [
         'durationMonths', 'durationWeeks', 
         'scholarshipPercentageMin', 'scholarshipPercentageMax', 
@@ -4892,6 +4892,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const decimalFields = [
         'fees', 'costOfLiving', 'applicationFees'
+      ];
+      
+      // Enum and other fields that can't accept empty strings
+      const nullableStringFields = [
+        'discipline', 'subDiscipline', 'level', 'approvalStatus'
       ];
       
       const updateData: Record<string, any> = { ...rawData };
@@ -4913,6 +4918,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (field in updateData && typeof updateData[field] === 'string') {
           const parsed = parseFloat(updateData[field]);
           updateData[field] = isNaN(parsed) ? null : parsed.toString();
+        }
+      }
+      
+      // Handle enum/nullable string fields - convert empty strings to null
+      for (const field of nullableStringFields) {
+        if (field in updateData && updateData[field] === '') {
+          updateData[field] = null;
         }
       }
 
