@@ -166,11 +166,11 @@ export default function PublicCourseDetail() {
 
                 {/* Feature Badges */}
                 <div className="flex flex-wrap gap-2">
-                  {((course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined) || 
-                    (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined)) && (
+                  {((course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined && course.scholarshipPercentageMin > 0) || 
+                    (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined && course.scholarshipPercentageMax > 0)) && (
                     <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
                       <Award className="h-3 w-3 mr-1" />
-                      {course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
+                      {course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined && course.scholarshipPercentageMax > 0
                         ? `Up to ${course.scholarshipPercentageMax}%`
                         : `${course.scholarshipPercentageMin}%`} Scholarship
                     </Badge>
