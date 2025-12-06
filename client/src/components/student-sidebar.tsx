@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,6 +42,40 @@ interface NavSection {
   routes: NavRoute[];
 }
 
+interface StudentSidebarContextValue {
+  isSubmenuOpen: boolean;
+  setIsSubmenuOpen: (open: boolean) => void;
+  closeSubmenu: () => void;
+}
+
+const StudentSidebarContext = createContext<StudentSidebarContextValue | null>(null);
+
+export function useStudentSidebar() {
+  const context = useContext(StudentSidebarContext);
+  if (!context) {
+    return { isSubmenuOpen: false, setIsSubmenuOpen: () => {}, closeSubmenu: () => {} };
+  }
+  return context;
+}
+
+interface StudentSidebarProviderProps {
+  children: React.ReactNode;
+}
+
+export function StudentSidebarProvider({ children }: StudentSidebarProviderProps) {
+  const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
+
+  const closeSubmenu = () => {
+    setIsSubmenuOpen(false);
+  };
+
+  return (
+    <StudentSidebarContext.Provider value={{ isSubmenuOpen, setIsSubmenuOpen, closeSubmenu }}>
+      {children}
+    </StudentSidebarContext.Provider>
+  );
+}
+
 interface StudentSidebarProps {
   className?: string;
 }
@@ -49,7 +83,7 @@ interface StudentSidebarProps {
 export function StudentSidebar({ className }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("discover");
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
+  const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
   const { user } = useAuth();
 
   // Fetch student profile for profile picture
@@ -117,7 +151,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     const sectionId = findSectionForPath(location);
     if (sectionId) {
       setActiveSection(sectionId);
-      setIsSubmenuOpen(true);
     }
   }, [location]);
 
@@ -132,6 +165,10 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
   const handleRouteClick = (path: string) => {
     setLocation(path);
+    // On mobile, close the submenu when navigating
+    if (window.innerWidth < 1024) {
+      setIsSubmenuOpen(false);
+    }
   };
 
   const currentSection = navConfig.find(s => s.id === activeSection);
