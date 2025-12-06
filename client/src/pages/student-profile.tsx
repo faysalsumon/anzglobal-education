@@ -405,7 +405,7 @@ function StudentProfileContent() {
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
         isCurrentlyStudying: data.isCurrentlyStudying,
-        gpa: data.gpa && data.gpa !== "" ? parseFloat(data.gpa) : undefined,
+        gpa: data.gpa && data.gpa !== "" ? data.gpa : undefined,
         gradeScale: data.gradeScale || undefined,
       };
       
