@@ -12,9 +12,10 @@ import {
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
   Target, MonitorPlay, Plane
 } from "lucide-react";
-import type { Course, University } from "@shared/schema";
+import type { Course, University, Application } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -22,11 +23,21 @@ export default function PublicCourseDetail() {
   const [, params] = useRoute("/courses/:id");
   const courseId = params?.id;
   const [selectedCampusLocation, setSelectedCampusLocation] = useState<string | null>(null);
+  const { user, isStudent } = useAuth();
 
   const { data: course, isLoading } = useQuery<CourseWithUniversity>({
     queryKey: [`/api/courses/${courseId}`],
     enabled: !!courseId,
   });
+
+  // Check if student has already applied for this course
+  const { data: applicationsData } = useQuery<{ applications: Application[] }>({
+    queryKey: ["/api/student/applications"],
+    enabled: isStudent,
+  });
+
+  const applications = applicationsData?.applications || [];
+  const existingApplication = applications.find(app => app.courseId === courseId);
 
   if (isLoading) {
     return (
@@ -619,17 +630,43 @@ export default function PublicCourseDetail() {
             {/* Action Buttons Card */}
             <Card className="lg:sticky lg:top-24 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
               <CardContent className="pt-6 space-y-3">
-                <Button 
-                  asChild 
-                  className="w-full shadow-lg shadow-primary/20" 
-                  size="lg"
-                  data-testid="button-login-apply"
-                >
-                  <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Login to Apply
-                  </a>
-                </Button>
+                {existingApplication ? (
+                  <Button 
+                    asChild 
+                    className="w-full shadow-lg shadow-green-500/20 bg-green-600 hover:bg-green-700" 
+                    size="lg"
+                    data-testid="button-already-applied"
+                  >
+                    <Link href="/student/applications">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Applied for this course
+                    </Link>
+                  </Button>
+                ) : isStudent ? (
+                  <Button 
+                    asChild 
+                    className="w-full shadow-lg shadow-primary/20" 
+                    size="lg"
+                    data-testid="button-apply-now"
+                  >
+                    <Link href={`/student/courses/${course.id}`}>
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Apply Now
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button 
+                    asChild 
+                    className="w-full shadow-lg shadow-primary/20" 
+                    size="lg"
+                    data-testid="button-login-apply"
+                  >
+                    <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Login to Apply
+                    </a>
+                  </Button>
+                )}
                 {course.curriculumUrl && (
                   <Button 
                     asChild 
