@@ -135,6 +135,16 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       ],
     },
     {
+      id: "profile",
+      label: "Profile",
+      icon: User,
+      color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
+      routes: [
+        { icon: User, label: "My Profile", path: "/student/profile" },
+        { icon: GraduationCap, label: "Education History", path: "/student/profile#education" },
+      ],
+    },
+    {
       id: "connect",
       label: "Connect",
       icon: MessageSquare,
@@ -271,7 +281,14 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Link href="/student/profile" data-testid="nav-profile-avatar" className="relative">
+              <button
+                onClick={() => handleSectionClick("profile")}
+                className={cn(
+                  "relative rounded-full transition-all",
+                  activeSection === "profile" && "ring-2 ring-purple-500"
+                )}
+                data-testid="nav-profile-avatar"
+              >
                 <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
                   {profileImageUrl && (
                     <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
@@ -287,7 +304,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                 ) : (
                   <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-background" data-testid="badge-profile-incomplete" />
                 )}
-              </Link>
+              </button>
             </TooltipTrigger>
             <TooltipContent side="right">
               <div className="text-sm">
