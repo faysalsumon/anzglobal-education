@@ -262,6 +262,31 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
+              <Link href="/student/profile" data-testid="nav-profile-avatar">
+                <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                  {profileImageUrl && (
+                    <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
+                  )}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <div className="text-sm">
+                <p className="font-medium">
+                  {user?.firstName && user?.lastName 
+                    ? `${user.firstName} ${user.lastName}`
+                    : user?.email?.split('@')[0]}
+                </p>
+                <p className="text-muted-foreground text-xs">View Profile</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -283,27 +308,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
         isSubmenuOpen ? "translate-x-0" : "-translate-x-full",
         className
       )}>
-          <div className="h-16 flex items-center px-4 border-b">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                {profileImageUrl && (
-                  <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
-                )}
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate">
-                  {user?.firstName && user?.lastName 
-                    ? `${user.firstName} ${user.lastName}`
-                    : user?.email?.split('@')[0]}
-                </span>
-                <span className="text-xs text-muted-foreground">Student</span>
-              </div>
-            </div>
-          </div>
-
           {currentSection && (
             <div className="px-3 py-2 border-b">
               <h3 className={cn(
