@@ -41,6 +41,7 @@ type Conversation = {
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [message, setMessage] = useState("");
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -190,64 +191,75 @@ export function ChatWidget() {
     setIsMinimized(!isMinimized);
   };
 
-  // Floating chat button with human avatar - ATO style
+  // Floating chat button with human avatar - collapsible design
   if (!isOpen) {
     return (
       <div 
-        className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-40 flex items-end gap-2"
+        className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-40"
         data-testid="chat-widget-trigger"
+        onMouseEnter={() => setIsCollapsed(false)}
+        onMouseLeave={() => setIsCollapsed(true)}
       >
-        {/* Floating avatar with gentle animation */}
-        <button
-          onClick={toggleOpen}
-          className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full"
-          data-testid="button-open-chat"
-          aria-label="Open chat assistant"
+        {/* Combined avatar + button container */}
+        <div 
+          className={`
+            flex items-center gap-2 bg-card border border-border rounded-full shadow-lg 
+            transition-all duration-300 ease-in-out overflow-hidden
+            ${isCollapsed ? 'p-1' : 'p-1 pr-4'}
+          `}
+          style={{
+            animation: "float 3s ease-in-out infinite",
+          }}
         >
-          {/* Avatar container with floating animation */}
-          <div 
-            className="relative transition-transform duration-300 group-hover:scale-105"
-            style={{
-              animation: "float 3s ease-in-out infinite",
-            }}
+          {/* Avatar button */}
+          <button
+            onClick={toggleOpen}
+            className="relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full flex-shrink-0"
+            data-testid="button-open-chat"
+            aria-label="Open chat assistant"
           >
-            {/* Avatar image */}
-            <img
-              src={chatAvatarImage}
-              alt="Zan - Education Assistant"
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg border-2 border-white dark:border-slate-800"
-            />
-            
-            {/* Online indicator */}
-            <span className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
-            
-            {/* Unread badge */}
-            {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
-                data-testid="badge-unread-count"
-              >
-                {unreadCount}
-              </Badge>
-            )}
-          </div>
-        </button>
-        
-        {/* Ask button pill */}
-        <Button
-          onClick={toggleOpen}
-          className="rounded-full px-5 py-2 h-auto shadow-lg bg-primary hover:bg-primary/90 text-sm font-medium"
-          data-testid="button-ask-chat"
-        >
-          Ask Zan
-        </Button>
+            <div className="relative transition-transform duration-300 group-hover:scale-105">
+              <img
+                src={chatAvatarImage}
+                alt="Zan - Education Assistant"
+                className="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-primary/20"
+              />
+              
+              {/* Online indicator */}
+              <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
+              
+              {/* Unread badge */}
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
+                  data-testid="badge-unread-count"
+                >
+                  {unreadCount}
+                </Badge>
+              )}
+            </div>
+          </button>
+          
+          {/* Ask Zan text - only visible when expanded */}
+          <button
+            onClick={toggleOpen}
+            className={`
+              flex flex-col items-start transition-all duration-300 ease-in-out
+              ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
+            `}
+            data-testid="button-ask-chat"
+          >
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Need help?</span>
+            <span className="text-sm font-semibold text-foreground whitespace-nowrap">Ask Zan</span>
+          </button>
+        </div>
         
         {/* CSS for floating animation */}
         <style>{`
           @keyframes float {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
+            50% { transform: translateY(-4px); }
           }
         `}</style>
       </div>
