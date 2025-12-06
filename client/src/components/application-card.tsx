@@ -314,7 +314,7 @@ export function ApplicationCard({ application, course, university, consultant }:
               )}
             </CardTitle>
             <CardDescription className="mt-1">
-              {university?.name || "University"} • {course?.country || "Unknown Location"}
+              {university?.name || "University"}
             </CardDescription>
           </div>
           <Badge
