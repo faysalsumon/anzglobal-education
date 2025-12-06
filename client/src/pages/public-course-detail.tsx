@@ -31,13 +31,13 @@ export default function PublicCourseDetail() {
   });
 
   // Check if student has already applied for this course
-  const { data: applicationsData } = useQuery<{ applications: Application[] }>({
+  const { data: applicationsData } = useQuery<{ applications: Array<{ application: Application }> }>({
     queryKey: ["/api/student/applications"],
     enabled: isStudent,
   });
 
   const applications = applicationsData?.applications || [];
-  const existingApplication = applications.find(app => app.courseId === courseId);
+  const existingApplication = applications.find(app => app.application.courseId === courseId);
 
   if (isLoading) {
     return (

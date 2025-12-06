@@ -67,7 +67,7 @@ export default function CourseDetail() {
     enabled: isStudent,
   });
 
-  const { data: applicationsData } = useQuery<{ applications: Application[] }>({
+  const { data: applicationsData } = useQuery<{ applications: Array<{ application: Application }> }>({
     queryKey: ["/api/student/applications"],
     enabled: isStudent,
   });
@@ -78,7 +78,7 @@ export default function CourseDetail() {
   });
 
   const applications = applicationsData?.applications || [];
-  const existingApplication = applications.find(app => app.courseId === courseId);
+  const existingApplication = applications.find(app => app.application.courseId === courseId);
   const isFavorited = favorites?.some(fav => fav.itemType === "course" && fav.itemId === courseId);
 
   const form = useForm<z.infer<typeof applicationFormSchema>>({
@@ -324,11 +324,11 @@ export default function CourseDetail() {
 
                 {/* Application Status */}
                 {existingApplication && (
-                  <div className={`p-4 rounded-lg border ${getStatusColor(existingApplication.status)}`} data-testid="alert-application-status">
+                  <div className={`p-4 rounded-lg border ${getStatusColor(existingApplication.application.status)}`} data-testid="alert-application-status">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-5 w-5" />
                       <div>
-                        <p className="font-semibold" data-testid="text-application-status">Application Status: {getStatusLabel(existingApplication.status)}</p>
+                        <p className="font-semibold" data-testid="text-application-status">Application Status: {getStatusLabel(existingApplication.application.status)}</p>
                         <p className="text-sm opacity-80">You have already applied to this course</p>
                       </div>
                     </div>
