@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { StudentLayout } from "@/components/student-layout";
 import { 
   Users, 
   DollarSign, 
@@ -297,12 +298,11 @@ function AffiliateDashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Affiliate Dashboard</h1>
-          <p className="text-muted-foreground">Manage your referrals and track your earnings</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Affiliate Dashboard</h1>
+        <p className="text-muted-foreground">Manage your referrals and track your earnings</p>
+      </div>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4 mb-8">
@@ -482,7 +482,6 @@ function AffiliateDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }
@@ -622,6 +621,14 @@ export default function AffiliatePage() {
     );
   }
 
-  // If logged in, show dashboard. Otherwise, show landing page
-  return user ? <AffiliateDashboard /> : <AffiliateLanding />;
+  // If logged in, show dashboard with student layout. Otherwise, show landing page
+  if (user) {
+    return (
+      <StudentLayout>
+        <AffiliateDashboard />
+      </StudentLayout>
+    );
+  }
+
+  return <AffiliateLanding />;
 }
