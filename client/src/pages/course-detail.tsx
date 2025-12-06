@@ -67,7 +67,7 @@ export default function CourseDetail() {
     enabled: isStudent,
   });
 
-  const { data: applications } = useQuery<Application[]>({
+  const { data: applicationsData } = useQuery<{ applications: Application[] }>({
     queryKey: ["/api/student/applications"],
     enabled: isStudent,
   });
@@ -77,7 +77,8 @@ export default function CourseDetail() {
     enabled: isStudent,
   });
 
-  const existingApplication = applications?.find(app => app.courseId === courseId);
+  const applications = applicationsData?.applications || [];
+  const existingApplication = applications.find(app => app.courseId === courseId);
   const isFavorited = favorites?.some(fav => fav.itemType === "course" && fav.itemId === courseId);
 
   const form = useForm<z.infer<typeof applicationFormSchema>>({
