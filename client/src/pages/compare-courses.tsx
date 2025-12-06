@@ -17,17 +17,35 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
-export default function CompareCourses() {
-  const [location] = useLocation();
-  const { toast} = useToast();
-  const urlParams = new URLSearchParams(window.location.search);
-  const courseIds = urlParams.get('courses')?.split(',').map(id => id.trim()).filter(Boolean) || [];
+interface CourseComparison {
+  id: string;
+  courseId: string;
+  studentProfileId: string;
+  createdAt: string;
+}
 
-  const { data: allCourses = [], isLoading } = useQuery<Course[]>({
+export default function CompareCourses() {
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlCourseIds = urlParams.get('courses')?.split(',').map(id => id.trim()).filter(Boolean) || [];
+
+  // Fetch saved comparisons from API
+  const { data: savedComparisons = [], isLoading: comparisonsLoading } = useQuery<CourseComparison[]>({
+    queryKey: ["/api/student/comparisons"],
+  });
+
+  const { data: allCourses = [], isLoading: coursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/courses"],
   });
 
+  // Use URL params if provided, otherwise use saved comparisons
+  const courseIds = urlCourseIds.length > 0 
+    ? urlCourseIds 
+    : savedComparisons.map(c => c.courseId);
+
   const courses = allCourses.filter(c => courseIds.includes(c.id));
+  const isLoading = comparisonsLoading || coursesLoading;
 
   const removeComparisonMutation = useMutation({
     mutationFn: async (courseId: string) => {
@@ -86,12 +104,21 @@ export default function CompareCourses() {
         <div className="container mx-auto px-4 py-12">
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-lg font-medium mb-2">Not enough courses to compare</p>
-              <p className="text-sm text-muted-foreground mb-4">Please select at least 2 courses to compare</p>
+              <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
+              <p className="text-lg font-medium mb-2">
+                {courses.length === 0 
+                  ? "No courses selected for comparison" 
+                  : "Need at least 2 courses to compare"}
+              </p>
+              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                {courses.length === 0 
+                  ? "Browse courses and click the compare icon to add courses to your comparison list."
+                  : `You have ${courses.length} course selected. Add at least one more to compare side by side.`}
+              </p>
               <Button asChild>
-                <Link href="/courses">
+                <Link href="/student/courses" data-testid="button-browse-courses">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Courses
+                  Browse Courses
                 </Link>
               </Button>
             </CardContent>
