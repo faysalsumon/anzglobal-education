@@ -8,9 +8,24 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, Calendar, Building2, Upload, CheckCircle, Clock, XCircle, Eye, ChevronRight, Download, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { FileText, Calendar, Building2, Upload, CheckCircle, Clock, XCircle, Eye, ChevronRight, Download, ChevronDown, ChevronUp, AlertTriangle, FolderOpen } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
+
+// Required documents that students must upload
+const REQUIRED_DOCUMENTS = [
+  { type: "passport", name: "Passport Copy", required: true },
+  { type: "transcript", name: "Academic Transcripts", required: true },
+  { type: "language_test", name: "English Test Results", required: true },
+];
+
+interface StudentDocument {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+}
 
 type ApplicationStage = 
   | "Assessment"
@@ -155,6 +170,18 @@ export function ApplicationCard({ application, course, university, consultant }:
   const { data: pendingDocuments } = useQuery<{ pendingRequests: any[] }>({
     queryKey: [`/api/student/applications/${application.id}/pending-documents`],
   });
+
+  // Fetch student's uploaded documents to check for required documents
+  const { data: studentDocuments = [] } = useQuery<StudentDocument[]>({
+    queryKey: ["/api/student/documents"],
+  });
+
+  // Check which required documents are missing
+  const missingRequiredDocs = REQUIRED_DOCUMENTS.filter(
+    (reqDoc) => !studentDocuments.some((doc) => doc.type === reqDoc.type)
+  );
+  
+  const hasMissingDocuments = missingRequiredDocs.length > 0;
 
   const uploadDocumentMutation = useMutation({
     mutationFn: async (data: { applicationId: string; stage: ApplicationStage; documentName: string; documentUrl: string; documentType: string }) => {
@@ -338,6 +365,35 @@ export function ApplicationCard({ application, course, university, consultant }:
           </div>
         </div>
 
+        {/* Missing Documents Alert */}
+        {hasMissingDocuments && (
+          <Alert variant="destructive" className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800 dark:text-orange-400">Required Documents Missing</AlertTitle>
+            <AlertDescription className="text-orange-700 dark:text-orange-300">
+              <p className="mb-2">
+                Please upload the following mandatory documents to proceed with your application:
+              </p>
+              <ul className="list-disc list-inside space-y-1 mb-3">
+                {missingRequiredDocs.map((doc) => (
+                  <li key={doc.type} className="text-sm">{doc.name}</li>
+                ))}
+              </ul>
+              <Link href="/student/documents">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                  data-testid="button-upload-missing-docs"
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Go to My Documents
+                </Button>
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">
           <Button
@@ -349,83 +405,16 @@ export function ApplicationCard({ application, course, university, consultant }:
             {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
             {isExpanded ? "Hide Details" : "View Details"}
           </Button>
-          <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="default"
-                size="sm"
-                data-testid={`button-upload-document-${application.id}`}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]" data-testid="dialog-upload-document">
-              <DialogHeader>
-                <DialogTitle>Upload Document</DialogTitle>
-                <DialogDescription>
-                  Upload documents for {STAGE_DISPLAY_NAMES[application.currentStage]} stage
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="documentName">Document Name *</Label>
-                  <Input
-                    id="documentName"
-                    placeholder="e.g., Passport Copy, Academic Transcript"
-                    value={documentData.documentName}
-                    onChange={(e) => setDocumentData({ ...documentData, documentName: e.target.value })}
-                    data-testid="input-document-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="documentUrl">Document URL *</Label>
-                  <Input
-                    id="documentUrl"
-                    placeholder="https://..."
-                    value={documentData.documentUrl}
-                    onChange={(e) => setDocumentData({ ...documentData, documentUrl: e.target.value })}
-                    data-testid="input-document-url"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="documentType">Document Type</Label>
-                  <Select
-                    value={documentData.documentType || undefined}
-                    onValueChange={(value) => setDocumentData({ ...documentData, documentType: value })}
-                  >
-                    <SelectTrigger data-testid="select-document-type">
-                      <SelectValue placeholder="Select document type (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="passport">Passport</SelectItem>
-                      <SelectItem value="transcript">Academic Transcript</SelectItem>
-                      <SelectItem value="certificate">Certificate</SelectItem>
-                      <SelectItem value="ielts">IELTS/TOEFL</SelectItem>
-                      <SelectItem value="financial">Financial Document</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setDocumentDialogOpen(false)}
-                  data-testid="button-cancel-upload"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleDocumentUpload}
-                  disabled={uploadDocumentMutation.isPending}
-                  data-testid="button-confirm-upload"
-                >
-                  {uploadDocumentMutation.isPending ? "Uploading..." : "Upload"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Link href="/student/documents">
+            <Button
+              variant="default"
+              size="sm"
+              data-testid={`button-upload-document-${application.id}`}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Document
+            </Button>
+          </Link>
         </div>
 
         {/* Stage History */}
