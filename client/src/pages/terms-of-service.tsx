@@ -206,9 +206,9 @@ export default function TermsOfService() {
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>If you have any questions about these Terms, please contact us:</p>
                   <ul className="list-none space-y-2">
-                    <li><strong>Email:</strong> legal@anzglobaleducation.com</li>
+                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
                     <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
-                    <li><strong>Phone:</strong> +61 2 9999 8888</li>
+                    <li><strong>Phone:</strong> +61 401 125 380</li>
                   </ul>
                 </div>
               </CardContent>

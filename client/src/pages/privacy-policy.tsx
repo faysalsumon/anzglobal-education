@@ -264,10 +264,9 @@ export default function PrivacyPolicy() {
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
                   <ul className="list-none space-y-2">
-                    <li><strong>Privacy Officer Email:</strong> privacy@anzglobaleducation.com</li>
-                    <li><strong>General Inquiries:</strong> info@anzglobaleducation.com</li>
+                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
                     <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
-                    <li><strong>Phone:</strong> +61 2 9999 8888</li>
+                    <li><strong>Phone:</strong> +61 401 125 380</li>
                   </ul>
                   <p className="mt-4">
                     If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at <a href="https://www.oaic.gov.au" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.oaic.gov.au</a>.
