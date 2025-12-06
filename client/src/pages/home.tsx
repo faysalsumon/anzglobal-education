@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { UniversityDashboard } from "@/components/university-dashboard";
 import { StudentDashboard } from "@/components/student-dashboard";
+import { StudentLayout } from "@/components/student-layout";
+import { UniversityLayout } from "@/components/university-layout";
 
 export default function Home() {
   const { user, isUniversity, isStudent } = useAuth();
@@ -17,11 +19,19 @@ export default function Home() {
   }, [isAdmin, setLocation]);
 
   if (isUniversity) {
-    return <UniversityDashboard />;
+    return (
+      <UniversityLayout breadcrumbTitle="Dashboard">
+        <UniversityDashboard />
+      </UniversityLayout>
+    );
   }
 
   if (isStudent) {
-    return <StudentDashboard />;
+    return (
+      <StudentLayout breadcrumbTitle="Dashboard">
+        <StudentDashboard />
+      </StudentLayout>
+    );
   }
 
   // Admin users are redirected in useEffect above

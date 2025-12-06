@@ -133,7 +133,7 @@ function AppContent() {
     (location.startsWith('/admin/') && location !== '/admin/login');
 
   // Student and University portal pages now have their own 3-column layouts
-  const isStudentPortal = location.startsWith('/student/');
+  const isStudentPortal = location.startsWith('/student/') || location === '/dashboard';
   const isUniversityPortal = location.startsWith('/university/');
 
   // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
