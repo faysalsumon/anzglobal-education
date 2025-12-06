@@ -93,6 +93,32 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
   // Get the profile image URL - prefer student profile picture
   const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
 
+  // Calculate profile completion percentage
+  const calculateProfileCompletion = () => {
+    if (!studentProfile) return 0;
+    
+    const requiredFields = [
+      'firstName',
+      'lastName',
+      'phone',
+      'dateOfBirth',
+      'nationality',
+      'country',
+      'profileImageUrl',
+      'bio',
+    ];
+    
+    const filledFields = requiredFields.filter(field => {
+      const value = studentProfile[field as keyof typeof studentProfile];
+      return value !== null && value !== undefined && value !== '';
+    });
+    
+    return Math.round((filledFields.length / requiredFields.length) * 100);
+  };
+
+  const profileCompletion = calculateProfileCompletion();
+  const isProfileComplete = profileCompletion === 100;
+
   const navConfig: NavSection[] = [
     {
       id: "discover",
@@ -262,7 +288,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Link href="/student/profile" data-testid="nav-profile-avatar">
+              <Link href="/student/profile" data-testid="nav-profile-avatar" className="relative">
                 <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
                   {profileImageUrl && (
                     <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
@@ -271,6 +297,13 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
+                {isProfileComplete ? (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center h-4 min-w-4 px-0.5 rounded-full bg-green-500 text-[8px] font-bold text-white" data-testid="badge-profile-complete">
+                    100%
+                  </span>
+                ) : (
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-background" data-testid="badge-profile-incomplete" />
+                )}
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -280,7 +313,14 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                     ? `${user.firstName} ${user.lastName}`
                     : user?.email?.split('@')[0]}
                 </p>
-                <p className="text-muted-foreground text-xs">View Profile</p>
+                <p className={cn(
+                  "text-xs",
+                  isProfileComplete ? "text-green-500" : "text-muted-foreground"
+                )}>
+                  {isProfileComplete 
+                    ? "Profile Complete" 
+                    : `Profile ${profileCompletion}% complete`}
+                </p>
               </div>
             </TooltipContent>
           </Tooltip>
