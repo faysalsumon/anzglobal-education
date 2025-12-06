@@ -122,7 +122,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/affiliate'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
@@ -136,7 +136,7 @@ function AppContent() {
     (location.startsWith('/admin/') && location !== '/admin/login');
 
   // Student and University portal pages now have their own 3-column layouts
-  const isStudentPortal = location.startsWith('/student/') || location === '/dashboard';
+  const isStudentPortal = location.startsWith('/student/') || location === '/dashboard' || location === '/affiliate';
   const isUniversityPortal = location.startsWith('/university/');
 
   // Internal dashboard/portal pages that should NOT show footer (only for authenticated users)
@@ -144,7 +144,8 @@ function AppContent() {
     '/dashboard',
     '/university/',
     '/student/',
-    '/chat'
+    '/chat',
+    '/affiliate'
   ];
   const isInternalDashboard = internalDashboardRoutes.some(route => 
     location === route || location.startsWith(route)
