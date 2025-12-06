@@ -26,14 +26,22 @@ export function CampusLocationMapDialog({
     let timer: NodeJS.Timeout | null = null;
 
     const cleanup = () => {
-      if (markerRef.current) {
-        google.maps.event.clearInstanceListeners(markerRef.current);
-        markerRef.current.setMap(null);
-        markerRef.current = null;
-      }
-      if (mapInstanceRef.current) {
-        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
-        mapInstanceRef.current = null;
+      try {
+        if (markerRef.current) {
+          if (typeof google !== 'undefined' && google.maps?.event) {
+            google.maps.event.clearInstanceListeners(markerRef.current);
+          }
+          markerRef.current.setMap(null);
+          markerRef.current = null;
+        }
+        if (mapInstanceRef.current) {
+          if (typeof google !== 'undefined' && google.maps?.event) {
+            google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+          }
+          mapInstanceRef.current = null;
+        }
+      } catch (e) {
+        console.warn("Error during map cleanup:", e);
       }
     };
 
@@ -52,14 +60,18 @@ export function CampusLocationMapDialog({
       return;
     }
 
-    if (!mapRef.current) return;
-
     setOptions({
       key: apiKey,
     });
 
     const initMap = async () => {
-      if (!isMounted || !isOpen || !mapRef.current) return;
+      if (!isMounted || !isOpen) return;
+      
+      if (!mapRef.current) {
+        console.warn("Map container not found, retrying...");
+        timer = setTimeout(initMap, 100);
+        return;
+      }
       
       cleanup();
       
