@@ -16,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Home,
   MessageSquare,
   LayoutDashboard,
 } from "lucide-react";
@@ -353,19 +352,6 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
               })}
             </div>
           </ScrollArea>
-
-        <div className="p-3 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2"
-            onClick={() => setLocation("/")}
-            data-testid="button-public-site"
-          >
-            <Home className="h-4 w-4" />
-            Public Site
-          </Button>
-        </div>
 
         <Button
           variant="ghost"
