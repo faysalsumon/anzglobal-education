@@ -368,10 +368,10 @@ export default function PublicCourses() {
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
-      // Extract cities from campuses
-      if (course.campuses) {
-        course.campuses.forEach(campus => {
-          if (campus.city) cities.add(campus.city);
+      // Extract cities from campusLocations
+      if (course.campusLocations) {
+        course.campusLocations.forEach((location: string) => {
+          if (location) cities.add(location);
         });
       }
     });
@@ -484,7 +484,7 @@ export default function PublicCourses() {
       }
       
       // Check if this course has a campus in the selected city
-      return course.campuses?.some(campus => campus.city === campusCity);
+      return course.campusLocations?.some((location: string) => location === campusCity);
     });
     
     if (!hasCoursesWithCity) {
@@ -550,13 +550,13 @@ export default function PublicCourses() {
     // Campus city filtering with normalization
     if (campusCity) {
       const normalizedSearchCity = normalizeCity(campusCity);
-      const hasCampusInCity = course.campuses?.some(campus => {
-        if (!campus.city) return false;
-        const normalizedCampusCity = normalizeCity(campus.city);
+      const hasCampusInCity = course.campusLocations?.some((location: string) => {
+        if (!location) return false;
+        const normalizedLocation = normalizeCity(location);
         // Flexible matching after normalization
-        return normalizedCampusCity === normalizedSearchCity ||
-               normalizedCampusCity.includes(normalizedSearchCity) ||
-               normalizedSearchCity.includes(normalizedCampusCity);
+        return normalizedLocation === normalizedSearchCity ||
+               normalizedLocation.includes(normalizedSearchCity) ||
+               normalizedSearchCity.includes(normalizedLocation);
       });
       if (!hasCampusInCity) return false;
     }
@@ -867,14 +867,14 @@ export default function PublicCourses() {
                       
                       {/* Campus Availability Badges */}
                       {(() => {
-                        const campusesWithCity = course.campuses?.filter(campus => campus.city) || [];
-                        if (campusesWithCity.length === 0) return null;
+                        const locations = course.campusLocations?.filter((loc: string) => loc) || [];
+                        if (locations.length === 0) return null;
                         
                         return (
                           <div className="mb-3 sm:mb-4">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Available at:</p>
                             <div className="flex flex-wrap gap-1.5">
-                              {campusesWithCity.slice(0, 3).map((campus, idx) => (
+                              {locations.slice(0, 3).map((location: string, idx: number) => (
                                 <Button
                                   key={idx}
                                   variant="outline"
@@ -883,23 +883,23 @@ export default function PublicCourses() {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     // Store raw city value (normalization happens in filtering logic)
-                                    setCampusCity(campus.city);
+                                    setCampusCity(location);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                   }}
-                                  aria-label={`Filter courses available in ${campus.city}`}
+                                  aria-label={`Filter courses available in ${location}`}
                                   data-testid={`badge-campus-${course.id}-${idx}`}
                                 >
                                   <MapPin className="h-3 w-3" />
-                                  {campus.city}
+                                  {location}
                                 </Button>
                               ))}
-                              {campusesWithCity.length > 3 && (
+                              {locations.length > 3 && (
                                 <Badge 
                                   variant="secondary" 
                                   className="text-xs px-2 py-0.5"
                                   data-testid={`badge-more-campuses-${course.id}`}
                                 >
-                                  +{campusesWithCity.length - 3} more
+                                  +{locations.length - 3} more
                                 </Badge>
                               )}
                             </div>

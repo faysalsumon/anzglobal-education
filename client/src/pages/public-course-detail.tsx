@@ -659,11 +659,11 @@ export default function PublicCourseDetail() {
                     variant="outline" 
                     className="w-full" 
                     size="lg"
-                    data-testid="button-download-curriculum"
+                    data-testid="button-visit-course"
                   >
                     <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Curriculum
+                      <Globe className="h-4 w-4 mr-2" />
+                      Visit Course Link
                     </a>
                   </Button>
                 )}
