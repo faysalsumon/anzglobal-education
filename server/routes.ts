@@ -4883,20 +4883,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseId = req.params.id;
       const rawData = req.body;
       
-      // Sanitize data: convert empty strings to null for integer fields
+      // Sanitize data: convert empty strings to null for numeric fields
       const integerFields = [
         'durationMonths', 'durationWeeks', 
         'scholarshipPercentageMin', 'scholarshipPercentageMax', 
         'minimumAge'
       ];
       
+      const decimalFields = [
+        'fees', 'costOfLiving', 'applicationFees'
+      ];
+      
       const updateData: Record<string, any> = { ...rawData };
+      
+      // Handle integer fields
       for (const field of integerFields) {
         if (field in updateData && (updateData[field] === '' || updateData[field] === null)) {
           updateData[field] = null;
         } else if (field in updateData && typeof updateData[field] === 'string') {
           const parsed = parseInt(updateData[field], 10);
           updateData[field] = isNaN(parsed) ? null : parsed;
+        }
+      }
+      
+      // Handle decimal fields
+      for (const field of decimalFields) {
+        if (field in updateData && (updateData[field] === '' || updateData[field] === null)) {
+          updateData[field] = null;
+        } else if (field in updateData && typeof updateData[field] === 'string') {
+          const parsed = parseFloat(updateData[field]);
+          updateData[field] = isNaN(parsed) ? null : parsed.toString();
         }
       }
 
