@@ -590,9 +590,9 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
     const formData = new FormData(e.currentTarget);
     formData.append("file", selectedFile);
     
-    // Normalize empty folderId to null (for "All Documents" case)
+    // Normalize "none" or empty folderId to null (for "All Documents" case)
     const folderId = formData.get("folderId");
-    if (folderId === "") {
+    if (folderId === "" || folderId === "none") {
       formData.delete("folderId");
     }
 
@@ -665,11 +665,12 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
         </div>
         <div className="space-y-2">
           <Label htmlFor="folderId">Folder</Label>
-          <Select name="folderId" defaultValue={initialFolderId || ""}>
+          <Select name="folderId" defaultValue={initialFolderId || "none"}>
             <SelectTrigger data-testid="select-upload-folder">
               <SelectValue placeholder="Select folder" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">All Documents (No Folder)</SelectItem>
               {folders.map((folder) => (
                 <SelectItem key={folder.id} value={folder.id}>
                   {folder.name}
