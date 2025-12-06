@@ -1262,98 +1262,120 @@ function StudentProfileContent() {
                   </DialogHeader>
                   <Form {...languageScoreForm}>
                     <form onSubmit={handleLanguageScoreSubmit} className="space-y-4">
-                      <FormField
-                        control={languageScoreForm.control}
-                        name="testType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Test Type *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-language-test-type">
-                                  <SelectValue placeholder="Select test type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="ielts">IELTS (0-9)</SelectItem>
-                                <SelectItem value="toefl">TOEFL (0-120)</SelectItem>
-                                <SelectItem value="pte">PTE Academic (10-90)</SelectItem>
-                                <SelectItem value="duolingo">Duolingo English Test (10-160)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={languageScoreForm.control}
-                        name="overallScore"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Overall Score *</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g., 7.5" data-testid="input-language-overall-score" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={languageScoreForm.control}
-                          name="listeningScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Listening Score</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 8.0" data-testid="input-language-listening" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={languageScoreForm.control}
-                          name="readingScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Reading Score</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.5" data-testid="input-language-reading" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={languageScoreForm.control}
-                          name="writingScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Writing Score</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.0" data-testid="input-language-writing" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={languageScoreForm.control}
-                          name="speakingScore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Speaking Score</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 7.5" data-testid="input-language-speaking" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      {(() => {
+                        const selectedTestType = languageScoreForm.watch("testType");
+                        const scoreConfig: Record<string, { range: string; overall: string; section: string; step: string }> = {
+                          ielts: { range: "0-9", overall: "e.g., 7.5", section: "e.g., 7.0", step: "0.5" },
+                          toefl: { range: "0-120", overall: "e.g., 100", section: "e.g., 25", step: "1" },
+                          pte: { range: "10-90", overall: "e.g., 75", section: "e.g., 70", step: "1" },
+                          duolingo: { range: "10-160", overall: "e.g., 120", section: "e.g., 115", step: "5" },
+                        };
+                        const config = scoreConfig[selectedTestType] || scoreConfig.ielts;
+                        
+                        return (
+                          <>
+                            <FormField
+                              control={languageScoreForm.control}
+                              name="testType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Test Type *</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-language-test-type">
+                                        <SelectValue placeholder="Select test type" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="ielts">IELTS (0-9)</SelectItem>
+                                      <SelectItem value="toefl">TOEFL (0-120)</SelectItem>
+                                      <SelectItem value="pte">PTE Academic (10-90)</SelectItem>
+                                      <SelectItem value="duolingo">Duolingo English Test (10-160)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            {selectedTestType && (
+                              <p className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
+                                Score range for {selectedTestType.toUpperCase()}: <strong>{config.range}</strong>
+                              </p>
+                            )}
+                            
+                            <FormField
+                              control={languageScoreForm.control}
+                              name="overallScore"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Overall Score * {selectedTestType && `(${config.range})`}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} placeholder={config.overall} data-testid="input-language-overall-score" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField
+                                control={languageScoreForm.control}
+                                name="listeningScore"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Listening Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-listening" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={languageScoreForm.control}
+                                name="readingScore"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Reading Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-reading" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField
+                                control={languageScoreForm.control}
+                                name="writingScore"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Writing Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-writing" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={languageScoreForm.control}
+                                name="speakingScore"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Speaking Score {selectedTestType && `(${config.range})`}</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} value={field.value || ""} placeholder={config.section} data-testid="input-language-speaking" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </>
+                        );
+                      })()}
                       <div className="grid gap-4 md:grid-cols-2">
                         <FormField
                           control={languageScoreForm.control}
