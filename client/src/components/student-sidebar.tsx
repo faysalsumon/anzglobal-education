@@ -90,34 +90,27 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     queryKey: ["/api/student/profile"],
   });
 
+  // Fetch profile completion from API (same source as profile page)
+  interface ProfileCompletionResult {
+    isComplete: boolean;
+    percentage: number;
+    missingFields: string[];
+    completedSections: {
+      personalInfo: boolean;
+      education: boolean;
+      languageTest: boolean;
+    };
+  }
+  
+  const { data: completion } = useQuery<ProfileCompletionResult>({
+    queryKey: ["/api/student/profile/completion"],
+  });
+
   // Get the profile image URL - prefer student profile picture
   const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
 
-  // Calculate profile completion percentage
-  const calculateProfileCompletion = () => {
-    if (!studentProfile) return 0;
-    
-    const requiredFields = [
-      'firstName',
-      'lastName',
-      'phone',
-      'dateOfBirth',
-      'nationality',
-      'country',
-      'profileImageUrl',
-      'bio',
-    ];
-    
-    const filledFields = requiredFields.filter(field => {
-      const value = studentProfile[field as keyof typeof studentProfile];
-      return value !== null && value !== undefined && value !== '';
-    });
-    
-    return Math.round((filledFields.length / requiredFields.length) * 100);
-  };
-
-  const profileCompletion = calculateProfileCompletion();
-  const isProfileComplete = profileCompletion === 100;
+  const profileCompletion = completion?.percentage || 0;
+  const isProfileComplete = completion?.isComplete || false;
 
   const navConfig: NavSection[] = [
     {
