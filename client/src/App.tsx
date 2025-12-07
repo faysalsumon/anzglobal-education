@@ -43,6 +43,7 @@ import UserTypeSelection from "@/pages/user-type-selection";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
 import InstitutionLogin from "@/pages/institution-login";
+import AuthPage from "@/pages/auth";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
@@ -64,6 +65,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
     <Switch>
       {/* Public routes accessible to everyone */}
       <Route path="/" component={Landing} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/login" component={Login} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/institution/login" component={InstitutionLogin} />
@@ -122,7 +124,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/login', '/admin/login', '/institution/login'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 

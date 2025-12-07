@@ -195,7 +195,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   onClick={onStudentLoginClick}
                   data-testid="button-student-login"
                 >
-                  Student Login
+                  Login / Sign up
                 </Button>
               ) : (
                 <Button
@@ -204,7 +204,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                   asChild
                   data-testid="button-student-login"
                 >
-                  <a href="/api/login?type=student">Student Login</a>
+                  <a href="/auth">Login / Sign up</a>
                 </Button>
               )
             )}
@@ -335,7 +335,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                           }}
                           data-testid="button-mobile-student-login"
                         >
-                          Student Login
+                          Login / Sign up
                         </Button>
                       ) : (
                         <Button
@@ -344,7 +344,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                           asChild
                           data-testid="button-mobile-student-login"
                         >
-                          <a href="/api/login?type=student">Student Login</a>
+                          <a href="/auth">Login / Sign up</a>
                         </Button>
                       )
                     )}

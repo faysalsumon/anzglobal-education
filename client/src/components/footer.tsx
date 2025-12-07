@@ -50,7 +50,7 @@ const footerSections: FooterSection[] = [
   {
     title: "FOR INSTITUTIONS",
     links: [
-      { label: "Institution Login", href: "/institution/login" },
+      { label: "Institution Login", href: "/auth" },
       { label: "Become a Partner", href: "/partner-with-us" },
       { label: "Partner Support", href: "/contact?topic=partner" },
     ],
