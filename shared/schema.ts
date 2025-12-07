@@ -476,6 +476,255 @@ export const courses = pgTable("courses", {
   disciplineActiveIdx: index("courses_discipline_active_idx").on(table.discipline, table.isActive, table.approvalStatus),
 }));
 
+// ============================================
+// GLOBAL REGION SYSTEM TABLES
+// Supports multi-region platform with domain-based detection
+// ============================================
+
+// Regions table - defines supported regions/countries
+export const regions = pgTable("regions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Region identification
+  code: varchar("code", { length: 10 }).notNull().unique(), // e.g., 'AU', 'BD', 'UK', 'CA'
+  name: text("name").notNull(), // e.g., 'Australia', 'Bangladesh'
+  
+  // Domain and routing
+  domainPattern: text("domain_pattern"), // e.g., '.com.au', '.com.bd', '.co.uk'
+  primaryDomain: text("primary_domain"), // e.g., 'anzglobal.com.au'
+  
+  // Localization
+  defaultLocale: varchar("default_locale", { length: 10 }).default("en"), // e.g., 'en', 'bn'
+  supportedLocales: text("supported_locales").array(), // ['en', 'bn'] for Bangladesh
+  defaultCurrency: varchar("default_currency", { length: 3 }).default("AUD"), // ISO 4217 currency code
+  currencySymbol: varchar("currency_symbol", { length: 5 }).default("$"),
+  
+  // Region settings
+  timezone: varchar("timezone", { length: 50 }), // e.g., 'Australia/Sydney', 'Asia/Dhaka'
+  flagEmoji: varchar("flag_emoji", { length: 10 }), // e.g., '🇦🇺', '🇧🇩'
+  flagUrl: text("flag_url"), // URL to flag image
+  
+  // Inheritance/fallback
+  parentRegionId: varchar("parent_region_id").references((): any => regions.id, { onDelete: "set null" }),
+  
+  // Display settings
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false), // Only one region should be default
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("regions_code_idx").on(table.code),
+  activeIdx: index("regions_active_idx").on(table.isActive),
+}));
+
+// Student pathways table - defines onshore/offshore student types
+export const studentPathways = pgTable("student_pathways", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  code: varchar("code", { length: 20 }).notNull().unique(), // 'onshore', 'offshore'
+  name: text("name").notNull(), // 'Onshore Student', 'Offshore Student'
+  description: text("description"),
+  
+  // Pathway characteristics
+  requiresVisa: boolean("requires_visa").default(false),
+  locationDescription: text("location_description"), // e.g., 'Already in Australia', 'Applying from overseas'
+  
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("student_pathways_code_idx").on(table.code),
+}));
+
+// Course region variants - region-specific pricing and requirements per course
+export const courseRegionVariants = pgTable("course_region_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Core references
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  regionId: varchar("region_id").notNull().references(() => regions.id, { onDelete: "cascade" }),
+  pathwayId: varchar("pathway_id").references(() => studentPathways.id, { onDelete: "set null" }), // Null = applies to all pathways
+  
+  // Pricing (region-specific)
+  tuitionFee: decimal("tuition_fee", { precision: 12, scale: 2 }),
+  tuitionCurrency: varchar("tuition_currency", { length: 3 }).default("AUD"),
+  applicationFee: decimal("application_fee", { precision: 10, scale: 2 }),
+  costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
+  scholarshipMin: integer("scholarship_min"),
+  scholarshipMax: integer("scholarship_max"),
+  
+  // English requirements (can differ by region)
+  englishRequirements: jsonb("english_requirements").$type<EnglishRequirementsStructured>(),
+  
+  // Academic entry requirements (region-specific)
+  academicRequirements: text("academic_requirements"),
+  minimumAge: integer("minimum_age"),
+  eligibilityNotes: text("eligibility_notes"),
+  
+  // Visa linkage
+  visaRequirementId: varchar("visa_requirement_id").references(() => visaRequirements.id, { onDelete: "set null" }),
+  
+  // Availability
+  isAvailable: boolean("is_available").default(true),
+  availabilityNotes: text("availability_notes"),
+  
+  // Effective dates for pricing
+  effectiveFrom: date("effective_from"),
+  effectiveTo: date("effective_to"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Compound unique constraint for course + region + pathway combination
+  courseRegionPathwayUnique: unique("course_region_pathway_unique").on(table.courseId, table.regionId, table.pathwayId),
+  // Indexes for efficient lookups
+  courseIdx: index("course_variants_course_idx").on(table.courseId),
+  regionIdx: index("course_variants_region_idx").on(table.regionId),
+  pathwayIdx: index("course_variants_pathway_idx").on(table.pathwayId),
+  courseRegionIdx: index("course_variants_course_region_idx").on(table.courseId, table.regionId),
+}));
+
+// Visa requirements table - region/pathway level visa information
+export const visaRequirements = pgTable("visa_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Region and pathway scope
+  regionId: varchar("region_id").notNull().references(() => regions.id, { onDelete: "cascade" }),
+  pathwayId: varchar("pathway_id").references(() => studentPathways.id, { onDelete: "set null" }), // Null = applies to all pathways in region
+  
+  // Visa details
+  visaType: varchar("visa_type", { length: 100 }), // e.g., 'Student Visa (Subclass 500)'
+  visaName: text("visa_name").notNull(),
+  description: text("description"),
+  
+  // Requirements
+  processingTime: varchar("processing_time", { length: 100 }), // e.g., '4-6 weeks'
+  applicationFee: decimal("application_fee", { precision: 10, scale: 2 }),
+  feeCurrency: varchar("fee_currency", { length: 3 }).default("AUD"),
+  
+  // Documents and conditions
+  requiredDocuments: text("required_documents").array(),
+  financialRequirements: text("financial_requirements"),
+  healthRequirements: text("health_requirements"),
+  englishRequirements: text("english_requirements"),
+  
+  // Work rights
+  workRightsIncluded: boolean("work_rights_included").default(false),
+  workRightsDetails: text("work_rights_details"),
+  
+  // Links and resources
+  officialUrl: text("official_url"),
+  applicationUrl: text("application_url"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  regionPathwayUnique: unique("visa_region_pathway_unique").on(table.regionId, table.pathwayId),
+  regionIdx: index("visa_requirements_region_idx").on(table.regionId),
+}));
+
+// Localized content entity type enum
+export const localizedEntityTypeEnum = pgEnum('localized_entity_type', [
+  'course',
+  'institution',
+  'page',
+  'faq',
+  'blog',
+  'visa_requirement',
+  'testimonial',
+  'ui_string',
+]);
+
+// Localized content table - translations for any entity
+export const localizedContent = pgTable("localized_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Entity reference
+  entityType: localizedEntityTypeEnum("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  
+  // Locale
+  locale: varchar("locale", { length: 10 }).notNull(), // e.g., 'en', 'bn', 'fr'
+  
+  // Translated content (flexible JSON structure)
+  content: jsonb("content").notNull(), // { title: '...', description: '...', requirements: '...' }
+  
+  // Translation status
+  isAutoTranslated: boolean("is_auto_translated").default(false),
+  isReviewed: boolean("is_reviewed").default(false),
+  reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  // Source tracking
+  sourceLocale: varchar("source_locale", { length: 10 }).default("en"),
+  translatedAt: timestamp("translated_at"),
+  translatedBy: varchar("translated_by").references(() => users.id, { onDelete: "set null" }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Compound unique for entity + locale
+  entityLocaleUnique: unique("entity_locale_unique").on(table.entityType, table.entityId, table.locale),
+  // Indexes for lookups
+  entityIdx: index("localized_content_entity_idx").on(table.entityType, table.entityId),
+  localeIdx: index("localized_content_locale_idx").on(table.locale),
+}));
+
+// ============================================
+// REGION SYSTEM INTERFACES
+// ============================================
+
+// Interface for course with region variant data
+export interface CourseWithRegionVariant {
+  course: typeof courses.$inferSelect;
+  variant?: typeof courseRegionVariants.$inferSelect;
+  region?: typeof regions.$inferSelect;
+  pathway?: typeof studentPathways.$inferSelect;
+  visaRequirement?: typeof visaRequirements.$inferSelect;
+  localizedContent?: Record<string, any>;
+}
+
+// Interface for resolved course data (merged base + variant)
+export interface ResolvedCourseData {
+  // Base course fields
+  id: string;
+  title: string;
+  description: string | null;
+  subject: string;
+  discipline: string | null;
+  level: string;
+  duration: string | null;
+  
+  // Region-resolved pricing
+  tuitionFee: string | null;
+  currency: string;
+  applicationFee: string | null;
+  costOfLiving: string | null;
+  scholarshipMin: number | null;
+  scholarshipMax: number | null;
+  
+  // Region-resolved requirements
+  englishRequirements: EnglishRequirementsStructured | null;
+  academicRequirements: string | null;
+  minimumAge: number | null;
+  
+  // Region/visa info
+  regionCode: string;
+  pathwayCode: string | null;
+  visaRequired: boolean;
+  visaInfo: typeof visaRequirements.$inferSelect | null;
+  
+  // Localized content
+  localizedTitle?: string;
+  localizedDescription?: string;
+}
+
 // Student profiles table
 export const studentProfiles = pgTable("student_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2828,4 +3077,126 @@ export interface CrmContactWithRelations extends CrmContact {
     profileImageUrl: string | null;
   } | null;
   sourceLead?: CrmLead | null;
+}
+
+// ============================================
+// GLOBAL REGION SYSTEM SCHEMAS AND TYPES
+// ============================================
+
+// Regions
+export const insertRegionSchema = createInsertSchema(regions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRegionSchema = insertRegionSchema.partial();
+
+export type Region = typeof regions.$inferSelect;
+export type InsertRegion = z.infer<typeof insertRegionSchema>;
+export type UpdateRegion = z.infer<typeof updateRegionSchema>;
+
+// Student Pathways
+export const insertStudentPathwaySchema = createInsertSchema(studentPathways).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StudentPathway = typeof studentPathways.$inferSelect;
+export type InsertStudentPathway = z.infer<typeof insertStudentPathwaySchema>;
+
+// Course Region Variants
+export const insertCourseRegionVariantSchema = createInsertSchema(courseRegionVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateCourseRegionVariantSchema = insertCourseRegionVariantSchema.partial();
+
+export type CourseRegionVariant = typeof courseRegionVariants.$inferSelect;
+export type InsertCourseRegionVariant = z.infer<typeof insertCourseRegionVariantSchema>;
+export type UpdateCourseRegionVariant = z.infer<typeof updateCourseRegionVariantSchema>;
+
+// Visa Requirements
+export const insertVisaRequirementSchema = createInsertSchema(visaRequirements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateVisaRequirementSchema = insertVisaRequirementSchema.partial();
+
+export type VisaRequirement = typeof visaRequirements.$inferSelect;
+export type InsertVisaRequirement = z.infer<typeof insertVisaRequirementSchema>;
+export type UpdateVisaRequirement = z.infer<typeof updateVisaRequirementSchema>;
+
+// Localized Content
+export const insertLocalizedContentSchema = createInsertSchema(localizedContent).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  reviewedAt: true,
+  translatedAt: true,
+});
+
+export const updateLocalizedContentSchema = insertLocalizedContentSchema.partial();
+
+export type LocalizedContent = typeof localizedContent.$inferSelect;
+export type InsertLocalizedContent = z.infer<typeof insertLocalizedContentSchema>;
+export type UpdateLocalizedContent = z.infer<typeof updateLocalizedContentSchema>;
+
+// Region with related data for frontend display
+export interface RegionWithDetails extends Region {
+  pathways?: StudentPathway[];
+  visaRequirements?: VisaRequirement[];
+  courseVariantCount?: number;
+}
+
+// Course variant with full relations
+export interface CourseRegionVariantWithRelations extends CourseRegionVariant {
+  course?: {
+    id: string;
+    title: string;
+    subject: string;
+    level: string | null;
+    universityId: string;
+  };
+  region?: Region;
+  pathway?: StudentPathway;
+  visaRequirement?: VisaRequirement;
+}
+
+// Resolved course data for region-aware display (merges base course with variant overrides)
+export interface ResolvedCourseData {
+  id: string;
+  title: string;
+  description: string | null;
+  subject: string;
+  discipline: string | null;
+  level: string | null;
+  duration: string | null;
+  
+  // Pricing (from variant or base course)
+  tuitionFee: string | null;
+  currency: string;
+  applicationFee: string | null;
+  costOfLiving: string | null;
+  scholarshipMin: number | null;
+  scholarshipMax: number | null;
+  
+  // Requirements (from variant or base course)
+  englishRequirements: Record<string, any> | null;
+  academicRequirements: string | null;
+  minimumAge: number | null;
+  
+  // Region context
+  regionCode: string;
+  pathwayCode: string | null;
+  visaRequired: boolean;
+  visaInfo: VisaRequirement | null;
+  
+  // Localized content overrides
+  localizedTitle?: string;
+  localizedDescription?: string;
 }

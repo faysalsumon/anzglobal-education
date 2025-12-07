@@ -94,6 +94,29 @@ import {
   type ContentSnippet,
   type InsertContentSnippet,
   type UpdateContentSnippet,
+  // Region system imports
+  regions,
+  studentPathways,
+  courseRegionVariants,
+  visaRequirements,
+  localizedContent,
+  type Region,
+  type InsertRegion,
+  type UpdateRegion,
+  type StudentPathway,
+  type InsertStudentPathway,
+  type CourseRegionVariant,
+  type InsertCourseRegionVariant,
+  type UpdateCourseRegionVariant,
+  type VisaRequirement,
+  type InsertVisaRequirement,
+  type UpdateVisaRequirement,
+  type LocalizedContent,
+  type InsertLocalizedContent,
+  type UpdateLocalizedContent,
+  type RegionWithDetails,
+  type CourseRegionVariantWithRelations,
+  type ResolvedCourseData,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
@@ -339,6 +362,60 @@ export interface IStorage {
   createContentSnippet(snippet: InsertContentSnippet): Promise<ContentSnippet>;
   updateContentSnippet(id: string, data: UpdateContentSnippet): Promise<ContentSnippet>;
   deleteContentSnippet(id: string): Promise<void>;
+  
+  // ============================================
+  // GLOBAL REGION SYSTEM OPERATIONS
+  // ============================================
+  
+  // Region operations
+  getRegionById(id: string): Promise<Region | undefined>;
+  getRegionByCode(code: string): Promise<Region | undefined>;
+  getRegionByDomainPattern(domain: string): Promise<Region | undefined>;
+  getAllRegions(activeOnly?: boolean): Promise<Region[]>;
+  getRegionWithDetails(id: string): Promise<RegionWithDetails | undefined>;
+  createRegion(region: InsertRegion): Promise<Region>;
+  updateRegion(id: string, data: UpdateRegion): Promise<Region>;
+  deleteRegion(id: string): Promise<void>;
+  getDefaultRegion(): Promise<Region | undefined>;
+  
+  // Student pathway operations
+  getPathwayById(id: string): Promise<StudentPathway | undefined>;
+  getPathwayByCode(code: string): Promise<StudentPathway | undefined>;
+  getAllPathways(activeOnly?: boolean): Promise<StudentPathway[]>;
+  createPathway(pathway: InsertStudentPathway): Promise<StudentPathway>;
+  updatePathway(id: string, data: Partial<InsertStudentPathway>): Promise<StudentPathway>;
+  deletePathway(id: string): Promise<void>;
+  
+  // Course region variant operations
+  getVariantById(id: string): Promise<CourseRegionVariant | undefined>;
+  getVariantsByCourseId(courseId: string): Promise<CourseRegionVariant[]>;
+  getVariantsByRegionId(regionId: string): Promise<CourseRegionVariant[]>;
+  getVariant(courseId: string, regionId: string, pathwayId?: string): Promise<CourseRegionVariant | undefined>;
+  getVariantWithRelations(courseId: string, regionId: string, pathwayId?: string): Promise<CourseRegionVariantWithRelations | undefined>;
+  createVariant(variant: InsertCourseRegionVariant): Promise<CourseRegionVariant>;
+  updateVariant(id: string, data: UpdateCourseRegionVariant): Promise<CourseRegionVariant>;
+  deleteVariant(id: string): Promise<void>;
+  deleteVariantsByCourseId(courseId: string): Promise<void>;
+  
+  // Visa requirement operations
+  getVisaRequirementById(id: string): Promise<VisaRequirement | undefined>;
+  getVisaRequirementsByRegionId(regionId: string): Promise<VisaRequirement[]>;
+  getVisaRequirement(regionId: string, pathwayId?: string): Promise<VisaRequirement | undefined>;
+  createVisaRequirement(requirement: InsertVisaRequirement): Promise<VisaRequirement>;
+  updateVisaRequirement(id: string, data: UpdateVisaRequirement): Promise<VisaRequirement>;
+  deleteVisaRequirement(id: string): Promise<void>;
+  
+  // Localized content operations
+  getLocalizedContentById(id: string): Promise<LocalizedContent | undefined>;
+  getLocalizedContent(entityType: string, entityId: string, locale: string): Promise<LocalizedContent | undefined>;
+  getLocalizedContentsByEntity(entityType: string, entityId: string): Promise<LocalizedContent[]>;
+  getAllLocalizedContent(filters?: { entityType?: string; locale?: string; isReviewed?: boolean }): Promise<LocalizedContent[]>;
+  createLocalizedContent(content: InsertLocalizedContent): Promise<LocalizedContent>;
+  updateLocalizedContent(id: string, data: UpdateLocalizedContent): Promise<LocalizedContent>;
+  deleteLocalizedContent(id: string): Promise<void>;
+  
+  // Course resolution with region fallback
+  resolveCourseForRegion(courseId: string, regionCode: string, pathwayCode?: string): Promise<ResolvedCourseData | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2106,6 +2183,399 @@ export class DatabaseStorage implements IStorage {
 
   async deleteContentSnippet(id: string): Promise<void> {
     await db.delete(contentSnippets).where(eq(contentSnippets.id, id));
+  }
+
+  // ============================================
+  // GLOBAL REGION SYSTEM IMPLEMENTATIONS
+  // ============================================
+
+  // Region operations
+  async getRegionById(id: string): Promise<Region | undefined> {
+    const [region] = await db.select().from(regions).where(eq(regions.id, id));
+    return region;
+  }
+
+  async getRegionByCode(code: string): Promise<Region | undefined> {
+    const [region] = await db.select().from(regions).where(eq(regions.code, code.toUpperCase()));
+    return region;
+  }
+
+  async getRegionByDomainPattern(domain: string): Promise<Region | undefined> {
+    // Match domain against patterns like '.com.au', '.com.bd'
+    const allRegions = await db.select().from(regions).where(eq(regions.isActive, true));
+    
+    for (const region of allRegions) {
+      if (region.domainPattern && domain.endsWith(region.domainPattern)) {
+        return region;
+      }
+      if (region.primaryDomain && domain.includes(region.primaryDomain)) {
+        return region;
+      }
+    }
+    
+    // Return default region if no match
+    return this.getDefaultRegion();
+  }
+
+  async getAllRegions(activeOnly: boolean = false): Promise<Region[]> {
+    if (activeOnly) {
+      return await db.select().from(regions)
+        .where(eq(regions.isActive, true))
+        .orderBy(regions.displayOrder);
+    }
+    return await db.select().from(regions).orderBy(regions.displayOrder);
+  }
+
+  async getRegionWithDetails(id: string): Promise<RegionWithDetails | undefined> {
+    const region = await this.getRegionById(id);
+    if (!region) return undefined;
+
+    const pathways = await this.getAllPathways(true);
+    const visaReqs = await this.getVisaRequirementsByRegionId(id);
+    
+    // Count course variants for this region
+    const variants = await db.select().from(courseRegionVariants)
+      .where(eq(courseRegionVariants.regionId, id));
+
+    return {
+      ...region,
+      pathways,
+      visaRequirements: visaReqs,
+      courseVariantCount: variants.length,
+    };
+  }
+
+  async createRegion(regionData: InsertRegion): Promise<Region> {
+    const [region] = await db.insert(regions).values({
+      ...regionData,
+      code: regionData.code.toUpperCase(),
+    }).returning();
+    return region;
+  }
+
+  async updateRegion(id: string, data: UpdateRegion): Promise<Region> {
+    const updateData = { ...data, updatedAt: new Date() };
+    if (data.code) {
+      updateData.code = data.code.toUpperCase();
+    }
+    const [region] = await db.update(regions)
+      .set(updateData)
+      .where(eq(regions.id, id))
+      .returning();
+    return region;
+  }
+
+  async deleteRegion(id: string): Promise<void> {
+    await db.delete(regions).where(eq(regions.id, id));
+  }
+
+  async getDefaultRegion(): Promise<Region | undefined> {
+    const [region] = await db.select().from(regions)
+      .where(and(eq(regions.isDefault, true), eq(regions.isActive, true)));
+    return region;
+  }
+
+  // Student pathway operations
+  async getPathwayById(id: string): Promise<StudentPathway | undefined> {
+    const [pathway] = await db.select().from(studentPathways).where(eq(studentPathways.id, id));
+    return pathway;
+  }
+
+  async getPathwayByCode(code: string): Promise<StudentPathway | undefined> {
+    const [pathway] = await db.select().from(studentPathways)
+      .where(eq(studentPathways.code, code.toLowerCase()));
+    return pathway;
+  }
+
+  async getAllPathways(activeOnly: boolean = false): Promise<StudentPathway[]> {
+    if (activeOnly) {
+      return await db.select().from(studentPathways)
+        .where(eq(studentPathways.isActive, true))
+        .orderBy(studentPathways.displayOrder);
+    }
+    return await db.select().from(studentPathways).orderBy(studentPathways.displayOrder);
+  }
+
+  async createPathway(pathwayData: InsertStudentPathway): Promise<StudentPathway> {
+    const [pathway] = await db.insert(studentPathways).values({
+      ...pathwayData,
+      code: pathwayData.code.toLowerCase(),
+    }).returning();
+    return pathway;
+  }
+
+  async updatePathway(id: string, data: Partial<InsertStudentPathway>): Promise<StudentPathway> {
+    const updateData: any = { ...data };
+    if (data.code) {
+      updateData.code = data.code.toLowerCase();
+    }
+    const [pathway] = await db.update(studentPathways)
+      .set(updateData)
+      .where(eq(studentPathways.id, id))
+      .returning();
+    return pathway;
+  }
+
+  async deletePathway(id: string): Promise<void> {
+    await db.delete(studentPathways).where(eq(studentPathways.id, id));
+  }
+
+  // Course region variant operations
+  async getVariantById(id: string): Promise<CourseRegionVariant | undefined> {
+    const [variant] = await db.select().from(courseRegionVariants)
+      .where(eq(courseRegionVariants.id, id));
+    return variant;
+  }
+
+  async getVariantsByCourseId(courseId: string): Promise<CourseRegionVariant[]> {
+    return await db.select().from(courseRegionVariants)
+      .where(eq(courseRegionVariants.courseId, courseId));
+  }
+
+  async getVariantsByRegionId(regionId: string): Promise<CourseRegionVariant[]> {
+    return await db.select().from(courseRegionVariants)
+      .where(eq(courseRegionVariants.regionId, regionId));
+  }
+
+  async getVariant(courseId: string, regionId: string, pathwayId?: string): Promise<CourseRegionVariant | undefined> {
+    // Try to find exact match first (with pathway)
+    if (pathwayId) {
+      const [exactMatch] = await db.select().from(courseRegionVariants)
+        .where(and(
+          eq(courseRegionVariants.courseId, courseId),
+          eq(courseRegionVariants.regionId, regionId),
+          eq(courseRegionVariants.pathwayId, pathwayId)
+        ));
+      if (exactMatch) return exactMatch;
+    }
+
+    // Fall back to region-only variant (pathway = null, applies to all)
+    const [regionOnlyMatch] = await db.select().from(courseRegionVariants)
+      .where(and(
+        eq(courseRegionVariants.courseId, courseId),
+        eq(courseRegionVariants.regionId, regionId),
+        isNull(courseRegionVariants.pathwayId)
+      ));
+    
+    return regionOnlyMatch;
+  }
+
+  async getVariantWithRelations(courseId: string, regionId: string, pathwayId?: string): Promise<CourseRegionVariantWithRelations | undefined> {
+    const variant = await this.getVariant(courseId, regionId, pathwayId);
+    if (!variant) return undefined;
+
+    const course = await this.getCourseById(courseId);
+    const region = await this.getRegionById(regionId);
+    const pathway = variant.pathwayId ? await this.getPathwayById(variant.pathwayId) : undefined;
+    const visaReq = variant.visaRequirementId ? await this.getVisaRequirementById(variant.visaRequirementId) : undefined;
+
+    return {
+      ...variant,
+      course: course ? {
+        id: course.id,
+        title: course.title,
+        subject: course.subject,
+        level: course.level,
+        universityId: course.universityId,
+      } : undefined,
+      region,
+      pathway,
+      visaRequirement: visaReq,
+    };
+  }
+
+  async createVariant(variantData: InsertCourseRegionVariant): Promise<CourseRegionVariant> {
+    const [variant] = await db.insert(courseRegionVariants).values(variantData).returning();
+    return variant;
+  }
+
+  async updateVariant(id: string, data: UpdateCourseRegionVariant): Promise<CourseRegionVariant> {
+    const [variant] = await db.update(courseRegionVariants)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courseRegionVariants.id, id))
+      .returning();
+    return variant;
+  }
+
+  async deleteVariant(id: string): Promise<void> {
+    await db.delete(courseRegionVariants).where(eq(courseRegionVariants.id, id));
+  }
+
+  async deleteVariantsByCourseId(courseId: string): Promise<void> {
+    await db.delete(courseRegionVariants).where(eq(courseRegionVariants.courseId, courseId));
+  }
+
+  // Visa requirement operations
+  async getVisaRequirementById(id: string): Promise<VisaRequirement | undefined> {
+    const [requirement] = await db.select().from(visaRequirements)
+      .where(eq(visaRequirements.id, id));
+    return requirement;
+  }
+
+  async getVisaRequirementsByRegionId(regionId: string): Promise<VisaRequirement[]> {
+    return await db.select().from(visaRequirements)
+      .where(eq(visaRequirements.regionId, regionId));
+  }
+
+  async getVisaRequirement(regionId: string, pathwayId?: string): Promise<VisaRequirement | undefined> {
+    // Try exact match first
+    if (pathwayId) {
+      const [exactMatch] = await db.select().from(visaRequirements)
+        .where(and(
+          eq(visaRequirements.regionId, regionId),
+          eq(visaRequirements.pathwayId, pathwayId)
+        ));
+      if (exactMatch) return exactMatch;
+    }
+
+    // Fall back to region-level requirement
+    const [regionMatch] = await db.select().from(visaRequirements)
+      .where(and(
+        eq(visaRequirements.regionId, regionId),
+        isNull(visaRequirements.pathwayId)
+      ));
+    
+    return regionMatch;
+  }
+
+  async createVisaRequirement(requirementData: InsertVisaRequirement): Promise<VisaRequirement> {
+    const [requirement] = await db.insert(visaRequirements).values(requirementData).returning();
+    return requirement;
+  }
+
+  async updateVisaRequirement(id: string, data: UpdateVisaRequirement): Promise<VisaRequirement> {
+    const [requirement] = await db.update(visaRequirements)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(visaRequirements.id, id))
+      .returning();
+    return requirement;
+  }
+
+  async deleteVisaRequirement(id: string): Promise<void> {
+    await db.delete(visaRequirements).where(eq(visaRequirements.id, id));
+  }
+
+  // Localized content operations
+  async getLocalizedContentById(id: string): Promise<LocalizedContent | undefined> {
+    const [content] = await db.select().from(localizedContent)
+      .where(eq(localizedContent.id, id));
+    return content;
+  }
+
+  async getLocalizedContent(entityType: string, entityId: string, locale: string): Promise<LocalizedContent | undefined> {
+    const [content] = await db.select().from(localizedContent)
+      .where(and(
+        eq(localizedContent.entityType, entityType as any),
+        eq(localizedContent.entityId, entityId),
+        eq(localizedContent.locale, locale)
+      ));
+    return content;
+  }
+
+  async getLocalizedContentsByEntity(entityType: string, entityId: string): Promise<LocalizedContent[]> {
+    return await db.select().from(localizedContent)
+      .where(and(
+        eq(localizedContent.entityType, entityType as any),
+        eq(localizedContent.entityId, entityId)
+      ));
+  }
+
+  async getAllLocalizedContent(filters?: { entityType?: string; locale?: string; isReviewed?: boolean }): Promise<LocalizedContent[]> {
+    const conditions = [];
+    
+    if (filters?.entityType) {
+      conditions.push(eq(localizedContent.entityType, filters.entityType as any));
+    }
+    if (filters?.locale) {
+      conditions.push(eq(localizedContent.locale, filters.locale));
+    }
+    if (filters?.isReviewed !== undefined) {
+      conditions.push(eq(localizedContent.isReviewed, filters.isReviewed));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(localizedContent).where(and(...conditions));
+    }
+    return await db.select().from(localizedContent);
+  }
+
+  async createLocalizedContent(contentData: InsertLocalizedContent): Promise<LocalizedContent> {
+    const [content] = await db.insert(localizedContent).values(contentData).returning();
+    return content;
+  }
+
+  async updateLocalizedContent(id: string, data: UpdateLocalizedContent): Promise<LocalizedContent> {
+    const [content] = await db.update(localizedContent)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(localizedContent.id, id))
+      .returning();
+    return content;
+  }
+
+  async deleteLocalizedContent(id: string): Promise<void> {
+    await db.delete(localizedContent).where(eq(localizedContent.id, id));
+  }
+
+  // Course resolution with region fallback
+  async resolveCourseForRegion(courseId: string, regionCode: string, pathwayCode?: string): Promise<ResolvedCourseData | undefined> {
+    // Get base course
+    const course = await this.getCourseById(courseId);
+    if (!course) return undefined;
+
+    // Get region
+    const region = await this.getRegionByCode(regionCode);
+    if (!region) return undefined;
+
+    // Get pathway if provided
+    const pathway = pathwayCode ? await this.getPathwayByCode(pathwayCode) : undefined;
+
+    // Get variant with fallback logic:
+    // 1. Try exact match (course + region + pathway)
+    // 2. Try region-only match (course + region, pathway = null)
+    // 3. Fall back to base course data
+    const variant = await this.getVariant(courseId, region.id, pathway?.id);
+
+    // Get visa requirement
+    const visaReq = variant?.visaRequirementId 
+      ? await this.getVisaRequirementById(variant.visaRequirementId)
+      : await this.getVisaRequirement(region.id, pathway?.id);
+
+    // Get localized content for course
+    const localized = await this.getLocalizedContent('course', courseId, region.defaultLocale || 'en');
+
+    // Merge base course with variant overrides
+    return {
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      subject: course.subject,
+      discipline: course.discipline,
+      level: course.level,
+      duration: course.duration,
+      
+      // Pricing: prefer variant, fall back to base course
+      tuitionFee: variant?.tuitionFee?.toString() || course.fees?.toString() || null,
+      currency: variant?.tuitionCurrency || region.defaultCurrency || 'AUD',
+      applicationFee: variant?.applicationFee?.toString() || course.applicationFees?.toString() || null,
+      costOfLiving: variant?.costOfLiving?.toString() || course.costOfLiving?.toString() || null,
+      scholarshipMin: variant?.scholarshipMin ?? course.scholarshipPercentageMin ?? null,
+      scholarshipMax: variant?.scholarshipMax ?? course.scholarshipPercentageMax ?? null,
+      
+      // Requirements: prefer variant, fall back to base course
+      englishRequirements: variant?.englishRequirements || course.englishRequirementsStructured || null,
+      academicRequirements: variant?.academicRequirements || course.academicRequirements || null,
+      minimumAge: variant?.minimumAge ?? course.minimumAge ?? null,
+      
+      // Region info
+      regionCode: region.code,
+      pathwayCode: pathway?.code || null,
+      visaRequired: pathway?.requiresVisa || false,
+      visaInfo: visaReq || null,
+      
+      // Localized content
+      localizedTitle: (localized?.content as any)?.title,
+      localizedDescription: (localized?.content as any)?.description,
+    };
   }
 }
 

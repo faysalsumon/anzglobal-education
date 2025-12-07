@@ -9160,6 +9160,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.use('/api/crm', isAuthenticated, crmRouter.default);
   console.log('CRM routes registered for leads and contacts management');
 
+  // Register region management routes for global scalability
+  const { registerRegionRoutes } = await import('./region-routes');
+  registerRegionRoutes(app);
+  console.log('Region management routes registered for global scalability');
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering
