@@ -368,6 +368,12 @@ export function ApplicationCard({ application, course, university, consultant }:
               )}
             </CardTitle>
             <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
+              <Avatar className="h-5 w-5 border">
+                <AvatarImage src={university?.logo || undefined} alt={university?.name} />
+                <AvatarFallback className="text-[10px] bg-muted">
+                  {university?.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
               <span>{university?.name || "University"}</span>
               <span className="text-muted-foreground/50">•</span>
               <span className="font-mono text-xs">ID: {application.id.slice(0, 8).toUpperCase()}</span>
