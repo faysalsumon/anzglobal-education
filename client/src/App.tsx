@@ -49,6 +49,7 @@ import AdminProfile from "@/pages/admin-profile";
 import AdminCSVImport from "@/pages/admin-csv-import";
 import ScrapingJobDetail from "@/pages/scraping-job-detail";
 import ScrapingReviewDashboard from "@/pages/scraping-review-dashboard";
+import AdminApplicationDetail from "@/pages/admin-application-detail";
 import ChatPage from "@/pages/chat";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
@@ -94,6 +95,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/admin/csv-import" component={AdminCSVImport} />
       <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
       <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
+      <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
       <Route path="/university/profile" component={UniversityProfile} />
       <Route path="/university/dashboard" component={Home} />
       <Route path="/university/institutions" component={UniversityInstitutions} />

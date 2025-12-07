@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -437,6 +438,7 @@ function DraggableApplicationCard({
 export function AdminApplicationsKanban() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [consultantFilter, setConsultantFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -1052,8 +1054,7 @@ export function AdminApplicationsKanban() {
                     selectedApplications.has(app.application.id) ? 'ring-2 ring-primary ring-offset-1' : ''
                   } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : ''}`}
                   onClick={() => {
-                    setSelectedApplication(app);
-                    setDetailsDialogOpen(true);
+                    setLocation(`/admin/applications/${app.application.id}`);
                   }}
                   data-testid={`card-application-${app.application.id}`}
                 >
@@ -1138,8 +1139,7 @@ export function AdminApplicationsKanban() {
                             variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedApplication(app);
-                              setDetailsDialogOpen(true);
+                              setLocation(`/admin/applications/${app.application.id}`);
                             }}
                             data-testid={`button-view-${app.application.id}`}
                           >
@@ -1202,8 +1202,7 @@ export function AdminApplicationsKanban() {
                                         isSelected={selectedApplications.has(app.application.id)}
                                         onToggleSelection={() => toggleSelection(app.application.id)}
                                         onViewDetails={() => {
-                                          setSelectedApplication(app);
-                                          setDetailsDialogOpen(true);
+                                          setLocation(`/admin/applications/${app.application.id}`);
                                         }}
                                         onAdvanceStage={() => {
                                           const next = getNextStage(stage);
@@ -1265,8 +1264,7 @@ export function AdminApplicationsKanban() {
                                         isSelected={selectedApplications.has(app.application.id)}
                                         onToggleSelection={() => toggleSelection(app.application.id)}
                                         onViewDetails={() => {
-                                          setSelectedApplication(app);
-                                          setDetailsDialogOpen(true);
+                                          setLocation(`/admin/applications/${app.application.id}`);
                                         }}
                                         onAdvanceStage={() => {}}
                                         nextStage={null}
