@@ -338,6 +338,90 @@ export function StudentDashboard() {
         </CardContent>
       </Card>
 
+      {/* My Applications Section - Moved to top after Quick Actions */}
+      <Card className="border-2 shadow-lg overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-secondary" />
+        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-4 md:pb-6">
+          <div className="flex items-start sm:items-center justify-between gap-3 md:gap-4 flex-col sm:flex-row">
+            <div className="flex items-center gap-2.5 md:gap-3">
+              <div className="p-2.5 md:p-3 bg-primary/10 rounded-xl shrink-0">
+                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-xl md:text-2xl">My Applications</CardTitle>
+                <CardDescription className="text-sm md:text-base">Track your course applications and their status</CardDescription>
+              </div>
+            </div>
+            {applications.length > 0 && (
+              <Button variant="outline" size="default" asChild data-testid="button-view-all-applications" className="border-2 min-h-[44px] w-full sm:w-auto">
+                <Link href="/student/applications">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4 md:pt-6">
+          {applications.length === 0 ? (
+            <div className="text-center py-12 md:py-16 bg-gradient-to-br from-muted/20 to-transparent rounded-xl md:rounded-2xl border-2 border-dashed px-4">
+              <div className="p-4 md:p-5 bg-primary/10 rounded-xl md:rounded-2xl w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 md:mb-6 flex items-center justify-center">
+                <FileText className="h-10 w-10 md:h-12 md:w-12 text-primary" />
+              </div>
+              <h3 className="font-bold text-lg md:text-xl mb-2 md:mb-3">No applications yet</h3>
+              <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8 max-w-md mx-auto">
+                Start browsing courses and submit your first application to begin your academic journey
+              </p>
+              <Button asChild size="lg" data-testid="button-browse-courses-empty" className="shadow-lg min-h-12">
+                <Link href="/student/courses">
+                  <Search className="mr-2 h-5 w-5" />
+                  Browse Courses
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3 md:space-y-4">
+              {applications.slice(0, 5).map((application, index) => (
+                <Card key={application.id} className="p-4 md:p-5 border-2 transition-transform duration-300 hover:-translate-y-1" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <div className="flex items-center justify-between gap-3 md:gap-4 flex-col sm:flex-row">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <p className="font-bold text-base md:text-lg mb-1.5 md:mb-2" data-testid={`application-${application.id}`}>
+                        Application #{application.id.slice(0, 8)}
+                      </p>
+                      <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                        Submitted {new Date(application.createdAt!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <Badge 
+                      variant={
+                        application.status === "accepted" ? "default" :
+                        application.status === "rejected" ? "destructive" :
+                        "secondary"
+                      }
+                      data-testid={`status-${application.id}`}
+                      className="capitalize px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-bold w-full sm:w-auto text-center"
+                    >
+                      {application.status}
+                    </Badge>
+                  </div>
+                </Card>
+              ))}
+              {applications.length > 5 && (
+                <div className="text-center pt-3 md:pt-4">
+                  <Button variant="outline" asChild data-testid="button-view-more-applications" className="border-2 min-h-[44px]">
+                    <Link href="/student/applications">
+                      View {applications.length - 5} More Applications
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Referral Program with Enhanced Design */}
       {profile && referralData && (
         <Card className="border-2 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent shadow-xl overflow-hidden relative">
@@ -483,90 +567,6 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
-
-      {/* Application Status with Enhanced Design */}
-      <Card className="border-2 shadow-lg overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-secondary" />
-        <CardHeader className="bg-gradient-to-br from-muted/30 to-transparent pb-4 md:pb-6">
-          <div className="flex items-start sm:items-center justify-between gap-3 md:gap-4 flex-col sm:flex-row">
-            <div className="flex items-center gap-2.5 md:gap-3">
-              <div className="p-2.5 md:p-3 bg-primary/10 rounded-xl shrink-0">
-                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-xl md:text-2xl">My Applications</CardTitle>
-                <CardDescription className="text-sm md:text-base">Track your course applications and their status</CardDescription>
-              </div>
-            </div>
-            {applications.length > 0 && (
-              <Button variant="outline" size="default" asChild data-testid="button-view-all-applications" className="border-2 min-h-[44px] w-full sm:w-auto">
-                <Link href="/student/applications">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4 md:pt-6">
-          {applications.length === 0 ? (
-            <div className="text-center py-12 md:py-16 bg-gradient-to-br from-muted/20 to-transparent rounded-xl md:rounded-2xl border-2 border-dashed px-4">
-              <div className="p-4 md:p-5 bg-primary/10 rounded-xl md:rounded-2xl w-20 h-20 md:w-24 md:h-24 mx-auto mb-5 md:mb-6 flex items-center justify-center">
-                <FileText className="h-10 w-10 md:h-12 md:w-12 text-primary" />
-              </div>
-              <h3 className="font-bold text-lg md:text-xl mb-2 md:mb-3">No applications yet</h3>
-              <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8 max-w-md mx-auto">
-                Start browsing courses and submit your first application to begin your academic journey
-              </p>
-              <Button asChild size="lg" data-testid="button-browse-courses-empty" className="shadow-lg min-h-12">
-                <Link href="/student/courses">
-                  <Search className="mr-2 h-5 w-5" />
-                  Browse Courses
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3 md:space-y-4">
-              {applications.slice(0, 5).map((application, index) => (
-                <Card key={application.id} className="p-4 md:p-5 border-2 transition-transform duration-300 hover:-translate-y-1" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <div className="flex items-center justify-between gap-3 md:gap-4 flex-col sm:flex-row">
-                    <div className="flex-1 w-full sm:w-auto">
-                      <p className="font-bold text-base md:text-lg mb-1.5 md:mb-2" data-testid={`application-${application.id}`}>
-                        Application #{application.id.slice(0, 8)}
-                      </p>
-                      <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                        Submitted {new Date(application.createdAt!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <Badge 
-                      variant={
-                        application.status === "accepted" ? "default" :
-                        application.status === "rejected" ? "destructive" :
-                        "secondary"
-                      }
-                      data-testid={`status-${application.id}`}
-                      className="capitalize px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-bold w-full sm:w-auto text-center"
-                    >
-                      {application.status}
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-              {applications.length > 5 && (
-                <div className="text-center pt-3 md:pt-4">
-                  <Button variant="outline" asChild data-testid="button-view-more-applications" className="border-2 min-h-[44px]">
-                    <Link href="/student/applications">
-                      View {applications.length - 5} More Applications
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
