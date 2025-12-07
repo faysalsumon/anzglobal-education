@@ -36,6 +36,7 @@ import {
   AlertTriangle, Plus, Calendar, UserCheck, ExternalLink, Send, Layers
 } from "lucide-react";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
+import { StudentApplicationNotes } from "@/components/student-application-notes";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationStage, STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
 
@@ -326,7 +327,7 @@ export function ApplicationDetailsPanel({
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="details" className="flex items-center gap-1" data-testid="tab-details">
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Details</span>
@@ -338,9 +339,13 @@ export function ApplicationDetailsPanel({
               <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">{documents.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="notes" className="flex items-center gap-1" data-testid="tab-notes">
+          <TabsTrigger value="messages" className="flex items-center gap-1" data-testid="tab-messages">
             <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Notes</span>
+            <span className="hidden sm:inline">Messages</span>
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="flex items-center gap-1" data-testid="tab-notes">
+            <User className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Internal</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-1" data-testid="tab-history">
             <History className="h-3.5 w-3.5" />
@@ -656,7 +661,19 @@ export function ApplicationDetailsPanel({
           </ScrollArea>
         </TabsContent>
 
+        <TabsContent value="messages" className="mt-4">
+          <StudentApplicationNotes
+            applicationId={application.id}
+            studentName={`${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student'}
+          />
+        </TabsContent>
+
         <TabsContent value="notes" className="mt-4">
+          <div className="space-y-2 mb-4">
+            <p className="text-sm text-muted-foreground">
+              Internal notes are only visible to team members. Use "Messages" tab to communicate with the student.
+            </p>
+          </div>
           <ApplicationInternalNotes
             applicationId={application.id}
             currentUserId={currentUserId}

@@ -15,8 +15,14 @@ import {
   Calendar,
   Clock,
   Bell,
-  ChevronRight
+  Mail,
+  Phone,
+  Globe,
+  DollarSign,
+  FileCheck,
+  MessageSquare
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
@@ -54,35 +60,42 @@ interface AdminApplicationDetail {
   course: {
     id: string;
     title: string;
+    universityId?: string;
     level: string | null;
-    duration?: string | null;
-    fees?: string | null;
+    duration: string | null;
+    fees: string | null;
+    country: string | null;
+    subject?: string | null;
   };
   university: {
     id: string;
     name: string;
     country: string | null;
-    logo?: string | null;
+    logo: string | null;
   };
   student: {
     id: string;
+    oddsId?: string;
     firstName: string | null;
     lastName: string | null;
     email: string | null;
-    profilePicture?: string | null;
-    nationality?: string | null;
-    phone?: string | null;
+    profilePicture: string | null;
+    nationality: string | null;
+    phone: string | null;
+    userId: string | null;
   };
   consultant: {
     id: string;
     firstName: string | null;
     lastName: string | null;
-    email?: string | null;
+    email: string | null;
   } | null;
   documentProgress: {
     requiredDocs: number;
     requiredUploaded: number;
     totalDocs: number;
+    uploadedDocs?: number;
+    verifiedDocs?: number;
   };
 }
 
@@ -160,8 +173,11 @@ function AdminApplicationDetailContent() {
     ? Math.round((documentProgress.requiredUploaded / documentProgress.requiredDocs) * 100)
     : 0;
 
+  const studentInitials = `${student.firstName?.charAt(0) || ''}${student.lastName?.charAt(0) || ''}`.toUpperCase();
+
   return (
     <div className="space-y-6">
+      {/* Header with back button, student name, course, and status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" asChild data-testid="button-back">
@@ -171,11 +187,11 @@ function AdminApplicationDetailContent() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground" data-testid="text-student-name">
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-header-student-name">
               {student.firstName} {student.lastName}
             </h1>
-            <p className="text-muted-foreground flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <GraduationCap className="h-3 w-3" />
               {course.title}
             </p>
           </div>
@@ -196,68 +212,167 @@ function AdminApplicationDetailContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Student and Course Info Cards */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Student Info Card */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">University</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Student Information
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold truncate" data-testid="text-university-name">
-              {university.name}
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={student.profilePicture || undefined} alt={`${student.firstName} ${student.lastName}`} />
+                <AvatarFallback className="text-lg">{studentInitials || 'ST'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-xl font-semibold" data-testid="text-student-name">
+                  {student.firstName} {student.lastName}
+                </h2>
+                {student.nationality && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    {student.nationality}
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">{university.country}</p>
+            <div className="grid gap-2 pt-2 border-t">
+              {student.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${student.email}`} className="text-primary hover:underline" data-testid="link-student-email">
+                    {student.email}
+                  </a>
+                </div>
+              )}
+              {student.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${student.phone}`} className="hover:underline" data-testid="text-student-phone">
+                    {student.phone}
+                  </a>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                Applied: {format(new Date(application.createdAt), 'MMM d, yyyy')}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Course Info Card */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assigned Consultant</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Course Details
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold truncate" data-testid="text-consultant-name">
-              {consultant ? `${consultant.firstName} ${consultant.lastName}` : "Unassigned"}
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-4">
+              {university.logo ? (
+                <Avatar className="h-16 w-16 rounded-md">
+                  <AvatarImage src={university.logo} alt={university.name} className="object-contain" />
+                  <AvatarFallback className="rounded-md">{university.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold" data-testid="text-course-title">{course.title}</h3>
+                <p className="text-sm text-muted-foreground" data-testid="text-university-name">{university.name}</p>
+                {course.level && (
+                  <Badge variant="secondary" className="mt-1">{course.level}</Badge>
+                )}
+              </div>
             </div>
-            {consultant?.email && (
-              <p className="text-xs text-muted-foreground truncate">{consultant.email}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Document Progress</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold" data-testid="text-doc-progress">
-              {progress}%
+            <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div>
+                <p className="text-xs text-muted-foreground">Duration</p>
+                <p className="text-sm font-medium flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {course.duration ?? 'Not specified'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tuition Fees</p>
+                <p className="text-sm font-medium flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  {course.fees != null ? (typeof course.fees === 'number' ? `$${course.fees.toLocaleString()}` : course.fees) : 'Not specified'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Country</p>
+                <p className="text-sm font-medium flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  {course.country || university.country || 'Not specified'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Consultant</p>
+                <p className="text-sm font-medium flex items-center gap-1" data-testid="text-consultant-name">
+                  <User className="h-3 w-3" />
+                  {consultant ? `${consultant.firstName} ${consultant.lastName}` : 'Unassigned'}
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {documentProgress.requiredUploaded}/{documentProgress.requiredDocs} required docs
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Applied Date</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold" data-testid="text-applied-date">
-              {format(new Date(application.createdAt), 'MMM d, yyyy')}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Updated: {format(new Date(application.updatedAt), 'MMM d')}
-            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Document Progress Card */}
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileCheck className="h-5 w-5" />
+            Document Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex justify-between text-sm mb-1">
+                <span>Required Documents</span>
+                <span className="font-medium">{progress}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all" 
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-center px-4 border-l">
+              <p className="text-2xl font-bold" data-testid="text-doc-uploaded">{documentProgress.requiredUploaded}</p>
+              <p className="text-xs text-muted-foreground">of {documentProgress.requiredDocs} required</p>
+            </div>
+            <div className="text-center px-4 border-l">
+              <p className="text-2xl font-bold">{documentProgress.totalDocs}</p>
+              <p className="text-xs text-muted-foreground">total docs</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Application Details Panel with all features */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Application Management
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Process application, manage documents, and communicate with the student
+          </p>
+        </CardHeader>
+        <CardContent>
           <ApplicationDetailsPanel
             application={application as any}
             course={course}

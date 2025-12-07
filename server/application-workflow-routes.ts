@@ -491,8 +491,22 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       res.json({
         application: appData.application,
-        course: appData.course || { id: '', title: 'Unknown Course', level: null },
-        university: appData.university || { id: '', name: 'Unknown University', country: null },
+        course: appData.course ? {
+          id: appData.course.id,
+          title: appData.course.title,
+          universityId: appData.course.universityId,
+          level: appData.course.level,
+          duration: appData.course.duration,
+          fees: appData.course.fees,
+          country: appData.course.country,
+          subject: appData.course.subject,
+        } : { id: '', title: 'Unknown Course', level: null, duration: null, fees: null, country: null, subject: null },
+        university: appData.university ? {
+          id: appData.university.id,
+          name: appData.university.name,
+          logo: appData.university.logo,
+          country: appData.university.country,
+        } : { id: '', name: 'Unknown University', country: null, logo: null },
         student: {
           id: appData.student?.id || '',
           firstName: appData.student?.firstName || null,
@@ -501,6 +515,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           profilePicture: appData.student?.profileImageUrl || null,
           nationality: appData.student?.nationality || null,
           phone: appData.student?.phone || null,
+          userId: appData.student?.userId || null,
         },
         consultant: appData.consultant ? {
           id: appData.consultant.id,
