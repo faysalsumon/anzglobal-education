@@ -1130,14 +1130,20 @@ export class DatabaseStorage implements IStorage {
       return await db
         .select()
         .from(documents)
-        .where(isNull(documents.folderId))
+        .where(and(
+          isNull(documents.folderId),
+          eq(documents.isActive, true)
+        ))
         .orderBy(desc(documents.createdAt));
     }
     
     return await db
       .select()
       .from(documents)
-      .where(eq(documents.folderId, folderId))
+      .where(and(
+        eq(documents.folderId, folderId),
+        eq(documents.isActive, true)
+      ))
       .orderBy(desc(documents.createdAt));
   }
 
@@ -1145,13 +1151,16 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(documents)
-      .where(eq(documents.applicationId, applicationId));
+      .where(and(
+        eq(documents.applicationId, applicationId),
+        eq(documents.isActive, true)
+      ));
   }
 
   async getAllDocuments(filters?: { status?: string; type?: string; senderId?: string; recipientId?: string }): Promise<Document[]> {
     let query = db.select().from(documents);
     
-    const conditions = [];
+    const conditions = [eq(documents.isActive, true)];
     if (filters?.status) {
       conditions.push(eq(documents.status, filters.status));
     }
@@ -1165,9 +1174,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(documents.recipientId, filters.recipientId));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
+    query = query.where(and(...conditions)) as any;
     
     return await query.orderBy(desc(documents.createdAt));
   }
