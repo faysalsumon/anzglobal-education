@@ -427,6 +427,95 @@ export function registerApplicationWorkflowRoutes(app: Express) {
     }
   });
 
+  // Get single application by ID (admin view)
+  app.get("/api/admin/applications/:id", isAuthenticated, async (req, res) => {
+    try {
+      const adminAccess = await checkAdminAccess(req);
+      if (!adminAccess) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id: applicationId } = req.params;
+
+      // Get application with related data
+      const result = await db
+        .select({
+          application: applications,
+          course: courses,
+          university: universities,
+          student: studentProfiles,
+          consultant: users,
+        })
+        .from(applications)
+        .leftJoin(courses, eq(applications.courseId, courses.id))
+        .leftJoin(universities, eq(courses.universityId, universities.id))
+        .leftJoin(studentProfiles, eq(applications.studentId, studentProfiles.id))
+        .leftJoin(users, eq(applications.assignedConsultantId, users.id))
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
+      const appData = result[0];
+
+      // Get student user email
+      let studentEmail: string | null = null;
+      if (appData.student?.userId) {
+        const studentUser = await db.query.users.findFirst({
+          where: eq(users.id, appData.student.userId),
+        });
+        studentEmail = studentUser?.email || null;
+      }
+
+      // Get document progress for this application
+      const docStats = await db
+        .select({
+          totalDocs: sql<number>`count(*)::int`,
+          uploadedDocs: sql<number>`count(case when ${applicationStageDocuments.documentUrl} is not null then 1 end)::int`,
+          verifiedDocs: sql<number>`count(case when ${applicationStageDocuments.isVerified} = true then 1 end)::int`,
+          requiredDocs: sql<number>`count(case when ${applicationStageDocuments.isRequired} = true then 1 end)::int`,
+          requiredUploaded: sql<number>`count(case when ${applicationStageDocuments.isRequired} = true and ${applicationStageDocuments.documentUrl} is not null then 1 end)::int`,
+        })
+        .from(applicationStageDocuments)
+        .where(eq(applicationStageDocuments.applicationId, applicationId));
+
+      const documentProgress = docStats[0] || {
+        totalDocs: 0,
+        uploadedDocs: 0,
+        verifiedDocs: 0,
+        requiredDocs: 0,
+        requiredUploaded: 0,
+      };
+
+      res.json({
+        application: appData.application,
+        course: appData.course || { id: '', title: 'Unknown Course', level: null },
+        university: appData.university || { id: '', name: 'Unknown University', country: null },
+        student: {
+          id: appData.student?.id || '',
+          firstName: appData.student?.firstName || null,
+          lastName: appData.student?.lastName || null,
+          email: studentEmail,
+          profilePicture: appData.student?.profileImageUrl || null,
+          nationality: appData.student?.nationality || null,
+          phone: appData.student?.phone || null,
+        },
+        consultant: appData.consultant ? {
+          id: appData.consultant.id,
+          firstName: appData.consultant.firstName,
+          lastName: appData.consultant.lastName,
+          email: appData.consultant.email,
+        } : null,
+        documentProgress,
+      });
+    } catch (error: any) {
+      console.error("Error fetching admin application:", error);
+      res.status(500).json({ error: "Failed to fetch application" });
+    }
+  });
+
   // Assign applications to consultant
   app.post("/api/admin/applications/assign", isAuthenticated, async (req, res) => {
     try {
