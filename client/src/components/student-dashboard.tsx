@@ -7,7 +7,13 @@ import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, Gi
 import { Link } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { StudentProfile, Application } from "@shared/schema";
+import type { StudentProfile, Application, Course, University } from "@shared/schema";
+
+interface EnrichedApplication {
+  application: Application;
+  course: Course | null;
+  university: University | null;
+}
 
 interface ReferralStats {
   totalReferrals: number;
@@ -30,11 +36,12 @@ export function StudentDashboard() {
     queryKey: ["/api/student/profile"],
   });
 
-  const { data: applicationsData } = useQuery<{ applications: { application: Application }[] }>({
+  const { data: applicationsData } = useQuery<{ applications: EnrichedApplication[] }>({
     queryKey: ["/api/student/applications"],
   });
   
-  const applications = applicationsData?.applications?.map(a => a.application) || [];
+  const enrichedApplications = applicationsData?.applications || [];
+  const applications = enrichedApplications.map(a => a.application);
 
   const { data: referralStats } = useQuery<ReferralStats>({
     queryKey: ["/api/student/referral/stats"],
@@ -381,16 +388,20 @@ export function StudentDashboard() {
             </div>
           ) : (
             <div className="space-y-3 md:space-y-4">
-              {applications.slice(0, 5).map((application, index) => (
+              {enrichedApplications.slice(0, 5).map(({ application, course, university }, index) => (
                 <Card key={application.id} className="p-4 md:p-5 border-2 transition-transform duration-300 hover:-translate-y-1" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="flex items-center justify-between gap-3 md:gap-4 flex-col sm:flex-row">
                     <div className="flex-1 w-full sm:w-auto">
-                      <p className="font-bold text-base md:text-lg mb-1.5 md:mb-2" data-testid={`application-${application.id}`}>
-                        Application #{application.id.slice(0, 8)}
+                      <p className="font-bold text-base md:text-lg mb-1" data-testid={`application-${application.id}`}>
+                        {course?.title || `Application #${application.id.slice(0, 8)}`}
                       </p>
-                      <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                        Submitted {new Date(application.createdAt!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      <p className="text-sm text-muted-foreground mb-1.5 md:mb-2 flex items-center gap-2">
+                        <GraduationCap className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
+                        {university?.name || "Unknown Institution"}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 flex items-center gap-2">
+                        <FileText className="h-3 w-3 md:h-3.5 md:w-3.5 shrink-0" />
+                        ID: {application.id.slice(0, 8).toUpperCase()} • Submitted {new Date(application.createdAt!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>
                     <Badge 
