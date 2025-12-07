@@ -367,8 +367,10 @@ export function ApplicationCard({ application, course, university, consultant }:
                 <span className="truncate">Course Application</span>
               )}
             </CardTitle>
-            <CardDescription className="mt-1">
-              {university?.name || "University"}
+            <CardDescription className="mt-1 flex items-center gap-2 flex-wrap">
+              <span>{university?.name || "University"}</span>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="font-mono text-xs">ID: {application.id.slice(0, 8).toUpperCase()}</span>
             </CardDescription>
           </div>
           <Badge
