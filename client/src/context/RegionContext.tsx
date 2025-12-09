@@ -7,7 +7,9 @@ export interface PublicRegion {
   flagEmoji?: string;
   flagUrl?: string;
   defaultCurrency: string;
+  currencySymbol?: string;
   defaultLocale: string;
+  supportedLocales?: string[];
   timezone?: string;
 }
 

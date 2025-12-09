@@ -9,6 +9,7 @@ import { ChatWidget } from "@/components/chat-widget";
 import { Footer } from "@/components/footer";
 import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
+import { RegionProvider } from "@/context/RegionContext";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
@@ -216,8 +217,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent />
-        <Toaster />
+        <RegionProvider>
+          <AppContent />
+          <Toaster />
+        </RegionProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

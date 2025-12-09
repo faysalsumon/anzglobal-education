@@ -12,6 +12,7 @@ import {
   updateLocalizedContentSchema,
 } from "@shared/schema";
 import { getRegionContext } from "./middleware/region-detection";
+import { seedRegions } from "./seed-regions";
 
 export function registerRegionRoutes(router: Router) {
   // ============================================
@@ -26,6 +27,24 @@ export function registerRegionRoutes(router: Router) {
     } catch (error: any) {
       console.error("Error fetching regions:", error);
       res.status(500).json({ message: "Failed to fetch regions" });
+    }
+  });
+
+  // Seed endpoint - must be registered BEFORE /:id route to avoid matching "seed" as an id
+  router.post("/api/admin/regions/seed", async (req: Request, res: Response) => {
+    try {
+      await seedRegions();
+      const regions = await storage.getAllRegions();
+      const pathways = await storage.getAllPathways();
+      res.json({ 
+        success: true, 
+        message: "Regions and pathways seeded successfully",
+        regions: regions.length,
+        pathways: pathways.length,
+      });
+    } catch (error: any) {
+      console.error("Error seeding regions:", error);
+      res.status(500).json({ message: "Failed to seed regions", error: error.message });
     }
   });
 

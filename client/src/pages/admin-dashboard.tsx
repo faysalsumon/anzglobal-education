@@ -54,6 +54,7 @@ import { CrmLeadsPanel } from "@/components/crm-leads-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
+import { AdminRegionsPanel } from "@/components/admin-regions-panel";
 
 interface User {
   id: string;
@@ -2165,6 +2166,11 @@ export default function AdminDashboard() {
         {/* Affiliates Tab */}
         {activeTab === "affiliates" && (
           <AdminAffiliatesPanel />
+        )}
+
+        {/* Regions Tab */}
+        {activeTab === "regions" && (
+          <AdminRegionsPanel />
         )}
 
         {/* Activity Logs Tab */}
