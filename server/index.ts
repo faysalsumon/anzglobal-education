@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware } from "./middleware/region-detection";
+import { csrfErrorHandler } from "./middleware/csrf";
 
 const app = express();
 
@@ -11,6 +13,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+app.use(cookieParser());
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -19,6 +22,34 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 app.use(regionDetectionMiddleware);
+
+const SENSITIVE_FIELDS = [
+  "password", "token", "secret", "apiKey", "api_key", "accessToken", "access_token",
+  "refreshToken", "refresh_token", "authorization", "cookie", "session",
+  "email", "phone", "address", "ssn", "creditCard", "credit_card",
+  "documentUrl", "document_url", "profileImageUrl", "profile_image_url"
+];
+
+function sanitizeLogData(data: any, depth = 0): any {
+  if (depth > 3 || data === null || data === undefined) return "[truncated]";
+  if (typeof data !== "object") return typeof data === "string" && data.length > 50 ? "[string]" : data;
+  if (Array.isArray(data)) return `[array:${data.length}]`;
+  
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_FIELDS.some(field => lowerKey.includes(field.toLowerCase()))) {
+      sanitized[key] = "[redacted]";
+    } else if (typeof value === "object" && value !== null) {
+      sanitized[key] = "[object]";
+    } else if (typeof value === "string" && value.length > 100) {
+      sanitized[key] = "[long_string]";
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -35,12 +66,14 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      
+      if (capturedJsonResponse && res.statusCode >= 400) {
+        const sanitized = sanitizeLogData(capturedJsonResponse);
+        logLine += ` :: ${JSON.stringify(sanitized)}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 120) {
+        logLine = logLine.slice(0, 119) + "…";
       }
 
       log(logLine);
@@ -58,6 +91,8 @@ app.use((req, res, next) => {
     console.error('[Pinecone] Failed to initialize index:', error);
     console.error('[Pinecone] Chat agent will not function until index is ready');
   });
+
+  app.use(csrfErrorHandler);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

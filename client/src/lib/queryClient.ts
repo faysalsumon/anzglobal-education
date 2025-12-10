@@ -1,7 +1,15 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getCsrfToken, clearCsrfToken } from "@/hooks/useCsrf";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    if (res.status === 403) {
+      const text = await res.text();
+      if (text.includes("CSRF")) {
+        clearCsrfToken();
+      }
+      throw new Error(`${res.status}: ${text || res.statusText}`);
+    }
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
@@ -13,10 +21,26 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const isFormData = data instanceof FormData;
+  const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase());
+  
+  const headers: Record<string, string> = {};
+  
+  if (!isFormData && data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (isMutating) {
+    try {
+      const csrfToken = await getCsrfToken();
+      headers["X-CSRF-Token"] = csrfToken;
+    } catch (error) {
+      console.warn("Failed to get CSRF token, proceeding without it");
+    }
+  }
   
   const res = await fetch(url, {
     method,
-    headers: isFormData ? {} : (data ? { "Content-Type": "application/json" } : {}),
+    headers,
     body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
     credentials: "include",
   });

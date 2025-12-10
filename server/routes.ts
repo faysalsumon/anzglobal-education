@@ -110,6 +110,7 @@ import {
 import { sendContactInquiryEmails } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
+import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
 
 // Environment-aware rate limiting for AI extraction endpoint
 // DEV: 30/hr, PREVIEW: 15/hr, PROD: 5/hr
@@ -310,6 +311,40 @@ const csvUpload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // CSRF token endpoint - must be after setupAuth for session access
+  app.get("/api/csrf-token", csrfTokenEndpoint);
+
+  // CSRF protection for all API mutating routes (POST, PUT, PATCH, DELETE)
+  // Applied after auth so session is available for token generation
+  app.use('/api', (req, res, next) => {
+    const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+    if (safeMethods.includes(req.method)) {
+      return next();
+    }
+    // Skip CSRF for public endpoints and auth flows that don't require prior auth
+    const publicEndpoints = [
+      '/api/public/',
+      '/api/contact/inquiry',
+      '/api/chat/message',
+      '/api/login',
+      '/api/register',
+      '/api/callback',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/callback',
+      '/api/auth/logout',
+      '/api/student/login',
+      '/api/student/register',
+      '/api/university/login',
+      '/api/university/register',
+    ];
+    const fullPath = req.originalUrl.split('?')[0];
+    if (publicEndpoints.some(ep => fullPath.startsWith(ep))) {
+      return next();
+    }
+    return doubleCsrfProtection(req, res, next);
+  });
 
   // Serve uploaded files from the public directory
   app.use('/students', express.static(path.join(process.cwd(), 'public', 'students')));
