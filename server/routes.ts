@@ -101,6 +101,7 @@ import {
   generateUniversitiesSampleCSV,
   generateCoursesSampleCSV,
 } from "./csvImportUtils";
+import { setupSupabaseAuth } from "./supabase-auth-routes";
 import {
   notifyNewApplication,
   notifyApplicationStatusChange,
@@ -338,6 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/student/register',
       '/api/university/login',
       '/api/university/register',
+      '/api/supabase-auth/',
     ];
     const fullPath = req.originalUrl.split('?')[0];
     if (publicEndpoints.some(ep => fullPath.startsWith(ep))) {
@@ -9199,6 +9201,9 @@ Sitemap: ${baseUrl}/sitemap.xml
   const { registerRegionRoutes } = await import('./region-routes');
   registerRegionRoutes(app);
   console.log('Region management routes registered for global scalability');
+
+  // Register Supabase authentication routes
+  setupSupabaseAuth(app);
 
   // ========== Activity Logs API ==========
   
