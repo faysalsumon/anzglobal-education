@@ -10,6 +10,7 @@ import { Footer } from "@/components/footer";
 import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
 import { RegionProvider } from "@/context/RegionContext";
+import { SupabaseAuthProvider } from "@/lib/supabase-auth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
@@ -55,6 +56,7 @@ import ChatPage from "@/pages/chat";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import AffiliatePage from "@/pages/affiliate";
+import ResetPasswordPage from "@/pages/reset-password";
 
 interface RouterProps {
   user: any;
@@ -86,6 +88,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/affiliate" component={AffiliatePage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
@@ -217,10 +220,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <RegionProvider>
-          <AppContent />
-          <Toaster />
-        </RegionProvider>
+        <SupabaseAuthProvider>
+          <RegionProvider>
+            <AppContent />
+            <Toaster />
+          </RegionProvider>
+        </SupabaseAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

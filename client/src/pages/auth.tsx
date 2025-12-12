@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink } from "lucide-react";
+import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2 } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
-type AuthView = "main" | "more-options" | "email" | "user-type";
+type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password";
 type UserType = "student" | "institution" | null;
 
 export default function AuthPage() {
@@ -21,8 +22,10 @@ export default function AuthPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { signIn, signUp, resetPassword, isConfigured } = useSupabaseAuth();
 
   const handleStudentLogin = () => {
     window.location.href = "/api/student/login";
@@ -43,12 +46,115 @@ export default function AuthPage() {
     });
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Email Authentication Coming Soon",
-      description: "Email/password login will be available in a future update. For now, please use Google or Replit authentication.",
-    });
+    
+    if (!isConfigured) {
+      toast({
+        title: "Not Available",
+        description: "Email authentication is not configured. Please use Google sign-in instead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (isSignup) {
+        if (!firstName || !lastName) {
+          toast({
+            title: "Error",
+            description: "Please enter your first and last name.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const { error } = await signUp(email, password, {
+          firstName,
+          lastName,
+          userType: userType || "student",
+        });
+
+        if (error) {
+          toast({
+            title: "Signup Failed",
+            description: error.message || "Failed to create account.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Check Your Email",
+            description: "We've sent you a verification link. Please check your email to complete signup.",
+          });
+          setView("main");
+        }
+      } else {
+        const { error } = await signIn(email, password);
+
+        if (error) {
+          toast({
+            title: "Login Failed",
+            description: error.message || "Invalid email or password.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: "Successfully signed in.",
+          });
+          setLocation("/dashboard");
+        }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await resetPassword(email);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send reset email.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email Sent",
+          description: "Check your inbox for password reset instructions.",
+        });
+        setView("email");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleUserTypeSelect = (type: "student" | "institution") => {
@@ -71,6 +177,8 @@ export default function AuthPage() {
       setView("main");
     } else if (view === "user-type") {
       setView("main");
+    } else if (view === "forgot-password") {
+      setView("email");
     }
   };
 
@@ -244,12 +352,6 @@ export default function AuthPage() {
                   </p>
                 </div>
 
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-amber-800 dark:text-amber-200">
-                    Email/password authentication is coming soon. For now, please use Google sign-in for the best experience.
-                  </p>
-                </div>
-
                 <form onSubmit={handleEmailSubmit} className="space-y-4">
                   {isSignup && (
                     <div className="grid grid-cols-2 gap-4">
@@ -261,6 +363,7 @@ export default function AuthPage() {
                           placeholder="John"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
+                          disabled={isLoading}
                           data-testid="input-firstname"
                         />
                       </div>
@@ -272,6 +375,7 @@ export default function AuthPage() {
                           placeholder="Doe"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
+                          disabled={isLoading}
                           data-testid="input-lastname"
                         />
                       </div>
@@ -286,6 +390,7 @@ export default function AuthPage() {
                       placeholder="your.email@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
                       data-testid="input-email"
                     />
                   </div>
@@ -295,9 +400,10 @@ export default function AuthPage() {
                     <Input 
                       id="password"
                       type="password"
-                      placeholder={isSignup ? "Create a password" : "Enter your password"}
+                      placeholder={isSignup ? "Create a password (min. 6 characters)" : "Enter your password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
                       data-testid="input-password"
                     />
                   </div>
@@ -306,6 +412,7 @@ export default function AuthPage() {
                     <div className="flex justify-end">
                       <button 
                         type="button"
+                        onClick={() => setView("forgot-password")}
                         className="text-sm text-primary hover:underline"
                         data-testid="link-forgot-password"
                       >
@@ -317,9 +424,17 @@ export default function AuthPage() {
                   <Button 
                     type="submit" 
                     className="w-full h-12"
+                    disabled={isLoading}
                     data-testid="button-submit-email"
                   >
-                    {isSignup ? "Create Account" : "Sign In"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {isSignup ? "Creating Account..." : "Signing In..."}
+                      </>
+                    ) : (
+                      isSignup ? "Create Account" : "Sign In"
+                    )}
                   </Button>
                 </form>
 
@@ -355,6 +470,61 @@ export default function AuthPage() {
                     <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
                     <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
                   </p>
+                </div>
+              </>
+            )}
+
+            {view === "forgot-password" && (
+              <>
+                <div className="space-y-2 mb-8">
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                    Reset your password
+                  </h1>
+                  <p className="text-muted-foreground">
+                    Enter your email and we'll send you a link to reset your password
+                  </p>
+                </div>
+
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email Address</Label>
+                    <Input 
+                      id="reset-email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
+                      data-testid="input-reset-email"
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12"
+                    disabled={isLoading}
+                    data-testid="button-send-reset"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <button 
+                    type="button"
+                    onClick={() => setView("email")}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                    data-testid="button-back-to-signin"
+                  >
+                    Back to sign in
+                  </button>
                 </div>
               </>
             )}
