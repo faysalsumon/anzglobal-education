@@ -183,6 +183,73 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
   }
 });
 
+// Resend verification email for unverified users
+router.post('/resend-verification', async (req: Request, res: Response) => {
+  try {
+    if (!supabase) {
+      return res.status(503).json({ error: 'Supabase is not configured' });
+    }
+
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Use Supabase's resend confirmation email feature
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+
+    if (error) {
+      // Handle case where user doesn't exist or is already verified
+      if (error.message.includes('already confirmed')) {
+        return res.status(400).json({ 
+          error: 'Email already verified',
+          code: 'EMAIL_ALREADY_VERIFIED',
+          suggestion: 'You can sign in with your email and password.'
+        });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ message: 'Verification email sent. Please check your inbox.' });
+  } catch (err) {
+    console.error('[Supabase Auth] Resend verification error:', err);
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
+// Check if email exists (for better UX on signup)
+router.post('/check-email', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Check local database first
+    const existingUser = await storage.getUserByEmail(email);
+    
+    if (existingUser) {
+      return res.json({ 
+        exists: true, 
+        verified: existingUser.emailVerified || false,
+        message: existingUser.emailVerified 
+          ? 'This email is already registered. Please sign in or reset your password.'
+          : 'This email is registered but not verified. Please check your inbox or resend verification.'
+      });
+    }
+
+    res.json({ exists: false });
+  } catch (err) {
+    console.error('[Supabase Auth] Check email error:', err);
+    res.status(500).json({ error: 'Failed to check email' });
+  }
+});
+
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
     if (!supabase) {

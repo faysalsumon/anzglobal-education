@@ -12,6 +12,7 @@ interface SupabaseAuthContextType {
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
+  resendVerification: (email: string) => Promise<{ error: AuthError | null }>;
   setupTOTP: () => Promise<{ qr: string; secret: string } | { error: AuthError }>;
   verifyTOTP: (code: string, factorId: string) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (provider: "google" | "github" | "facebook") => Promise<{ error: AuthError | null }>;
@@ -92,6 +93,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }, []);
 
+  const resendVerification = useCallback(async (email: string) => {
+    if (!supabase) return { error: notConfiguredError };
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
+    return { error };
+  }, []);
+
   const updatePassword = useCallback(async (newPassword: string) => {
     if (!supabase) return { error: notConfiguredError };
     const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -145,6 +155,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
+    resendVerification,
     setupTOTP,
     verifyTOTP,
     signInWithOAuth,

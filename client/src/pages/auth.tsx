@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2 } from "lucide-react";
+import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password";
+type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password" | "email-exists";
 type UserType = "student" | "institution" | null;
 
 export default function AuthPage() {
@@ -23,9 +24,11 @@ export default function AuthPage() {
   const [lastName, setLastName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailExistsError, setEmailExistsError] = useState<{ verified: boolean; email: string } | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { signIn, signUp, resetPassword, isConfigured } = useSupabaseAuth();
+  const { signIn, signUp, resetPassword, resendVerification, isConfigured } = useSupabaseAuth();
 
   const handleStudentLogin = () => {
     window.location.href = "/api/student/login";
@@ -68,6 +71,7 @@ export default function AuthPage() {
     }
 
     setIsLoading(true);
+    setEmailExistsError(null);
 
     try {
       if (isSignup) {
@@ -88,11 +92,48 @@ export default function AuthPage() {
         });
 
         if (error) {
-          toast({
-            title: "Signup Failed",
-            description: error.message || "Failed to create account.",
-            variant: "destructive",
-          });
+          // Check both message and any nested error description (Supabase sometimes puts details there)
+          const errorMsg = error.message?.toLowerCase() || "";
+          const errorDetails = (error as any).error_description?.toLowerCase() || 
+                              (error as any).__isAuthError ? JSON.stringify(error).toLowerCase() : "";
+          const errorCode = (error as any).code?.toLowerCase() || "";
+          // Normalize underscores to spaces for consistent matching
+          const fullError = `${errorMsg} ${errorDetails} ${errorCode}`.replace(/_/g, " ");
+          
+          // Check for rate limiting (security delay) - this happens when trying to signup with existing email
+          // Also check HTTP status for 400/429 which indicates rate limit or duplicate
+          const status = (error as any).status;
+          const isRateLimitOrDuplicate = status === 400 || status === 429;
+          
+          if (fullError.includes("security purposes") || 
+              fullError.includes("rate limit") ||
+              fullError.includes("too many requests") ||
+              fullError.includes("only request this after") ||
+              fullError.includes("signups not allowed") ||
+              (isRateLimitOrDuplicate && fullError.includes("signup"))) {
+            // Supabase rate limits signup for existing emails - show email exists view
+            setEmailExistsError({ verified: false, email });
+            setView("email-exists");
+          }
+          // Check for duplicate email errors
+          else if (fullError.includes("already registered") || 
+              fullError.includes("user already exists") ||
+              fullError.includes("email already") ||
+              fullError.includes("already been registered")) {
+            // Show the email exists view with options
+            setEmailExistsError({ verified: true, email });
+            setView("email-exists");
+          } else if (fullError.includes("confirm") || fullError.includes("verify")) {
+            // Unverified user trying to sign up again
+            setEmailExistsError({ verified: false, email });
+            setView("email-exists");
+          } else {
+            toast({
+              title: "Signup Failed",
+              description: error.message || "Failed to create account.",
+              variant: "destructive",
+            });
+          }
         } else {
           toast({
             title: "Check Your Email",
@@ -104,11 +145,19 @@ export default function AuthPage() {
         const { error } = await signIn(email, password);
 
         if (error) {
-          toast({
-            title: "Login Failed",
-            description: error.message || "Invalid email or password.",
-            variant: "destructive",
-          });
+          const errorMsg = error.message?.toLowerCase() || "";
+          
+          // Check if email is not confirmed
+          if (errorMsg.includes("email not confirmed") || errorMsg.includes("not verified")) {
+            setEmailExistsError({ verified: false, email });
+            setView("email-exists");
+          } else {
+            toast({
+              title: "Login Failed",
+              description: error.message || "Invalid email or password.",
+              variant: "destructive",
+            });
+          }
         } else {
           toast({
             title: "Welcome back!",
@@ -119,6 +168,30 @@ export default function AuthPage() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!emailExistsError?.email) return;
+    
+    setIsResending(true);
+    try {
+      const { error } = await resendVerification(emailExistsError.email);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to resend verification email.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Verification Email Sent",
+          description: "Please check your inbox for the verification link.",
+        });
+      }
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -178,6 +251,9 @@ export default function AuthPage() {
     } else if (view === "user-type") {
       setView("main");
     } else if (view === "forgot-password") {
+      setView("email");
+    } else if (view === "email-exists") {
+      setEmailExistsError(null);
       setView("email");
     }
   };
@@ -584,6 +660,121 @@ export default function AuthPage() {
                     <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
                     <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
                   </p>
+                </div>
+              </>
+            )}
+
+            {view === "email-exists" && emailExistsError && (
+              <>
+                <div className="space-y-2 mb-6">
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                    {emailExistsError.verified ? "Email Already Registered" : "Email Not Verified"}
+                  </h1>
+                  <p className="text-muted-foreground">
+                    {emailExistsError.verified 
+                      ? "This email is already associated with an account." 
+                      : "Your account exists but the email hasn't been verified yet."}
+                  </p>
+                </div>
+
+                <Alert className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <span className="font-medium">{emailExistsError.email}</span> is already in our system.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-3">
+                  {emailExistsError.verified ? (
+                    <>
+                      <Button 
+                        className="w-full h-12 gap-2"
+                        onClick={() => {
+                          setIsSignup(false);
+                          setView("email");
+                        }}
+                        data-testid="button-go-to-signin"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Sign In Instead
+                      </Button>
+
+                      <Button 
+                        variant="outline"
+                        className="w-full h-12 gap-2"
+                        onClick={() => setView("forgot-password")}
+                        data-testid="button-go-to-reset"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                        Reset Password
+                      </Button>
+
+                      <p className="text-sm text-muted-foreground text-center mt-4">
+                        Forgot your password? Use the reset password option above to regain access to your account.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        className="w-full h-12 gap-2"
+                        onClick={handleResendVerification}
+                        disabled={isResending}
+                        data-testid="button-resend-verification"
+                      >
+                        {isResending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4" />
+                            Resend Verification Email
+                          </>
+                        )}
+                      </Button>
+
+                      <Button 
+                        variant="outline"
+                        className="w-full h-12 gap-2"
+                        onClick={() => {
+                          setIsSignup(false);
+                          setView("email");
+                        }}
+                        data-testid="button-try-signin"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Try Signing In
+                      </Button>
+
+                      <div className="bg-muted/50 rounded-lg p-4 mt-4">
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Tips:</strong>
+                        </p>
+                        <ul className="text-sm text-muted-foreground list-disc list-inside mt-2 space-y-1">
+                          <li>Check your spam or junk folder</li>
+                          <li>Make sure you're checking the correct email inbox</li>
+                          <li>The link expires after 24 hours</li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-6 text-center">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setEmailExistsError(null);
+                      setIsSignup(true);
+                      setEmail("");
+                      setView("email");
+                    }}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                    data-testid="button-try-different-email"
+                  >
+                    Use a different email address
+                  </button>
                 </div>
               </>
             )}
