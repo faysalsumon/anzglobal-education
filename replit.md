@@ -18,7 +18,9 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
 - **Backend**: Node.js Express.js in TypeScript.
-- **Authentication**: OpenID Connect (OIDC) via Replit Auth and Passport.js, with PostgreSQL session storage.
+- **Authentication**: Dual authentication system:
+  - **Supabase Auth** (primary): Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
+  - **Replit Auth** (legacy): OpenID Connect via Passport.js with PostgreSQL session storage. Will be deprecated once Supabase migration is complete.
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat.
 - **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
@@ -57,7 +59,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Student Application Portal**: Utilizes an 11-stage workflow (Assessment to Visa-Lodgment/Outcome) with dedicated database tables and a Student Portal UI.
 
 ## External Dependencies
-- **Authentication Service**: Replit Auth.
+- **Authentication Service**: Supabase Auth (primary) with Replit Auth (legacy, pending removal).
 - **AI Service**: OpenAI API (GPT-4o, GPT-4o-mini).
 - **Vector Database**: Pinecone.
 - **Database**: PostgreSQL (Neon).
