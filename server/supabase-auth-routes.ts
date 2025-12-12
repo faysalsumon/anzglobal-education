@@ -484,6 +484,51 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
   }
 });
 
+// Sync user from Supabase to local database (called after email confirmation)
+router.post('/sync-user', async (req: Request, res: Response) => {
+  try {
+    const { supabaseId, email, firstName, lastName, userType, emailVerified } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Check if user already exists in local database
+    let existingUser = await storage.getUserByEmail(email);
+
+    if (existingUser) {
+      // Update existing user's verification status
+      if (emailVerified && !existingUser.emailVerified) {
+        await storage.updateUser(existingUser.id, { emailVerified: true });
+      }
+      return res.json({ 
+        message: 'User already exists', 
+        user: { ...existingUser, emailVerified: emailVerified || existingUser.emailVerified }
+      });
+    }
+
+    // Create new user in local database
+    const newUser = await storage.createUser({
+      email,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      userType: userType || 'student',
+      emailVerified: emailVerified || false,
+      isActive: true,
+    });
+
+    console.log(`[Supabase Auth] Synced user ${email} to local database`);
+
+    res.status(201).json({ 
+      message: 'User synced successfully', 
+      user: newUser 
+    });
+  } catch (err) {
+    console.error('[Supabase Auth] Sync user error:', err);
+    res.status(500).json({ error: 'Failed to sync user' });
+  }
+});
+
 router.get('/status', (req: Request, res: Response) => {
   res.json({
     configured: isSupabaseConfigured(),

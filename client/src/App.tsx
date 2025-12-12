@@ -57,6 +57,7 @@ import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import AffiliatePage from "@/pages/affiliate";
 import ResetPasswordPage from "@/pages/reset-password";
+import AuthCallback from "@/pages/auth-callback";
 
 interface RouterProps {
   user: any;
