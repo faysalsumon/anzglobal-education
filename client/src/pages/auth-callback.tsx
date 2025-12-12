@@ -50,14 +50,15 @@ export default function AuthCallback() {
           }
 
           if (data.session?.user) {
-            await syncUserToDatabase(data.session.user);
-            setUserType(data.session.user.user_metadata?.user_type || "student");
+            const sessionUser = data.session.user;
+            await syncUserToDatabase(sessionUser);
+            setUserType(sessionUser.user_metadata?.user_type || "student");
             setStatus("success");
             
             queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
             
             setTimeout(() => {
-              redirectToDashboard(data.session.user.user_metadata?.user_type);
+              redirectToDashboard(sessionUser.user_metadata?.user_type);
             }, 1500);
             return;
           }
@@ -104,7 +105,7 @@ export default function AuthCallback() {
 
     async function syncUserToDatabase(supabaseUser: any) {
       try {
-        await apiRequest("POST", "/api/auth/sync-user", {
+        await apiRequest("POST", "/api/supabase-auth/sync-user", {
           supabaseId: supabaseUser.id,
           email: supabaseUser.email,
           firstName: supabaseUser.user_metadata?.first_name,

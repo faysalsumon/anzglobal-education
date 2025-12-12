@@ -90,6 +90,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/affiliate" component={AffiliatePage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/auth/callback" component={AuthCallback} />
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
@@ -131,7 +132,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/login', '/admin/login', '/institution/login'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/login', '/admin/login', '/institution/login', '/reset-password'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
