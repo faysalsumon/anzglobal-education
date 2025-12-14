@@ -163,7 +163,7 @@ export default function AuthPage() {
             title: "Welcome back!",
             description: "Successfully signed in.",
           });
-          setLocation("/dashboard");
+          setLocation("/student/dashboard");
         }
       }
     } finally {

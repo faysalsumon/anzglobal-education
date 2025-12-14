@@ -54,8 +54,8 @@ export default function Login() {
       // Small delay to ensure cache invalidation completes
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Redirect to dashboard after login
-      setLocation("/dashboard");
+      // Redirect to student dashboard after login
+      setLocation("/student/dashboard");
     } catch (error: any) {
       toast({
         title: "Login failed",
