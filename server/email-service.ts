@@ -9,8 +9,8 @@ if (!apiKey) {
 const resend = apiKey ? new Resend(apiKey) : null;
 
 // Email configuration
-const FROM_EMAIL = 'onboarding@resend.dev'; // Use Resend's default sender for testing
-const ADMIN_EMAIL = 'admin@anzglobaleducation.com'; // Change this to your actual admin email
+const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobal.com.au>';
+const ADMIN_EMAIL = 'admin@anzglobal.com.au';
 
 interface ContactInquiryEmailData {
   inquiryType: 'student' | 'institution';
@@ -549,5 +549,325 @@ export async function sendDocumentRequestNotification(data: ApplicationEmailData
     console.log(`Document request email sent to ${data.studentEmail} for application ${data.applicationId}`);
   } catch (error: any) {
     console.error('Error sending document request email:', error.message);
+  }
+}
+
+// ============================================
+// NEW TRANSACTIONAL EMAIL TEMPLATES
+// ============================================
+
+interface WelcomeEmailData {
+  email: string;
+  firstName: string;
+  userType: 'student' | 'institution' | 'admin';
+}
+
+interface ProfileReminderEmailData {
+  email: string;
+  firstName: string;
+  profileCompletion: number;
+  missingFields: string[];
+}
+
+interface ApplicationSubmittedEmailData {
+  email: string;
+  studentName: string;
+  courseTitle: string;
+  institutionName: string;
+  applicationId: string;
+  submittedDate: string;
+}
+
+// Welcome email HTML template
+function getWelcomeEmailHtml(data: WelcomeEmailData): string {
+  const userTypeMessages = {
+    student: {
+      title: 'Welcome to Your Study Journey!',
+      description: 'Your account has been verified and you\'re ready to explore thousands of courses from top universities worldwide.',
+      cta: 'Start Exploring Courses',
+      ctaUrl: 'https://anzglobal.com.au/courses'
+    },
+    institution: {
+      title: 'Welcome to ANZ Global Education!',
+      description: 'Your institution account is now active. Start connecting with international students and showcase your programs.',
+      cta: 'Access Your Dashboard',
+      ctaUrl: 'https://anzglobal.com.au/university/dashboard'
+    },
+    admin: {
+      title: 'Welcome to ANZ Global Education!',
+      description: 'Your admin account has been activated.',
+      cta: 'Go to Admin Dashboard',
+      ctaUrl: 'https://anzglobal.com.au/admin/dashboard'
+    }
+  };
+
+  const msg = userTypeMessages[data.userType] || userTypeMessages.student;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Welcome to ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">${msg.title}</h2>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Hi ${data.firstName},
+                  </p>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    ${msg.description}
+                  </p>
+                  ${data.userType === 'student' ? `
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
+                    <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                      <li>Complete your profile to get personalized recommendations</li>
+                      <li>Browse courses from top Australian universities</li>
+                      <li>Save your favorite courses to compare later</li>
+                      <li>Start your application when you're ready</li>
+                    </ul>
+                  </div>
+                  ` : ''}
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="${msg.ctaUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">${msg.cta}</a>
+                  </div>
+                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+                    Need help? Our support team is here for you at support@anzglobal.com.au
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #888888; font-size: 12px; margin: 0;">
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Profile completion reminder email HTML template
+function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
+  const missingFieldsList = data.missingFields.map(field => `<li>${field}</li>`).join('');
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Complete Your Profile - ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Complete Your Profile</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Your Profile is ${data.profileCompletion}% Complete</h2>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Hi ${data.firstName},
+                  </p>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    A complete profile helps universities understand your background better and increases your chances of a successful application.
+                  </p>
+                  <div style="background-color: #fff3cd; border-left: 4px solid #FF5000; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #FF5000; margin: 0 0 15px 0; font-size: 18px;">Missing Information:</h3>
+                    <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                      ${missingFieldsList}
+                    </ul>
+                  </div>
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="https://anzglobal.com.au/student/profile" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
+                  </div>
+                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+                    Having a complete profile makes your applications stand out and helps us match you with the right courses.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #888888; font-size: 12px; margin: 0;">
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Application submitted confirmation email HTML template
+function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Application Submitted - ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Submitted!</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Congratulations on taking this step</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Great News, ${data.studentName}!</h2>
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Your application has been successfully submitted and is now being reviewed.
+                  </p>
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Application Details:</h3>
+                    <table cellpadding="8" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #666666; font-size: 14px;"><strong>Application ID:</strong></td>
+                        <td style="color: #333333; font-size: 14px;">${data.applicationId}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666666; font-size: 14px;"><strong>Course:</strong></td>
+                        <td style="color: #333333; font-size: 14px;">${data.courseTitle}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666666; font-size: 14px;"><strong>Institution:</strong></td>
+                        <td style="color: #333333; font-size: 14px;">${data.institutionName}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #666666; font-size: 14px;"><strong>Submitted:</strong></td>
+                        <td style="color: #333333; font-size: 14px;">${data.submittedDate}</td>
+                      </tr>
+                    </table>
+                  </div>
+                  <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #28a745; margin: 0 0 15px 0; font-size: 18px;">What Happens Next?</h3>
+                    <ol style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                      <li>Our team will review your application</li>
+                      <li>You may receive requests for additional documents</li>
+                      <li>The institution will assess your application</li>
+                      <li>You'll receive updates at each stage via email</li>
+                    </ol>
+                  </div>
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #888888; font-size: 12px; margin: 0;">
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Send welcome email to new users
+export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping welcome email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `Welcome to ANZ Global Education, ${data.firstName}!`,
+      html: getWelcomeEmailHtml(data),
+    });
+
+    console.log(`Welcome email sent to ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending welcome email:', error.message);
+  }
+}
+
+// Send profile completion reminder email
+export async function sendProfileReminderEmail(data: ProfileReminderEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping profile reminder email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `Complete Your Profile - ${data.profileCompletion}% Done`,
+      html: getProfileReminderEmailHtml(data),
+    });
+
+    console.log(`Profile reminder email sent to ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending profile reminder email:', error.message);
+  }
+}
+
+// Send application submitted confirmation email
+export async function sendApplicationSubmittedEmail(data: ApplicationSubmittedEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping application submitted email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `Application Submitted: ${data.courseTitle} at ${data.institutionName}`,
+      html: getApplicationSubmittedEmailHtml(data),
+    });
+
+    console.log(`Application submitted email sent to ${data.email} for application ${data.applicationId}`);
+  } catch (error: any) {
+    console.error('Error sending application submitted email:', error.message);
   }
 }
