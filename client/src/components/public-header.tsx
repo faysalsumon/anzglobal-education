@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +20,9 @@ import {
 import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { NotificationBell } from "@/components/NotificationBell";
 import type { StudentProfile } from "@shared/schema";
 
@@ -30,7 +32,22 @@ interface PublicHeaderProps {
 
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
+  const { signOut } = useSupabaseAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      await fetch("/api/logout", { method: "GET", credentials: "include" });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.clear();
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      window.location.href = "/";
+    }
+  };
 
   // Fetch student profile for profile picture
   const { data: studentProfile } = useQuery<StudentProfile>({
@@ -177,11 +194,13 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     <DropdownMenuSeparator />
                     
                     {/* Logout */}
-                    <DropdownMenuItem asChild>
-                      <a href="/api/logout" className="text-destructive cursor-pointer" data-testid="menu-logout">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                      </a>
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="text-destructive cursor-pointer" 
+                      data-testid="menu-logout"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -316,13 +335,14 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                       <Button
                         variant="destructive"
                         className="w-full"
-                        asChild
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          handleLogout();
+                        }}
                         data-testid="button-mobile-logout"
                       >
-                        <a href="/api/logout">
-                          <LogOut className="mr-2 h-4 w-4" />
-                          Logout
-                        </a>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
                       </Button>
                     ) : (
                       onStudentLoginClick ? (
