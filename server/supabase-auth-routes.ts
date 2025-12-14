@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 import { storage } from './storage';
 import type { User } from '@shared/schema';
+import { sendWelcomeEmail } from './email-service';
 
 const router = Router();
 
@@ -518,6 +519,15 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     });
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
+
+    // Send welcome email to new user
+    const welcomeUserType = userType === 'institution_user' ? 'institution' : 
+                            userType === 'platform_admin' ? 'admin' : 'student';
+    sendWelcomeEmail({
+      email,
+      firstName: firstName || 'there',
+      userType: welcomeUserType,
+    }).catch(err => console.error('[Email] Failed to send welcome email:', err));
 
     res.status(201).json({ 
       message: 'User synced successfully', 
