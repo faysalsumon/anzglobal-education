@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,13 @@ import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password" | "email-exists";
 type UserType = "student" | "institution" | null;
@@ -25,6 +32,8 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailExistsError, setEmailExistsError] = useState<{ verified: boolean; email: string } | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, isConfigured } = useSupabaseAuth();
@@ -337,8 +346,8 @@ export default function AuthPage() {
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center mb-4">
                     By continuing, you agree to ANZ Global Education's{" "}
-                    <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
-                    <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                    <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-main">Terms of Use</button>. Read our{" "}
+                    <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-main">Privacy Policy</button>.
                   </p>
 
                   <button
@@ -399,8 +408,8 @@ export default function AuthPage() {
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
                     By continuing, you agree to ANZ Global Education's{" "}
-                    <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
-                    <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                    <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-options">Terms of Use</button>. Read our{" "}
+                    <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-options">Privacy Policy</button>.
                   </p>
                 </div>
               </>
@@ -534,8 +543,8 @@ export default function AuthPage() {
                 <div className="mt-6 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
                     By continuing, you agree to ANZ Global Education's{" "}
-                    <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
-                    <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                    <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-email">Terms of Use</button>. Read our{" "}
+                    <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-email">Privacy Policy</button>.
                   </p>
                 </div>
               </>
@@ -648,8 +657,8 @@ export default function AuthPage() {
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
                     By continuing, you agree to ANZ Global Education's{" "}
-                    <Link href="/terms" className="text-primary hover:underline">Terms of Use</Link>. Read our{" "}
-                    <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                    <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-usertype">Terms of Use</button>. Read our{" "}
+                    <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-usertype">Privacy Policy</button>.
                   </p>
                 </div>
               </>
@@ -795,6 +804,143 @@ export default function AuthPage() {
           <p>Copyright {new Date().getFullYear()} | ANZ Global Education</p>
         </div>
       </footer>
+
+      {/* Terms of Use Dialog */}
+      <Dialog open={showTerms} onOpenChange={setShowTerms}>
+        <DialogContent className="max-w-2xl max-h-[80vh]" data-testid="dialog-terms">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Terms of Use</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] pr-4">
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <p className="text-foreground font-medium">Last Updated: December 2024</p>
+              
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">1. Acceptance of Terms</h3>
+                <p>By accessing and using ANZ Global Education's platform, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">2. Description of Service</h3>
+                <p>ANZ Global Education provides an online platform connecting international students with educational institutions. Our services include course discovery, application assistance, and student support services.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">3. User Accounts</h3>
+                <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. You agree to provide accurate and complete information when creating an account.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">4. User Conduct</h3>
+                <p>You agree not to:</p>
+                <ul className="list-disc list-inside pl-4 space-y-1">
+                  <li>Provide false or misleading information</li>
+                  <li>Use the platform for any unlawful purpose</li>
+                  <li>Attempt to gain unauthorized access to our systems</li>
+                  <li>Interfere with other users' use of the platform</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">5. Intellectual Property</h3>
+                <p>All content on this platform, including text, graphics, logos, and software, is the property of ANZ Global Education or its licensors and is protected by copyright and intellectual property laws.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">6. Limitation of Liability</h3>
+                <p>ANZ Global Education is not liable for any indirect, incidental, or consequential damages arising from your use of our services. We do not guarantee admission to any educational institution.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">7. Changes to Terms</h3>
+                <p>We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the new terms.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">8. Contact Us</h3>
+                <p>If you have any questions about these Terms, please contact us at support@anzglobaleducation.com</p>
+              </section>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Privacy Policy Dialog */}
+      <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
+        <DialogContent className="max-w-2xl max-h-[80vh]" data-testid="dialog-privacy">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Privacy Policy</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] pr-4">
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <p className="text-foreground font-medium">Last Updated: December 2024</p>
+              
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">1. Information We Collect</h3>
+                <p>We collect information you provide directly, including:</p>
+                <ul className="list-disc list-inside pl-4 space-y-1">
+                  <li>Name, email address, and contact information</li>
+                  <li>Educational background and academic records</li>
+                  <li>Passport and identification documents</li>
+                  <li>Application materials and supporting documents</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">2. How We Use Your Information</h3>
+                <p>We use your information to:</p>
+                <ul className="list-disc list-inside pl-4 space-y-1">
+                  <li>Process your applications to educational institutions</li>
+                  <li>Communicate with you about your applications</li>
+                  <li>Provide personalized course recommendations</li>
+                  <li>Improve our services and user experience</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">3. Information Sharing</h3>
+                <p>We may share your information with:</p>
+                <ul className="list-disc list-inside pl-4 space-y-1">
+                  <li>Educational institutions you apply to</li>
+                  <li>Service providers who assist our operations</li>
+                  <li>Government authorities when required by law</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">4. Data Security</h3>
+                <p>We implement appropriate security measures to protect your personal information, including encryption, secure servers, and access controls.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">5. Your Rights</h3>
+                <p>You have the right to:</p>
+                <ul className="list-disc list-inside pl-4 space-y-1">
+                  <li>Access your personal information</li>
+                  <li>Request correction of inaccurate data</li>
+                  <li>Request deletion of your data</li>
+                  <li>Withdraw consent for data processing</li>
+                </ul>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">6. Cookies and Tracking</h3>
+                <p>We use cookies and similar technologies to enhance your experience, analyze usage, and provide personalized content. You can control cookie preferences through your browser settings.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">7. International Transfers</h3>
+                <p>Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place for such transfers.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="font-semibold text-foreground">8. Contact Us</h3>
+                <p>For privacy-related inquiries, please contact our Data Protection Officer at privacy@anzglobaleducation.com</p>
+              </section>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
