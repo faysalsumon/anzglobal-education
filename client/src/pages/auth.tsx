@@ -7,7 +7,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -260,14 +259,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/10 via-background to-secondary/5">
-      <header className="border-b bg-background/95 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="flex items-center" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
-          </Link>
-        </div>
-      </header>
-
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-4xl bg-background rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
           <button 
