@@ -30,6 +30,7 @@ import StudentReferrals from "@/pages/student-referrals";
 import StudentDocuments from "@/pages/student-documents";
 import StudentFavorites from "@/pages/student-favorites";
 import StudentDashboardPage from "@/pages/student-dashboard-page";
+import DashboardRedirect from "@/pages/dashboard-redirect";
 import PublicCourses from "@/pages/public-courses";
 import PublicCourseDetail from "@/pages/public-course-detail";
 import PublicInstitutions from "@/pages/public-institutions";
@@ -95,7 +96,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
-      <Route path="/dashboard" component={StudentDashboardPage} />
+      <Route path="/dashboard" component={DashboardRedirect} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/profile" component={AdminProfile} />
