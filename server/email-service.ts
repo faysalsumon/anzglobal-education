@@ -871,3 +871,236 @@ export async function sendApplicationSubmittedEmail(data: ApplicationSubmittedEm
     console.error('Error sending application submitted email:', error.message);
   }
 }
+
+// Admin approval notification interfaces
+interface AdminApprovalNotificationData {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface AdminApprovedNotificationData {
+  email: string;
+  firstName: string;
+  assignedRole: string;
+  approvedByName: string;
+}
+
+interface AdminRejectedNotificationData {
+  email: string;
+  firstName: string;
+  reason?: string;
+}
+
+// Format role for display
+function formatRole(role: string): string {
+  const roleLabels: Record<string, string> = {
+    super_admin: 'Super Admin',
+    platform_admin: 'Platform Admin',
+    support_manager: 'Support Manager',
+    support_staff: 'Support Staff',
+    operations_staff: 'Operations Staff',
+  };
+  return roleLabels[role] || role;
+}
+
+// Send notification to existing admins when new admin signup needs approval
+export async function sendNewAdminPendingNotification(data: AdminApprovalNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping new admin pending notification');
+    return;
+  }
+
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>New Admin Signup Pending Approval</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Admin Signup</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px;">
+                    <h2 style="color: #333333; margin: 0 0 20px 0;">Action Required: Review New Admin</h2>
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      A new user has signed up as a platform administrator and is awaiting your approval.
+                    </p>
+                    
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0 0 10px 0;"><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+                      <p style="margin: 0;"><strong>Email:</strong> ${data.email}</p>
+                    </div>
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      Please log in to the admin dashboard to review and approve this request.
+                    </p>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard#users" style="background-color: #3465A5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `New Admin Signup Pending: ${data.firstName} ${data.lastName}`,
+      html,
+    });
+
+    console.log(`New admin pending notification sent for ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending new admin pending notification:', error.message);
+  }
+}
+
+// Send notification to user when their admin account is approved
+export async function sendAdminApprovedNotification(data: AdminApprovedNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping admin approved notification');
+    return;
+  }
+
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Your Admin Account Has Been Approved</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #3465A5 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Account Approved!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px;">
+                    <h2 style="color: #333333; margin: 0 0 20px 0;">Welcome to the Team, ${data.firstName}!</h2>
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      Great news! Your administrator account has been approved by ${data.approvedByName}.
+                    </p>
+                    
+                    <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0 0 10px 0;"><strong>Assigned Role:</strong> ${formatRole(data.assignedRole)}</p>
+                      <p style="margin: 0;"><strong>Status:</strong> Active</p>
+                    </div>
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      You now have access to the admin dashboard. Log in to get started!
+                    </p>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard" style="background-color: #10b981; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: 'Your Admin Account Has Been Approved - ANZ Global Education',
+      html,
+    });
+
+    console.log(`Admin approved notification sent to ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending admin approved notification:', error.message);
+  }
+}
+
+// Send notification to user when their admin request is rejected
+export async function sendAdminRejectedNotification(data: AdminRejectedNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping admin rejected notification');
+    return;
+  }
+
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Admin Account Request Update</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background-color: #333333; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Account Request Update</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px;">
+                    <h2 style="color: #333333; margin: 0 0 20px 0;">Hello ${data.firstName},</h2>
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      We regret to inform you that your administrator account request was not approved at this time.
+                    </p>
+                    
+                    ${data.reason ? `
+                    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                      <p style="margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
+                    </div>
+                    ` : ''}
+                    
+                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                      If you believe this was in error or have questions, please contact our team at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: 'Admin Account Request Update - ANZ Global Education',
+      html,
+    });
+
+    console.log(`Admin rejected notification sent to ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending admin rejected notification:', error.message);
+  }
+}

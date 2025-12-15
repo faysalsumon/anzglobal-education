@@ -60,6 +60,7 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import AffiliatePage from "@/pages/affiliate";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallback from "@/pages/auth-callback";
+import AdminPendingApproval from "@/pages/admin-pending-approval";
 
 interface RouterProps {
   user: any;
@@ -99,6 +100,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/dashboard" component={DashboardRedirect} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/pending-approval" component={AdminPendingApproval} />
       <Route path="/admin/profile" component={AdminProfile} />
       <Route path="/admin/csv-import" component={AdminCSVImport} />
       <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />

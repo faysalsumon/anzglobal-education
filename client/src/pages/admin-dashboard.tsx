@@ -66,6 +66,7 @@ interface User {
   isActive: boolean | null;
   lastLogin: string | null;
   createdAt: string | null;
+  approvalStatus: string | null;
 }
 
 interface Institution {
@@ -332,6 +333,12 @@ export default function AdminDashboard() {
   const [rejectingCourse, setRejectingCourse] = useState<Course | null>(null);
   const [courseRejectionReason, setCourseRejectionReason] = useState("");
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
+  
+  // Admin approval state
+  const [approvingUser, setApprovingUser] = useState<User | null>(null);
+  const [approvalRole, setApprovalRole] = useState<string>("platform_admin");
+  const [rejectingUser, setRejectingUser] = useState<User | null>(null);
+  const [userRejectionReason, setUserRejectionReason] = useState("");
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
 
   // (Student leads state removed - consolidated into CRM Leads)
@@ -964,6 +971,52 @@ export default function AdminDashboard() {
     },
   });
 
+  // Admin user approval mutation
+  const approveUserMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      return await apiRequest("POST", `/api/super-admin/users/${id}/approve`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      setApprovingUser(null);
+      setApprovalRole("platform_admin");
+      toast({
+        title: "User approved",
+        description: "The admin user has been approved and notified via email",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Admin user rejection mutation
+  const rejectUserMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+      return await apiRequest("POST", `/api/super-admin/users/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      setRejectingUser(null);
+      setUserRejectionReason("");
+      toast({
+        title: "User rejected",
+        description: "The admin signup request has been rejected and the user notified",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter users
   const filteredUsers = users?.filter(user => {
     const matchesSearch = 
@@ -976,7 +1029,8 @@ export default function AdminDashboard() {
     const matchesStatus = 
       filterStatus === "all" ||
       (filterStatus === "active" && user.isActive) ||
-      (filterStatus === "inactive" && !user.isActive);
+      (filterStatus === "inactive" && !user.isActive) ||
+      (filterStatus === "pending" && user.approvalStatus === "pending");
     
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -1013,6 +1067,7 @@ export default function AdminDashboard() {
     students: users?.filter(u => u.userType === "student").length || 0,
     universities: users?.filter(u => u.userType === "university").length || 0,
     admins: users?.filter(u => u.userType === "admin").length || 0,
+    pending: users?.filter(u => u.approvalStatus === "pending").length || 0,
   };
 
   // Institution stats
@@ -1520,13 +1575,23 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[120px] h-8 text-sm" data-testid="select-filter-status">
+                  <SelectTrigger className="w-full sm:w-[160px] h-8 text-sm" data-testid="select-filter-status">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">
+                      <span className="flex items-center gap-2">
+                        Pending Approval
+                        {userStats.pending > 0 && (
+                          <Badge variant="destructive" className="text-xs px-1.5 py-0">
+                            {userStats.pending}
+                          </Badge>
+                        )}
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1597,40 +1662,79 @@ export default function AdminDashboard() {
                             </Select>
                           </TableCell>
                           <TableCell className="py-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => updateStatusMutation.mutate({
-                                userId: user.id,
-                                isActive: !user.isActive,
-                              })}
-                              data-testid={`button-toggle-status-${user.id}`}
-                            >
-                              {user.isActive ? (
-                                <><ShieldCheck className="h-4 w-4 mr-1 text-green-600" /> Active</>
-                              ) : (
-                                <><ShieldOff className="h-4 w-4 mr-1 text-red-600" /> Inactive</>
-                              )}
-                            </Button>
+                            {user.approvalStatus === "pending" ? (
+                              <Badge variant="outline" className="text-xs bg-yellow-50 border-yellow-300 text-yellow-700">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending Approval
+                              </Badge>
+                            ) : user.approvalStatus === "rejected" ? (
+                              <Badge variant="outline" className="text-xs bg-red-50 border-red-300 text-red-700">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Rejected
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => updateStatusMutation.mutate({
+                                  userId: user.id,
+                                  isActive: !user.isActive,
+                                })}
+                                data-testid={`button-toggle-status-${user.id}`}
+                              >
+                                {user.isActive ? (
+                                  <><ShieldCheck className="h-4 w-4 mr-1 text-green-600" /> Active</>
+                                ) : (
+                                  <><ShieldOff className="h-4 w-4 mr-1 text-red-600" /> Inactive</>
+                                )}
+                              </Button>
+                            )}
                           </TableCell>
                           <TableCell className="py-2 text-right">
                             <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditUser(user)}
-                                data-testid={`button-edit-user-${user.id}`}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeletingUser(user)}
-                                data-testid={`button-delete-user-${user.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              {user.approvalStatus === "pending" ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={() => setApprovingUser(user)}
+                                    data-testid={`button-approve-user-${user.id}`}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setRejectingUser(user)}
+                                    data-testid={`button-reject-user-${user.id}`}
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditUser(user)}
+                                    data-testid={`button-edit-user-${user.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setDeletingUser(user)}
+                                    data-testid={`button-delete-user-${user.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -2817,6 +2921,92 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Approve Admin User Dialog */}
+      <Dialog open={!!approvingUser} onOpenChange={() => setApprovingUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve Admin Signup</DialogTitle>
+            <DialogDescription>
+              Approve <strong>{approvingUser?.firstName} {approvingUser?.lastName}</strong> ({approvingUser?.email}) as a platform administrator. Select a role for this user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assign Role</label>
+              <Select value={approvalRole} onValueChange={setApprovalRole}>
+                <SelectTrigger className="w-full" data-testid="select-approval-role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="platform_admin">Platform Admin</SelectItem>
+                  <SelectItem value="support_manager">Support Manager</SelectItem>
+                  <SelectItem value="support_staff">Support Staff</SelectItem>
+                  <SelectItem value="operations_staff">Operations Staff</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The user will receive an email notification with their access details.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovingUser(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => approvingUser && approveUserMutation.mutate({ id: approvingUser.id, role: approvalRole })}
+              disabled={approveUserMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="button-confirm-approve-user"
+            >
+              {approveUserMutation.isPending ? "Approving..." : "Approve User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Admin User Dialog */}
+      <Dialog open={!!rejectingUser} onOpenChange={() => setRejectingUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Admin Signup</DialogTitle>
+            <DialogDescription>
+              Reject the admin signup request from <strong>{rejectingUser?.firstName} {rejectingUser?.lastName}</strong> ({rejectingUser?.email}).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Reason (Optional)</label>
+              <Textarea
+                placeholder="Provide a reason for rejection..."
+                value={userRejectionReason}
+                onChange={(e) => setUserRejectionReason(e.target.value)}
+                className="resize-none"
+                rows={3}
+                data-testid="input-rejection-reason"
+              />
+              <p className="text-xs text-muted-foreground">
+                The user will receive an email notification about the rejection.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectingUser(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectingUser && rejectUserMutation.mutate({ id: rejectingUser.id, reason: userRejectionReason })}
+              disabled={rejectUserMutation.isPending}
+              data-testid="button-confirm-reject-user"
+            >
+              {rejectUserMutation.isPending ? "Rejecting..." : "Reject User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Institution Confirmation */}
       <AlertDialog open={!!deletingInstitution} onOpenChange={() => setDeletingInstitution(null)}>

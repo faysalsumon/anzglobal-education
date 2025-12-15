@@ -506,11 +506,14 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       }
       return res.json({ 
         message: 'User already exists', 
-        user: { ...existingUser, emailVerified: emailVerified || existingUser.emailVerified }
+        user: { ...existingUser, emailVerified: emailVerified || existingUser.emailVerified },
+        approvalStatus: existingUser.approvalStatus,
       });
     }
 
     // Create new user in local database
+    // Platform admins start with pending approval status
+    const isPlatformAdmin = userType === 'platform_admin';
     const newUser = await storage.createUser({
       email,
       firstName: firstName || null,
@@ -518,22 +521,27 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       userType: userType || 'student',
       emailVerified: emailVerified || false,
       isActive: true,
+      approvalStatus: isPlatformAdmin ? 'pending' : null,
+      role: isPlatformAdmin ? null : 'user',
     });
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
 
-    // Send welcome email to new user
-    const welcomeUserType = userType === 'institution_user' ? 'institution' : 
-                            userType === 'platform_admin' ? 'admin' : 'student';
-    sendWelcomeEmail({
-      email,
-      firstName: firstName || 'there',
-      userType: welcomeUserType,
-    }).catch(err => console.error('[Email] Failed to send welcome email:', err));
+    // Send welcome email to new user (students and institutions)
+    // Platform admins get a different email flow (pending approval)
+    if (!isPlatformAdmin) {
+      const welcomeUserType = userType === 'institution_user' ? 'institution' : 'student';
+      sendWelcomeEmail({
+        email,
+        firstName: firstName || 'there',
+        userType: welcomeUserType,
+      }).catch(err => console.error('[Email] Failed to send welcome email:', err));
+    }
 
     res.status(201).json({ 
       message: 'User synced successfully', 
-      user: newUser 
+      user: newUser,
+      approvalStatus: newUser.approvalStatus,
     });
   } catch (err) {
     console.error('[Supabase Auth] Sync user error:', err);

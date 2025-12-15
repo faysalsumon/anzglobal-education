@@ -51,14 +51,15 @@ export default function AuthCallback() {
 
           if (data.session?.user) {
             const sessionUser = data.session.user;
-            await syncUserToDatabase(sessionUser);
-            setUserType(sessionUser.user_metadata?.user_type || "student");
+            const syncResult = await syncUserToDatabase(sessionUser);
+            const userTypeValue = sessionUser.user_metadata?.user_type || "student";
+            setUserType(userTypeValue);
             setStatus("success");
             
             queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
             
             setTimeout(() => {
-              redirectToDashboard(sessionUser.user_metadata?.user_type);
+              redirectToDashboard(userTypeValue, syncResult.approvalStatus);
             }, 1500);
             return;
           }
@@ -66,14 +67,15 @@ export default function AuthCallback() {
 
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session?.user) {
-          await syncUserToDatabase(sessionData.session.user);
-          setUserType(sessionData.session.user.user_metadata?.user_type || "student");
+          const syncResult = await syncUserToDatabase(sessionData.session.user);
+          const userTypeValue = sessionData.session.user.user_metadata?.user_type || "student";
+          setUserType(userTypeValue);
           setStatus("success");
           
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           
           setTimeout(() => {
-            redirectToDashboard(sessionData.session.user.user_metadata?.user_type);
+            redirectToDashboard(userTypeValue, syncResult.approvalStatus);
           }, 1500);
           return;
         }
@@ -84,14 +86,15 @@ export default function AuthCallback() {
         }
 
         if (session?.user) {
-          await syncUserToDatabase(session.user);
-          setUserType(session.user.user_metadata?.user_type || "student");
+          const syncResult = await syncUserToDatabase(session.user);
+          const userTypeValue = session.user.user_metadata?.user_type || "student";
+          setUserType(userTypeValue);
           setStatus("success");
           
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           
           setTimeout(() => {
-            redirectToDashboard(session.user.user_metadata?.user_type);
+            redirectToDashboard(userTypeValue, syncResult.approvalStatus);
           }, 1500);
         } else {
           throw new Error("Unable to complete authentication. Please try logging in.");
@@ -103,9 +106,9 @@ export default function AuthCallback() {
       }
     }
 
-    async function syncUserToDatabase(supabaseUser: any) {
+    async function syncUserToDatabase(supabaseUser: any): Promise<{ approvalStatus?: string | null }> {
       try {
-        await apiRequest("POST", "/api/supabase-auth/sync-user", {
+        const response = await apiRequest("POST", "/api/supabase-auth/sync-user", {
           supabaseId: supabaseUser.id,
           email: supabaseUser.email,
           firstName: supabaseUser.user_metadata?.first_name,
@@ -113,16 +116,22 @@ export default function AuthCallback() {
           userType: supabaseUser.user_metadata?.user_type || "student",
           emailVerified: !!supabaseUser.email_confirmed_at,
         });
+        return response;
       } catch (err) {
         console.warn("[Auth Callback] Failed to sync user to database:", err);
+        return {};
       }
     }
 
-    function redirectToDashboard(userType?: string) {
+    function redirectToDashboard(userType?: string, approvalStatus?: string | null) {
       switch (userType) {
         case "platform_admin":
         case "admin":
-          setLocation("/admin/dashboard");
+          if (approvalStatus === "pending" || approvalStatus === "rejected") {
+            setLocation("/admin/pending-approval");
+          } else {
+            setLocation("/admin/dashboard");
+          }
           break;
         case "institution_user":
           setLocation("/university/dashboard");

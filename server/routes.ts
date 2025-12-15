@@ -4513,6 +4513,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Approve pending platform admin signup
+  app.post("/api/super-admin/users/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      const access = await checkAdminAccess(adminUserId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      const { role } = req.body;
+
+      if (!role) {
+        return res.status(400).json({ message: "Role is required for approval" });
+      }
+
+      // Get the target user
+      const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId));
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (targetUser.approvalStatus !== 'pending') {
+        return res.status(400).json({ message: "User is not pending approval" });
+      }
+
+      // Get the approving admin's name
+      const [approvingAdmin] = await db.select().from(users).where(eq(users.id, adminUserId));
+      const approverName = approvingAdmin ? `${approvingAdmin.firstName || ''} ${approvingAdmin.lastName || ''}`.trim() || 'Admin' : 'Admin';
+
+      // Approve the user
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          approvalStatus: 'approved',
+          role: role,
+          approvedBy: adminUserId,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      // Send approval notification email
+      const { sendAdminApprovedNotification } = await import('./email-service');
+      sendAdminApprovedNotification({
+        email: updatedUser.email!,
+        firstName: updatedUser.firstName || 'there',
+        assignedRole: role,
+        approvedByName: approverName,
+      }).catch(err => console.error('[Email] Failed to send approval notification:', err));
+
+      const { 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordExpiry,
+        ...userData 
+      } = updatedUser;
+      res.json(userData);
+    } catch (error) {
+      console.error("Error approving user:", error);
+      res.status(500).json({ message: "Failed to approve user" });
+    }
+  });
+
+  // Reject pending platform admin signup
+  app.post("/api/super-admin/users/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      const access = await checkAdminAccess(adminUserId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      const { reason } = req.body;
+
+      // Get the target user
+      const [targetUser] = await db.select().from(users).where(eq(users.id, targetUserId));
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (targetUser.approvalStatus !== 'pending') {
+        return res.status(400).json({ message: "User is not pending approval" });
+      }
+
+      // Reject the user
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          approvalStatus: 'rejected',
+          rejectionReason: reason || null,
+          approvedBy: adminUserId,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      // Send rejection notification email
+      const { sendAdminRejectedNotification } = await import('./email-service');
+      sendAdminRejectedNotification({
+        email: updatedUser.email!,
+        firstName: updatedUser.firstName || 'there',
+        reason: reason,
+      }).catch(err => console.error('[Email] Failed to send rejection notification:', err));
+
+      const { 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordExpiry,
+        ...userData 
+      } = updatedUser;
+      res.json(userData);
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      res.status(500).json({ message: "Failed to reject user" });
+    }
+  });
+
+  // Get pending admin approvals count
+  app.get("/api/super-admin/pending-approvals/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const pendingUsers = await db
+        .select()
+        .from(users)
+        .where(eq(users.approvalStatus, 'pending'));
+
+      res.json({ count: pendingUsers.length });
+    } catch (error) {
+      console.error("Error fetching pending approvals count:", error);
+      res.status(500).json({ message: "Failed to fetch pending approvals count" });
+    }
+  });
+
   // Create new user
   app.post("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {
