@@ -210,6 +210,13 @@ export const contactTypeEnum = pgEnum('contact_type', [
   'providers_rep',
 ]);
 
+// Admin approval status enum
+export const approvalStatusEnum = pgEnum('approval_status', [
+  'pending',
+  'approved',
+  'rejected',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -272,6 +279,10 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).default("user"), // For granular permissions
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
+  approvalStatus: approvalStatusEnum("approval_status"), // For platform admin approval workflow (null for students/institutions)
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: "set null" }), // Admin who approved
+  approvedAt: timestamp("approved_at"), // When approval was granted
+  rejectionReason: text("rejection_reason"), // Reason for rejection if applicable
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

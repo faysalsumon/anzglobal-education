@@ -62,6 +62,8 @@ router.post('/signup', async (req: Request, res: Response) => {
           userType,
           emailVerified: data.user.email_confirmed_at ? true : false,
           isActive: true,
+          approvalStatus: userType === 'platform_admin' ? 'pending' : null,
+          role: userType === 'platform_admin' ? null : 'user',
         });
       }
     }
