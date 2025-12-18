@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { Mail, Lock, Loader2 } from "lucide-react";
-import { FaGoogle } from "react-icons/fa";
+import { FaGoogle, FaFacebook } from "react-icons/fa";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -24,6 +24,7 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const { signInWithOAuth, isConfigured } = useSupabaseAuth();
 
   // Capture referral code from URL and save to localStorage
@@ -105,6 +106,41 @@ export default function Login() {
       localStorage.removeItem('oauth_intended_user_type');
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    if (!isConfigured) {
+      toast({
+        title: "Not Available",
+        description: "Facebook authentication is not configured yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    localStorage.setItem('oauth_intended_user_type', 'student');
+    
+    setIsFacebookLoading(true);
+    try {
+      const { error } = await signInWithOAuth("facebook");
+      if (error) {
+        toast({
+          title: "Facebook Sign-In Failed",
+          description: error.message || "Failed to initiate Facebook sign-in.",
+          variant: "destructive",
+        });
+        localStorage.removeItem('oauth_intended_user_type');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      localStorage.removeItem('oauth_intended_user_type');
+    } finally {
+      setIsFacebookLoading(false);
     }
   };
 
@@ -202,6 +238,21 @@ export default function Login() {
                 <FaGoogle className="h-5 w-5 text-[#4285F4]" />
               )}
               <span>Sign in with Google</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full h-11 gap-3"
+              onClick={handleFacebookLogin}
+              disabled={isFacebookLoading}
+              data-testid="button-facebook-login"
+            >
+              {isFacebookLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <FaFacebook className="h-5 w-5 text-[#1877F2]" />
+              )}
+              <span>Sign in with Facebook</span>
             </Button>
             
             <div className="text-center text-sm">

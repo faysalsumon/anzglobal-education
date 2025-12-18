@@ -86,11 +86,41 @@ export default function AuthPage() {
     }
   };
 
-  const handleFacebookClick = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Facebook login will be available soon. Please use Google or continue with another option.",
-    });
+  const handleFacebookLogin = async (intendedUserType?: "student" | "institution_user") => {
+    if (!isConfigured) {
+      toast({
+        title: "Not Available",
+        description: "Facebook authentication is not configured yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Store intended user type in localStorage before redirecting to Facebook
+    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_user" : "student");
+    localStorage.setItem('oauth_intended_user_type', userTypeToStore);
+    
+    setIsLoading(true);
+    try {
+      const { error } = await signInWithOAuth("facebook");
+      if (error) {
+        toast({
+          title: "Facebook Sign-In Failed",
+          description: error.message || "Failed to initiate Facebook sign-in.",
+          variant: "destructive",
+        });
+        localStorage.removeItem('oauth_intended_user_type');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      localStorage.removeItem('oauth_intended_user_type');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -350,14 +380,13 @@ export default function AuthPage() {
 
                   <Button 
                     variant="outline"
-                    className="w-full h-12 justify-start gap-3 text-base font-medium border-border/50 opacity-60 cursor-not-allowed"
-                    onClick={handleFacebookClick}
-                    disabled
+                    className="w-full h-12 justify-start gap-3 text-base font-medium border-border/50"
+                    onClick={() => handleFacebookLogin()}
+                    disabled={isLoading}
                     data-testid="button-facebook-login"
                   >
                     <FaFacebook className="h-5 w-5 text-[#1877F2]" />
                     <span>Continue with Facebook</span>
-                    <span className="ml-auto text-xs text-muted-foreground">Coming soon</span>
                   </Button>
 
                   <Button 
