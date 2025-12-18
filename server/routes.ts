@@ -2056,7 +2056,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.getStudentProfileByUserId(userId);
 
       if (!profile) {
-        return res.status(404).json({ message: "Student profile not found" });
+        // If no student profile exists, return basic user data from users table
+        // This allows OAuth users to see their synced data (name, email, profile picture)
+        const user = await storage.getUser(userId);
+        if (user) {
+          return res.json({
+            id: null,
+            userId: user.id,
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            email: user.email || "",
+            profileImageUrl: user.profileImageUrl || "",
+            phone: "",
+            dateOfBirth: "",
+            nationality: "",
+            country: "",
+            bio: "",
+            careerGoals: "",
+            educationLevel: "",
+            fieldOfStudy: "",
+            previousEducation: "",
+            isNewProfile: true, // Flag to indicate this is a new profile needing completion
+          });
+        }
+        return res.status(404).json({ message: "User not found" });
       }
 
       res.json(profile);
