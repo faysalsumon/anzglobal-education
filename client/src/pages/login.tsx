@@ -7,9 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Lock } from "lucide-react";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { Mail, Lock, Loader2 } from "lucide-react";
+import { FaGoogle } from "react-icons/fa";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -20,6 +23,8 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { signInWithOAuth, isConfigured } = useSupabaseAuth();
 
   // Capture referral code from URL and save to localStorage
   useEffect(() => {
@@ -64,6 +69,42 @@ export default function Login() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isConfigured) {
+      toast({
+        title: "Not Available",
+        description: "Google authentication is not configured yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Store intended user type for OAuth callback (default to student for general login)
+    localStorage.setItem('oauth_intended_user_type', 'student');
+    
+    setIsGoogleLoading(true);
+    try {
+      const { error } = await signInWithOAuth("google");
+      if (error) {
+        toast({
+          title: "Google Sign-In Failed",
+          description: error.message || "Failed to initiate Google sign-in.",
+          variant: "destructive",
+        });
+        localStorage.removeItem('oauth_intended_user_type');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      localStorage.removeItem('oauth_intended_user_type');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -138,14 +179,41 @@ export default function Login() {
             </form>
           </Form>
           
-          <div className="mt-6 text-center text-sm">
-            <a
-              href="/api/login"
-              className="text-primary hover:underline"
-              data-testid="link-replit-auth"
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              className="w-full h-11 gap-3"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              data-testid="button-google-login"
             >
-              Or continue with Replit Auth
-            </a>
+              {isGoogleLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <FaGoogle className="h-5 w-5 text-[#4285F4]" />
+              )}
+              <span>Sign in with Google</span>
+            </Button>
+            
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">Don't have an account? </span>
+              <a
+                href="/auth"
+                className="text-primary hover:underline"
+                data-testid="link-signup"
+              >
+                Sign up
+              </a>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -11,6 +11,7 @@ interface UserWithAdminRole extends User {
 export function useAuth() {
   const { user: supabaseUser, session, isLoading: supabaseLoading, isConfigured } = useSupabaseAuth();
   
+  // Try to get user from legacy Replit auth
   const { data: legacyUser, isLoading: legacyLoading, isFetched, isSuccess } = useQuery<UserWithAdminRole | null>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -20,13 +21,48 @@ export function useAuth() {
     staleTime: 0,
   });
 
-  const isLoading = supabaseLoading || legacyLoading;
+  // Get user from database via Supabase token when we have a Supabase session
+  const { data: supabaseDbUser, isLoading: supabaseDbLoading } = useQuery<UserWithAdminRole | null>({
+    queryKey: ["/api/supabase-auth/user"],
+    queryFn: async () => {
+      if (!session?.access_token) return null;
+      
+      const response = await fetch("/api/supabase-auth/user", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 404) {
+          return null;
+        }
+        throw new Error("Failed to fetch user");
+      }
+      
+      return response.json();
+    },
+    enabled: !!session?.access_token && isConfigured,
+    retry: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0,
+  });
+
+  const isLoading = supabaseLoading || legacyLoading || (!!session && supabaseDbLoading);
 
   const user = useMemo(() => {
+    // Priority: legacyUser > supabaseDbUser > supabase metadata fallback
     if (legacyUser) {
       return legacyUser;
     }
     
+    if (supabaseDbUser) {
+      return supabaseDbUser;
+    }
+    
+    // Fallback to Supabase metadata only if we have a session but no DB user yet
+    // This handles the brief window during first login before sync completes
     if (supabaseUser && session) {
       const metadata = supabaseUser.user_metadata;
       return {
@@ -46,7 +82,7 @@ export function useAuth() {
     }
     
     return null;
-  }, [legacyUser, supabaseUser, session]);
+  }, [legacyUser, supabaseDbUser, supabaseUser, session]);
 
   const adminRole = user?.adminRole || user?.role || null;
   
@@ -56,7 +92,7 @@ export function useAuth() {
   
   const hasFullAdminAccess = isSuperAdmin || isSupportManager;
 
-  const isAuthResolved = (isFetched && !legacyLoading) || (!supabaseLoading && isConfigured);
+  const isAuthResolved = (isFetched && !legacyLoading) || (!supabaseLoading && isConfigured && !supabaseDbLoading);
   
   const isAuthenticated = (isSuccess && !!legacyUser) || (!!supabaseUser && !!session);
 

@@ -52,14 +52,13 @@ export default function AuthCallback() {
           if (data.session?.user) {
             const sessionUser = data.session.user;
             const syncResult = await syncUserToDatabase(sessionUser);
-            const userTypeValue = sessionUser.user_metadata?.user_type || "student";
-            setUserType(userTypeValue);
+            setUserType(syncResult.userType);
             setStatus("success");
             
             queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
             
             setTimeout(() => {
-              redirectToDashboard(userTypeValue, syncResult.approvalStatus);
+              redirectToDashboard(syncResult.userType, syncResult.approvalStatus);
             }, 1500);
             return;
           }
@@ -68,14 +67,13 @@ export default function AuthCallback() {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session?.user) {
           const syncResult = await syncUserToDatabase(sessionData.session.user);
-          const userTypeValue = sessionData.session.user.user_metadata?.user_type || "student";
-          setUserType(userTypeValue);
+          setUserType(syncResult.userType);
           setStatus("success");
           
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           
           setTimeout(() => {
-            redirectToDashboard(userTypeValue, syncResult.approvalStatus);
+            redirectToDashboard(syncResult.userType, syncResult.approvalStatus);
           }, 1500);
           return;
         }
@@ -87,14 +85,13 @@ export default function AuthCallback() {
 
         if (session?.user) {
           const syncResult = await syncUserToDatabase(session.user);
-          const userTypeValue = session.user.user_metadata?.user_type || "student";
-          setUserType(userTypeValue);
+          setUserType(syncResult.userType);
           setStatus("success");
           
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
           
           setTimeout(() => {
-            redirectToDashboard(userTypeValue, syncResult.approvalStatus);
+            redirectToDashboard(syncResult.userType, syncResult.approvalStatus);
           }, 1500);
         } else {
           throw new Error("Unable to complete authentication. Please try logging in.");
@@ -106,20 +103,30 @@ export default function AuthCallback() {
       }
     }
 
-    async function syncUserToDatabase(supabaseUser: any): Promise<{ approvalStatus?: string | null }> {
+    async function syncUserToDatabase(supabaseUser: any): Promise<{ approvalStatus?: string | null; userType: string }> {
+      // Check for stored OAuth intended user type (set before redirecting to Google)
+      const storedUserType = localStorage.getItem('oauth_intended_user_type');
+      // Use stored type, then Supabase metadata, then default to student
+      const userType = storedUserType || supabaseUser.user_metadata?.user_type || "student";
+      
+      // Clear the stored user type after using it
+      if (storedUserType) {
+        localStorage.removeItem('oauth_intended_user_type');
+      }
+      
       try {
         const response = await apiRequest("POST", "/api/supabase-auth/sync-user", {
           supabaseId: supabaseUser.id,
           email: supabaseUser.email,
-          firstName: supabaseUser.user_metadata?.first_name,
-          lastName: supabaseUser.user_metadata?.last_name,
-          userType: supabaseUser.user_metadata?.user_type || "student",
+          firstName: supabaseUser.user_metadata?.first_name || supabaseUser.user_metadata?.full_name?.split(' ')[0],
+          lastName: supabaseUser.user_metadata?.last_name || supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' '),
+          userType,
           emailVerified: !!supabaseUser.email_confirmed_at,
-        });
-        return response;
+        }) as { approvalStatus?: string | null };
+        return { ...response, userType };
       } catch (err) {
         console.warn("[Auth Callback] Failed to sync user to database:", err);
-        return {};
+        return { userType };
       }
     }
 

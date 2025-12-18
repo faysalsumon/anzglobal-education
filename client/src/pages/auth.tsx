@@ -36,7 +36,7 @@ export default function AuthPage() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { signIn, signUp, resetPassword, resendVerification, isConfigured } = useSupabaseAuth();
+  const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
 
   const handleStudentLogin = () => {
     window.location.href = "/api/student/login";
@@ -46,8 +46,44 @@ export default function AuthPage() {
     window.location.href = "/api/login?type=university";
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = "/api/student/login";
+  const handleGoogleLogin = async (intendedUserType?: "student" | "institution_user") => {
+    if (!isConfigured) {
+      toast({
+        title: "Not Available",
+        description: "Google authentication is not configured yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Store intended user type in localStorage before redirecting to Google
+    // This will be read by auth-callback to properly set the user type
+    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_user" : "student");
+    localStorage.setItem('oauth_intended_user_type', userTypeToStore);
+    
+    setIsLoading(true);
+    try {
+      const { error } = await signInWithOAuth("google");
+      if (error) {
+        toast({
+          title: "Google Sign-In Failed",
+          description: error.message || "Failed to initiate Google sign-in.",
+          variant: "destructive",
+        });
+        // Clear stored user type on error
+        localStorage.removeItem('oauth_intended_user_type');
+      }
+      // If successful, the user will be redirected to Google
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      localStorage.removeItem('oauth_intended_user_type');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFacebookClick = () => {
@@ -305,7 +341,7 @@ export default function AuthPage() {
                   <Button 
                     variant="outline"
                     className="w-full h-12 justify-start gap-3 text-base font-medium border-border/50 hover-elevate"
-                    onClick={handleGoogleLogin}
+                    onClick={() => handleGoogleLogin()}
                     data-testid="button-google-login"
                   >
                     <FaGoogle className="h-5 w-5 text-[#4285F4]" />
@@ -377,7 +413,7 @@ export default function AuthPage() {
                   <Button 
                     variant="outline"
                     className="w-full h-12 justify-start gap-3 text-base font-medium border-border/50 hover-elevate"
-                    onClick={handleGoogleLogin}
+                    onClick={() => handleGoogleLogin()}
                     data-testid="button-google-login-alt"
                   >
                     <FaGoogle className="h-5 w-5 text-[#4285F4]" />
@@ -519,7 +555,7 @@ export default function AuthPage() {
                   <Button 
                     variant="outline"
                     className="w-full h-12 gap-3"
-                    onClick={handleGoogleLogin}
+                    onClick={() => handleGoogleLogin()}
                     data-testid="button-google-alt"
                   >
                     <FaGoogle className="h-5 w-5 text-[#4285F4]" />

@@ -496,11 +496,18 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // SECURITY: Only allow safe user types via OAuth sync
+    // platform_admin can only be created through the proper signup flow with approval
+    // This prevents privilege escalation via localStorage manipulation
+    const allowedUserTypes = ['student', 'institution_user'];
+    const safeUserType = allowedUserTypes.includes(userType) ? userType : 'student';
+
     // Check if user already exists in local database
     let existingUser = await storage.getUserByEmail(email);
 
     if (existingUser) {
       // Update existing user's verification status
+      // SECURITY: Never change userType for existing users via sync
       if (emailVerified && !existingUser.emailVerified) {
         await storage.updateUser(existingUser.id, { emailVerified: true });
       }
@@ -512,31 +519,27 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     }
 
     // Create new user in local database
-    // Platform admins start with pending approval status
-    const isPlatformAdmin = userType === 'platform_admin';
+    // SECURITY: Only allow student or institution_user via OAuth
     const newUser = await storage.createUser({
       email,
       firstName: firstName || null,
       lastName: lastName || null,
-      userType: userType || 'student',
+      userType: safeUserType,
       emailVerified: emailVerified || false,
       isActive: true,
-      approvalStatus: isPlatformAdmin ? 'pending' : null,
-      role: isPlatformAdmin ? null : 'user',
+      approvalStatus: null,
+      role: 'user',
     });
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
 
     // Send welcome email to new user (students and institutions)
-    // Platform admins get a different email flow (pending approval)
-    if (!isPlatformAdmin) {
-      const welcomeUserType = userType === 'institution_user' ? 'institution' : 'student';
-      sendWelcomeEmail({
-        email,
-        firstName: firstName || 'there',
-        userType: welcomeUserType,
-      }).catch(err => console.error('[Email] Failed to send welcome email:', err));
-    }
+    const welcomeUserType = safeUserType === 'institution_user' ? 'institution' : 'student';
+    sendWelcomeEmail({
+      email,
+      firstName: firstName || 'there',
+      userType: welcomeUserType,
+    }).catch(err => console.error('[Email] Failed to send welcome email:', err));
 
     res.status(201).json({ 
       message: 'User synced successfully', 
@@ -546,6 +549,48 @@ router.post('/sync-user', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Supabase Auth] Sync user error:', err);
     res.status(500).json({ error: 'Failed to sync user' });
+  }
+});
+
+// Get current user from database using Supabase token
+router.get('/user', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Supabase is not configured' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Get user from local database
+    const dbUser = await storage.getUserByEmail(user.email!);
+    
+    if (!dbUser) {
+      return res.status(404).json({ error: 'User not found in database' });
+    }
+
+    // Include admin role if applicable
+    if (dbUser.userType === 'platform_admin') {
+      const adminMember = await storage.getAdminTeamMemberByUserId(dbUser.id);
+      return res.json({
+        ...dbUser,
+        adminRole: adminMember?.role || dbUser.role || null,
+      });
+    }
+
+    res.json(dbUser);
+  } catch (err) {
+    console.error('[Supabase Auth] Get user error:', err);
+    res.status(500).json({ error: 'Failed to get user' });
   }
 });
 
