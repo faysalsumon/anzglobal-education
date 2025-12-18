@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { Mail, Lock, ShieldCheck } from "lucide-react";
 
 const loginSchema = z.object({
@@ -32,39 +33,39 @@ export default function AdminLogin() {
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/login", data) as any;
-      
+      if (!supabase) {
+        throw new Error("Authentication service not available");
+      }
+
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
       // Invalidate auth cache and refetch to get updated user data
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Use fetchQuery to get the fresh user data (avoids manual GET and race conditions)
+      // Fetch the platform user data
       const user = await queryClient.fetchQuery({
         queryKey: ["/api/auth/user"],
       }) as any;
       
-      // Role-based redirection logic to EXISTING routes
-      let redirectPath = "/";
-      let welcomeMessage = `Welcome back, ${response.firstName || response.email}!`;
-      
-      if (user.userType === "admin") {
-        redirectPath = "/admin/dashboard";
-        welcomeMessage = `Welcome to Admin Portal, ${response.firstName || response.email}!`;
-      } else if (user.userType === "university") {
-        // University users land on their profile page
-        redirectPath = "/university/profile";
-        welcomeMessage = `Welcome to University Portal, ${response.firstName || response.email}!`;
-      } else if (user.userType === "student") {
-        // Student users land on courses page
-        redirectPath = "/student/courses";
-        welcomeMessage = `Welcome back, ${response.firstName || response.email}!`;
+      // Verify user is platform_admin
+      if (user.userType !== "platform_admin") {
+        await supabase.auth.signOut();
+        throw new Error("Access denied. This portal is for platform administrators only.");
       }
       
       toast({
         title: "Login successful",
-        description: welcomeMessage,
+        description: `Welcome to Admin Portal, ${user.firstName || user.email}!`,
       });
 
-      setLocation(redirectPath);
+      setLocation("/admin/dashboard");
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -152,28 +153,9 @@ export default function AdminLogin() {
             </form>
           </Form>
           
-          <div className="mt-6 space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
-            
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => window.location.href = "/api/login"}
-              data-testid="button-replit-auth"
-            >
-              Continue with Replit Auth
-            </Button>
-          </div>
-
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>Platform administration access only</p>
+            <p className="mt-2 text-xs">Contact your system administrator for access.</p>
           </div>
         </CardContent>
       </Card>

@@ -31,8 +31,8 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    if (!userType || !['student', 'institution_user', 'platform_admin'].includes(userType)) {
-      return res.status(400).json({ error: 'Valid userType is required (student, institution_user, or platform_admin)' });
+    if (!userType || !['student', 'institution_user'].includes(userType)) {
+      return res.status(400).json({ error: 'Valid userType is required (student or institution_user). Platform admin accounts require manual approval.' });
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -617,6 +617,75 @@ router.get('/status', (req: Request, res: Response) => {
       passwordReset: true,
     },
   });
+});
+
+router.post('/admin/invite', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Supabase Admin is not configured' });
+    }
+
+    // Use the supabaseUser populated by global middleware for consistency
+    const supabaseUser = (req as any).supabaseUser;
+    if (!supabaseUser) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify platform_admin role from our database (source of truth)
+    if (supabaseUser.userType !== 'platform_admin') {
+      return res.status(403).json({ error: 'Only platform admins can invite new admins' });
+    }
+
+    const requestingUser = supabaseUser;
+
+    const { email, firstName, lastName, role } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const existingUser = await storage.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'A user with this email already exists' });
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        first_name: firstName || null,
+        last_name: lastName || null,
+        user_type: 'platform_admin',
+        invited_by: requestingUser.id,
+      },
+      redirectTo: `${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : ''}/admin/login`,
+    });
+
+    if (error) {
+      console.error('[Admin Invite] Error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    if (data.user) {
+      await storage.createUser({
+        email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        userType: 'platform_admin',
+        supabaseId: data.user.id,
+        emailVerified: false,
+        isActive: true,
+        approvalStatus: 'approved',
+        role: role || 'admin',
+      });
+    }
+
+    res.status(201).json({
+      message: `Invitation sent to ${email}. They will receive an email to set their password.`,
+      user: data.user,
+    });
+  } catch (err) {
+    console.error('[Admin Invite] Error:', err);
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
 });
 
 export function setupSupabaseAuth(app: any) {
