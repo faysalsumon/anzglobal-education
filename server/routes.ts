@@ -2195,7 +2195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== "admin") {
+      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
         return res.status(403).json({ message: "Access denied. Admin access required." });
       }
 
@@ -2214,7 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== "admin") {
+      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
         return res.status(403).json({ message: "Access denied. Admin access required." });
       }
 
@@ -2249,7 +2249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || user.userType !== "admin") {
+      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
         return res.status(403).json({ message: "Access denied. Admin access required." });
       }
 
@@ -2968,7 +2968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         where: eq(users.id, userId),
       });
 
-      if (!user || (user.userType !== "admin" && user.userType !== "university")) {
+      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin" && user.userType !== "university")) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -9536,8 +9536,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       return { isAdmin: true, role: adminMember.role };
     }
     const user = await storage.getUser(userId);
-    if (user?.userType === 'admin' || user?.userType === 'super_admin') {
-      return { isAdmin: true, role: user.userType };
+    // Include platform_admin as an admin type
+    if (user?.userType === 'admin' || user?.userType === 'super_admin' || user?.userType === 'platform_admin') {
+      return { isAdmin: true, role: user.role || user.userType };
     }
     return { isAdmin: false, role: null };
   }
