@@ -234,7 +234,8 @@ export async function checkAdminAccess(
 ): Promise<{ role: AdminRole } | null> {
   const user = await storage.getUser(userId);
   
-  if (!user || user.userType !== 'admin') {
+  // Accept both 'admin' and 'platform_admin' userTypes as valid admin access
+  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
     return null;
   }
   
