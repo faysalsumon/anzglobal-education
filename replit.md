@@ -20,6 +20,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Backend**: Node.js Express.js in TypeScript.
 - **Authentication**: Dual authentication system:
   - **Supabase Auth** (primary): Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
+  - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_user" are allowed via OAuth sync; platform_admin requires manual approval.
   - **Replit Auth** (legacy): OpenID Connect via Passport.js with PostgreSQL session storage. Will be deprecated once Supabase migration is complete.
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat.
