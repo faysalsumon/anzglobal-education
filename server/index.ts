@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
+import { supabaseAuthMiddleware } from "./supabase-middleware";
 
 const app = express();
 
@@ -22,6 +23,9 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 app.use(regionDetectionMiddleware);
+
+// Add Supabase auth middleware to process JWT tokens
+app.use(supabaseAuthMiddleware);
 
 const SENSITIVE_FIELDS = [
   "password", "token", "secret", "apiKey", "api_key", "accessToken", "access_token",

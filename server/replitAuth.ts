@@ -298,7 +298,23 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // Check if user is authenticated via session
+  // First check if user is authenticated via Supabase (JWT token)
+  const supabaseUser = (req as any).supabaseUser;
+  if (supabaseUser) {
+    // Create a compatible user object with claims for Supabase users
+    (req as any).user = {
+      claims: {
+        sub: supabaseUser.id,
+        email: supabaseUser.email,
+        first_name: supabaseUser.firstName,
+        last_name: supabaseUser.lastName,
+      },
+      supabaseUser: supabaseUser,
+    };
+    return next();
+  }
+
+  // Check if user is authenticated via passport session
   if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
