@@ -490,7 +490,7 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
 // Sync user from Supabase to local database (called after email confirmation)
 router.post('/sync-user', async (req: Request, res: Response) => {
   try {
-    const { supabaseId, email, firstName, lastName, userType, emailVerified } = req.body;
+    const { supabaseId, email, firstName, lastName, userType, emailVerified, profileImageUrl } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -506,14 +506,26 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     let existingUser = await storage.getUserByEmail(email);
 
     if (existingUser) {
-      // Update existing user's verification status
+      // Update existing user's verification status and profile image if not set
       // SECURITY: Never change userType for existing users via sync
+      const updateData: any = {};
       if (emailVerified && !existingUser.emailVerified) {
-        await storage.updateUser(existingUser.id, { emailVerified: true });
+        updateData.emailVerified = true;
+      }
+      // Sync profile image from OAuth if user doesn't have one
+      if (profileImageUrl && !existingUser.profileImageUrl) {
+        updateData.profileImageUrl = profileImageUrl;
+      }
+      if (Object.keys(updateData).length > 0) {
+        await storage.updateUser(existingUser.id, updateData);
       }
       return res.json({ 
         message: 'User already exists', 
-        user: { ...existingUser, emailVerified: emailVerified || existingUser.emailVerified },
+        user: { 
+          ...existingUser, 
+          emailVerified: emailVerified || existingUser.emailVerified,
+          profileImageUrl: existingUser.profileImageUrl || profileImageUrl,
+        },
         approvalStatus: existingUser.approvalStatus,
       });
     }
@@ -529,6 +541,7 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       isActive: true,
       approvalStatus: null,
       role: 'user',
+      profileImageUrl: profileImageUrl || null,
     });
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);

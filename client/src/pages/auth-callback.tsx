@@ -114,6 +114,13 @@ export default function AuthCallback() {
         localStorage.removeItem('oauth_intended_user_type');
       }
       
+      // Extract profile picture from OAuth provider metadata
+      // Google: avatar_url or picture, Facebook: avatar_url or picture
+      const profileImageUrl = supabaseUser.user_metadata?.avatar_url || 
+                              supabaseUser.user_metadata?.picture ||
+                              supabaseUser.user_metadata?.profile_image_url ||
+                              null;
+      
       try {
         const response = await apiRequest("POST", "/api/supabase-auth/sync-user", {
           supabaseId: supabaseUser.id,
@@ -122,6 +129,7 @@ export default function AuthCallback() {
           lastName: supabaseUser.user_metadata?.last_name || supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' '),
           userType,
           emailVerified: !!supabaseUser.email_confirmed_at,
+          profileImageUrl,
         }) as { approvalStatus?: string | null };
         return { ...response, userType };
       } catch (err) {
