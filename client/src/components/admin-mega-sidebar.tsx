@@ -30,7 +30,6 @@ import {
   LogOut,
 } from "lucide-react";
 import { Link } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -59,11 +58,9 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logout } = useAuth();
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = '/admin/login';
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
   };
 
   const navConfig: NavDomain[] = [
@@ -257,9 +254,9 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="icon"
-                  className="w-12 h-12 rounded-xl transition-all text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="w-12 h-12 rounded-xl"
                   onClick={handleLogout}
                   data-testid="button-logout"
                 >

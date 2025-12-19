@@ -50,7 +50,7 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
   const [activeSection, setActiveSection] = useState<string | null>("overview");
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const navConfig: NavSection[] = [
     {
@@ -160,13 +160,8 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
     return "UN";
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setLocation("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+  const handleLogout = () => {
+    window.location.href = '/api/logout';
   };
 
   return (
@@ -233,9 +228,9 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="icon"
-                  className="h-10 w-10 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="h-10 w-10 rounded-lg"
                   onClick={handleLogout}
                   data-testid="button-logout"
                 >

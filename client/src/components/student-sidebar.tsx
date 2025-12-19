@@ -339,9 +339,9 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
+                variant="destructive"
                 size="icon"
-                className="h-10 w-10 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="h-10 w-10 rounded-lg"
                 onClick={handleLogout}
                 data-testid="button-logout"
               >
