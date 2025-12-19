@@ -38,13 +38,13 @@ export default function AuthPage() {
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
 
-  const handleStudentLogin = () => {
-    window.location.href = "/api/student/login";
-  };
-
-  const handleInstitutionLogin = () => {
-    window.location.href = "/api/login?type=university";
-  };
+  // Legacy Replit auth functions - deprecated, keeping for reference
+  // const handleStudentLogin = () => {
+  //   window.location.href = "/api/student/login";
+  // };
+  // const handleInstitutionLogin = () => {
+  //   window.location.href = "/api/login?type=university";
+  // };
 
   const handleGoogleLogin = async (intendedUserType?: "student" | "institution_user") => {
     if (!isConfigured) {
@@ -306,11 +306,8 @@ export default function AuthPage() {
 
   const handleUserTypeSelect = (type: "student" | "institution") => {
     setUserType(type);
-    if (type === "student") {
-      handleStudentLogin();
-    } else {
-      handleInstitutionLogin();
-    }
+    // Use Supabase auth flow - show email/password form instead of legacy Replit redirect
+    setView("email");
   };
 
   const handleClose = () => {
@@ -451,22 +448,18 @@ export default function AuthPage() {
 
                   <Separator className="my-4" />
 
-                  <div className="bg-muted/50 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Our secure authentication is powered by Replit. You can sign in with your Google account through this option.
-                    </p>
-                    <Button 
-                      className="w-full h-12 gap-3 text-base font-medium"
-                      onClick={handleStudentLogin}
-                      data-testid="button-replit-login"
-                    >
-                      <ExternalLink className="h-5 w-5" />
-                      <span>Sign in with Replit</span>
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="outline"
+                    className="w-full h-12 justify-start gap-3 text-base font-medium border-border/50 hover-elevate"
+                    onClick={() => setView("email")}
+                    data-testid="button-email-login"
+                  >
+                    <Mail className="h-5 w-5" />
+                    <span>Continue with Email</span>
+                  </Button>
 
-                  <p className="text-xs text-center text-muted-foreground">
-                    Replit authentication supports Google login and provides secure session management.
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Sign in securely with your email and password.
                   </p>
                 </div>
 
