@@ -1658,16 +1658,14 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="py-2">
                             <Select
-                              value={user.roleId || ""}
+                              value={user.roleId ?? undefined}
                               onValueChange={(value) => updateRoleMutation.mutate({
                                 userId: user.id,
                                 roleId: value,
                               })}
                             >
                               <SelectTrigger className="w-[150px] h-7 text-xs" data-testid={`select-role-${user.id}`}>
-                                <SelectValue placeholder="Assign role">
-                                  {roles?.find(r => r.id === user.roleId)?.displayName || user.role || "No role"}
-                                </SelectValue>
+                                <SelectValue placeholder="Assign role" />
                               </SelectTrigger>
                               <SelectContent>
                                 {roles?.map((role) => (
