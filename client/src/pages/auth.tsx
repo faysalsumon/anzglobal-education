@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound } from "lucide-react";
+import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -34,6 +34,7 @@ export default function AuthPage() {
   const [isResending, setIsResending] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
@@ -233,9 +234,9 @@ export default function AuthPage() {
             });
           }
         } else {
-          // Fetch the user's actual role from the database - this is mandatory for access control
+          // Fetch the user's actual role from database - use supabase-auth endpoint which reads JWT
           try {
-            const response = await fetch("/api/auth/user", {
+            const response = await fetch("/api/supabase-auth/user", {
               credentials: "include",
             });
             
@@ -582,15 +583,27 @@ export default function AuthPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input 
-                      id="password"
-                      type="password"
-                      placeholder={isSignup ? "Create a password (min. 6 characters)" : "Enter your password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      data-testid="input-password"
-                    />
+                    <div className="relative">
+                      <Input 
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder={isSignup ? "Create a password (min. 6 characters)" : "Enter your password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="pr-10"
+                        data-testid="input-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={-1}
+                        data-testid="button-toggle-password"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   {!isSignup && (
