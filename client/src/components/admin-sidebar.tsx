@@ -1,6 +1,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -26,7 +27,9 @@ import {
   UserPlus,
   Contact,
   FileText,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 interface AdminSidebarProps {
@@ -37,6 +40,12 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: AdminSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/admin/login';
+  };
   
   // Core management items (only for full admin access)
   const managementItems = [
@@ -272,6 +281,23 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
           </SidebarGroup>
         )}
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-border/40 p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              tooltip="Logout"
+              size="default"
+              data-testid="button-logout"
+              className="h-9 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span className="truncate">Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

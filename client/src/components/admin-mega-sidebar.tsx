@@ -27,8 +27,10 @@ import {
   X,
   User,
   Link2,
+  LogOut,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
@@ -57,6 +59,12 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/admin/login';
+  };
 
   const navConfig: NavDomain[] = [
     {
@@ -227,8 +235,8 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
             </div>
           </ScrollArea>
 
-          {/* Profile Link at Bottom */}
-          <div className="p-2 border-t border-border">
+          {/* Profile and Logout at Bottom */}
+          <div className="p-2 border-t border-border space-y-2">
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Link href="/admin/profile">
@@ -244,6 +252,22 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
               </TooltipTrigger>
               <TooltipContent side="right" className="font-medium">
                 My Profile
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-12 h-12 rounded-xl transition-all text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                Logout
               </TooltipContent>
             </Tooltip>
           </div>
