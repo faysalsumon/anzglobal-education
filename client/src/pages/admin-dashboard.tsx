@@ -1658,22 +1658,23 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="py-2">
                             <Select
-                              value={user.role || "user"}
+                              value={user.roleId || ""}
                               onValueChange={(value) => updateRoleMutation.mutate({
                                 userId: user.id,
-                                userType: user.userType,
-                                role: value,
+                                roleId: value,
                               })}
                             >
-                              <SelectTrigger className="w-[130px] h-7 text-xs">
-                                <SelectValue />
+                              <SelectTrigger className="w-[150px] h-7 text-xs" data-testid={`select-role-${user.id}`}>
+                                <SelectValue placeholder="Assign role">
+                                  {roles?.find(r => r.id === user.roleId)?.displayName || user.role || "No role"}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                                <SelectItem value="support_manager">Support Manager</SelectItem>
-                                <SelectItem value="support_staff">Support Staff</SelectItem>
-                                <SelectItem value="operations_staff">Operations Staff</SelectItem>
+                                {roles?.map((role) => (
+                                  <SelectItem key={role.id} value={role.id}>
+                                    {role.displayName}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </TableCell>
