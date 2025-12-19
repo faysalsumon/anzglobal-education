@@ -58,7 +58,7 @@ export default function AdminLogin() {
       // Verify user is platform_admin
       if (user.userType !== "platform_admin") {
         await supabase.auth.signOut();
-        throw new Error("Access denied. This portal is for platform administrators only.");
+        throw new Error("Access denied. This portal is for platform administrators only. Students and institutions should use the main Sign In page at /auth");
       }
       
       toast({

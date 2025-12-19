@@ -233,11 +233,62 @@ export default function AuthPage() {
             });
           }
         } else {
-          toast({
-            title: "Welcome back!",
-            description: "Successfully signed in.",
-          });
-          setLocation("/dashboard");
+          // Fetch the user's actual role from the database - this is mandatory for access control
+          try {
+            const response = await fetch("/api/auth/user", {
+              credentials: "include",
+            });
+            
+            if (!response.ok) {
+              // If we can't verify user role, sign them out for security
+              const { supabase } = await import("@/lib/supabase");
+              if (supabase) {
+                await supabase.auth.signOut();
+              }
+              toast({
+                title: "Login Error",
+                description: "Unable to verify your account. Please try again.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
+            const userData = await response.json();
+            
+            // Check if user is a platform admin - they should use /admin/login instead
+            if (userData.userType === "platform_admin") {
+              // Sign them out and redirect to admin login
+              const { supabase } = await import("@/lib/supabase");
+              if (supabase) {
+                await supabase.auth.signOut();
+              }
+              toast({
+                title: "Access Restricted",
+                description: "Platform administrators must use the Admin Login portal.",
+                variant: "destructive",
+              });
+              setLocation("/admin/login");
+              return;
+            }
+            
+            toast({
+              title: "Welcome back!",
+              description: "Successfully signed in.",
+            });
+            setLocation("/dashboard");
+          } catch (fetchError) {
+            // If we can't verify user role, sign them out for security
+            console.error("Error fetching user data:", fetchError);
+            const { supabase } = await import("@/lib/supabase");
+            if (supabase) {
+              await supabase.auth.signOut();
+            }
+            toast({
+              title: "Login Error",
+              description: "Unable to verify your account. Please try again.",
+              variant: "destructive",
+            });
+          }
         }
       }
     } finally {
