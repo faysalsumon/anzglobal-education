@@ -236,13 +236,30 @@ export default function AuthPage() {
         } else {
           // Fetch the user's actual role from database - use supabase-auth endpoint which reads JWT
           try {
+            const { supabase } = await import("@/lib/supabase");
+            
+            // Get the current session to include the access token
+            const { data: sessionData } = await supabase?.auth.getSession() || { data: null };
+            const accessToken = sessionData?.session?.access_token;
+            
+            if (!accessToken) {
+              toast({
+                title: "Login Error",
+                description: "Unable to verify your account. Please try again.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
             const response = await fetch("/api/supabase-auth/user", {
               credentials: "include",
+              headers: {
+                "Authorization": `Bearer ${accessToken}`,
+              },
             });
             
             if (!response.ok) {
               // If we can't verify user role, sign them out for security
-              const { supabase } = await import("@/lib/supabase");
               if (supabase) {
                 await supabase.auth.signOut();
               }
@@ -254,12 +271,12 @@ export default function AuthPage() {
               return;
             }
             
-            const userData = await response.json();
+            const responseData = await response.json();
+            const userType = responseData.user?.platformUser?.userType;
             
             // Check if user is a platform admin - they should use /admin/login instead
-            if (userData.userType === "platform_admin") {
+            if (userType === "platform_admin") {
               // Sign them out and redirect to admin login
-              const { supabase } = await import("@/lib/supabase");
               if (supabase) {
                 await supabase.auth.signOut();
               }
