@@ -275,7 +275,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'university'
+  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'institution_admin'
   role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system
   roleId: varchar("role_id"), // References roles table for granular permissions (added later to avoid circular reference)
   isActive: boolean("is_active").default(true),
@@ -288,12 +288,13 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User Type enum - constrains valid user types
+// User Type enum - constrains valid user types (4 types only)
+// Note: 'Super Admin' is a ROLE, not a user type
 export const userTypeEnum = pgEnum('user_type', [
-  'platform_admin',
-  'admin', 
-  'student',
-  'university',
+  'platform_admin',    // Platform administrators
+  'admin',             // Internal staff (various roles like Super Admin, CEO, Consultant, etc.)
+  'student',           // Students seeking education
+  'institution_admin', // Institution/University administrators
 ]);
 
 // Roles table - stores all available roles (scalable, can add more anytime)
@@ -359,7 +360,7 @@ export const activityLogs = pgTable("activity_logs", {
   userEmail: varchar("user_email"),
   userName: varchar("user_name"),
   userProfilePicture: varchar("user_profile_picture"),
-  userType: varchar("user_type", { length: 20 }), // 'student', 'university', 'admin', 'super_admin'
+  userType: varchar("user_type", { length: 20 }), // 'student', 'institution_admin', 'admin', 'platform_admin'
   
   // Entity being acted upon
   entityType: activityEntityTypeEnum("entity_type").notNull(),
@@ -879,7 +880,7 @@ export const applicationStageHistory = pgTable("application_stage_history", {
   toStage: applicationStageEnum("to_stage").notNull(),
   
   changedBy: varchar("changed_by").notNull().references(() => users.id, { onDelete: "cascade" }), // Who moved the stage
-  changedByRole: varchar("changed_by_role", { length: 20 }).notNull(), // 'student', 'admin', 'university'
+  changedByRole: varchar("changed_by_role", { length: 20 }).notNull(), // 'student', 'admin', 'institution_admin', 'platform_admin'
   
   notes: text("notes"), // Optional notes for the stage transition
   metadata: jsonb("metadata"), // Additional stage-specific data
@@ -909,7 +910,7 @@ export const applicationStageDocuments = pgTable("application_stage_documents", 
   isVerified: boolean("is_verified").default(false),
   
   uploadedBy: varchar("uploaded_by").references(() => users.id, { onDelete: "set null" }),
-  uploadedByRole: varchar("uploaded_by_role", { length: 20 }), // 'student', 'admin', 'university'
+  uploadedByRole: varchar("uploaded_by_role", { length: 20 }), // 'student', 'admin', 'institution_admin', 'platform_admin'
   uploadedAt: timestamp("uploaded_at"),
   
   verifiedBy: varchar("verified_by").references(() => users.id, { onDelete: "set null" }),
@@ -1212,10 +1213,10 @@ export const documents = pgTable("documents", {
   mimeType: varchar("mime_type", { length: 100 }),
   
   senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }), // Who uploaded the document
-  senderType: varchar("sender_type", { length: 20 }).notNull(), // 'student' or 'university'
+  senderType: varchar("sender_type", { length: 20 }).notNull(), // 'student' or 'institution_admin'
   
   recipientId: varchar("recipient_id").references(() => users.id, { onDelete: "cascade" }), // Who receives the document (can be null for general submissions)
-  recipientType: varchar("recipient_type", { length: 20 }), // 'student', 'university', or null
+  recipientType: varchar("recipient_type", { length: 20 }), // 'student', 'institution_admin', or null
   
   applicationId: varchar("application_id").references(() => applications.id, { onDelete: "cascade" }), // Optional link to application
   universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }), // Optional link to university
@@ -1245,7 +1246,7 @@ export const documentFolders = pgTable("document_folders", {
   description: text("description"),
   parentFolderId: varchar("parent_folder_id"), // Self-reference for nested folders
   ownerId: varchar("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  ownerType: varchar("owner_type", { length: 20 }).notNull(), // 'student', 'university', 'admin'
+  ownerType: varchar("owner_type", { length: 20 }).notNull(), // 'student', 'institution_admin', 'admin'
   studentProfileId: varchar("student_profile_id").references(() => studentProfiles.id, { onDelete: "cascade" }),
   universityId: varchar("university_id").references(() => universities.id, { onDelete: "cascade" }),
   color: varchar("color", { length: 7 }), // Hex color for folder

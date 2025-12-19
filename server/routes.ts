@@ -589,10 +589,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/set-user-type", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { userType } = req.body;
+      let { userType } = req.body;
 
-      if (!["university", "student", "admin"].includes(userType)) {
+      if (!["institution_admin", "university", "student", "admin", "platform_admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
+      }
+
+      // Normalize legacy 'university' to 'institution_admin'
+      if (userType === "university") {
+        userType = "institution_admin";
       }
 
       const user = await storage.upsertUser({
@@ -4621,11 +4626,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { userType, role } = req.body;
+      let { userType, role } = req.body;
       const targetUserId = req.params.id;
 
-      if (!["student", "university", "admin", "super_admin"].includes(userType)) {
+      if (!["student", "institution_admin", "university", "admin", "platform_admin"].includes(userType)) {
         return res.status(400).json({ message: "Invalid user type" });
+      }
+
+      // Normalize legacy 'university' to 'institution_admin'
+      if (userType === "university") {
+        userType = "institution_admin";
       }
 
       // Update user

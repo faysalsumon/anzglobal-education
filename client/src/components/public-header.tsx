@@ -89,7 +89,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
       if (adminRole === "support_staff") return "Consultant";
       return "Admin";
     }
-    if (user.userType === "university") return "Institution";
+    if (user.userType === "university" || user.userType === "institution_admin") return "Institution Admin";
     if (user.userType === "student") return "Student";
     return user.userType.replace('_', ' ');
   };

@@ -38,7 +38,7 @@ export default function InstitutionLogin() {
       const userData = await response.json();
       
       // Verify this is a university/institution user before proceeding
-      if (userData.userType !== "university") {
+      if (userData.userType !== "university" && userData.userType !== "institution_admin") {
         // Log them out since they used wrong portal
         try {
           await apiRequest("POST", "/api/logout", {});

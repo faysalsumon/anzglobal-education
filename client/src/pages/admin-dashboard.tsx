@@ -191,11 +191,15 @@ interface Application {
 }
 
 // Helper function to format user type labels
+// Note: 'Super Admin' is a ROLE, not a user type
 const formatUserType = (userType: string): string => {
   const labels: Record<string, string> = {
-    admin: "Super Admin",
+    platform_admin: "Platform Admin",
+    admin: "Admin",
     student: "Student",
-    university: "University"
+    institution_admin: "Institution Admin",
+    // Legacy support - map old values
+    university: "Institution Admin"
   };
   return labels[userType] || userType;
 };
@@ -205,7 +209,7 @@ const userSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  userType: z.enum(["student", "university", "admin"]),
+  userType: z.enum(["student", "institution_admin", "admin", "platform_admin"]),
   role: z.string().optional(),
 });
 
@@ -1081,8 +1085,8 @@ export default function AdminDashboard() {
     active: users?.filter(u => u.isActive).length || 0,
     inactive: users?.filter(u => !u.isActive).length || 0,
     students: users?.filter(u => u.userType === "student").length || 0,
-    universities: users?.filter(u => u.userType === "university").length || 0,
-    admins: users?.filter(u => u.userType === "admin").length || 0,
+    institutions: users?.filter(u => u.userType === "institution_admin" || u.userType === "university").length || 0,
+    admins: users?.filter(u => u.userType === "admin" || u.userType === "platform_admin").length || 0,
     pending: users?.filter(u => u.approvalStatus === "pending").length || 0,
   };
 
@@ -1501,8 +1505,8 @@ export default function AdminDashboard() {
             <Card className="p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">Universities</p>
-                  <p className="text-xl font-bold">{userStats.universities}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Institutions</p>
+                  <p className="text-xl font-bold">{userStats.institutions}</p>
                 </div>
                 <Building2 className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -1586,8 +1590,9 @@ export default function AdminDashboard() {
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="student">Students</SelectItem>
-                    <SelectItem value="university">Universities</SelectItem>
-                    <SelectItem value="admin">Super Admins</SelectItem>
+                    <SelectItem value="institution_admin">Institution Admins</SelectItem>
+                    <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="platform_admin">Platform Admins</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -2387,8 +2392,9 @@ export default function AdminDashboard() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="university">University</SelectItem>
-                        <SelectItem value="admin">Super Admin</SelectItem>
+                        <SelectItem value="institution_admin">Institution Admin</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="platform_admin">Platform Admin</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

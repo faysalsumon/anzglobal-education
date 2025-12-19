@@ -12,7 +12,7 @@ export default function UserTypeSelection() {
   const { toast } = useToast();
 
   const setUserTypeMutation = useMutation({
-    mutationFn: async (userType: "university" | "student") => {
+    mutationFn: async (userType: "institution_admin" | "student") => {
       return await apiRequest("POST", "/api/auth/set-user-type", { userType });
     },
     onSuccess: () => {
@@ -38,12 +38,12 @@ export default function UserTypeSelection() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="hover-elevate cursor-pointer transition-all" onClick={() => !setUserTypeMutation.isPending && setUserTypeMutation.mutate("university")}>
+          <Card className="hover-elevate cursor-pointer transition-all" onClick={() => !setUserTypeMutation.isPending && setUserTypeMutation.mutate("institution_admin")}>
             <CardHeader className="text-center pb-4">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <Building2 className="h-8 w-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl">I'm a University</CardTitle>
+              <CardTitle className="text-2xl">I'm an Institution</CardTitle>
               <CardDescription>Register your institution and manage courses</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
@@ -69,7 +69,7 @@ export default function UserTypeSelection() {
                 disabled={setUserTypeMutation.isPending}
                 data-testid="button-select-university"
               >
-                {setUserTypeMutation.isPending ? "Setting up..." : "Continue as University"}
+                {setUserTypeMutation.isPending ? "Setting up..." : "Continue as Institution"}
               </Button>
             </CardContent>
           </Card>
