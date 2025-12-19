@@ -20,7 +20,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Backend**: Node.js Express.js in TypeScript.
 - **Authentication**: Dual authentication system:
   - **Supabase Auth** (primary): Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
-  - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_user" are allowed via OAuth sync; platform_admin requires manual approval.
+  - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_admin" are allowed via OAuth sync; platform_admin requires manual approval.
   - **Replit Auth** (legacy): OpenID Connect via Passport.js with PostgreSQL session storage. Will be deprecated once Supabase migration is complete.
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat.
@@ -30,13 +30,14 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage.
 - **Authorization**: Scalable Role-Based Access Control (RBAC) with granular permissions:
+  - **User Types (4 only)**: `platform_admin`, `admin`, `student`, `institution_admin` - strictly enforced, "Super Admin" is a role not a user type
   - **Database Schema**: `roles`, `permissions`, and `role_permissions` tables for dynamic role management
-  - **9 Roles**: super_admin, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
+  - **9 Roles**: super_admin, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, institution_rep (formerly university_rep)
   - **30+ Permissions**: Resource:action format (e.g., 'dashboard:read', 'users:write', 'applications:approve')
   - **Permission Service** (`server/permission-service.ts`): Caching (5-min TTL), hasPermission(), getUserPermissions(), isPlatformAdmin()
   - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
   - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/users/:id/assign-role`
-  - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types for backward compatibility
+  - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types; server normalizes legacy 'university' values to 'institution_admin' on persist
 
 ### Feature Specifications
 - **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes comprehensive application management with specific stage transitions and a document request system.
