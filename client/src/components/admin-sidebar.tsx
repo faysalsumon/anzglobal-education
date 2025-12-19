@@ -46,12 +46,6 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       value: "users",
       show: hasFullAdminAccess,
     },
-    {
-      icon: Building2,
-      label: "Institutions",
-      value: "institutions",
-      show: hasFullAdminAccess,
-    },
   ];
 
   // CRM items (visible to all admins - their work assignments)
@@ -95,6 +89,12 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       label: "Courses",
       value: "courses",
       show: true,
+    },
+    {
+      icon: Building2,
+      label: "Institutions",
+      value: "institutions",
+      show: hasFullAdminAccess,
     },
     {
       icon: Newspaper,
