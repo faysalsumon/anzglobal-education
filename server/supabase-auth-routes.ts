@@ -670,7 +670,6 @@ router.post('/admin/invite', async (req: Request, res: Response) => {
         firstName: firstName || null,
         lastName: lastName || null,
         userType: 'platform_admin',
-        supabaseId: data.user.id,
         emailVerified: false,
         isActive: true,
         approvalStatus: 'approved',
