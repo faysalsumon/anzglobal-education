@@ -275,8 +275,9 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'student', 'university', 'admin', or 'super_admin'
-  role: varchar("role", { length: 50 }).default("user"), // For granular permissions
+  userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'university'
+  role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system
+  roleId: varchar("role_id"), // References roles table for granular permissions (added later to avoid circular reference)
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
   approvalStatus: approvalStatusEnum("approval_status"), // For platform admin approval workflow (null for students/institutions)
@@ -286,6 +287,68 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// User Type enum - constrains valid user types
+export const userTypeEnum = pgEnum('user_type', [
+  'platform_admin',
+  'admin', 
+  'student',
+  'university',
+]);
+
+// Roles table - stores all available roles (scalable, can add more anytime)
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 50 }).notNull().unique(), // e.g., 'super_admin', 'ceo', 'junior_consultant'
+  displayName: varchar("display_name", { length: 100 }).notNull(), // e.g., 'Super Admin', 'CEO', 'Junior Consultant'
+  description: text("description"),
+  userType: varchar("user_type", { length: 20 }).notNull(), // Which user type this role belongs to
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Permissions table - granular permissions (resource:action format)
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resource: varchar("resource", { length: 50 }).notNull(), // e.g., 'courses', 'applications', 'users', 'crm'
+  action: varchar("action", { length: 50 }).notNull(), // e.g., 'read', 'write', 'delete', 'approve'
+  displayName: varchar("display_name", { length: 100 }).notNull(), // e.g., 'View Courses', 'Manage Applications'
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("permissions_resource_action_unique").on(table.resource, table.action),
+]);
+
+// Role-Permission mapping - which roles have which permissions
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("role_permissions_unique").on(table.roleId, table.permissionId),
+]);
+
+// Relations for roles and permissions
+export const rolesRelations = relations(roles, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, {
+    fields: [rolePermissions.roleId],
+    references: [roles.id],
+  }),
+  permission: one(permissions, {
+    fields: [rolePermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
 
 // Activity Logs table - CRM-style audit trail for all platform actions
 export const activityLogs = pgTable("activity_logs", {
@@ -3156,6 +3219,50 @@ export const updateLocalizedContentSchema = insertLocalizedContentSchema.partial
 export type LocalizedContent = typeof localizedContent.$inferSelect;
 export type InsertLocalizedContent = z.infer<typeof insertLocalizedContentSchema>;
 export type UpdateLocalizedContent = z.infer<typeof updateLocalizedContentSchema>;
+
+// Roles
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateRoleSchema = insertRoleSchema.partial();
+
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type UpdateRole = z.infer<typeof updateRoleSchema>;
+
+// Permissions
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updatePermissionSchema = insertPermissionSchema.partial();
+
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type UpdatePermission = z.infer<typeof updatePermissionSchema>;
+
+// Role Permissions
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+
+// Role with permissions (for API responses)
+export interface RoleWithPermissions extends Role {
+  permissions: Permission[];
+}
+
+// User with role details (for authorization context)
+export interface UserWithRole extends User {
+  roleDetails?: RoleWithPermissions;
+}
 
 // Region with related data for frontend display
 export interface RegionWithDetails extends Region {

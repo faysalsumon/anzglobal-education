@@ -29,7 +29,14 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Job Queue**: BullMQ with Redis for background jobs.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage.
-- **Authorization**: Role-based access control (`userType`) enforced by backend middleware.
+- **Authorization**: Scalable Role-Based Access Control (RBAC) with granular permissions:
+  - **Database Schema**: `roles`, `permissions`, and `role_permissions` tables for dynamic role management
+  - **9 Roles**: super_admin, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
+  - **30+ Permissions**: Resource:action format (e.g., 'dashboard:read', 'users:write', 'applications:approve')
+  - **Permission Service** (`server/permission-service.ts`): Caching (5-min TTL), hasPermission(), getUserPermissions(), isPlatformAdmin()
+  - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
+  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/users/:id/assign-role`
+  - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types for backward compatibility
 
 ### Feature Specifications
 - **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes comprehensive application management with specific stage transitions and a document request system.

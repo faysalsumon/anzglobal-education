@@ -68,6 +68,15 @@ import {
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
+import { 
+  hasPermission, 
+  isAdmin as checkIsAdmin, 
+  isPlatformAdmin,
+  getUserRole,
+  getUserPermissions,
+  invalidatePermissionCache
+} from "./permission-service";
+import { roles } from "@shared/schema";
 import {
   generateUniversityDescription,
   generateCourseDescription,
@@ -231,7 +240,7 @@ async function checkUniversityAccess(
 export async function checkAdminAccess(
   userId: string,
   requiredRoles?: AdminRole[]
-): Promise<{ role: AdminRole } | null> {
+): Promise<{ role: AdminRole; roleName?: string } | null> {
   const user = await storage.getUser(userId);
   
   // Accept both 'admin' and 'platform_admin' userTypes as valid admin access
@@ -239,9 +248,39 @@ export async function checkAdminAccess(
     return null;
   }
   
-  // Check if user has role directly in users table (for direct admin creation)
-  // Note: This supports admins created directly in DB (e.g., for testing) without admin_team_members entries.
-  // Production admins should ideally have admin_team_members entries for full team management features.
+  // NEW: Check role from roles table using roleId
+  if (user.roleId) {
+    const userRole = await getUserRole(userId);
+    if (userRole) {
+      // Map new role names to legacy AdminRole type for backward compatibility
+      const roleName = userRole.name;
+      
+      // Role mapping: New roles -> Legacy AdminRole types
+      // This ensures proper access control when using new role system
+      const roleToLegacy: Record<string, AdminRole> = {
+        'super_admin': 'super_admin',
+        'ceo': 'super_admin',
+        'cfo': 'operations_staff',
+        'branch_manager': 'support_manager',
+        'marketing_executive': 'support_staff',
+        'senior_consultant': 'support_staff',
+        'junior_consultant': 'support_staff',
+      };
+      
+      // Get the mapped legacy role (default to support_staff for unknown roles)
+      const legacyRole = roleToLegacy[roleName] || 'support_staff';
+      
+      // If requiredRoles is specified, check if user has required access
+      if (requiredRoles && !requiredRoles.includes(legacyRole)) {
+        return null;
+      }
+      
+      // Return the properly mapped legacy role (NOT defaulting to super_admin)
+      return { role: legacyRole, roleName };
+    }
+  }
+  
+  // LEGACY: Check if user has role directly in users table
   if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
     const userRole = user.role as AdminRole;
     if (requiredRoles && !requiredRoles.includes(userRole)) {
@@ -250,7 +289,7 @@ export async function checkAdminAccess(
     return { role: userRole };
   }
   
-  // Otherwise check admin_team_members table
+  // LEGACY: Otherwise check admin_team_members table
   const adminMember = await storage.getAdminTeamMemberByUserId(userId);
   if (!adminMember || !adminMember.isActive) {
     return null;
@@ -498,20 +537,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      // If admin user, include their admin team member role with fallback to user.role
-      if (user && user.userType === 'admin') {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get user's role details from new roles table
+      const roleDetails = await getUserRole(userId);
+      const permissions = await getUserPermissions(userId);
+      
+      // If admin user, include their role info
+      if (user.userType === 'admin' || user.userType === 'platform_admin') {
         const adminMember = await storage.getAdminTeamMemberByUserId(userId);
         res.json({
           ...user,
-          // Prefer adminTeamMember role, fallback to user.role for compatibility
-          adminRole: adminMember?.role || user.role || null,
+          // New role system
+          roleDetails: roleDetails || null,
+          permissions: permissions,
+          // Legacy: Prefer adminTeamMember role, fallback to user.role for compatibility
+          adminRole: adminMember?.role || user.role || roleDetails?.name || null,
         });
       } else {
-        res.json(user);
+        res.json({
+          ...user,
+          roleDetails: roleDetails || null,
+          permissions: permissions,
+        });
       }
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  
+  // Get user's permissions
+  app.get("/api/auth/permissions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const permissions = await getUserPermissions(userId);
+      const roleDetails = await getUserRole(userId);
+      
+      res.json({
+        permissions,
+        role: roleDetails,
+      });
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
     }
   });
 
@@ -4421,6 +4492,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error rejecting course:", error);
       res.status(400).json({ message: error.message || "Failed to reject course" });
+    }
+  });
+
+  // ==================== ROLE MANAGEMENT ROUTES ====================
+  
+  // Get all roles (admin only)
+  app.get("/api/admin/roles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allRoles = await db.select().from(roles).where(eq(roles.isActive, true));
+      res.json(allRoles);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Get roles for a specific user type
+  app.get("/api/admin/roles/:userType", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const userType = req.params.userType;
+      const roleList = await db
+        .select()
+        .from(roles)
+        .where(and(eq(roles.userType, userType), eq(roles.isActive, true)));
+      
+      res.json(roleList);
+    } catch (error) {
+      console.error("Error fetching roles by user type:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Update user's role (super admin only)
+  app.patch("/api/admin/users/:id/assign-role", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { roleId } = req.body;
+      const targetUserId = req.params.id;
+
+      // Verify role exists
+      const [role] = await db.select().from(roles).where(eq(roles.id, roleId));
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      // Update user's roleId
+      const [updatedUser] = await db
+        .update(users)
+        .set({ roleId, updatedAt: new Date() })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Invalidate permission cache for this user
+      invalidatePermissionCache(targetUserId);
+
+      res.json({
+        message: "Role assigned successfully",
+        user: updatedUser,
+        role,
+      });
+    } catch (error) {
+      console.error("Error assigning role:", error);
+      res.status(500).json({ message: "Failed to assign role" });
     }
   });
 
