@@ -63,10 +63,20 @@ interface User {
   lastName: string | null;
   userType: string;
   role: string | null;
+  roleId: string | null;
   isActive: boolean | null;
   lastLogin: string | null;
   createdAt: string | null;
   approvalStatus: string | null;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string | null;
+  userType: string;
+  isActive: boolean;
 }
 
 interface Institution {
@@ -446,6 +456,12 @@ export default function AdminDashboard() {
     queryKey: ["/api/super-admin/applications"],
   });
 
+  // Fetch roles for role assignment dropdown (new RBAC system)
+  const { data: roles } = useQuery<Role[]>({
+    queryKey: ["/api/admin/roles"],
+    enabled: hasFullAdminAccess,
+  });
+
   // (inquiryLeads query removed - consolidated into CRM Leads)
 
   // Fetch selected institution to get its campusAddresses
@@ -554,8 +570,8 @@ export default function AdminDashboard() {
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, userType, role }: { userId: string; userType: string; role: string }) => {
-      return await apiRequest("PATCH", `/api/super-admin/users/${userId}/role`, { userType, role });
+    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+      return await apiRequest("PATCH", `/api/admin/users/${userId}/assign-role`, { roleId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
