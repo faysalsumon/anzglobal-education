@@ -55,6 +55,7 @@ import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
 import { AdminRegionsPanel } from "@/components/admin-regions-panel";
+import { AdminTeamPanel } from "@/components/admin-team-panel";
 
 interface User {
   id: string;
@@ -294,8 +295,8 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs'];
-    const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs'];
+    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'affiliates'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     
     if (hash && validTabs.includes(hash)) {
       // Check access for full-admin-only tabs
@@ -2305,6 +2306,13 @@ export default function AdminDashboard() {
               showFilters={true}
               limit={50}
             />
+          </div>
+        )}
+
+        {/* Team Management Tab */}
+        {activeTab === "team" && hasFullAdminAccess && (
+          <div className="space-y-4">
+            <AdminTeamPanel />
           </div>
         )}
               </div>

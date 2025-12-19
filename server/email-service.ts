@@ -1104,3 +1104,128 @@ export async function sendAdminRejectedNotification(data: AdminRejectedNotificat
     console.error('Error sending admin rejected notification:', error.message);
   }
 }
+
+// ============================================
+// TEAM INVITATION EMAIL NOTIFICATIONS
+// ============================================
+
+interface TeamInvitationEmailData {
+  email: string;
+  inviterName: string;
+  roleName: string;
+  inviteToken: string;
+  expiresAt: Date;
+  note?: string;
+}
+
+// HTML email template for team invitation
+function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
+  const inviteUrl = `${process.env.REPL_URL || 'https://anzglobal.com.au'}/auth/accept-invite?token=${data.inviteToken}`;
+  const expiryDate = new Date(data.expiresAt).toLocaleDateString('en-AU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>You're Invited to Join ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're Invited to Join Our Team!</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome to the Team!</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    <strong>${data.inviterName}</strong> has invited you to join the ANZ Global Education platform as a <strong>${data.roleName}</strong>.
+                  </p>
+                  
+                  ${data.note ? `
+                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
+                    <p style="color: #555555; font-size: 14px; font-style: italic; margin: 0;">"${data.note}"</p>
+                  </div>
+                  ` : ''}
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                    Click the button below to set up your account and get started:
+                  </p>
+                  
+                  <!-- CTA Button -->
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="${inviteUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 18px; font-weight: bold;">Accept Invitation</a>
+                  </div>
+                  
+                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
+                    <p style="color: #856404; margin: 0; font-size: 14px;">
+                      <strong>⏰ Note:</strong> This invitation will expire on <strong>${expiryDate}</strong>. Please accept it before then.
+                    </p>
+                  </div>
+                  
+                  <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                    If the button doesn't work, copy and paste this link into your browser:
+                  </p>
+                  <p style="color: #3465A5; font-size: 12px; word-break: break-all; margin: 5px 0 0 0;">
+                    ${inviteUrl}
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
+                    ANZ Global Education - Your Gateway to Global Education
+                  </p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">
+                    If you didn't expect this invitation, you can safely ignore this email.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Send team invitation email
+export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping team invitation email');
+    return false;
+  }
+
+  try {
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `You're Invited to Join ANZ Global Education as ${data.roleName}`,
+      html: getTeamInvitationEmailHtml(data),
+    });
+
+    console.log(`Team invitation email sent to ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending team invitation email:', error.message);
+    return false;
+  }
+}

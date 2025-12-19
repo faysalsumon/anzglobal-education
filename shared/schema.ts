@@ -351,6 +351,43 @@ export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => 
   }),
 }));
 
+// Invitation status enum
+export const invitationStatusEnum = pgEnum('invitation_status', [
+  'pending',   // Invitation sent, awaiting acceptance
+  'accepted',  // User accepted and created account
+  'expired',   // Invitation link expired (7 days)
+  'revoked',   // Admin cancelled the invitation
+]);
+
+// Team invitations table - for platform_admin/admin to invite new team members
+export const invitations = pgTable("invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  userType: varchar("user_type", { length: 20 }).notNull().default("admin"), // 'platform_admin' or 'admin' only
+  tokenHash: varchar("token_hash").notNull(), // Hashed invitation token for security
+  status: invitationStatusEnum("status").notNull().default("pending"),
+  invitedById: varchar("invited_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  revokedAt: timestamp("revoked_at"),
+  note: text("note"), // Optional note from inviter
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for invitations
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  role: one(roles, {
+    fields: [invitations.roleId],
+    references: [roles.id],
+  }),
+  invitedBy: one(users, {
+    fields: [invitations.invitedById],
+    references: [users.id],
+  }),
+}));
+
 // Activity Logs table - CRM-style audit trail for all platform actions
 export const activityLogs = pgTable("activity_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3258,6 +3295,31 @@ export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 // Role with permissions (for API responses)
 export interface RoleWithPermissions extends Role {
   permissions: Permission[];
+}
+
+// Invitations
+export const insertInvitationSchema = createInsertSchema(invitations).omit({
+  id: true,
+  tokenHash: true,
+  status: true,
+  acceptedAt: true,
+  revokedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+
+// Invitation with role details (for API responses)
+export interface InvitationWithDetails extends Invitation {
+  role?: Role;
+  invitedBy?: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  };
 }
 
 // User with role details (for authorization context)

@@ -706,6 +706,122 @@ router.post('/admin/invite', async (req: Request, res: Response) => {
   }
 });
 
+// ==================== TEAM INVITATION ACCEPTANCE ROUTES ====================
+
+// Validate invitation token (public - no auth required)
+router.get('/invitation/validate', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: 'Invitation token is required' });
+    }
+
+    const { validateInvitationToken } = await import('./invitation-service');
+    const result = await validateInvitationToken(token);
+
+    if (!result.valid) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({
+      valid: true,
+      email: result.invitation?.email,
+      roleName: result.invitation?.role?.displayName,
+      expiresAt: result.invitation?.expiresAt,
+    });
+  } catch (err) {
+    console.error('[Invitation Validate] Error:', err);
+    res.status(500).json({ error: 'Failed to validate invitation' });
+  }
+});
+
+// Accept invitation and create account (public - no auth required)
+router.post('/invitation/accept', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Authentication service is not configured' });
+    }
+
+    const { token, password, firstName, lastName } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const { validateInvitationToken, acceptInvitation } = await import('./invitation-service');
+    const validation = await validateInvitationToken(token);
+
+    if (!validation.valid || !validation.invitation) {
+      return res.status(400).json({ error: validation.error || 'Invalid invitation' });
+    }
+
+    const invitation = validation.invitation;
+
+    // Create user in Supabase using admin client
+    const { data: supabaseData, error: supabaseError } = await supabaseAdmin.auth.admin.createUser({
+      email: invitation.email,
+      password,
+      email_confirm: true, // Auto-confirm email since they received the invitation
+      user_metadata: {
+        first_name: firstName || null,
+        last_name: lastName || null,
+        user_type: invitation.userType,
+        invited: true,
+      },
+    });
+
+    if (supabaseError) {
+      console.error('[Invitation Accept] Supabase error:', supabaseError);
+      return res.status(400).json({ error: supabaseError.message });
+    }
+
+    // Create user in our database
+    const newUser = await storage.createUser({
+      email: invitation.email,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      userType: invitation.userType,
+      roleId: invitation.roleId,
+      emailVerified: true,
+      isActive: true,
+      approvalStatus: 'approved',
+    });
+
+    // Mark invitation as accepted
+    await acceptInvitation(token);
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail({
+        email: invitation.email,
+        firstName: firstName || 'Team Member',
+        userType: invitation.userType,
+      });
+    } catch (emailError) {
+      console.error('[Invitation Accept] Welcome email error:', emailError);
+    }
+
+    res.status(201).json({
+      message: 'Account created successfully. You can now sign in.',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        userType: newUser.userType,
+      },
+    });
+  } catch (err) {
+    console.error('[Invitation Accept] Error:', err);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
 export function setupSupabaseAuth(app: any) {
   app.use('/api/supabase-auth', router);
   console.log('Supabase authentication routes registered');

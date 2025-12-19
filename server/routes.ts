@@ -4587,6 +4587,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== TEAM INVITATION ROUTES ====================
+  
+  // Get all invitations (platform_admin and admin only)
+  app.get("/api/admin/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getInvitations } = await import('./invitation-service');
+      const invitationList = await getInvitations();
+      res.json(invitationList);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Get available admin roles for invitation (platform_admin and admin only)
+  app.get("/api/admin/invitations/roles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getAdminRoles } = await import('./invitation-service');
+      const adminRoles = await getAdminRoles();
+      res.json(adminRoles);
+    } catch (error) {
+      console.error("Error fetching admin roles:", error);
+      res.status(500).json({ message: "Failed to fetch admin roles" });
+    }
+  });
+
+  // Create invitation (platform_admin and admin only)
+  app.post("/api/admin/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { email, roleId, userType, note } = req.body;
+
+      if (!email || !roleId) {
+        return res.status(400).json({ message: "Email and role are required" });
+      }
+
+      // Validate user type
+      const validUserType = userType === 'platform_admin' ? 'platform_admin' : 'admin';
+
+      const { createInvitation } = await import('./invitation-service');
+      const result = await createInvitation({
+        email,
+        roleId,
+        userType: validUserType,
+        invitedById: userId,
+        note,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      res.status(201).json(result.invitation);
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Resend invitation (platform_admin and admin only)
+  app.post("/api/admin/invitations/:id/resend", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { resendInvitation } = await import('./invitation-service');
+      const result = await resendInvitation(req.params.id, userId);
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      res.json({ message: "Invitation resent successfully", invitation: result.invitation });
+    } catch (error) {
+      console.error("Error resending invitation:", error);
+      res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  // Revoke invitation (platform_admin and admin only)
+  app.delete("/api/admin/invitations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { revokeInvitation } = await import('./invitation-service');
+      const result = await revokeInvitation(req.params.id);
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+
+      res.json({ message: "Invitation revoked successfully" });
+    } catch (error) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
   // Super Admin User Management Routes
   app.get("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {
