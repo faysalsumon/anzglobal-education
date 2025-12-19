@@ -84,6 +84,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
+        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
       ],
@@ -95,7 +96,6 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
       routes: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
-        { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
       ],
