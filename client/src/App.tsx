@@ -62,6 +62,7 @@ import AffiliatePage from "@/pages/affiliate";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallback from "@/pages/auth-callback";
 import AdminPendingApproval from "@/pages/admin-pending-approval";
+import AcceptInvitation from "@/pages/accept-invitation";
 
 interface RouterProps {
   user: any;
@@ -96,6 +97,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/affiliate" component={AffiliatePage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/auth/callback" component={AuthCallback} />
+      <Route path="/accept-invitation" component={AcceptInvitation} />
       
       {/* Protected routes - always available but protected at component level */}
       <Route path="/user-type" component={UserTypeSelection} />
