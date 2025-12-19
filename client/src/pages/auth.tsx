@@ -47,7 +47,7 @@ export default function AuthPage() {
   //   window.location.href = "/api/login?type=university";
   // };
 
-  const handleGoogleLogin = async (intendedUserType?: "student" | "institution_user") => {
+  const handleGoogleLogin = async (intendedUserType?: "student" | "institution_admin") => {
     if (!isConfigured) {
       toast({
         title: "Not Available",
@@ -59,7 +59,7 @@ export default function AuthPage() {
     
     // Store intended user type in localStorage before redirecting to Google
     // This will be read by auth-callback to properly set the user type
-    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_user" : "student");
+    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_admin" : "student");
     localStorage.setItem('oauth_intended_user_type', userTypeToStore);
     
     setIsLoading(true);
@@ -87,7 +87,7 @@ export default function AuthPage() {
     }
   };
 
-  const handleFacebookLogin = async (intendedUserType?: "student" | "institution_user") => {
+  const handleFacebookLogin = async (intendedUserType?: "student" | "institution_admin") => {
     if (!isConfigured) {
       toast({
         title: "Not Available",
@@ -98,7 +98,7 @@ export default function AuthPage() {
     }
     
     // Store intended user type in localStorage before redirecting to Facebook
-    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_user" : "student");
+    const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_admin" : "student");
     localStorage.setItem('oauth_intended_user_type', userTypeToStore);
     
     setIsLoading(true);

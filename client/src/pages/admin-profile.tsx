@@ -40,10 +40,10 @@ export default function AdminProfile() {
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
 
-  // Fetch admin profile
+  // Fetch admin profile - works for all user types
   const { data: profile, isLoading } = useQuery<AdminUser>({
     queryKey: ["/api/admin/profile"],
-    enabled: user?.userType === "admin",
+    enabled: !!user,
   });
 
   // Form setup

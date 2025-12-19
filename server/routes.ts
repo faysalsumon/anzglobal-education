@@ -2266,33 +2266,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/admin/profile - Get admin profile details
+  // GET /api/admin/profile - Get user profile details (works for all user types)
   app.get("/api/admin/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
-        return res.status(403).json({ message: "Access denied. Admin access required." });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       // Return safe user data (exclude sensitive fields)
       const { password, verificationToken, resetPasswordToken, ...safeUserData } = user;
       res.json(safeUserData);
     } catch (error) {
-      console.error("Error fetching admin profile:", error);
-      res.status(500).json({ message: "Failed to fetch admin profile" });
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
 
-  // PUT /api/admin/profile - Update admin profile details
+  // PUT /api/admin/profile - Update user profile details (works for all user types)
   app.put("/api/admin/profile", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
-        return res.status(403).json({ message: "Access denied. Admin access required." });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       // Only allow updating specific fields
@@ -2320,14 +2320,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/admin/upload-profile-photo - Upload admin profile photo
+  // POST /api/admin/upload-profile-photo - Upload user profile photo (works for all user types)
   app.post("/api/admin/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.userType !== "admin" && user.userType !== "platform_admin")) {
-        return res.status(403).json({ message: "Access denied. Admin access required." });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       if (!req.file) {

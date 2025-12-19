@@ -11,7 +11,7 @@ interface SignUpBody {
   password: string;
   firstName?: string;
   lastName?: string;
-  userType: 'student' | 'institution_user' | 'platform_admin';
+  userType: 'student' | 'institution_admin' | 'platform_admin';
 }
 
 interface SignInBody {
@@ -31,8 +31,8 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    if (!userType || !['student', 'institution_user'].includes(userType)) {
-      return res.status(400).json({ error: 'Valid userType is required (student or institution_user). Platform admin accounts require manual approval.' });
+    if (!userType || !['student', 'institution_admin'].includes(userType)) {
+      return res.status(400).json({ error: 'Valid userType is required (student or institution_admin). Platform admin accounts require manual approval.' });
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -104,18 +104,32 @@ router.post('/signin', async (req: Request, res: Response) => {
     
     if (!platformUser && data.user) {
       const metadata = data.user.user_metadata;
+      // Normalize legacy 'institution_user' or 'university' to 'institution_admin'
+      let userType = metadata?.user_type || 'student';
+      if (userType === 'institution_user' || userType === 'university') {
+        userType = 'institution_admin';
+      }
       platformUser = await storage.createUser({
         email,
         firstName: metadata?.first_name || null,
         lastName: metadata?.last_name || null,
-        userType: metadata?.user_type || 'student',
+        userType,
         emailVerified: true,
         isActive: true,
       });
     }
 
     if (platformUser) {
-      await storage.updateUser(platformUser.id, { lastLogin: new Date() });
+      // Also normalize existing user's userType if it's legacy
+      const updates: any = { lastLogin: new Date() };
+      if (platformUser.userType === 'institution_user' || platformUser.userType === 'university') {
+        updates.userType = 'institution_admin';
+      }
+      await storage.updateUser(platformUser.id, updates);
+      // Update local reference
+      if (updates.userType) {
+        platformUser.userType = updates.userType;
+      }
     }
 
     res.json({
@@ -499,8 +513,13 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     // SECURITY: Only allow safe user types via OAuth sync
     // platform_admin can only be created through the proper signup flow with approval
     // This prevents privilege escalation via localStorage manipulation
-    const allowedUserTypes = ['student', 'institution_user'];
-    const safeUserType = allowedUserTypes.includes(userType) ? userType : 'student';
+    // Normalize legacy 'institution_user' to 'institution_admin'
+    let normalizedUserType = userType;
+    if (userType === 'institution_user') {
+      normalizedUserType = 'institution_admin';
+    }
+    const allowedUserTypes = ['student', 'institution_admin'];
+    const safeUserType = allowedUserTypes.includes(normalizedUserType) ? normalizedUserType : 'student';
 
     // Check if user already exists in local database
     let existingUser = await storage.getUserByEmail(email);
@@ -531,7 +550,7 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     }
 
     // Create new user in local database
-    // SECURITY: Only allow student or institution_user via OAuth
+    // SECURITY: Only allow student or institution_admin via OAuth
     const newUser = await storage.createUser({
       email,
       firstName: firstName || null,
@@ -547,7 +566,7 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
 
     // Send welcome email to new user (students and institutions)
-    const welcomeUserType = safeUserType === 'institution_user' ? 'institution' : 'student';
+    const welcomeUserType = safeUserType === 'institution_admin' ? 'institution' : 'student';
     sendWelcomeEmail({
       email,
       firstName: firstName || 'there',

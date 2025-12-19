@@ -17,7 +17,8 @@ export default function DashboardRedirect() {
       case "admin":
         setLocation("/admin/dashboard");
         break;
-      case "institution_user":
+      case "institution_admin":
+      case "institution_user": // Legacy support
         setLocation("/university/dashboard");
         break;
       case "student":

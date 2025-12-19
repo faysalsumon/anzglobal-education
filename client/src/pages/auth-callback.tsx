@@ -148,7 +148,8 @@ export default function AuthCallback() {
             setLocation("/admin/dashboard");
           }
           break;
-        case "institution_user":
+        case "institution_admin":
+        case "institution_user": // Legacy support
           setLocation("/university/dashboard");
           break;
         case "student":
@@ -182,7 +183,7 @@ export default function AuthCallback() {
               </div>
               <CardTitle>Email Verified!</CardTitle>
               <CardDescription>
-                Your account has been verified. Redirecting to your {userType === "student" ? "student" : userType === "institution_user" ? "institution" : "admin"} dashboard...
+                Your account has been verified. Redirecting to your {userType === "student" ? "student" : (userType === "institution_admin" || userType === "institution_user") ? "institution" : "admin"} dashboard...
               </CardDescription>
             </>
           )}
