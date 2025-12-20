@@ -79,7 +79,9 @@ export async function createInvitation(data: CreateInvitationData): Promise<Invi
       ? `${inviter[0].firstName} ${inviter[0].lastName}`
       : inviter[0]?.email || 'ANZ Global Education';
 
-    await sendTeamInvitationEmail({
+    console.log(`[Invitation] Sending email to ${data.email} for role ${role[0].displayName}`);
+    
+    const emailSent = await sendTeamInvitationEmail({
       email: data.email,
       inviterName,
       roleName: role[0].displayName,
@@ -87,6 +89,8 @@ export async function createInvitation(data: CreateInvitationData): Promise<Invi
       expiresAt,
       note: data.note,
     });
+    
+    console.log(`[Invitation] Email sent: ${emailSent}`);
 
     const invitationWithDetails: InvitationWithDetails = {
       ...newInvitation,
