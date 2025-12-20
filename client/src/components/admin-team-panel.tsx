@@ -73,10 +73,8 @@ export function AdminTeamPanel() {
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: InviteFormData) => {
-      return apiRequest("/api/admin/invitations", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/admin/invitations", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
@@ -98,9 +96,8 @@ export function AdminTeamPanel() {
 
   const resendInvitationMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/invitations/${id}/resend`, {
-        method: "POST",
-      });
+      const response = await apiRequest("POST", `/api/admin/invitations/${id}/resend`);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
@@ -120,9 +117,8 @@ export function AdminTeamPanel() {
 
   const revokeInvitationMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/invitations/${id}`, {
-        method: "DELETE",
-      });
+      const response = await apiRequest("DELETE", `/api/admin/invitations/${id}`);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
