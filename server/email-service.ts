@@ -1215,6 +1215,9 @@ export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Pr
   }
 
   try {
+    console.log(`[Email] Attempting to send team invitation to ${data.email}`);
+    console.log(`[Email] From: ${FROM_EMAIL}`);
+    
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
@@ -1222,10 +1225,18 @@ export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Pr
       html: getTeamInvitationEmailHtml(data),
     });
 
+    console.log(`[Email] Full result:`, JSON.stringify(result, null, 2));
+    
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
     console.log(`Team invitation email sent to ${data.email}, ID: ${result.data?.id}`);
     return true;
   } catch (error: any) {
     console.error('Error sending team invitation email:', error.message);
+    console.error('Full error:', error);
     return false;
   }
 }
