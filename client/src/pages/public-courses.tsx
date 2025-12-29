@@ -945,7 +945,7 @@ export default function PublicCourses() {
                           </Button>
                         ) : (
                           <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                            <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                            <a href="/auth">
                               <LogIn className="mr-2 h-4 w-4" />
                               <span className="truncate">Login to Apply</span>
                             </a>

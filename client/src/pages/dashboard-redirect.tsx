@@ -7,10 +7,10 @@ export default function DashboardRedirect() {
   const [, setLocation] = useLocation();
   const { user, isLoading, isAuthenticated, isAuthResolved } = useAuth();
 
-  // Redirect unauthenticated users to login
+  // Redirect unauthenticated users to auth page
   useEffect(() => {
     if (isAuthResolved && !isAuthenticated) {
-      setLocation("/login");
+      setLocation("/auth");
       return;
     }
   }, [isAuthResolved, isAuthenticated, setLocation]);

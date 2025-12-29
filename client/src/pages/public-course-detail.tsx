@@ -661,7 +661,7 @@ export default function PublicCourseDetail() {
                     size="lg"
                     data-testid="button-login-apply"
                   >
-                    <a href={`/api/login?type=student&redirect=/student/courses/${course.id}`}>
+                    <a href="/auth">
                       <LogIn className="h-4 w-4 mr-2" />
                       Login to Apply
                     </a>

@@ -22,7 +22,7 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
   const [activeTab, setActiveTab] = useState("login");
 
   const handleReplitLogin = () => {
-    window.location.href = "/api/student/login";
+    window.location.href = "/auth";
   };
 
   const handleSocialLogin = (provider: string) => {

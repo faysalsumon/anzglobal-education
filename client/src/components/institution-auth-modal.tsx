@@ -34,8 +34,8 @@ export function InstitutionAuthModal({ open, onOpenChange }: InstitutionAuthModa
             variant="default"
             data-testid="button-institution-auth"
           >
-            <a href="/api/login?type=university">
-              <span>Continue with Replit</span>
+            <a href="/institution/login">
+              <span>Sign In to Institution Portal</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </Button>
@@ -55,7 +55,7 @@ export function InstitutionAuthModal({ open, onOpenChange }: InstitutionAuthModa
 
         <div className="rounded-lg bg-muted/50 p-3">
           <p className="text-xs text-center text-muted-foreground">
-            Secure authentication powered by Replit. Your institution profile will be created automatically on first sign-in.
+            Secure authentication for education partners. Your institution profile will be created automatically on first sign-in.
           </p>
         </div>
       </DialogContent>

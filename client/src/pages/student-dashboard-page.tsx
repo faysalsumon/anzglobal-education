@@ -9,10 +9,10 @@ export default function StudentDashboardPage() {
   const { isLoading, isAuthenticated, isAuthResolved, isStudent } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect unauthenticated users to login
+  // Redirect unauthenticated users to auth page
   useEffect(() => {
     if (isAuthResolved && !isAuthenticated) {
-      setLocation("/login");
+      setLocation("/auth");
     }
   }, [isAuthResolved, isAuthenticated, setLocation]);
 

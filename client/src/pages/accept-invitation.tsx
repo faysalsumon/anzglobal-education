@@ -99,7 +99,7 @@ export default function AcceptInvitation() {
         description: "Your account has been set up successfully. You can now sign in.",
       });
       setTimeout(() => {
-        setLocation("/login");
+        setLocation("/auth");
       }, 2000);
     },
     onError: (error: any) => {
@@ -127,7 +127,7 @@ export default function AcceptInvitation() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => setLocation("/login")} data-testid="button-go-to-login">
+            <Button onClick={() => setLocation("/auth")} data-testid="button-go-to-login">
               Go to Login
             </Button>
           </CardContent>
@@ -169,7 +169,7 @@ export default function AcceptInvitation() {
             <p className="text-sm text-muted-foreground">
               If you believe this is an error, please contact the person who invited you to request a new invitation.
             </p>
-            <Button onClick={() => setLocation("/login")} data-testid="button-go-to-login">
+            <Button onClick={() => setLocation("/auth")} data-testid="button-go-to-login">
               Go to Login
             </Button>
           </CardContent>
@@ -341,7 +341,7 @@ export default function AcceptInvitation() {
             <Button 
               variant="ghost" 
               className="p-0 h-auto text-primary underline-offset-4 hover:underline"
-              onClick={() => setLocation("/login")}
+              onClick={() => setLocation("/auth")}
               data-testid="link-go-to-login"
             >
               Sign in

@@ -199,7 +199,7 @@ export default function InstitutionLogin() {
             <p className="text-muted-foreground">
               Are you a student?{" "}
               <a 
-                href="/api/login?type=student" 
+                href="/auth" 
                 className="text-primary hover:underline font-medium"
                 data-testid="link-student-login"
               >
