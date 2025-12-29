@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -287,7 +288,39 @@ const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess, isAdmin } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Redirect unauthenticated users to admin login
+  useEffect(() => {
+    if (isAuthResolved && !isAuthenticated) {
+      setLocation("/admin/login");
+    }
+  }, [isAuthResolved, isAuthenticated, setLocation]);
+
+  // Redirect non-admin users to appropriate dashboard
+  useEffect(() => {
+    if (isAuthResolved && isAuthenticated && !isAdmin) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthResolved, isAuthenticated, isAdmin, setLocation]);
+
+  // Show loading state while auth is being resolved
+  if (isLoading || !isAuthResolved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard content until authentication is confirmed
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
   
   // Default tab based on role: restricted admins use my-tasks, full admins use users
   const defaultTab = (isConsultant || !hasFullAdminAccess) ? "my-tasks" : "users";
