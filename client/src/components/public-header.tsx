@@ -53,12 +53,10 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
       }
       
       // Clear all query cache
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       queryClient.clear();
       
-      // Redirect to home
-      setLocation("/");
+      // Force full page reload to clear all in-memory React state
+      window.location.href = "/";
     } catch (error) {
       console.error("Logout error:", error);
       // Force redirect even on error
