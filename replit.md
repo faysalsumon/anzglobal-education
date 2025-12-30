@@ -18,10 +18,10 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
 - **Backend**: Node.js Express.js in TypeScript.
-- **Authentication**: Dual authentication system:
-  - **Supabase Auth** (primary): Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
+- **Authentication**: Supabase-only authentication system (Replit Auth completely removed as of December 2025):
+  - **Supabase Auth**: Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
   - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_admin" are allowed via OAuth sync; platform_admin requires manual approval.
-  - **Replit Auth** (legacy): OpenID Connect via Passport.js with PostgreSQL session storage. Will be deprecated once Supabase migration is complete.
+  - **Login Portals**: `/admin/login` (platform admin), `/institution/login` (institution partners), `/auth` (students) - all using Supabase signInWithPassword.
 - **API**: RESTful.
 - **Real-time**: WebSockets for chat.
 - **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
@@ -68,7 +68,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Student Application Portal**: Utilizes an 11-stage workflow (Assessment to Visa-Lodgment/Outcome) with dedicated database tables and a Student Portal UI.
 
 ## External Dependencies
-- **Authentication Service**: Supabase Auth (primary) with Replit Auth (legacy, pending removal).
+- **Authentication Service**: Supabase Auth (exclusive - all authentication flows use Supabase).
 - **AI Service**: OpenAI API (GPT-4o, GPT-4o-mini).
 - **Vector Database**: Pinecone.
 - **Database**: PostgreSQL (Neon).
