@@ -29,10 +29,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { ProfilePictureDialog } from "@/components/profile-picture-dialog";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isUniversity, isStudent } = useAuth();
+  const { signOut } = useSupabaseAuth();
   const isAdmin = user?.userType === "admin";
   const hasFullAdminAccess = isAdmin && (user?.role === "super_admin" || user?.role === "support_manager");
   const [profilePictureDialogOpen, setProfilePictureDialogOpen] = useState(false);
@@ -181,11 +184,13 @@ export function AppSidebar() {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a href="/api/logout" className="cursor-pointer" data-testid="menu-logout">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </a>
+              <DropdownMenuItem 
+                onClick={() => performLogout(signOut)} 
+                className="cursor-pointer" 
+                data-testid="menu-logout"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

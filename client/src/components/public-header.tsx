@@ -38,13 +38,30 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
 
   const handleLogout = async () => {
     try {
+      // Sign out from Supabase first
       await signOut();
-      await fetch("/api/logout", { method: "GET", credentials: "include" });
+      
+      // Destroy legacy session - use redirect: 'manual' to handle 302 redirect gracefully
+      try {
+        await fetch("/api/logout", { 
+          method: "GET", 
+          credentials: "include",
+          redirect: "manual" 
+        });
+      } catch {
+        // Ignore errors from legacy logout endpoint
+      }
+      
+      // Clear all query cache
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       queryClient.clear();
+      
+      // Redirect to home
       setLocation("/");
     } catch (error) {
       console.error("Logout error:", error);
+      // Force redirect even on error
       window.location.href = "/";
     }
   };

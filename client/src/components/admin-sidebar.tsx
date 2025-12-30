@@ -31,6 +31,8 @@ import {
   LogOut,
 } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -40,9 +42,10 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: AdminSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const { signOut } = useSupabaseAuth();
 
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    performLogout(signOut);
   };
   
   // Core management items (only for full admin access)

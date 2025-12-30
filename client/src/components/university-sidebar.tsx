@@ -26,6 +26,8 @@ import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -160,8 +162,10 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
     return "UN";
   };
 
+  const { signOut } = useSupabaseAuth();
+
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    performLogout(signOut);
   };
 
   return (

@@ -29,6 +29,8 @@ import {
   Home,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface UnreadCountResponse {
   count: number;
@@ -43,6 +45,7 @@ interface NavItem {
 
 export function TopNavBar() {
   const { user, isUniversity, isStudent } = useAuth();
+  const { signOut } = useSupabaseAuth();
   const [location] = useLocation();
   const isAdmin = user?.userType === "admin";
 
@@ -206,11 +209,13 @@ export function TopNavBar() {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a href="/api/logout" className="text-destructive cursor-pointer" data-testid="menu-logout">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </a>
+              <DropdownMenuItem 
+                onClick={() => performLogout(signOut)} 
+                className="text-destructive cursor-pointer" 
+                data-testid="menu-logout"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

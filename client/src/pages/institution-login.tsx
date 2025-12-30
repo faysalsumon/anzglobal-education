@@ -41,7 +41,11 @@ export default function InstitutionLogin() {
       if (userData.userType !== "university" && userData.userType !== "institution_admin") {
         // Log them out since they used wrong portal
         try {
-          await apiRequest("POST", "/api/logout", {});
+          await fetch("/api/logout", { 
+            method: "GET", 
+            credentials: "include",
+            redirect: "manual" 
+          });
         } catch {
           // Ignore logout errors
         }

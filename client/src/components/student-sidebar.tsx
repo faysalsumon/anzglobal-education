@@ -26,6 +26,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
 import type { StudentProfile } from "@shared/schema";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -214,8 +216,10 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     return "ST";
   };
 
+  const { signOut } = useSupabaseAuth();
+
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    performLogout(signOut);
   };
 
   return (

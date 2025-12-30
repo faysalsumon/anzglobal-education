@@ -33,6 +33,8 @@ import {
 import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -59,9 +61,10 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { signOut } = useSupabaseAuth();
 
   const handleLogout = () => {
-    window.location.href = '/api/logout';
+    performLogout(signOut);
   };
 
   const navConfig: NavDomain[] = [
