@@ -5,8 +5,7 @@ import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
 import { db } from "./db";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import passport from "passport";
+import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
 import {
   insertUniversitySchema,
   insertCourseSchema,
@@ -350,10 +349,41 @@ const csvUpload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Session middleware for CSRF token support (Supabase handles auth via JWT)
+  const session = await import('express-session');
+  const connectPg = await import('connect-pg-simple');
+  const pgStore = connectPg.default(session.default);
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  
+  const isProduction = process.env.NODE_ENV === "production";
+  
+  app.set("trust proxy", 1);
+  app.use(session.default({
+    secret: process.env.SESSION_SECRET!,
+    store: new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: false,
+      ttl: sessionTtl,
+      tableName: "sessions",
+    }),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: sessionTtl,
+    },
+  }));
+  
+  // Simple logout endpoint - clears session only (Supabase signout handled on frontend)
+  app.get("/api/logout", (req, res) => {
+    req.session?.destroy(() => {
+      res.redirect("/");
+    });
+  });
 
-  // CSRF token endpoint - must be after setupAuth for session access
+  // CSRF token endpoint
   app.get("/api/csrf-token", csrfTokenEndpoint);
 
   // CSRF protection for all API mutating routes (POST, PUT, PATCH, DELETE)

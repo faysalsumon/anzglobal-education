@@ -55,7 +55,7 @@ export default function AuthCallback() {
             setUserType(syncResult.userType);
             setStatus("success");
             
-            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
             
             setTimeout(() => {
               redirectToDashboard(syncResult.userType, syncResult.approvalStatus);
@@ -70,7 +70,7 @@ export default function AuthCallback() {
           setUserType(syncResult.userType);
           setStatus("success");
           
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
           
           setTimeout(() => {
             redirectToDashboard(syncResult.userType, syncResult.approvalStatus);
@@ -88,7 +88,7 @@ export default function AuthCallback() {
           setUserType(syncResult.userType);
           setStatus("success");
           
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
           
           setTimeout(() => {
             redirectToDashboard(syncResult.userType, syncResult.approvalStatus);

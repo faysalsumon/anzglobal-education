@@ -16,7 +16,7 @@ export default function UserTypeSelection() {
       return await apiRequest("POST", "/api/auth/set-user-type", { userType });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       navigate("/");
     },
     onError: (error: Error) => {

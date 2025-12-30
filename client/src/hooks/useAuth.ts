@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { type User } from "@shared/schema";
-import { getQueryFn } from "@/lib/queryClient";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { useMemo } from "react";
 
@@ -10,19 +9,9 @@ interface UserWithAdminRole extends User {
 
 export function useAuth() {
   const { user: supabaseUser, session, isLoading: supabaseLoading, isConfigured } = useSupabaseAuth();
-  
-  // Try to get user from legacy Replit auth
-  const { data: legacyUser, isLoading: legacyLoading, isFetched, isSuccess } = useQuery<UserWithAdminRole | null>({
-    queryKey: ["/api/auth/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    retry: false,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    staleTime: 0,
-  });
 
   // Get user from database via Supabase token when we have a Supabase session
-  const { data: supabaseDbUser, isLoading: supabaseDbLoading } = useQuery<UserWithAdminRole | null>({
+  const { data: supabaseDbUser, isLoading: supabaseDbLoading, isFetched } = useQuery<UserWithAdminRole | null>({
     queryKey: ["/api/supabase-auth/user"],
     queryFn: async () => {
       if (!session?.access_token) return null;
@@ -49,14 +38,10 @@ export function useAuth() {
     staleTime: 0,
   });
 
-  const isLoading = supabaseLoading || legacyLoading || (!!session && supabaseDbLoading);
+  const isLoading = supabaseLoading || (!!session && supabaseDbLoading);
 
   const user = useMemo(() => {
-    // Priority: legacyUser > supabaseDbUser > supabase metadata fallback
-    if (legacyUser) {
-      return legacyUser;
-    }
-    
+    // Primary: Use database user from Supabase auth
     if (supabaseDbUser) {
       return supabaseDbUser;
     }
@@ -82,7 +67,7 @@ export function useAuth() {
     }
     
     return null;
-  }, [legacyUser, supabaseDbUser, supabaseUser, session]);
+  }, [supabaseDbUser, supabaseUser, session]);
 
   const adminRole = user?.adminRole || user?.role || null;
   
@@ -92,9 +77,12 @@ export function useAuth() {
   
   const hasFullAdminAccess = isSuperAdmin || isSupportManager;
 
-  const isAuthResolved = (isFetched && !legacyLoading) || (!supabaseLoading && isConfigured && !supabaseDbLoading);
+  // Auth is resolved when Supabase has finished loading
+  // If there's a session, also wait for the DB user to be fetched
+  const isAuthResolved = !supabaseLoading && isConfigured && (!session || isFetched);
   
-  const isAuthenticated = (isSuccess && !!legacyUser) || (!!supabaseUser && !!session);
+  // User is authenticated if we have a valid Supabase session
+  const isAuthenticated = !!supabaseUser && !!session;
 
   return {
     user,

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "./db";
-import { isAuthenticated, getAuthenticatedUserId } from "./replitAuth";
+import { isAuthenticated, getAuthenticatedUserId } from "./supabase-middleware";
 import {
   applications,
   applicationStageHistory,

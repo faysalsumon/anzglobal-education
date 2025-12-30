@@ -162,3 +162,62 @@ export function isUnifiedAuthenticated(
   
   return res.status(401).json({ message: "Unauthorized" });
 }
+
+/**
+ * Main authentication middleware for all routes.
+ * Only uses Supabase authentication (Replit Auth removed).
+ * Populates req.user with claims.sub for backward compatibility.
+ */
+export function isAuthenticated(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  if (!req.supabaseUser) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  // Populate req.user with claims for backward compatibility with existing routes
+  (req as any).user = {
+    claims: { sub: req.supabaseUser.id },
+    supabaseUser: req.supabaseUser,
+  };
+  
+  next();
+}
+
+/**
+ * Get the authenticated user ID from the request.
+ * Returns null if user is not authenticated.
+ */
+export function getAuthenticatedUserId(req: any): string | null {
+  return req.supabaseUser?.id ?? null;
+}
+
+/**
+ * Check if the authenticated user has institution/university access.
+ * Returns { userId, universityId } if access granted, null otherwise.
+ */
+export async function checkInstitutionAccess(req: any): Promise<{ userId: string; universityId: string } | null> {
+  const userId = getAuthenticatedUserId(req);
+  if (!userId) {
+    return null;
+  }
+
+  // Get user from request (already populated by supabaseAuthMiddleware)
+  const user = req.supabaseUser;
+  if (!user || (user.userType !== 'university' && user.userType !== 'institution_admin')) {
+    return null;
+  }
+
+  // Import storage dynamically to avoid circular imports
+  const { storage } = await import('./storage');
+  
+  // Get university associated with this user
+  const university = await storage.getUniversityByUserId(userId);
+  if (!university) {
+    return null;
+  }
+
+  return { userId, universityId: university.id };
+}

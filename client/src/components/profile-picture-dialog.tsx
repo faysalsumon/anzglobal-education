@@ -46,7 +46,7 @@ export function ProfilePictureDialog({ open, onOpenChange }: ProfilePictureDialo
       return response.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       toast({
         title: "Success",
         description: "Profile picture updated successfully",

@@ -9,7 +9,7 @@ import type { Express } from "express";
 import { db } from "./db";
 import { applications, applicationStageDocuments, type ApplicationStageDocument } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { isAuthenticated } from "./replitAuth";
+import { isAuthenticated } from "./supabase-middleware";
 import {
   validateStageTransition,
   getRequiredDocumentsForStage,

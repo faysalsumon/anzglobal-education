@@ -16,7 +16,7 @@ export default function AdminPendingApproval() {
     lastName: string;
     approvalStatus: string | null;
   }>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/supabase-auth/user"],
   });
 
   const handleSignOut = async () => {

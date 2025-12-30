@@ -208,7 +208,7 @@ function AffiliateDashboard() {
   const [, navigate] = useLocation();
 
   const { data: user } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/supabase-auth/user"],
   });
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
@@ -610,7 +610,7 @@ function BankDetailsForm({ profileId }: { profileId: string }) {
 
 export default function AffiliatePage() {
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/supabase-auth/user"],
   });
 
   if (isLoading) {

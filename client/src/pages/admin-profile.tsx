@@ -75,7 +75,7 @@ export default function AdminProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -114,7 +114,7 @@ export default function AdminProfile() {
       setCurrentPhotoUrl(data.photoPath);
       setImageTimestamp(Date.now());
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       toast({
         title: "Photo uploaded",
         description: "Your profile photo has been updated successfully.",

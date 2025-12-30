@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Mail, Lock, Building2, GraduationCap } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+import { Mail, Lock, Building2, GraduationCap, Eye, EyeOff } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -22,6 +23,7 @@ export default function InstitutionLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { user, isAuthenticated, isAuthResolved } = useAuth();
 
   useEffect(() => {
@@ -47,38 +49,32 @@ export default function InstitutionLogin() {
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
-      // Login returns a Response object, need to parse JSON
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      const userData = await response.json();
-      
-      // Verify this is a university/institution user before proceeding
-      if (userData.userType !== "university" && userData.userType !== "institution_admin") {
-        // Log them out since they used wrong portal
-        try {
-          await fetch("/api/logout", { 
-            method: "GET", 
-            credentials: "include",
-            redirect: "manual" 
-          });
-        } catch {
-          // Ignore logout errors
-        }
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-        
-        toast({
-          title: "Access Denied",
-          description: "This login portal is for institution partners only. Please use the appropriate login page for your account type.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+      if (!supabase) {
+        throw new Error("Authentication service not available");
       }
+
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Invalidate auth cache and refetch to get updated user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       
-      // Invalidate auth cache so useAuth hook refetches and knows user is authenticated
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Fetch the platform user data
+      const userData = await queryClient.fetchQuery({
+        queryKey: ["/api/supabase-auth/user"],
+      }) as any;
       
-      // Small delay to ensure session is properly written before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Verify this is an institution user
+      if (userData.userType !== "university" && userData.userType !== "institution_admin") {
+        await supabase.auth.signOut();
+        throw new Error("Access denied. This portal is for institution partners only. Please use the appropriate login page for your account type.");
+      }
       
       toast({
         title: "Welcome to Institution Portal",

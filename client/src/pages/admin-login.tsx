@@ -62,11 +62,11 @@ export default function AdminLogin() {
       }
 
       // Invalidate auth cache and refetch to get updated user data
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });
       
       // Fetch the platform user data
       const user = await queryClient.fetchQuery({
-        queryKey: ["/api/auth/user"],
+        queryKey: ["/api/supabase-auth/user"],
       }) as any;
       
       // Verify user is platform_admin
