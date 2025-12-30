@@ -288,26 +288,19 @@ export default function AuthPage() {
             const responseData = await response.json();
             const userType = responseData.user?.platformUser?.userType;
             
-            // Check if user is a platform admin - they should use /admin/login instead
-            if (userType === "platform_admin") {
-              // Sign them out and redirect to admin login
-              if (supabase) {
-                await supabase.auth.signOut();
-              }
-              toast({
-                title: "Access Restricted",
-                description: "Platform administrators must use the Admin Login portal.",
-                variant: "destructive",
-              });
-              setLocation("/admin/login");
-              return;
-            }
-            
             toast({
               title: "Welcome back!",
               description: "Successfully signed in.",
             });
-            setLocation("/dashboard");
+            
+            // Redirect based on user type
+            if (userType === "platform_admin" || userType === "admin") {
+              setLocation("/admin/dashboard");
+            } else if (userType === "institution_admin" || userType === "university") {
+              setLocation("/university/dashboard");
+            } else {
+              setLocation("/student/dashboard");
+            }
           } catch (fetchError) {
             // If we can't verify user role, sign them out for security
             console.error("Error fetching user data:", fetchError);
