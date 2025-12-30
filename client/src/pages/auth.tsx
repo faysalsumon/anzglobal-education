@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -22,6 +22,31 @@ import { useAuth } from "@/hooks/useAuth";
 type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password" | "email-exists";
 type UserType = "student" | "institution" | null;
 
+// Full-screen redirect overlay for platform admins
+function AdminRedirectOverlay() {
+  return (
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background animate-in fade-in duration-300"
+      data-testid="admin-redirect-overlay"
+    >
+      <div className="text-center space-y-6 animate-in zoom-in-95 duration-500">
+        <div className="mx-auto h-20 w-20 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
+          <ShieldCheck className="h-10 w-10 text-primary-foreground" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Admin Portal Access</h2>
+          <p className="text-muted-foreground max-w-sm">
+            Redirecting you to the secure admin login portal...
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const [view, setView] = useState<AuthView>("main");
   const [userType, setUserType] = useState<UserType>(null);
@@ -36,6 +61,7 @@ export default function AuthPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [redirectingToAdmin, setRedirectingToAdmin] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
@@ -43,8 +69,21 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (isAuthResolved && isAuthenticated && user) {
+      // Platform admins should not be on this page - they use /admin/login
       if (user.userType === "platform_admin" || user.userType === "admin") {
-        setLocation("/admin/dashboard");
+        setRedirectingToAdmin(true);
+        // Sign them out and redirect to admin login after a brief delay for the animation
+        const handleAdminRedirect = async () => {
+          const { supabase } = await import("@/lib/supabase");
+          if (supabase) {
+            await supabase.auth.signOut();
+          }
+          // Small delay to show the animation
+          setTimeout(() => {
+            window.location.href = "/admin/login";
+          }, 1200);
+        };
+        handleAdminRedirect();
       } else if (user.userType === "student") {
         setLocation("/student/dashboard");
       } else if (user.userType === "institution_admin" || user.userType === "university") {
@@ -286,7 +325,21 @@ export default function AuthPage() {
             }
             
             const responseData = await response.json();
-            const userType = responseData.user?.platformUser?.userType;
+            const detectedUserType = responseData.user?.platformUser?.userType;
+            
+            // Platform admins should use /admin/login - show overlay and redirect
+            if (detectedUserType === "platform_admin" || detectedUserType === "admin") {
+              setRedirectingToAdmin(true);
+              // Sign them out and redirect to admin login
+              if (supabase) {
+                await supabase.auth.signOut();
+              }
+              // Delay to show the animation before redirect
+              setTimeout(() => {
+                window.location.href = "/admin/login";
+              }, 1200);
+              return;
+            }
             
             toast({
               title: "Welcome back!",
@@ -294,9 +347,7 @@ export default function AuthPage() {
             });
             
             // Redirect based on user type
-            if (userType === "platform_admin" || userType === "admin") {
-              setLocation("/admin/dashboard");
-            } else if (userType === "institution_admin" || userType === "university") {
+            if (detectedUserType === "institution_admin" || detectedUserType === "university") {
               setLocation("/university/dashboard");
             } else {
               setLocation("/student/dashboard");
@@ -404,6 +455,11 @@ export default function AuthPage() {
       setView("email");
     }
   };
+
+  // Show admin redirect overlay when platform admin tries to use this page
+  if (redirectingToAdmin) {
+    return <AdminRedirectOverlay />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/10 via-background to-secondary/5">
