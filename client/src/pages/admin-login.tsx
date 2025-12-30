@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { Mail, Lock, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -22,6 +23,19 @@ export default function AdminLogin() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { user, isAuthenticated, isAuthResolved } = useAuth();
+
+  useEffect(() => {
+    if (isAuthResolved && isAuthenticated && user) {
+      if (user.userType === "platform_admin" || user.userType === "admin") {
+        setLocation("/admin/dashboard");
+      } else if (user.userType === "student") {
+        setLocation("/student/dashboard");
+      } else if (user.userType === "institution_admin" || user.userType === "university") {
+        setLocation("/university/dashboard");
+      }
+    }
+  }, [isAuthResolved, isAuthenticated, user, setLocation]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

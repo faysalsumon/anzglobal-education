@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/hooks/useAuth";
 
 type AuthView = "main" | "more-options" | "email" | "user-type" | "forgot-password" | "email-exists";
 type UserType = "student" | "institution" | null;
@@ -38,6 +39,19 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
+  const { user, isAuthenticated, isAuthResolved } = useAuth();
+
+  useEffect(() => {
+    if (isAuthResolved && isAuthenticated && user) {
+      if (user.userType === "platform_admin" || user.userType === "admin") {
+        setLocation("/admin/dashboard");
+      } else if (user.userType === "student") {
+        setLocation("/student/dashboard");
+      } else if (user.userType === "institution_admin" || user.userType === "university") {
+        setLocation("/university/dashboard");
+      }
+    }
+  }, [isAuthResolved, isAuthenticated, user, setLocation]);
 
   // Legacy Replit auth functions - deprecated, keeping for reference
   // const handleStudentLogin = () => {

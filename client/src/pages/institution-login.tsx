@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Mail, Lock, Building2, GraduationCap } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -21,6 +22,19 @@ export default function InstitutionLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated, isAuthResolved } = useAuth();
+
+  useEffect(() => {
+    if (isAuthResolved && isAuthenticated && user) {
+      if (user.userType === "institution_admin" || user.userType === "university") {
+        setLocation("/university/dashboard");
+      } else if (user.userType === "platform_admin" || user.userType === "admin") {
+        setLocation("/admin/dashboard");
+      } else if (user.userType === "student") {
+        setLocation("/student/dashboard");
+      }
+    }
+  }, [isAuthResolved, isAuthenticated, user, setLocation]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
