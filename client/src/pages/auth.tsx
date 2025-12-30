@@ -68,29 +68,27 @@ export default function AuthPage() {
   const { user, isAuthenticated, isAuthResolved } = useAuth();
 
   useEffect(() => {
-    if (isAuthResolved && isAuthenticated && user) {
+    if (isAuthResolved && isAuthenticated && user && !redirectingToAdmin) {
       // Platform admins should not be on this page - they use /admin/login
       if (user.userType === "platform_admin" || user.userType === "admin") {
         setRedirectingToAdmin(true);
         // Sign them out and redirect to admin login after a brief delay for the animation
         const handleAdminRedirect = async () => {
           const { supabase } = await import("@/lib/supabase");
-          if (supabase) {
-            await supabase.auth.signOut();
-          }
-          // Small delay to show the animation
-          setTimeout(() => {
-            window.location.href = "/admin/login";
-          }, 1200);
+          supabase?.auth.signOut().finally(() => {
+            setTimeout(() => {
+              window.location.href = "/admin/login";
+            }, 1000);
+          });
         };
         handleAdminRedirect();
       } else if (user.userType === "student") {
-        setLocation("/student/dashboard");
+        window.location.href = "/student/dashboard";
       } else if (user.userType === "institution_admin" || user.userType === "university") {
-        setLocation("/university/dashboard");
+        window.location.href = "/university/dashboard";
       }
     }
-  }, [isAuthResolved, isAuthenticated, user, setLocation]);
+  }, [isAuthResolved, isAuthenticated, user, redirectingToAdmin]);
 
   // Legacy Replit auth functions - deprecated, keeping for reference
   // const handleStudentLogin = () => {
@@ -329,15 +327,16 @@ export default function AuthPage() {
             
             // Platform admins should use /admin/login - show overlay and redirect
             if (detectedUserType === "platform_admin" || detectedUserType === "admin") {
+              // Set overlay state first, then sign out and redirect
               setRedirectingToAdmin(true);
-              // Sign them out and redirect to admin login
-              if (supabase) {
-                await supabase.auth.signOut();
-              }
-              // Delay to show the animation before redirect
-              setTimeout(() => {
-                window.location.href = "/admin/login";
-              }, 1200);
+              setIsLoading(false); // Reset loading so finally block doesn't interfere
+              
+              // Sign out async and redirect - don't await to avoid race conditions
+              supabase?.auth.signOut().finally(() => {
+                setTimeout(() => {
+                  window.location.href = "/admin/login";
+                }, 1000);
+              });
               return;
             }
             
@@ -348,9 +347,9 @@ export default function AuthPage() {
             
             // Redirect based on user type
             if (detectedUserType === "institution_admin" || detectedUserType === "university") {
-              setLocation("/university/dashboard");
+              window.location.href = "/university/dashboard";
             } else {
-              setLocation("/student/dashboard");
+              window.location.href = "/student/dashboard";
             }
           } catch (fetchError) {
             // If we can't verify user role, sign them out for security
