@@ -4617,6 +4617,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get permissions for a specific role (super admin only)
+  app.get("/api/admin/roles/:roleId/permissions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const { roleId } = req.params;
+
+      // Get role with permissions
+      const [role] = await db.select().from(roles).where(eq(roles.id, roleId));
+      if (!role) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      // Get permissions for this role
+      const rolePerms = await db
+        .select({
+          permission: permissions,
+        })
+        .from(rolePermissions)
+        .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+        .where(eq(rolePermissions.roleId, roleId));
+
+      res.json({
+        role,
+        permissions: rolePerms.map(rp => rp.permission),
+      });
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  // Get all users with their roles for role management (super admin only)
+  app.get("/api/admin/role-management/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      // Get all users with their roles (excluding students and institution admins for this view)
+      const usersWithRoles = await db
+        .select({
+          user: {
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            userType: users.userType,
+            roleId: users.roleId,
+            isActive: users.isActive,
+            createdAt: users.createdAt,
+          },
+          role: roles,
+        })
+        .from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .where(
+          sql`${users.userType} IN ('platform_admin', 'admin')`
+        )
+        .orderBy(users.createdAt);
+
+      res.json(usersWithRoles.map(ur => ({
+        ...ur.user,
+        role: ur.role || null,
+      })));
+    } catch (error) {
+      console.error("Error fetching users for role management:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   // ==================== TEAM INVITATION ROUTES ====================
   
   // Get all invitations (platform_admin and admin only)

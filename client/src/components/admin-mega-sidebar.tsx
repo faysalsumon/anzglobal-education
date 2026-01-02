@@ -29,6 +29,7 @@ import {
   Link2,
   LogOut,
   UsersRound,
+  Shield,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -55,9 +56,10 @@ interface AdminMegaSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   hasFullAdminAccess: boolean;
+  isSuperAdmin?: boolean;
 }
 
-export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }: AdminMegaSidebarProps) {
+export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, isSuperAdmin = false }: AdminMegaSidebarProps) {
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -100,6 +102,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess }:
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
       routes: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
+        { icon: Shield, label: "Role Management", value: "role-management", show: isSuperAdmin },
         { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },

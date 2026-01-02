@@ -56,6 +56,7 @@ import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
 import { AdminRegionsPanel } from "@/components/admin-regions-panel";
+import { AdminRoleManagementPanel } from "@/components/admin-role-management-panel";
 import { AdminTeamPanel } from "@/components/admin-team-panel";
 
 interface User {
@@ -328,10 +329,15 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'affiliates'];
+    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'affiliates', 'role-management'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs', 'team'];
+    const superAdminOnlyTabs = ['role-management'];
     
     if (hash && validTabs.includes(hash)) {
+      // Check access for super-admin-only tabs (role management requires super admin)
+      if (superAdminOnlyTabs.includes(hash) && !isSuperAdmin) {
+        return defaultTab;
+      }
       // Check access for full-admin-only tabs
       if (fullAdminOnlyTabs.includes(hash) && !hasFullAdminAccess) {
         return defaultTab; // Restricted admin - use default
@@ -1409,6 +1415,10 @@ export default function AdminDashboard() {
 
   // Handle tab change with scroll to top
   const handleTabChange = (tab: string) => {
+    // Prevent non-super admins from accessing role-management tab
+    if (tab === 'role-management' && !isSuperAdmin) {
+      return;
+    }
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1419,7 +1429,8 @@ export default function AdminDashboard() {
       <AdminMegaSidebar 
         activeTab={activeTab} 
         onTabChange={handleTabChange} 
-        hasFullAdminAccess={hasFullAdminAccess} 
+        hasFullAdminAccess={hasFullAdminAccess}
+        isSuperAdmin={isSuperAdmin}
       />
 
       {/* Main Content Area */}
@@ -2329,6 +2340,11 @@ export default function AdminDashboard() {
         {/* Regions Tab */}
         {activeTab === "regions" && (
           <AdminRegionsPanel />
+        )}
+
+        {/* Role Management Tab - Super Admin Only */}
+        {activeTab === "role-management" && isSuperAdmin && (
+          <AdminRoleManagementPanel />
         )}
 
         {/* Activity Logs Tab */}
