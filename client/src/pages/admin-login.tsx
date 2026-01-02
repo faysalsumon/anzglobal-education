@@ -12,6 +12,7 @@ import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { Mail, Lock, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { clearCsrfToken } from "@/hooks/useCsrf";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -60,6 +61,9 @@ export default function AdminLogin() {
       if (error) {
         throw new Error(error.message);
       }
+
+      // Clear CSRF token cache so a fresh token is fetched with the new session identifier
+      clearCsrfToken();
 
       // Invalidate auth cache and refetch to get updated user data
       await queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });

@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { Mail, Lock, Building2, GraduationCap, Eye, EyeOff } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
+import { clearCsrfToken } from "@/hooks/useCsrf";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -61,6 +62,9 @@ export default function InstitutionLogin() {
       if (error) {
         throw new Error(error.message);
       }
+
+      // Clear CSRF token cache so a fresh token is fetched with the new session identifier
+      clearCsrfToken();
 
       // Invalidate auth cache and refetch to get updated user data
       await queryClient.invalidateQueries({ queryKey: ["/api/supabase-auth/user"] });

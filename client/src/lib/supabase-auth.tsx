@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "./supabase";
 import type { User, Session, AuthError, AuthChangeEvent } from "@supabase/supabase-js";
+import { clearCsrfToken } from "@/hooks/useCsrf";
 
 interface SupabaseAuthContextType {
   user: User | null;
@@ -57,6 +58,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         if (event === 'PASSWORD_RECOVERY') {
           setIsPasswordRecovery(true);
         }
+        
+        // Clear CSRF token cache on any auth state change so fresh tokens
+        // are fetched with the new session identifier (covers login, logout, OAuth, etc.)
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          clearCsrfToken();
+        }
       }
     );
 
@@ -88,12 +95,18 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return { error: notConfiguredError };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) {
+      // Clear CSRF token so a fresh one is fetched with the new session identifier
+      clearCsrfToken();
+    }
     return { error };
   }, []);
 
   const signOut = useCallback(async () => {
     if (!supabase) return { error: notConfiguredError };
     const { error } = await supabase.auth.signOut();
+    // Clear CSRF token on logout as well
+    clearCsrfToken();
     return { error };
   }, []);
 
