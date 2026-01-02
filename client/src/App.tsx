@@ -138,7 +138,10 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login', '/reset-password'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
+  
+  // Standalone pages that have their own complete layout (no header/footer wrapping)
+  const standalonePages = ['/reset-password', '/accept-invitation'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
@@ -182,6 +185,12 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Standalone pages have their own complete layout (no header/footer wrapping)
+  const isStandalonePage = standalonePages.includes(location);
+  if (isStandalonePage) {
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
   // Admin dashboard uses its own full layout with sidebar (no footer)
