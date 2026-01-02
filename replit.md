@@ -36,7 +36,8 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **30+ Permissions**: Resource:action format (e.g., 'dashboard:read', 'users:write', 'applications:approve')
   - **Permission Service** (`server/permission-service.ts`): Caching (5-min TTL), hasPermission(), getUserPermissions(), isPlatformAdmin()
   - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
-  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/users/:id/assign-role`
+  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/roles/:roleId/permissions`, `/api/admin/role-management/users`, `/api/admin/users/:id/assign-role`
+  - **Role Management UI**: Super admin-only panel in admin dashboard (Management > Role Management) for viewing users with roles, assigning roles, and viewing role permissions
   - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types; server normalizes legacy 'university' values to 'institution_admin' on persist
 
 ### Feature Specifications
