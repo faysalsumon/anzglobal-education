@@ -30,7 +30,7 @@ export default function AdminForgotPassword() {
   const onSubmit = async (data: z.infer<typeof forgotPasswordSchema>) => {
     setIsLoading(true);
     try {
-      await apiRequest("POST", "/api/auth/forgot-password", { email: data.email });
+      await apiRequest("POST", "/api/supabase-auth/forgot-password", { email: data.email });
       
       setIsSuccess(true);
       toast({
