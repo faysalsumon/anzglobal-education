@@ -298,6 +298,102 @@ router.post('/reset-password', async (req: Request, res: Response) => {
   }
 });
 
+// Change password (authenticated user, requires current password verification)
+router.post('/change-password', async (req: Request, res: Response) => {
+  try {
+    if (!supabase) {
+      return res.status(503).json({ error: 'Supabase is not configured' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Validate the token and get the user making the request
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // Verify the user exists in our platform database (prevents arbitrary Supabase users)
+    const platformUser = await storage.getUserByEmail(user.email!);
+    if (!platformUser) {
+      return res.status(403).json({ error: 'User not found in platform' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    // Verify current password by attempting to sign in with a fresh ephemeral client
+    // Creates a new client instance per request with no persistence to ensure no session reuse
+    const { createClient } = await import('@supabase/supabase-js');
+    const verificationClient = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          persistSession: false,  // Disable session persistence
+          autoRefreshToken: false, // Disable auto refresh
+          detectSessionInUrl: false, // Disable URL detection
+        }
+      }
+    );
+    
+    const { data: signInData, error: signInError } = await verificationClient.auth.signInWithPassword({
+      email: user.email!,
+      password: currentPassword,
+    });
+
+    // Immediately sign out to cleanup any session state
+    if (signInData?.session) {
+      await verificationClient.auth.signOut();
+    }
+
+    if (signInError) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Additional security: verify the signed-in user matches the token user
+    if (signInData?.user?.id !== user.id) {
+      console.error('[Change Password] User ID mismatch detected');
+      return res.status(403).json({ error: 'Security verification failed' });
+    }
+
+    // Update the password using admin API with explicit user ID
+    // This ensures we're updating the exact user whose token we validated
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+      password: newPassword,
+    });
+
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
+    }
+
+    // Send confirmation email
+    const { sendPasswordChangedEmail } = await import('./email-service');
+    await sendPasswordChangedEmail({
+      email: user.email!,
+      firstName: platformUser.firstName,
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('[Supabase Auth] Change password error:', err);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 router.get('/user', async (req: Request, res: Response) => {
   try {
     if (!supabase) {

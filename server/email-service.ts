@@ -1207,6 +1207,123 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
   `;
 }
 
+// Password changed confirmation email HTML template
+function getPasswordChangedEmailHtml(data: { email: string; firstName?: string | null }): string {
+  const name = data.firstName || 'there';
+  const changedAt = new Date().toLocaleString('en-AU', { 
+    dateStyle: 'full', 
+    timeStyle: 'short',
+    timeZone: 'Australia/Sydney' 
+  });
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Password Changed - ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Account Security Notification</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="width: 60px; height: 60px; background-color: #d4edda; border-radius: 50%; display: inline-block; line-height: 60px;">
+                      <span style="font-size: 30px;">✓</span>
+                    </div>
+                  </div>
+                  
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px; text-align: center;">Password Successfully Changed</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Hi ${name},
+                  </p>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Your password for your ANZ Global Education account (<strong>${data.email}</strong>) has been successfully changed.
+                  </p>
+                  
+                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <p style="color: #555555; font-size: 14px; margin: 0;">
+                      <strong>Changed at:</strong> ${changedAt} (AEST)
+                    </p>
+                  </div>
+                  
+                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
+                    <p style="color: #856404; margin: 0; font-size: 14px;">
+                      <strong>Didn't make this change?</strong> If you did not change your password, please contact our support team immediately at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>
+                    </p>
+                  </div>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
+                    Thank you for keeping your account secure.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
+                    ANZ Global Education - Your Gateway to Global Education
+                  </p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">
+                    This is an automated security notification. Please do not reply to this email.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+// Send password changed confirmation email
+export async function sendPasswordChangedEmail(data: { email: string; firstName?: string | null }): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping password changed email');
+    return false;
+  }
+
+  try {
+    console.log(`[Email] Attempting to send password changed notification to ${data.email}`);
+    
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: 'Password Changed - ANZ Global Education',
+      html: getPasswordChangedEmailHtml(data),
+    });
+
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
+    console.log(`Password changed email sent to ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending password changed email:', error.message);
+    return false;
+  }
+}
+
 // Send team invitation email
 export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Promise<boolean> {
   if (!resend) {
