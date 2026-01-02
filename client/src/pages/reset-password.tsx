@@ -14,16 +14,27 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isValidSession, setIsValidSession] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { updatePassword, isConfigured } = useSupabaseAuth();
+  const { updatePassword, isConfigured, isPasswordRecovery, session, isLoading: authLoading, clearPasswordRecovery } = useSupabaseAuth();
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+    
+    // Check if we have a valid session (from password recovery link)
+    // Either the PASSWORD_RECOVERY event was fired or we have a session with recovery token in URL
     const hash = window.location.hash;
-    if (!hash || !hash.includes("access_token")) {
+    const hasRecoveryToken = hash && (hash.includes("access_token") || hash.includes("type=recovery"));
+    
+    if (isPasswordRecovery || session || hasRecoveryToken) {
+      setIsValidSession(true);
+      setError(null);
+    } else {
       setError("Invalid or expired reset link. Please request a new password reset.");
     }
-  }, []);
+  }, [authLoading, isPasswordRecovery, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +81,7 @@ export default function ResetPasswordPage() {
         });
       } else {
         setIsSuccess(true);
+        clearPasswordRecovery(); // Clear the recovery state
         toast({
           title: "Password Updated",
           description: "Your password has been successfully reset.",
@@ -95,7 +107,12 @@ export default function ResetPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-background rounded-2xl shadow-xl p-8">
-          {isSuccess ? (
+          {authLoading ? (
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+              <p className="text-muted-foreground">Verifying reset link...</p>
+            </div>
+          ) : isSuccess ? (
             <div className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
@@ -114,7 +131,7 @@ export default function ResetPasswordPage() {
                 Go to Login
               </Button>
             </div>
-          ) : error && !password ? (
+          ) : !isValidSession ? (
             <div className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />

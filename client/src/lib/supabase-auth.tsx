@@ -7,6 +7,8 @@ interface SupabaseAuthContextType {
   session: Session | null;
   isLoading: boolean;
   isConfigured: boolean;
+  isPasswordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   signUp: (email: string, password: string, metadata?: { firstName?: string; lastName?: string; userType?: string }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
@@ -26,7 +28,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const configured = isSupabaseConfigured();
+
+  const clearPasswordRecovery = useCallback(() => {
+    setIsPasswordRecovery(false);
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -41,10 +48,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Track password recovery event so reset-password page can handle it
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
       }
     );
 
@@ -150,6 +162,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     session,
     isLoading,
     isConfigured: configured,
+    isPasswordRecovery,
+    clearPasswordRecovery,
     signUp,
     signIn,
     signOut,
