@@ -413,20 +413,33 @@ router.get('/user', async (req: Request, res: Response) => {
     }
 
     const platformUser = await storage.getUserByEmail(user.email!);
+    
+    if (!platformUser) {
+      return res.status(404).json({ error: 'User not found in platform database' });
+    }
+
+    // Return platform user data directly (expected format by useAuth hook and admin-login)
+    // Include adminRole for platform admins
+    let adminRole = platformUser.role || null;
+    if (platformUser.userType === 'platform_admin') {
+      const adminMember = await storage.getAdminTeamMemberByUserId(platformUser.id);
+      adminRole = adminMember?.role || platformUser.role || null;
+    }
 
     res.json({
-      user: {
-        ...user,
-        platformUser: platformUser ? {
-          id: platformUser.id,
-          email: platformUser.email,
-          firstName: platformUser.firstName,
-          lastName: platformUser.lastName,
-          userType: platformUser.userType,
-          role: platformUser.role,
-          profileImageUrl: platformUser.profileImageUrl,
-        } : null,
-      },
+      id: platformUser.id,
+      email: platformUser.email,
+      firstName: platformUser.firstName,
+      lastName: platformUser.lastName,
+      userType: platformUser.userType,
+      role: platformUser.role,
+      adminRole: adminRole,
+      profileImageUrl: platformUser.profileImageUrl,
+      isActive: platformUser.isActive,
+      emailVerified: platformUser.emailVerified,
+      approvalStatus: platformUser.approvalStatus,
+      createdAt: platformUser.createdAt,
+      updatedAt: platformUser.updatedAt,
     });
   } catch (err) {
     console.error('[Supabase Auth] Get user error:', err);
@@ -677,48 +690,6 @@ router.post('/sync-user', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Supabase Auth] Sync user error:', err);
     res.status(500).json({ error: 'Failed to sync user' });
-  }
-});
-
-// Get current user from database using Supabase token
-router.get('/user', async (req: Request, res: Response) => {
-  try {
-    if (!supabaseAdmin) {
-      return res.status(503).json({ error: 'Supabase is not configured' });
-    }
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No authorization token provided' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    // Get user from local database
-    const dbUser = await storage.getUserByEmail(user.email!);
-    
-    if (!dbUser) {
-      return res.status(404).json({ error: 'User not found in database' });
-    }
-
-    // Include admin role if applicable
-    if (dbUser.userType === 'platform_admin') {
-      const adminMember = await storage.getAdminTeamMemberByUserId(dbUser.id);
-      return res.json({
-        ...dbUser,
-        adminRole: adminMember?.role || dbUser.role || null,
-      });
-    }
-
-    res.json(dbUser);
-  } catch (err) {
-    console.error('[Supabase Auth] Get user error:', err);
-    res.status(500).json({ error: 'Failed to get user' });
   }
 });
 
