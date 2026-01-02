@@ -207,15 +207,6 @@ const formatUserType = (userType: string): string => {
   return labels[userType] || userType;
 };
 
-const userSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  userType: z.enum(["student", "institution_admin", "admin", "platform_admin"]),
-  role: z.string().optional(),
-});
-
 const institutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   country: z.string().min(1, "Country is required"),
@@ -361,8 +352,6 @@ export default function AdminDashboard() {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
 
@@ -406,18 +395,6 @@ export default function AdminDashboard() {
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   // Forms
-  const userForm = useForm<z.infer<typeof userSchema>>({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      firstName: "",
-      lastName: "",
-      userType: "student",
-      role: "",
-    },
-  });
-
   const institutionForm = useForm<z.infer<typeof institutionSchema>>({
     resolver: zodResolver(institutionSchema),
     defaultValues: {
@@ -547,51 +524,6 @@ export default function AdminDashboard() {
   }, [editingCourse]);
 
   // User mutations
-  const createUserMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof userSchema>) => {
-      return await apiRequest("POST", "/api/super-admin/users", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      setUserDialogOpen(false);
-      userForm.reset();
-      toast({
-        title: "User created",
-        description: "User has been created successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<z.infer<typeof userSchema>> }) => {
-      return await apiRequest("PATCH", `/api/super-admin/users/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
-      setUserDialogOpen(false);
-      setEditingUser(null);
-      userForm.reset();
-      toast({
-        title: "User updated",
-        description: "User has been updated successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/super-admin/users/${id}`);
@@ -1200,43 +1132,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // User handlers
-  const handleCreateUser = () => {
-    setEditingUser(null);
-    userForm.reset();
-    setUserDialogOpen(true);
-  };
-
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    userForm.reset({
-      email: user.email || "",
-      password: "", // Don't pre-fill password
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      userType: user.userType as any,
-      role: user.role || "",
-    });
-    setUserDialogOpen(true);
-  };
-
-  const handleSubmitUser = (data: z.infer<typeof userSchema>) => {
-    if (editingUser) {
-      // For edit, don't send password if it's empty
-      const updateData: any = {
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      };
-      if (data.password) {
-        updateData.password = data.password;
-      }
-      updateUserMutation.mutate({ id: editingUser.id, data: updateData });
-    } else {
-      createUserMutation.mutate(data);
-    }
-  };
-
   // Institution handlers
   const handleCreateInstitution = () => {
     setEditingInstitution(null);
@@ -1568,18 +1463,12 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Filters and Create Button */}
+          {/* User Management */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">User Management</CardTitle>
-                  <CardDescription className="text-xs">View and manage all platform users</CardDescription>
-                </div>
-                <Button size="sm" onClick={handleCreateUser} data-testid="button-create-user">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Create User
-                </Button>
+              <div>
+                <CardTitle className="text-base">User Management</CardTitle>
+                <CardDescription className="text-xs">View and manage all platform users. Use Team Invitations to add new team members.</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 px-4 py-3">
@@ -1781,24 +1670,14 @@ export default function AdminDashboard() {
                                   </Button>
                                 </>
                               ) : (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleEditUser(user)}
-                                    data-testid={`button-edit-user-${user.id}`}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setDeletingUser(user)}
-                                    data-testid={`button-delete-user-${user.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeletingUser(user)}
+                                  data-testid={`button-delete-user-${user.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
                               )}
                             </div>
                           </TableCell>
@@ -2369,107 +2248,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-
-      {/* User Create/Edit Dialog */}
-      <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit User" : "Create User"}</DialogTitle>
-            <DialogDescription>
-              {editingUser ? "Update user information" : "Create a new user account"}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...userForm}>
-            <form onSubmit={userForm.handleSubmit(handleSubmitUser)} className="space-y-4">
-              <FormField
-                control={userForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" placeholder="user@example.com" data-testid="input-user-email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={userForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{editingUser ? "Password (leave blank to keep current)" : "Password"}</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="password" placeholder={editingUser ? "Leave blank to keep current" : "Min. 8 characters"} data-testid="input-user-password" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={userForm.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>First Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="John" data-testid="input-user-firstname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={userForm.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Doe" data-testid="input-user-lastname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={userForm.control}
-                name="userType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>User Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-user-type">
-                          <SelectValue placeholder="Select user type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="institution_admin">Institution Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="platform_admin">Platform Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setUserDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createUserMutation.isPending || updateUserMutation.isPending} data-testid="button-submit-user">
-                  {editingUser ? "Update" : "Create"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       {/* Institution Create/Edit Dialog */}
       <Dialog open={institutionDialogOpen} onOpenChange={setInstitutionDialogOpen}>
