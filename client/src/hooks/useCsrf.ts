@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 let cachedToken: string | null = null;
 let tokenFetchPromise: Promise<string> | null = null;
+let tokenGeneration = 0; // Tracks cache invalidation to prevent race conditions
+
+async function getSupabaseAccessToken(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function getCsrfToken(): Promise<string> {
   if (cachedToken) {
@@ -12,20 +24,39 @@ export async function getCsrfToken(): Promise<string> {
     return tokenFetchPromise;
   }
 
-  tokenFetchPromise = fetch("/api/csrf-token", {
-    credentials: "include",
-  })
-    .then((res) => res.json())
-    .then((data) => {
+  const currentGeneration = tokenGeneration;
+  
+  tokenFetchPromise = (async () => {
+    // Get Supabase access token to include in the request
+    // This ensures the CSRF token is generated with the correct session identifier
+    const headers: Record<string, string> = {};
+    const accessToken = await getSupabaseAccessToken();
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    const res = await fetch("/api/csrf-token", {
+      credentials: "include",
+      headers,
+    });
+    const data = await res.json();
+    
+    // Only update cache if generation hasn't changed (no clearCsrfToken called during fetch)
+    if (tokenGeneration === currentGeneration) {
       cachedToken = data.csrfToken;
       tokenFetchPromise = null;
       return cachedToken!;
-    })
-    .catch((error) => {
+    } else {
+      // Cache was cleared during fetch (auth state changed), discard this token
       tokenFetchPromise = null;
-      console.error("Failed to fetch CSRF token:", error);
-      throw error;
-    });
+      // Fetch a fresh token with the new auth state
+      return getCsrfToken();
+    }
+  })().catch((error) => {
+    tokenFetchPromise = null;
+    console.error("Failed to fetch CSRF token:", error);
+    throw error;
+  });
 
   return tokenFetchPromise;
 }
@@ -33,6 +64,7 @@ export async function getCsrfToken(): Promise<string> {
 export function clearCsrfToken(): void {
   cachedToken = null;
   tokenFetchPromise = null;
+  tokenGeneration++; // Increment to invalidate any in-flight fetches
 }
 
 export function useCsrfToken() {

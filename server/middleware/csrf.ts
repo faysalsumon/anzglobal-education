@@ -1,6 +1,8 @@
 import { doubleCsrf } from "csrf-csrf";
 import type { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import { supabaseAdmin } from "../supabase";
+import { storage } from "../storage";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -64,7 +66,40 @@ export function csrfErrorHandler(
   next(err);
 }
 
-export function csrfTokenEndpoint(req: Request, res: Response) {
+export async function csrfTokenEndpoint(req: Request, res: Response) {
+  // First, check if user is authenticated via Supabase (even if middleware hasn't run yet)
+  // This ensures CSRF tokens are generated with the same session identifier used for validation
+  if (!(req as any).supabaseUser) {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      if (token && supabaseAdmin) {
+        try {
+          const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+          if (!error && user) {
+            const dbUser = await storage.getUserByEmail(user.email!);
+            if (dbUser) {
+              (req as any).supabaseUser = {
+                id: dbUser.id,
+                email: dbUser.email,
+                userType: dbUser.userType,
+                authProvider: "supabase",
+              };
+            } else {
+              (req as any).supabaseUser = {
+                id: user.id,
+                email: user.email,
+                authProvider: "supabase",
+              };
+            }
+          }
+        } catch (err) {
+          // Silently continue - user will get anonymous session identifier
+        }
+      }
+    }
+  }
+  
   // For anonymous users, ensure they have a stable session cookie BEFORE generating token
   // This cookie must be set before generateCsrfToken is called so getSessionIdentifier can read it
   const supabaseUser = (req as any).supabaseUser;
@@ -85,6 +120,6 @@ export function csrfTokenEndpoint(req: Request, res: Response) {
     (req as any).cookies["csrf-session"] = anonId;
   }
   
-  const token = csrfConfig.generateCsrfToken(req, res);
-  res.json({ csrfToken: token });
+  const csrfToken = csrfConfig.generateCsrfToken(req, res);
+  res.json({ csrfToken });
 }
