@@ -95,6 +95,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/affiliate" component={AffiliatePage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/auth/callback" component={AuthCallback} />
+      <Route path="/auth/accept-invite" component={AcceptInvitation} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
       
       {/* Protected routes - always available but protected at component level */}
@@ -141,7 +142,7 @@ function AppContent() {
   const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
-  const standalonePages = ['/reset-password', '/accept-invitation'];
+  const standalonePages = ['/reset-password', '/accept-invitation', '/auth/accept-invite'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 
