@@ -1120,7 +1120,11 @@ interface TeamInvitationEmailData {
 
 // HTML email template for team invitation
 function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
-  const inviteUrl = `${process.env.REPL_URL || 'https://anzglobal.com.au'}/auth/accept-invite?token=${data.inviteToken}`;
+  // Use Replit dev domain in development, fallback to production
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const inviteUrl = `${baseUrl}/auth/accept-invite?token=${data.inviteToken}`;
   const expiryDate = new Date(data.expiresAt).toLocaleDateString('en-AU', {
     year: 'numeric',
     month: 'long',
