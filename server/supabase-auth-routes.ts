@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 import { storage } from './storage';
+import { db } from './db';
+import { users } from '@shared/schema';
 import type { User } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail } from './email-service';
 
 const router = Router();
@@ -120,6 +123,20 @@ router.post('/signin', async (req: Request, res: Response) => {
     }
 
     if (platformUser) {
+      // Check if temp password has expired (24 hours)
+      if (platformUser.requiresPasswordReset && platformUser.tempPasswordIssuedAt) {
+        const tempPasswordAge = Date.now() - new Date(platformUser.tempPasswordIssuedAt).getTime();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (tempPasswordAge > twentyFourHours) {
+          // Sign out user and reject
+          await supabase.auth.signOut();
+          return res.status(401).json({ 
+            error: 'Your temporary password has expired. Please contact an administrator to issue a new one.',
+            code: 'TEMP_PASSWORD_EXPIRED'
+          });
+        }
+      }
+
       // Also normalize existing user's userType if it's legacy
       const updates: any = { lastLogin: new Date() };
       if (platformUser.userType === 'institution_user' || platformUser.userType === 'university') {
@@ -144,9 +161,11 @@ router.post('/signin', async (req: Request, res: Response) => {
           userType: platformUser.userType,
           role: platformUser.role,
           profileImageUrl: platformUser.profileImageUrl,
+          requiresPasswordReset: platformUser.requiresPasswordReset || false,
         } : null,
       },
       session: data.session,
+      requiresPasswordReset: platformUser?.requiresPasswordReset || false,
     });
   } catch (err) {
     console.error('[Supabase Auth] Signin error:', err);
@@ -438,6 +457,7 @@ router.get('/user', async (req: Request, res: Response) => {
       isActive: platformUser.isActive,
       emailVerified: platformUser.emailVerified,
       approvalStatus: platformUser.approvalStatus,
+      requiresPasswordReset: platformUser.requiresPasswordReset || false,
       createdAt: platformUser.createdAt,
       updatedAt: platformUser.updatedAt,
     });
@@ -886,6 +906,192 @@ router.post('/invitation/accept', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Invitation Accept] Error:', err);
     res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+// ==================== ADMIN USER CREATION (Direct with Temp Password) ====================
+
+// Generate a secure temporary password
+function generateTempPassword(): string {
+  const crypto = require('crypto');
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let password = '';
+  const bytes = crypto.randomBytes(12);
+  for (let i = 0; i < 12; i++) {
+    password += chars[bytes[i] % chars.length];
+  }
+  // Ensure password meets requirements
+  return password + 'Aa1!';
+}
+
+// Admin creates a user directly with temp password
+router.post('/admin/create-user', async (req: any, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Authentication service is not configured' });
+    }
+
+    // Check admin access
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.substring(7);
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !authUser) {
+      return res.status(401).json({ error: 'Invalid authentication' });
+    }
+
+    // Verify admin/platform_admin status
+    const adminUser = await storage.getUserByEmail(authUser.email || '');
+    if (!adminUser || !['admin', 'platform_admin'].includes(adminUser.userType)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { email, firstName, lastName, phone, roleId, branchId, userType } = req.body;
+
+    if (!email || !firstName || !lastName || !roleId || !userType) {
+      return res.status(400).json({ error: 'Email, first name, last name, role, and user type are required' });
+    }
+
+    // Validate user type
+    if (!['admin', 'platform_admin'].includes(userType)) {
+      return res.status(400).json({ error: 'Invalid user type. Must be admin or platform_admin' });
+    }
+
+    // Check if user already exists
+    const existingUser = await storage.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'A user with this email already exists' });
+    }
+
+    // Generate temporary password
+    const tempPassword = generateTempPassword();
+
+    // Create user in Supabase
+    const { data: supabaseData, error: supabaseError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        user_type: userType,
+        admin_created: true,
+      },
+    });
+
+    if (supabaseError) {
+      console.error('[Admin Create User] Supabase error:', supabaseError);
+      return res.status(400).json({ error: supabaseError.message });
+    }
+
+    // Create user in our database
+    const newUser = await storage.createUser({
+      email,
+      firstName,
+      lastName,
+      phone: phone || null,
+      userType,
+      roleId,
+      branchId: branchId || null,
+      emailVerified: true,
+      isActive: true,
+      approvalStatus: 'approved',
+      requiresPasswordReset: true,
+      tempPasswordIssuedAt: new Date(),
+    });
+
+    // Send welcome email with credentials
+    try {
+      const { sendAdminCreatedUserEmail } = await import('./email-service');
+      await sendAdminCreatedUserEmail({
+        email,
+        firstName,
+        lastName,
+        tempPassword,
+        createdByName: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || 'Administrator',
+      });
+    } catch (emailError) {
+      console.error('[Admin Create User] Email error:', emailError);
+      // Don't fail the request, just log the error
+    }
+
+    console.log(`[Admin Create User] User ${email} created by ${adminUser.email}`);
+
+    res.status(201).json({
+      message: 'User created successfully. Login credentials have been sent via email.',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        userType: newUser.userType,
+        requiresPasswordReset: true,
+      },
+    });
+  } catch (err) {
+    console.error('[Admin Create User] Error:', err);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Force password reset endpoint (for users who need to change password on first login)
+router.post('/force-password-reset', async (req: any, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Authentication service is not configured' });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.substring(7);
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !authUser) {
+      return res.status(401).json({ error: 'Invalid authentication' });
+    }
+
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    // Update password in Supabase
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      authUser.id,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error('[Force Password Reset] Supabase error:', updateError);
+      return res.status(400).json({ error: updateError.message });
+    }
+
+    // Clear the requiresPasswordReset flag in our database
+    const dbUser = await storage.getUserByEmail(authUser.email || '');
+    if (dbUser) {
+      await db.update(users)
+        .set({ 
+          requiresPasswordReset: false,
+          tempPasswordIssuedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, dbUser.id));
+    }
+
+    console.log(`[Force Password Reset] Password updated for ${authUser.email}`);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('[Force Password Reset] Error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
   }
 });
 

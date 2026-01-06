@@ -62,6 +62,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallback from "@/pages/auth-callback";
 import AdminPendingApproval from "@/pages/admin-pending-approval";
 import AcceptInvitation from "@/pages/accept-invitation";
+import ForcePasswordReset from "@/pages/force-password-reset";
 
 interface RouterProps {
   user: any;
@@ -94,6 +95,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/affiliate" component={AffiliatePage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/force-password-reset" component={ForcePasswordReset} />
       <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/auth/accept-invite" component={AcceptInvitation} />
       <Route path="/accept-invitation" component={AcceptInvitation} />
@@ -142,7 +144,7 @@ function AppContent() {
   const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
-  const standalonePages = ['/reset-password', '/accept-invitation', '/auth/accept-invite'];
+  const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite'];
   const isPublicRoute = publicRoutes.some(route => 
     location === route || 
     location.startsWith('/courses/') || 

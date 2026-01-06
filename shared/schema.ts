@@ -274,12 +274,16 @@ export const users = pgTable("users", {
   resetPasswordExpiry: timestamp("reset_password_expiry"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone", { length: 50 }), // User phone number for profile
   profileImageUrl: varchar("profile_image_url"),
   userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'institution_admin'
   role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system
   roleId: varchar("role_id"), // References roles table for granular permissions (added later to avoid circular reference)
+  branchId: varchar("branch_id"), // Assigned branch/office location for staff
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
+  requiresPasswordReset: boolean("requires_password_reset").default(false), // Force password change on first login
+  tempPasswordIssuedAt: timestamp("temp_password_issued_at"), // When temp password was created (for expiry tracking)
   approvalStatus: approvalStatusEnum("approval_status"), // For platform admin approval workflow (null for students/institutions)
   approvedBy: varchar("approved_by").references(() => users.id, { onDelete: "set null" }), // Admin who approved
   approvedAt: timestamp("approved_at"), // When approval was granted
@@ -629,6 +633,39 @@ export const regions = pgTable("regions", {
 }, (table) => ({
   codeIdx: index("regions_code_idx").on(table.code),
   activeIdx: index("regions_active_idx").on(table.isActive),
+}));
+
+// Branches table - office locations within regions
+export const branches = pgTable("branches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Branch identification
+  name: varchar("name", { length: 100 }).notNull(), // e.g., 'Melbourne Office', 'Sydney Office', 'Dhaka Office'
+  code: varchar("code", { length: 20 }).notNull().unique(), // e.g., 'MEL', 'SYD', 'DHK'
+  
+  // Location
+  regionId: varchar("region_id").references(() => regions.id, { onDelete: "set null" }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  postcode: varchar("postcode", { length: 20 }),
+  country: varchar("country", { length: 100 }),
+  
+  // Contact info
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  
+  // Display settings
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  isHeadquarters: boolean("is_headquarters").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  codeIdx: index("branches_code_idx").on(table.code),
+  regionIdx: index("branches_region_idx").on(table.regionId),
+  activeIdx: index("branches_active_idx").on(table.isActive),
 }));
 
 // Student pathways table - defines onshore/offshore student types
@@ -3207,6 +3244,19 @@ export const updateRegionSchema = insertRegionSchema.partial();
 export type Region = typeof regions.$inferSelect;
 export type InsertRegion = z.infer<typeof insertRegionSchema>;
 export type UpdateRegion = z.infer<typeof updateRegionSchema>;
+
+// Branches
+export const insertBranchSchema = createInsertSchema(branches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBranchSchema = insertBranchSchema.partial();
+
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+export type UpdateBranch = z.infer<typeof updateBranchSchema>;
 
 // Student Pathways
 export const insertStudentPathwaySchema = createInsertSchema(studentPathways).omit({

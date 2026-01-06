@@ -15,9 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { UserPlus, Mail, RotateCcw, Trash2, Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { UserPlus, Mail, RotateCcw, Trash2, Clock, CheckCircle, XCircle, AlertCircle, Loader2, User, Building2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-import type { InvitationWithDetails, Role } from "@shared/schema";
+import type { InvitationWithDetails, Role, Branch } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const inviteFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,6 +28,18 @@ const inviteFormSchema = z.object({
 });
 
 type InviteFormData = z.infer<typeof inviteFormSchema>;
+
+const createUserFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().optional(),
+  roleId: z.string().min(1, "Please select a role"),
+  userType: z.enum(["admin", "platform_admin"]),
+  branchId: z.string().optional(),
+});
+
+type CreateUserFormData = z.infer<typeof createUserFormSchema>;
 
 function getStatusBadge(status: string, expiresAt: Date) {
   const isExpired = new Date() > new Date(expiresAt);
@@ -51,15 +64,30 @@ function getStatusBadge(status: string, expiresAt: Date) {
 
 export function AdminTeamPanel() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [creationMethod, setCreationMethod] = useState<"invite" | "create">("invite");
   const { toast } = useToast();
 
-  const form = useForm<InviteFormData>({
+  const inviteForm = useForm<InviteFormData>({
     resolver: zodResolver(inviteFormSchema),
     defaultValues: {
       email: "",
       roleId: "",
       userType: "admin",
       note: "",
+    },
+  });
+
+  const createUserForm = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      roleId: "",
+      userType: "admin",
+      branchId: "",
     },
   });
 
@@ -71,6 +99,10 @@ export function AdminTeamPanel() {
     queryKey: ["/api/admin/invitations/roles"],
   });
 
+  const { data: branches = [], isLoading: isLoadingBranches } = useQuery<Branch[]>({
+    queryKey: ["/api/admin/branches"],
+  });
+
   const createInvitationMutation = useMutation({
     mutationFn: async (data: InviteFormData) => {
       const response = await apiRequest("POST", "/api/admin/invitations", data);
@@ -79,7 +111,7 @@ export function AdminTeamPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
       setIsInviteDialogOpen(false);
-      form.reset();
+      inviteForm.reset();
       toast({
         title: "Invitation Sent",
         description: "The team member will receive an email with instructions to join.",
@@ -88,6 +120,29 @@ export function AdminTeamPanel() {
     onError: (error: any) => {
       toast({
         title: "Failed to send invitation",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: CreateUserFormData) => {
+      const response = await apiRequest("POST", "/api/supabase-auth/admin/create-user", data);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/team-members"] });
+      setIsCreateUserDialogOpen(false);
+      createUserForm.reset();
+      toast({
+        title: "User Created Successfully",
+        description: "The user will receive an email with their login credentials and will be required to change their password on first login.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create user",
         description: error.message || "Please try again",
         variant: "destructive",
       });
@@ -136,8 +191,12 @@ export function AdminTeamPanel() {
     },
   });
 
-  const onSubmit = (data: InviteFormData) => {
+  const onInviteSubmit = (data: InviteFormData) => {
     createInvitationMutation.mutate(data);
+  };
+
+  const onCreateUserSubmit = (data: CreateUserFormData) => {
+    createUserMutation.mutate(data);
   };
 
   const pendingInvitations = invitations.filter(i => i.status === "pending");
@@ -164,10 +223,10 @@ export function AdminTeamPanel() {
                 Send an invitation email to add a new team member. They'll receive a link to set up their account.
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Form {...inviteForm}>
+              <form onSubmit={inviteForm.handleSubmit(onInviteSubmit)} className="space-y-4">
                 <FormField
-                  control={form.control}
+                  control={inviteForm.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -185,7 +244,7 @@ export function AdminTeamPanel() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={inviteForm.control}
                   name="roleId"
                   render={({ field }) => (
                     <FormItem>
@@ -213,7 +272,7 @@ export function AdminTeamPanel() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={inviteForm.control}
                   name="userType"
                   render={({ field }) => (
                     <FormItem>
@@ -234,7 +293,7 @@ export function AdminTeamPanel() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={inviteForm.control}
                   name="note"
                   render={({ field }) => (
                     <FormItem>
@@ -273,6 +332,212 @@ export function AdminTeamPanel() {
                       <>
                         <Mail className="h-4 w-4 mr-2" />
                         Send Invitation
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create User Dialog */}
+        <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" data-testid="button-create-user">
+              <User className="h-4 w-4 mr-2" />
+              Create User
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create User Account</DialogTitle>
+              <DialogDescription>
+                Create a new user account directly. They'll receive an email with login credentials and must change their password on first login.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...createUserForm}>
+              <form onSubmit={createUserForm.handleSubmit(onCreateUserSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createUserForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="John" 
+                            data-testid="input-create-firstname"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Smith" 
+                            data-testid="input-create-lastname"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={createUserForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="john.smith@example.com" 
+                          type="email"
+                          data-testid="input-create-email"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createUserForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="+61 400 000 000" 
+                          type="tel"
+                          data-testid="input-create-phone"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createUserForm.control}
+                    name="roleId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-create-role">
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {isLoadingRoles ? (
+                              <SelectItem value="loading" disabled>Loading roles...</SelectItem>
+                            ) : (
+                              roles.map((role) => (
+                                <SelectItem key={role.id} value={role.id}>
+                                  {role.displayName}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="userType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>User Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-create-user-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin (Staff)</SelectItem>
+                            <SelectItem value="platform_admin">Platform Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={createUserForm.control}
+                  name="branchId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-create-branch">
+                            <SelectValue placeholder="Select a branch" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No Branch</SelectItem>
+                          {isLoadingBranches ? (
+                            <SelectItem value="loading" disabled>Loading branches...</SelectItem>
+                          ) : (
+                            branches.map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-3 w-3" />
+                                  {branch.name}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Note:</strong> A temporary password will be generated and sent to the user via email. They will be required to change it on first login.
+                </div>
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsCreateUserDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createUserMutation.isPending}
+                    data-testid="button-submit-create-user"
+                  >
+                    {createUserMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Create User
                       </>
                     )}
                   </Button>

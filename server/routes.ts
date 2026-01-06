@@ -4823,6 +4823,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== BRANCHES MANAGEMENT ====================
+  
+  // Get all branches
+  app.get("/api/admin/branches", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { branches, regions } = await import('@shared/schema');
+      const branchList = await db.select({
+        id: branches.id,
+        name: branches.name,
+        code: branches.code,
+        regionId: branches.regionId,
+        address: branches.address,
+        city: branches.city,
+        state: branches.state,
+        postcode: branches.postcode,
+        country: branches.country,
+        phone: branches.phone,
+        email: branches.email,
+        displayOrder: branches.displayOrder,
+        isActive: branches.isActive,
+        isHeadquarters: branches.isHeadquarters,
+        createdAt: branches.createdAt,
+        region: {
+          id: regions.id,
+          name: regions.name,
+          code: regions.code,
+        },
+      })
+      .from(branches)
+      .leftJoin(regions, eq(branches.regionId, regions.id))
+      .orderBy(branches.displayOrder, branches.name);
+
+      res.json(branchList);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+      res.status(500).json({ message: "Failed to fetch branches" });
+    }
+  });
+
+  // Create branch
+  app.post("/api/admin/branches", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access || access.userType !== 'platform_admin') {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const { branches, insertBranchSchema } = await import('@shared/schema');
+      const validatedData = insertBranchSchema.parse(req.body);
+
+      const [newBranch] = await db.insert(branches).values(validatedData).returning();
+      res.status(201).json(newBranch);
+    } catch (error: any) {
+      console.error("Error creating branch:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid branch data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create branch" });
+    }
+  });
+
+  // Update branch
+  app.patch("/api/admin/branches/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access || access.userType !== 'platform_admin') {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const { branches, updateBranchSchema } = await import('@shared/schema');
+      const validatedData = updateBranchSchema.parse(req.body);
+
+      const [updated] = await db.update(branches)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(branches.id, req.params.id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating branch:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid branch data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update branch" });
+    }
+  });
+
+  // Delete branch
+  app.delete("/api/admin/branches/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access || access.userType !== 'platform_admin') {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const { branches } = await import('@shared/schema');
+      const [deleted] = await db.delete(branches)
+        .where(eq(branches.id, req.params.id))
+        .returning();
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+
+      res.json({ message: "Branch deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting branch:", error);
+      res.status(500).json({ message: "Failed to delete branch" });
+    }
+  });
+
   // Super Admin User Management Routes
   app.get("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {

@@ -73,10 +73,20 @@ export default function AdminLogin() {
         queryKey: ["/api/supabase-auth/user"],
       }) as any;
       
-      // Verify user is platform_admin
-      if (user.userType !== "platform_admin") {
+      // Verify user is platform_admin or admin
+      if (user.userType !== "platform_admin" && user.userType !== "admin") {
         await supabase.auth.signOut();
         throw new Error("Access denied. This portal is for platform administrators only. Students and institutions should use the main Sign In page at /auth");
+      }
+      
+      // Check if user needs to reset their password (first login with temp password)
+      if (user.requiresPasswordReset) {
+        toast({
+          title: "Password Change Required",
+          description: "Please set a new password to continue.",
+        });
+        setLocation("/force-password-reset");
+        return;
       }
       
       toast({

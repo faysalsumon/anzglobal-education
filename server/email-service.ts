@@ -830,6 +830,133 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
   }
 }
 
+// ============================================
+// ADMIN-CREATED USER EMAIL (with temp password)
+// ============================================
+
+interface AdminCreatedUserEmailData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  tempPassword: string;
+  createdByName: string;
+}
+
+function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const loginUrl = `${baseUrl}/admin/login`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Your ANZ Global Education Account</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Account Has Been Created</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome, ${data.firstName}!</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    <strong>${data.createdByName}</strong> has created an account for you on the ANZ Global Education platform.
+                  </p>
+                  
+                  <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3 style="color: #333333; margin: 0 0 15px 0; font-size: 16px;">Your Login Credentials</h3>
+                    <p style="color: #555555; font-size: 14px; margin: 5px 0;">
+                      <strong>Email:</strong> ${data.email}
+                    </p>
+                    <p style="color: #555555; font-size: 14px; margin: 5px 0;">
+                      <strong>Temporary Password:</strong> <code style="background-color: #e9ecef; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${data.tempPassword}</code>
+                    </p>
+                  </div>
+                  
+                  <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
+                    <p style="color: #856404; font-size: 14px; margin: 0;">
+                      <strong>⚠️ Important:</strong> You will be required to change your password when you first log in.
+                    </p>
+                  </div>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                    Click the button below to sign in to your account:
+                  </p>
+                  
+                  <!-- CTA Button -->
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td align="center" style="padding: 20px 0;">
+                        <a href="${loginUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                          Sign In to Your Account
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <p style="color: #888888; font-size: 12px; margin-top: 30px;">
+                    If the button doesn't work, copy and paste this link into your browser:<br>
+                    <a href="${loginUrl}" style="color: #3465A5;">${loginUrl}</a>
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 20px 40px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: #888888; font-size: 12px; margin: 0;">
+                    ANZ Global Education - Your Gateway to Global Education
+                  </p>
+                  <p style="color: #888888; font-size: 11px; margin: 10px 0 0 0;">
+                    If you didn't expect this email, please contact your administrator.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+export async function sendAdminCreatedUserEmail(data: AdminCreatedUserEmailData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping admin created user email');
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `Your ANZ Global Education Account Has Been Created`,
+      html: getAdminCreatedUserEmailHtml(data),
+    });
+
+    console.log(`Admin created user email sent to ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending admin created user email:', error.message);
+    throw error;
+  }
+}
+
 // Send profile completion reminder email
 export async function sendProfileReminderEmail(data: ProfileReminderEmailData): Promise<void> {
   if (!resend) {
