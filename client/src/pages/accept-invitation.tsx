@@ -64,9 +64,9 @@ export default function AcceptInvitation() {
   });
 
   const { data: validationResult, isLoading: isValidating, error: validationError } = useQuery<InvitationDetails>({
-    queryKey: ["/api/auth/invitation/validate", token],
+    queryKey: ["/api/supabase-auth/invitation/validate", token],
     queryFn: async () => {
-      const response = await fetch(`/api/auth/invitation/validate?token=${token}`);
+      const response = await fetch(`/api/supabase-auth/invitation/validate?token=${token}`);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to validate invitation");
@@ -79,7 +79,7 @@ export default function AcceptInvitation() {
 
   const acceptMutation = useMutation({
     mutationFn: async (data: AcceptFormData) => {
-      const response = await apiRequest("POST", "/api/auth/invitation/accept", {
+      const response = await apiRequest("POST", "/api/supabase-auth/invitation/accept", {
         token,
         firstName: data.firstName,
         lastName: data.lastName,
