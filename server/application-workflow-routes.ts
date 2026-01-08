@@ -78,6 +78,7 @@ const documentVerificationSchema = z.object({
 
 /**
  * Helper to check if user has admin access
+ * Accepts both 'admin' and 'platform_admin' userTypes for proper RBAC
  */
 export async function checkAdminAccess(req: any): Promise<{ userId: string; role: string } | null> {
   if (!req.user) return null;
@@ -90,7 +91,7 @@ export async function checkAdminAccess(req: any): Promise<{ userId: string; role
     columns: { id: true, userType: true, role: true },
   });
 
-  if (!user || user.userType !== 'admin') return null;
+  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) return null;
 
   return { userId: user.id, role: user.role || 'admin' };
 }
