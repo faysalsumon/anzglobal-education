@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Users,
   Building2,
@@ -184,7 +183,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
       {/* Sidebar Container - Fixed on mobile, relative on desktop */}
       <div 
         className={cn(
-          "h-screen flex flex-shrink-0 transition-all duration-200 ease-out",
+          "flex flex-shrink-0 transition-all duration-200 ease-out h-full",
           // Mobile: fixed position with slide-in/out
           "fixed left-0 top-0 z-40 lg:relative lg:z-auto",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -193,13 +192,13 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
       >
         {/* Icon Rail - Column 1 */}
         <div className="w-16 bg-card border-r border-border flex flex-col h-full">
-          {/* Logo */}
-          <div className="h-14 flex items-center justify-center border-b border-border">
+          {/* Logo - Fixed header height to match main header */}
+          <div className="h-14 flex-shrink-0 flex items-center justify-center border-b border-border">
             <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
           </div>
 
-          {/* Domain Icons */}
-          <ScrollArea className="flex-1">
+          {/* Domain Icons - Scrollable if needed, but typically fits */}
+          <div className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center py-2 gap-1">
               {visibleDomains.map((domain) => {
                 const Icon = domain.icon;
@@ -230,21 +229,21 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
 
         </div>
 
         {/* Submenu Panel - Column 2 */}
         <div 
           className={cn(
-            "bg-background border-r border-border transition-all duration-200 ease-out overflow-hidden",
+            "bg-background border-r border-border transition-all duration-200 ease-out overflow-hidden h-full",
             isSubmenuOpen && activeDomain ? "w-48" : "w-0"
           )}
         >
           <div className="w-48 h-full flex flex-col">
-            {/* Domain Header */}
+            {/* Domain Header - Fixed height to match main header */}
             {currentDomain && (
-              <div className="h-14 px-3 flex items-center justify-between border-b border-border">
+              <div className="h-14 flex-shrink-0 px-3 flex items-center justify-between border-b border-border">
                 <div className="flex items-center gap-2">
                   <currentDomain.icon className="h-4 w-4" />
                   <span className="font-semibold text-sm">{currentDomain.label}</span>
@@ -261,8 +260,8 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
               </div>
             )}
 
-            {/* Route List */}
-            <ScrollArea className="flex-1">
+            {/* Route List - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
               <div className="p-2 space-y-0.5">
                 {visibleRoutes.map((route) => {
                   const Icon = route.icon;
@@ -285,7 +284,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
 

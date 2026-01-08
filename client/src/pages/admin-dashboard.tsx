@@ -1341,8 +1341,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/30">
-      {/* Left Mega Sidebar (3-column navigation) */}
+    <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+      {/* Left Mega Sidebar (3-column navigation) - Fixed height, no scroll */}
       <AdminMegaSidebar 
         activeTab={activeTab} 
         onTabChange={handleTabChange} 
@@ -1350,10 +1350,10 @@ export default function AdminDashboard() {
         isSuperAdmin={isSuperAdmin}
       />
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1 lg:ml-0">
-        {/* Top Header with Breadcrumb */}
-        <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
+      {/* Main Content Area - Flex column with fixed header and scrollable content */}
+      <div className="flex flex-col flex-1 min-w-0 h-full">
+        {/* Top Header with Breadcrumb - Fixed height, never scrolls */}
+        <header className="flex-shrink-0 h-14 flex items-center gap-4 border-b bg-background px-4 md:px-6">
           <div className="flex flex-1 items-center justify-between gap-4 lg:pl-0 pl-10">
             <Breadcrumb data-testid="breadcrumb">
               <BreadcrumbList>
@@ -1424,11 +1424,11 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          {/* Main Content */}
+          {/* Main Content - Scrollable area */}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-3 md:py-4">
+            <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4">
               {/* Simple single-column layout */}
-              <main className="space-y-3 md:space-y-4">
+              <div className="space-y-4">
                 {/* Dashboard Header */}
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold" data-testid="text-dashboard-title">
@@ -2317,8 +2317,8 @@ export default function AdminDashboard() {
             <AdminTeamPanel />
           </div>
         )}
+                </div>
               </div>
-              </main>
             </div>
           </div>
         </div>
