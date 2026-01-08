@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 interface UserWithAdminRole extends User {
   adminRole?: string | null;
+  roleName?: string | null;
 }
 
 export function useAuth() {

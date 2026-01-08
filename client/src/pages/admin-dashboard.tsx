@@ -1360,11 +1360,13 @@ export default function AdminDashboard() {
                 {/* Dashboard Header */}
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold" data-testid="text-dashboard-title">
-                    {isConsultant 
-                      ? "Consultant Dashboard" 
-                      : isSuperAdmin 
-                        ? "Super Admin Dashboard" 
-                        : "Admin Dashboard"}
+                    {user?.roleName 
+                      ? `${user.roleName} Dashboard`
+                      : isConsultant 
+                        ? "Consultant Dashboard" 
+                        : isSuperAdmin 
+                          ? "Super Admin Dashboard" 
+                          : "Admin Dashboard"}
                   </h1>
                   <p className="text-muted-foreground text-xs md:text-sm">
                     {isConsultant 
