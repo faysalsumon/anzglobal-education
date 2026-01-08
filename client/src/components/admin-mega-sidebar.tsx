@@ -22,8 +22,6 @@ import {
   Wrench,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  X,
   Link2,
   UsersRound,
   Shield,
@@ -52,12 +50,20 @@ interface AdminMegaSidebarProps {
   onTabChange: (tab: string) => void;
   hasFullAdminAccess: boolean;
   isSuperAdmin?: boolean;
+  isMobileMenuOpen?: boolean;
+  onMobileMenuToggle?: () => void;
 }
 
-export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, isSuperAdmin = false }: AdminMegaSidebarProps) {
+export function AdminMegaSidebar({ 
+  activeTab, 
+  onTabChange, 
+  hasFullAdminAccess, 
+  isSuperAdmin = false,
+  isMobileMenuOpen = false,
+  onMobileMenuToggle
+}: AdminMegaSidebarProps) {
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navConfig: NavDomain[] = [
     {
@@ -153,7 +159,10 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
 
   const handleRouteClick = (value: string) => {
     onTabChange(value);
-    setIsMobileMenuOpen(false);
+    // Close mobile menu when route is clicked
+    if (onMobileMenuToggle && isMobileMenuOpen) {
+      onMobileMenuToggle();
+    }
   };
 
   const currentDomain = visibleDomains.find(d => d.id === activeDomain);
@@ -161,22 +170,11 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
 
   return (
     <>
-      {/* Mobile Menu Toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-3 left-3 z-50 lg:hidden"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        data-testid="button-mobile-menu-toggle"
-      >
-        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
-
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={onMobileMenuToggle}
         />
       )}
 

@@ -32,7 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
@@ -361,6 +361,7 @@ export default function AdminDashboard() {
   };
   
   const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Sync active tab to URL hash only when it changes and differs from current hash
   useEffect(() => {
@@ -1348,13 +1349,26 @@ export default function AdminDashboard() {
         onTabChange={handleTabChange} 
         hasFullAdminAccess={hasFullAdminAccess}
         isSuperAdmin={isSuperAdmin}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
       {/* Main Content Area - Flex column with fixed header and scrollable content */}
       <div className="flex flex-col flex-1 min-w-0 h-full">
         {/* Top Header with Breadcrumb - Fixed height, never scrolls */}
-        <header className="flex-shrink-0 h-14 flex items-center gap-4 border-b bg-background px-4 md:px-6">
-          <div className="flex flex-1 items-center justify-between gap-4 lg:pl-0 pl-10">
+        <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
+          {/* Mobile menu toggle - only visible on mobile */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden flex-shrink-0"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            data-testid="button-mobile-menu-toggle"
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          
+          <div className="flex flex-1 items-center justify-between gap-4">
             <Breadcrumb data-testid="breadcrumb">
               <BreadcrumbList>
                 <BreadcrumbItem>
