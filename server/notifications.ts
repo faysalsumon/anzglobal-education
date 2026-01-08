@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { notifications } from "@shared/schema";
+import { sendToUser } from "./websocket-clients";
 
 export type NotificationType = 
   | "application_submitted"
@@ -40,6 +41,16 @@ export async function createNotification(params: CreateNotificationParams) {
       isRead: false,
     })
     .returning();
+  
+  // Send real-time notification via WebSocket if user is connected
+  const sent = sendToUser(userId, {
+    type: 'new_notification',
+    notification,
+  });
+  
+  if (sent) {
+    console.log(`[Notification] Real-time notification sent to user ${userId}`);
+  }
   
   return notification;
 }

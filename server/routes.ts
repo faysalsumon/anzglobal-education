@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
+import { wsClients } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
 import {
@@ -9682,7 +9683,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   
   // WebSocket server for real-time chat with session-based authentication
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const clients = new Map<string, WebSocket>(); // userId -> WebSocket
+  // Using shared wsClients map from websocket-clients.ts for cross-module access
   
   wss.on('connection', async (ws: WebSocket, request) => {
     let userId: string | null = null;
@@ -9761,7 +9762,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
       
       // Successfully authenticated - register client
-      clients.set(userId, ws);
+      wsClients.set(userId, ws);
       console.log(`[WS] ✅ Client authenticated successfully: ${userId}`);
       ws.send(JSON.stringify({ type: 'auth_success', userId }));
       
@@ -9838,7 +9839,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           });
           
           // Send message to recipient if they're online
-          const recipientSocket = clients.get(recipientId);
+          const recipientSocket = wsClients.get(recipientId);
           if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
             recipientSocket.send(JSON.stringify({
               type: 'new_message',
@@ -9876,7 +9877,7 @@ Sitemap: ${baseUrl}/sitemap.xml
             return; // Silently ignore invalid typing indicators
           }
           
-          const recipientSocket = clients.get(recipientId);
+          const recipientSocket = wsClients.get(recipientId);
           if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
             recipientSocket.send(JSON.stringify({
               type: 'user_typing',
@@ -9895,7 +9896,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     
     ws.on('close', () => {
       if (userId) {
-        clients.delete(userId);
+        wsClients.delete(userId);
         console.log(`WebSocket client disconnected: ${userId}`);
       }
     });
@@ -9903,7 +9904,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
       if (userId) {
-        clients.delete(userId);
+        wsClients.delete(userId);
       }
     });
   });
