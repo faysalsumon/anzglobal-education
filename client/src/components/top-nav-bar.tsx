@@ -194,12 +194,6 @@ export function TopNavBar() {
                   </Link>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem asChild>
-                <Link href="/" data-testid="menu-public-site">
-                  <Home className="mr-2 h-4 w-4" />
-                  Public Site
-                </Link>
-              </DropdownMenuItem>
               {(isStudent || isUniversity) && (
                 <DropdownMenuItem asChild>
                   <Link href={isStudent ? "/student/ai-assistant" : "/university/ai-assistant"} data-testid="menu-ai-assistant">

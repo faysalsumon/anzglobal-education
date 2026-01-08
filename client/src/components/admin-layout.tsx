@@ -1,5 +1,4 @@
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,7 +15,6 @@ interface AdminLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   breadcrumbTitle: string;
-  showPublicSiteButton?: boolean;
 }
 
 const TAB_TO_ROUTE_MAP: Record<string, string> = {
@@ -49,8 +47,7 @@ function getTabFromPath(pathname: string): string {
 export function AdminLayout({ 
   children, 
   activeTab,
-  breadcrumbTitle,
-  showPublicSiteButton = true
+  breadcrumbTitle
 }: AdminLayoutProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
@@ -100,14 +97,6 @@ export function AdminLayout({
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            {showPublicSiteButton && (
-              <Button variant="outline" size="sm" asChild data-testid="button-public-site" className="hidden md:flex">
-                <Link href="/">
-                  <Home className="h-4 w-4 mr-2" />
-                  Public Site
-                </Link>
-              </Button>
-            )}
           </div>
         </header>
 

@@ -1349,12 +1349,6 @@ export default function AdminDashboard() {
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
-              <Button variant="outline" size="sm" asChild data-testid="button-public-site" className="hidden md:flex">
-                <Link href="/">
-                  <Home className="h-4 w-4 mr-2" />
-                  Public Site
-                </Link>
-              </Button>
             </div>
           </header>
 
