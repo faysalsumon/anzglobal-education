@@ -822,11 +822,11 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           
           if (currentApplication.courseId) {
             const [course] = await db
-              .select({ name: courses.name })
+              .select({ title: courses.title })
               .from(courses)
               .where(eq(courses.id, currentApplication.courseId))
               .limit(1);
-            courseName = course?.name || 'Course';
+            courseName = course?.title || 'Course';
           }
           
           if (currentApplication.studentId) {
