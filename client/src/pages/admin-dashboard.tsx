@@ -32,7 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
@@ -1971,6 +1971,16 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="py-2">
                             <div className="flex justify-end gap-1">
+                              {/* View button - opens public institution page */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => window.open(`/institutions/${institution.id}`, '_blank')}
+                                title="View public page"
+                                data-testid={`button-view-institution-${institution.id}`}
+                              >
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              </Button>
                               {/* Approve/Reject buttons for pending institutions */}
                               {hasFullAdminAccess && institution.approvalStatus === "pending" && (
                                 <>
