@@ -75,6 +75,7 @@ export function useAuth() {
   const isSuperAdmin = adminRole === "super_admin";
   const isSupportManager = adminRole === "support_manager";
   const isConsultant = adminRole === "support_staff";
+  const isMarketingExecutive = user?.roleName === "marketing_executive";
   
   const hasFullAdminAccess = isSuperAdmin || isSupportManager;
 
@@ -97,6 +98,7 @@ export function useAuth() {
     isSuperAdmin,
     isSupportManager,
     isConsultant,
+    isMarketingExecutive,
     hasFullAdminAccess,
   };
 }

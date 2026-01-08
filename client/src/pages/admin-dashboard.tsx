@@ -287,7 +287,7 @@ const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess, isAdmin } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isSuperAdmin, isMarketingExecutive, hasFullAdminAccess, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
   const { signOut } = useSupabaseAuth();
 
@@ -343,8 +343,10 @@ export default function AdminDashboard() {
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
     const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management'];
-    const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs', 'team'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const superAdminOnlyTabs = ['role-management'];
+    // Marketing Executive can access institutions tab along with full admins
+    const marketingExecutiveTabs = ['institutions'];
     
     if (hash && validTabs.includes(hash)) {
       // Check access for super-admin-only tabs (role management requires super admin)
@@ -354,6 +356,10 @@ export default function AdminDashboard() {
       // Check access for full-admin-only tabs
       if (fullAdminOnlyTabs.includes(hash) && !hasFullAdminAccess) {
         return defaultTab; // Restricted admin - use default
+      }
+      // Marketing Executive tabs - accessible by full admins OR marketing executives
+      if (marketingExecutiveTabs.includes(hash) && !hasFullAdminAccess && !isMarketingExecutive) {
+        return defaultTab;
       }
       return hash; // Valid tab with proper access
     }
@@ -1349,6 +1355,7 @@ export default function AdminDashboard() {
         onTabChange={handleTabChange} 
         hasFullAdminAccess={hasFullAdminAccess}
         isSuperAdmin={isSuperAdmin}
+        isMarketingExecutive={isMarketingExecutive}
         isMobileMenuOpen={isMobileMenuOpen}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
