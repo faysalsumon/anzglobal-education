@@ -59,6 +59,8 @@ import { AdminRegionsPanel } from "@/components/admin-regions-panel";
 import { AdminRoleManagementPanel } from "@/components/admin-role-management-panel";
 import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
+import { NotificationBell } from "@/components/NotificationBell";
+import { MessageCircle } from "lucide-react";
 
 interface User {
   id: string;
@@ -1349,6 +1351,24 @@ export default function AdminDashboard() {
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
+              
+              {/* Platform-wide Notifications and Messages */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  data-testid="button-messages"
+                  onClick={() => {
+                    // Open chat widget or navigate to messages
+                    const chatWidget = document.querySelector('[data-testid="chat-widget-toggle"]') as HTMLButtonElement;
+                    if (chatWidget) chatWidget.click();
+                  }}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </Button>
+                <NotificationBell />
+              </div>
             </div>
           </header>
 
