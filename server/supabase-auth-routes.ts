@@ -6,6 +6,7 @@ import { users } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail } from './email-service';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -913,7 +914,6 @@ router.post('/invitation/accept', async (req: Request, res: Response) => {
 
 // Generate a secure temporary password
 function generateTempPassword(): string {
-  const crypto = require('crypto');
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
   let password = '';
   const bytes = crypto.randomBytes(12);
