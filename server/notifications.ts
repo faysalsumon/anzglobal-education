@@ -4,6 +4,7 @@ import { notifications } from "@shared/schema";
 export type NotificationType = 
   | "application_submitted"
   | "application_status_changed"
+  | "application_assigned"
   | "new_course_published"
   | "team_member_added"
   | "profile_update"
@@ -179,5 +180,27 @@ export async function notifyGeneral(params: {
     message: params.message,
     link: params.link,
     metadata: params.metadata,
+  });
+}
+
+export async function notifyApplicationAssigned(params: {
+  consultantUserId: string;
+  studentName: string;
+  courseName: string;
+  applicationId: string;
+  assignedByName: string;
+}) {
+  return createNotification({
+    userId: params.consultantUserId,
+    type: "application_assigned",
+    title: "New Application Assigned",
+    message: `${params.assignedByName} assigned you an application from ${params.studentName} for ${params.courseName}`,
+    link: `/admin/applications/${params.applicationId}`,
+    metadata: {
+      applicationId: params.applicationId,
+      studentName: params.studentName,
+      courseName: params.courseName,
+      assignedByName: params.assignedByName,
+    },
   });
 }

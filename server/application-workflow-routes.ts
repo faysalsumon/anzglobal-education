@@ -19,6 +19,7 @@ import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logActivity } from "./activity-logger";
 import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
+import { notifyApplicationAssigned } from "./notifications";
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
@@ -551,6 +552,15 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(404).json({ error: "Consultant not found" });
       }
 
+      // Get the assigning admin's details
+      const assigningAdmin = await db.query.users.findFirst({
+        where: eq(users.id, adminAccess.userId),
+        columns: { firstName: true, lastName: true },
+      });
+      const assignedByName = assigningAdmin 
+        ? `${assigningAdmin.firstName} ${assigningAdmin.lastName}` 
+        : 'Admin';
+
       // Assign applications
       await db
         .update(applications)
@@ -560,8 +570,31 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         })
         .where(inArray(applications.id, validatedData.applicationIds));
 
-      // Log activity for each assignment
+      // Log activity and send notifications for each assignment
       for (const appId of validatedData.applicationIds) {
+        // Get application details for notification
+        const appDetails = await db.query.applications.findFirst({
+          where: eq(applications.id, appId),
+          with: {
+            course: {
+              columns: { name: true },
+            },
+            student: {
+              columns: { firstName: true, lastName: true },
+            },
+          },
+        });
+
+        // Handle both single object and array cases for relations
+        const studentData = appDetails?.student as { firstName?: string | null; lastName?: string | null } | null;
+        const courseData = appDetails?.course as { name?: string | null } | null;
+        
+        const studentName = studentData 
+          ? `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student'
+          : 'Student';
+        const courseName = courseData?.name || 'Course';
+
+        // Log activity
         await logActivity({
           userId: adminAccess.userId,
           action: 'assigned',
@@ -573,6 +606,19 @@ export function registerApplicationWorkflowRoutes(app: Express) {
             consultantName: `${consultant.firstName} ${consultant.lastName}`,
           },
         });
+
+        // Send notification to the assigned consultant
+        try {
+          await notifyApplicationAssigned({
+            consultantUserId: validatedData.consultantId,
+            studentName,
+            courseName,
+            applicationId: appId,
+            assignedByName,
+          });
+        } catch (notifyError) {
+          console.error("Error sending assignment notification:", notifyError);
+        }
       }
 
       res.json({ message: "Applications assigned successfully", count: validatedData.applicationIds.length });
