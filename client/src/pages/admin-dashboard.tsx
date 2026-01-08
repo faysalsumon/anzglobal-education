@@ -32,7 +32,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -285,6 +289,21 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isSuperAdmin, hasFullAdminAccess, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
+  const { signOut } = useSupabaseAuth();
+
+  const handleLogout = () => {
+    performLogout(signOut);
+  };
+
+  const getUserInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "AD";
+  };
   
   // Redirect unauthenticated users to admin login
   useEffect(() => {
@@ -1352,7 +1371,7 @@ export default function AdminDashboard() {
                 </BreadcrumbList>
               </Breadcrumb>
               
-              {/* Platform-wide Notifications and Messages */}
+              {/* Platform-wide Notifications, Messages, Profile, and Logout */}
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -1368,6 +1387,39 @@ export default function AdminDashboard() {
                   <MessageCircle className="h-5 w-5" />
                 </Button>
                 <NotificationBell />
+                
+                {/* Profile Avatar */}
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Link href="/admin/profile">
+                      <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile">
+                        {user?.profileImageUrl && (
+                          <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
+                        )}
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>My Profile</TooltipContent>
+                </Tooltip>
+
+                {/* Logout Button */}
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleLogout}
+                      data-testid="button-logout"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Logout</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </header>

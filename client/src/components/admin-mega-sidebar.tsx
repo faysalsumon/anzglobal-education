@@ -25,18 +25,13 @@ import {
   ChevronRight,
   Menu,
   X,
-  User,
   Link2,
-  LogOut,
   UsersRound,
   Shield,
   MapPin,
 } from "lucide-react";
-import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
-import { performLogout } from "@/lib/logout";
-import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -64,11 +59,6 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { signOut } = useSupabaseAuth();
-
-  const handleLogout = () => {
-    performLogout(signOut);
-  };
 
   const navConfig: NavDomain[] = [
     {
@@ -242,42 +232,6 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
             </div>
           </ScrollArea>
 
-          {/* Profile and Logout at Bottom */}
-          <div className="p-2 border-t border-border space-y-2">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Link href="/admin/profile">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-12 h-12 rounded-xl transition-all text-gray-600 bg-gray-50 dark:bg-gray-950 dark:text-gray-400"
-                    data-testid="button-admin-profile"
-                  >
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                My Profile
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="w-12 h-12 rounded-xl"
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                Logout
-              </TooltipContent>
-            </Tooltip>
-          </div>
         </div>
 
         {/* Submenu Panel - Column 2 */}
