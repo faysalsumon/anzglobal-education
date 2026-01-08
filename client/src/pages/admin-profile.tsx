@@ -22,6 +22,19 @@ interface AdminUser {
   lastName: string | null;
   phone: string | null;
   dateOfBirth: string | null;
+  // Personal Address fields
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  postalCode: string | null;
+  country: string | null;
+  // Emergency Contact fields
+  emergencyFirstName: string | null;
+  emergencyLastName: string | null;
+  emergencyMobile: string | null;
+  emergencyEmail: string | null;
+  emergencyRelationship: string | null;
   profileImageUrl: string | null;
   userType: string;
   role: string | null;
@@ -54,6 +67,29 @@ const changePasswordSchema = z.object({
 
 type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
+// Address form schema
+const addressFormSchema = z.object({
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
+  city: z.string().optional(),
+  stateProvince: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+});
+
+type AddressFormValues = z.infer<typeof addressFormSchema>;
+
+// Emergency contact form schema
+const emergencyContactFormSchema = z.object({
+  emergencyFirstName: z.string().optional(),
+  emergencyLastName: z.string().optional(),
+  emergencyMobile: z.string().optional(),
+  emergencyEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+  emergencyRelationship: z.string().optional(),
+});
+
+type EmergencyContactFormValues = z.infer<typeof emergencyContactFormSchema>;
+
 export default function AdminProfile() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -83,6 +119,31 @@ export default function AdminProfile() {
     },
   });
 
+  // Address form setup
+  const addressForm = useForm<AddressFormValues>({
+    resolver: zodResolver(addressFormSchema),
+    defaultValues: {
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      stateProvince: "",
+      postalCode: "",
+      country: "",
+    },
+  });
+
+  // Emergency contact form setup
+  const emergencyContactForm = useForm<EmergencyContactFormValues>({
+    resolver: zodResolver(emergencyContactFormSchema),
+    defaultValues: {
+      emergencyFirstName: "",
+      emergencyLastName: "",
+      emergencyMobile: "",
+      emergencyEmail: "",
+      emergencyRelationship: "",
+    },
+  });
+
   // Update form and photo URL when profile loads
   useEffect(() => {
     if (profile) {
@@ -93,9 +154,24 @@ export default function AdminProfile() {
         dateOfBirth: profile.dateOfBirth || "",
         profileImageUrl: profile.profileImageUrl || "",
       });
+      addressForm.reset({
+        addressLine1: profile.addressLine1 || "",
+        addressLine2: profile.addressLine2 || "",
+        city: profile.city || "",
+        stateProvince: profile.stateProvince || "",
+        postalCode: profile.postalCode || "",
+        country: profile.country || "",
+      });
+      emergencyContactForm.reset({
+        emergencyFirstName: profile.emergencyFirstName || "",
+        emergencyLastName: profile.emergencyLastName || "",
+        emergencyMobile: profile.emergencyMobile || "",
+        emergencyEmail: profile.emergencyEmail || "",
+        emergencyRelationship: profile.emergencyRelationship || "",
+      });
       setCurrentPhotoUrl(profile.profileImageUrl || null);
     }
-  }, [profile, form]);
+  }, [profile, form, addressForm, emergencyContactForm]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -160,6 +236,48 @@ export default function AdminProfile() {
     },
   });
 
+  // Update address mutation
+  const updateAddressMutation = useMutation({
+    mutationFn: async (data: AddressFormValues) => {
+      return await apiRequest("PUT", "/api/admin/profile", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
+      toast({
+        title: "Address updated",
+        description: "Your address has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update address",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update emergency contact mutation
+  const updateEmergencyContactMutation = useMutation({
+    mutationFn: async (data: EmergencyContactFormValues) => {
+      return await apiRequest("PUT", "/api/admin/profile", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
+      toast({
+        title: "Emergency contact updated",
+        description: "Your emergency contact details have been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update emergency contact",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -191,6 +309,14 @@ export default function AdminProfile() {
 
   const onSubmit = (data: ProfileFormValues) => {
     updateProfileMutation.mutate(data);
+  };
+
+  const onAddressSubmit = (data: AddressFormValues) => {
+    updateAddressMutation.mutate(data);
+  };
+
+  const onEmergencyContactSubmit = (data: EmergencyContactFormValues) => {
+    updateEmergencyContactMutation.mutate(data);
   };
 
   // Password change form
@@ -473,6 +599,270 @@ export default function AdminProfile() {
                       <>
                         <Check className="h-4 w-4 mr-2" />
                         Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* Personal Address Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Address</CardTitle>
+            <CardDescription>
+              Update your address details
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...addressForm}>
+              <form onSubmit={addressForm.handleSubmit(onAddressSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={addressForm.control}
+                    name="addressLine1"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Address Line 1</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Street address" 
+                            {...field} 
+                            data-testid="input-addressLine1"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="addressLine2"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Address Line 2</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Apartment, suite, unit, etc. (optional)" 
+                            {...field} 
+                            data-testid="input-addressLine2"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Sydney" 
+                            {...field} 
+                            data-testid="input-city"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="stateProvince"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State / Province</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="NSW" 
+                            {...field} 
+                            data-testid="input-stateProvince"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="2000" 
+                            {...field} 
+                            data-testid="input-postalCode"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addressForm.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Australia" 
+                            {...field} 
+                            data-testid="input-country"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button
+                    type="submit"
+                    disabled={updateAddressMutation.isPending || !addressForm.formState.isDirty}
+                    data-testid="button-save-address"
+                  >
+                    {updateAddressMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Save Address
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* Emergency Contact Details Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Emergency Contact Details</CardTitle>
+            <CardDescription>
+              Add emergency contact information
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...emergencyContactForm}>
+              <form onSubmit={emergencyContactForm.handleSubmit(onEmergencyContactSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={emergencyContactForm.control}
+                    name="emergencyFirstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Contact first name" 
+                            {...field} 
+                            data-testid="input-emergencyFirstName"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emergencyContactForm.control}
+                    name="emergencyLastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Contact last name" 
+                            {...field} 
+                            data-testid="input-emergencyLastName"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emergencyContactForm.control}
+                    name="emergencyMobile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="+61 400 000 000" 
+                            {...field} 
+                            data-testid="input-emergencyMobile"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emergencyContactForm.control}
+                    name="emergencyEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="email"
+                            placeholder="contact@email.com" 
+                            {...field} 
+                            data-testid="input-emergencyEmail"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={emergencyContactForm.control}
+                    name="emergencyRelationship"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Relationship</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., Spouse, Parent, Sibling" 
+                            {...field} 
+                            data-testid="input-emergencyRelationship"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button
+                    type="submit"
+                    disabled={updateEmergencyContactMutation.isPending || !emergencyContactForm.formState.isDirty}
+                    data-testid="button-save-emergency-contact"
+                  >
+                    {updateEmergencyContactMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Save Emergency Contact
                       </>
                     )}
                   </Button>
