@@ -487,6 +487,11 @@ export const universities = pgTable("universities", {
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
   
+  // Audit trail for tracking
+  createdByUserId: varchar("created_by_user_id").references(() => users.id), // User who created the institution
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id), // User who last updated the institution
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // User currently assigned to manage/edit this institution
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

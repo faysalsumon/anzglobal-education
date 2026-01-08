@@ -5584,14 +5584,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const allInstitutions = await storage.getAllUniversities();
-      res.json(allInstitutions);
+      // Fetch all institutions with creator/editor info
+      const allInstitutions = await db.select({
+        id: universities.id,
+        userId: universities.userId,
+        name: universities.name,
+        description: universities.description,
+        logo: universities.logo,
+        website: universities.website,
+        country: universities.country,
+        establishedYear: universities.establishedYear,
+        contactEmail: universities.contactEmail,
+        contactPhone: universities.contactPhone,
+        numberOfCampuses: universities.numberOfCampuses,
+        providerType: universities.providerType,
+        scholarshipPercentageMin: universities.scholarshipPercentageMin,
+        scholarshipPercentageMax: universities.scholarshipPercentageMax,
+        topDisciplines: universities.topDisciplines,
+        smallDescription: universities.smallDescription,
+        fullDescription: universities.fullDescription,
+        institutionGallery: universities.institutionGallery,
+        topCourses: universities.topCourses,
+        campusAddresses: universities.campusAddresses,
+        tuitionFeesMin: universities.tuitionFeesMin,
+        tuitionFeesMax: universities.tuitionFeesMax,
+        tuitionCurrency: universities.tuitionCurrency,
+        deliveryModes: universities.deliveryModes,
+        intakePeriods: universities.intakePeriods,
+        accreditationStatus: universities.accreditationStatus,
+        rankingBand: universities.rankingBand,
+        facilities: universities.facilities,
+        internationalStudentSupport: universities.internationalStudentSupport,
+        tags: universities.tags,
+        approvalStatus: universities.approvalStatus,
+        rejectionReason: universities.rejectionReason,
+        submittedForApprovalAt: universities.submittedForApprovalAt,
+        approvedAt: universities.approvedAt,
+        approvedBy: universities.approvedBy,
+        createdByUserId: universities.createdByUserId,
+        updatedByUserId: universities.updatedByUserId,
+        assignedToUserId: universities.assignedToUserId,
+        isActive: universities.isActive,
+        createdAt: universities.createdAt,
+        updatedAt: universities.updatedAt,
+      }).from(universities);
+
+      // Get user names for creator/editor display
+      const userIds = new Set<string>();
+      allInstitutions.forEach(inst => {
+        if (inst.createdByUserId) userIds.add(inst.createdByUserId);
+        if (inst.updatedByUserId) userIds.add(inst.updatedByUserId);
+        if (inst.assignedToUserId) userIds.add(inst.assignedToUserId);
+      });
+
+      const userMap = new Map<string, { firstName: string; lastName: string }>();
+      if (userIds.size > 0) {
+        const userIdArray = Array.from(userIds);
+        const usersData = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        }).from(users).where(inArray(users.id, userIdArray));
+        
+        usersData.forEach(u => {
+          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '' });
+        });
+      }
+
+      // Enrich institutions with user names
+      const enrichedInstitutions = allInstitutions.map(inst => ({
+        ...inst,
+        createdByName: inst.createdByUserId && userMap.has(inst.createdByUserId) 
+          ? `${userMap.get(inst.createdByUserId)!.firstName} ${userMap.get(inst.createdByUserId)!.lastName}`.trim()
+          : null,
+        updatedByName: inst.updatedByUserId && userMap.has(inst.updatedByUserId)
+          ? `${userMap.get(inst.updatedByUserId)!.firstName} ${userMap.get(inst.updatedByUserId)!.lastName}`.trim()
+          : null,
+        assignedToName: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
+          ? `${userMap.get(inst.assignedToUserId)!.firstName} ${userMap.get(inst.assignedToUserId)!.lastName}`.trim()
+          : null,
+      }));
+
+      res.json(enrichedInstitutions);
     } catch (error) {
       console.error("Error fetching institutions:", error);
       res.status(500).json({ message: "Failed to fetch institutions" });
@@ -5823,7 +5904,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5907,6 +5989,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         facilities: facilities || null,
         internationalStudentSupport: internationalStudentSupport || null,
         tags: tags || null,
+        createdByUserId: userId,
+        updatedByUserId: userId,
+        assignedToUserId: userId,
       });
 
       // Trigger async knowledge base rebuild
@@ -5923,7 +6008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5943,6 +6029,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Add audit trail - track who updated the institution
+      updateData.updatedByUserId = userId;
+      updateData.updatedAt = new Date();
+
       const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
       
       // Trigger async knowledge base rebuild
@@ -5952,6 +6042,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating institution:", error);
       res.status(500).json({ message: "Failed to update institution" });
+    }
+  });
+
+  // Get list of admin users who can be assigned institutions
+  app.get("/api/super-admin/admin-users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Get all active admin users who can be assigned institutions
+      const adminUsers = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        roleId: users.roleId,
+      }).from(users).where(
+        and(
+          or(
+            eq(users.userType, 'admin'),
+            eq(users.userType, 'platform_admin')
+          ),
+          eq(users.isActive, true)
+        )
+      );
+
+      // Enrich with role names
+      const roleIds = new Set<string>();
+      adminUsers.forEach(u => {
+        if (u.roleId) roleIds.add(u.roleId);
+      });
+
+      const roleMap = new Map<string, string>();
+      if (roleIds.size > 0) {
+        const roleIdArray = Array.from(roleIds);
+        const rolesData = await db.select({
+          id: roles.id,
+          displayName: roles.displayName,
+        }).from(roles).where(inArray(roles.id, roleIdArray));
+        
+        rolesData.forEach(r => {
+          roleMap.set(r.id, r.displayName);
+        });
+      }
+
+      const enrichedAdminUsers = adminUsers.map(u => ({
+        id: u.id,
+        name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+        email: u.email,
+        roleName: u.roleId && roleMap.has(u.roleId) ? roleMap.get(u.roleId) : null,
+      }));
+
+      res.json(enrichedAdminUsers);
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ message: "Failed to fetch admin users" });
+    }
+  });
+
+  // Transfer institution to another user (change assignedToUserId)
+  app.patch("/api/super-admin/institutions/:id/transfer", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      const { assignedToUserId } = req.body;
+
+      if (!assignedToUserId) {
+        return res.status(400).json({ message: "assignedToUserId is required" });
+      }
+
+      // Check if institution exists
+      const institution = await storage.getUniversityById(institutionId);
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      // Verify the target user exists, is an admin type, and is active
+      const targetUser = await storage.getUser(assignedToUserId);
+      if (!targetUser) {
+        return res.status(400).json({ message: "Specified user does not exist" });
+      }
+      if (targetUser.userType !== 'admin' && targetUser.userType !== 'platform_admin') {
+        return res.status(400).json({ message: "User must be an admin to be assigned institutions" });
+      }
+      if (targetUser.isActive === false) {
+        return res.status(400).json({ message: "Cannot assign institutions to inactive users" });
+      }
+
+      // Update the institution with the new assignee
+      const updatedInstitution = await storage.updateUniversity(institutionId, {
+        assignedToUserId,
+        updatedByUserId: userId,
+        updatedAt: new Date(),
+      });
+
+      // Get the assigner's and assignee's names for the response
+      const assigner = await storage.getUser(userId);
+      const assignerName = assigner ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() : 'Unknown';
+      const assigneeName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
+
+      res.json({
+        ...updatedInstitution,
+        assignedToName: assigneeName,
+        message: `Institution transferred to ${assigneeName}`,
+      });
+    } catch (error) {
+      console.error("Error transferring institution:", error);
+      res.status(500).json({ message: "Failed to transfer institution" });
     }
   });
 

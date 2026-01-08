@@ -32,7 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
@@ -118,6 +118,12 @@ interface Institution {
   approvalStatus: string | null;
   isActive: boolean;
   createdAt: string | null;
+  createdByUserId: string | null;
+  updatedByUserId: string | null;
+  assignedToUserId: string | null;
+  createdByName: string | null;
+  updatedByName: string | null;
+  assignedToName: string | null;
 }
 
 interface Course {
@@ -393,6 +399,8 @@ export default function AdminDashboard() {
   const [rejectingInstitution, setRejectingInstitution] = useState<Institution | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedInstitutions, setSelectedInstitutions] = useState<Set<string>>(new Set());
+  const [transferringInstitution, setTransferringInstitution] = useState<Institution | null>(null);
+  const [selectedTransferUserId, setSelectedTransferUserId] = useState<string>("");
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
@@ -699,6 +707,35 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     },
+  });
+
+  // Transfer institution mutation
+  const transferInstitutionMutation = useMutation({
+    mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string }) => {
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      setTransferringInstitution(null);
+      setSelectedTransferUserId("");
+      toast({
+        title: "Institution transferred",
+        description: "Institution has been successfully transferred to the selected user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch admin users for transfer dropdown
+  const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null }>>({
+    queryKey: ["/api/super-admin/admin-users"],
+    enabled: !!transferringInstitution,
   });
 
   // Course mutations
@@ -1868,7 +1905,7 @@ export default function AdminDashboard() {
                       </TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Name</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Location</TableHead>
-                      <TableHead className="py-2 text-xs font-semibold">Provider Type</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Assigned To</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Status</TableHead>
                       <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
@@ -1891,7 +1928,9 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="py-2 font-medium text-sm">{institution.name}</TableCell>
                           <TableCell className="py-2 text-sm text-muted-foreground">{institution.country}</TableCell>
-                          <TableCell className="py-2 text-sm text-muted-foreground">{institution.providerType || "N/A"}</TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground">
+                            {institution.assignedToName || institution.createdByName || "-"}
+                          </TableCell>
                           <TableCell className="py-2">
                             {institution.approvalStatus === "approved" && (
                               <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs">
@@ -1954,8 +1993,8 @@ export default function AdminDashboard() {
                                   </Button>
                                 </>
                               )}
-                              {/* Edit button (only for full admins) */}
-                              {hasFullAdminAccess && (
+                              {/* Edit button (for full admins or marketing executives) */}
+                              {(hasFullAdminAccess || isMarketingExecutive) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1963,6 +2002,18 @@ export default function AdminDashboard() {
                                   data-testid={`button-edit-institution-${institution.id}`}
                                 >
                                   <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {/* Transfer button (for admins to reassign institutions) */}
+                              {(hasFullAdminAccess || isMarketingExecutive) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setTransferringInstitution(institution)}
+                                  title="Transfer to another user"
+                                  data-testid={`button-transfer-institution-${institution.id}`}
+                                >
+                                  <UserPlus className="h-4 w-4 text-primary" />
                                 </Button>
                               )}
                               {/* Delete button (only for full admins) */}
@@ -2980,6 +3031,60 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Transfer Institution Dialog */}
+      <Dialog open={!!transferringInstitution} onOpenChange={() => { setTransferringInstitution(null); setSelectedTransferUserId(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer Institution</DialogTitle>
+            <DialogDescription>
+              Transfer <strong>{transferringInstitution?.name}</strong> to another team member for editing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assign to</label>
+              <Select value={selectedTransferUserId} onValueChange={setSelectedTransferUserId}>
+                <SelectTrigger data-testid="select-transfer-user">
+                  <SelectValue placeholder="Select a team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {adminUsers?.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name || user.email} {user.roleName ? `(${user.roleName})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The selected user will be assigned to manage this institution.
+              </p>
+            </div>
+            {transferringInstitution?.assignedToName && (
+              <p className="text-sm text-muted-foreground">
+                Currently assigned to: <strong>{transferringInstitution.assignedToName}</strong>
+              </p>
+            )}
+            {transferringInstitution?.createdByName && (
+              <p className="text-sm text-muted-foreground">
+                Created by: <strong>{transferringInstitution.createdByName}</strong>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTransferringInstitution(null); setSelectedTransferUserId(""); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => transferringInstitution && selectedTransferUserId && transferInstitutionMutation.mutate({ id: transferringInstitution.id, assignedToUserId: selectedTransferUserId })}
+              disabled={!selectedTransferUserId || transferInstitutionMutation.isPending}
+              data-testid="button-confirm-transfer-institution"
+            >
+              {transferInstitutionMutation.isPending ? "Transferring..." : "Transfer Institution"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* AI Course Data Extractor Dialog */}
       <Dialog open={aiCourseExtractorDialogOpen} onOpenChange={setAiCourseExtractorDialogOpen}>
