@@ -4682,7 +4682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
         .where(
-          sql`${users.userType} IN ('platform_admin', 'admin')`
+          dsql`${users.userType} IN ('platform_admin', 'admin')`
         )
         .orderBy(users.createdAt);
 
