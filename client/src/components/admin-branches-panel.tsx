@@ -12,14 +12,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MapPin, Plus, Edit, Trash2, Phone, Building2, Search, Loader2 } from "lucide-react";
+import { MapPin, Plus, Edit, Trash2, Phone, Building2, Search, Loader2, Globe } from "lucide-react";
+
+interface Region {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
 
 interface Branch {
   id: string;
   name: string;
   code: string;
+  regionId: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -41,7 +50,7 @@ interface Branch {
 const branchFormSchema = z.object({
   name: z.string().min(1, "Branch name is required"),
   code: z.string().min(1, "Branch code is required").max(20, "Code must be 20 characters or less"),
-  country: z.string().optional(),
+  regionId: z.string().min(1, "Region is required"),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -57,7 +66,7 @@ type BranchFormData = z.infer<typeof branchFormSchema>;
 const defaultFormValues: BranchFormData = {
   name: "",
   code: "",
-  country: "",
+  regionId: "",
   address: "",
   city: "",
   state: "",
@@ -84,6 +93,12 @@ export function AdminBranchesPanel() {
   const { data: branches = [], isLoading } = useQuery<Branch[]>({
     queryKey: ["/api/admin/branches"],
   });
+
+  const { data: regions = [], isLoading: regionsLoading } = useQuery<Region[]>({
+    queryKey: ["/api/admin/regions"],
+  });
+
+  const activeRegions = regions.filter(r => r.isActive);
 
   const createMutation = useMutation({
     mutationFn: async (data: BranchFormData) => {
@@ -143,7 +158,7 @@ export function AdminBranchesPanel() {
     form.reset({
       name: branch.name,
       code: branch.code,
-      country: branch.country || "",
+      regionId: branch.regionId || "",
       address: branch.address || "",
       city: branch.city || "",
       state: branch.state || "",
@@ -190,7 +205,7 @@ export function AdminBranchesPanel() {
     return (
       branch.name.toLowerCase().includes(query) ||
       branch.code.toLowerCase().includes(query) ||
-      (branch.country?.toLowerCase().includes(query) || false) ||
+      (branch.region?.name?.toLowerCase().includes(query) || false) ||
       (branch.city?.toLowerCase().includes(query) || false)
     );
   });
@@ -246,7 +261,7 @@ export function AdminBranchesPanel() {
                   <TableRow>
                     <TableHead>Branch Name</TableHead>
                     <TableHead>Code</TableHead>
-                    <TableHead>Country</TableHead>
+                    <TableHead>Region</TableHead>
                     <TableHead>City</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Status</TableHead>
@@ -267,7 +282,17 @@ export function AdminBranchesPanel() {
                       <TableCell>
                         <Badge variant="outline" data-testid={`text-branch-code-${branch.id}`}>{branch.code}</Badge>
                       </TableCell>
-                      <TableCell data-testid={`text-branch-country-${branch.id}`}>{branch.country || "-"}</TableCell>
+                      <TableCell data-testid={`text-branch-region-${branch.id}`}>
+                        {branch.region ? (
+                          <div className="flex items-center gap-1">
+                            <Globe className="h-3 w-3 text-muted-foreground" />
+                            <span>{branch.region.name}</span>
+                            <Badge variant="outline" className="text-xs ml-1">{branch.region.code}</Badge>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell data-testid={`text-branch-city-${branch.id}`}>{branch.city || "-"}</TableCell>
                       <TableCell>
                         {branch.phone ? (
@@ -338,7 +363,7 @@ export function AdminBranchesPanel() {
                       <FormLabel>Branch Name *</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g., Melbourne Office" 
+                          placeholder="e.g., Dhaka Office" 
                           {...field} 
                           data-testid="input-branch-name"
                         />
@@ -355,7 +380,7 @@ export function AdminBranchesPanel() {
                       <FormLabel>Branch Code *</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g., MEL" 
+                          placeholder="e.g., DHK" 
                           maxLength={20}
                           {...field}
                           onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -370,17 +395,38 @@ export function AdminBranchesPanel() {
 
               <FormField
                 control={form.control}
-                name="country"
+                name="regionId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g., Australia" 
-                        {...field} 
-                        data-testid="input-branch-country"
-                      />
-                    </FormControl>
+                    <FormLabel>Region *</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={regionsLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-branch-region">
+                          <SelectValue placeholder={regionsLoading ? "Loading regions..." : "Select a region"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {activeRegions.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No regions available. Please create a region first.
+                          </div>
+                        ) : (
+                          activeRegions.map((region) => (
+                            <SelectItem key={region.id} value={region.id} data-testid={`option-region-${region.id}`}>
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-4 w-4" />
+                                <span>{region.name}</span>
+                                <Badge variant="outline" className="text-xs">{region.code}</Badge>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -467,7 +513,7 @@ export function AdminBranchesPanel() {
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="+61 3 1234 5678" 
+                          placeholder="+880 2 1234 5678" 
                           {...field} 
                           data-testid="input-branch-phone"
                         />
@@ -543,7 +589,7 @@ export function AdminBranchesPanel() {
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isPending} 
+                  disabled={isPending || activeRegions.length === 0} 
                   data-testid="button-save-branch"
                 >
                   {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
