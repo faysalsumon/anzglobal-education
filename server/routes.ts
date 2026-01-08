@@ -2346,7 +2346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Only allow updating specific fields
-      const allowedFields = ['firstName', 'lastName', 'profileImageUrl'];
+      const allowedFields = ['firstName', 'lastName', 'phone', 'dateOfBirth', 'profileImageUrl'];
       const updates: any = {};
       
       for (const field of allowedFields) {

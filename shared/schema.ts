@@ -275,6 +275,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   phone: varchar("phone", { length: 50 }), // User phone number for profile
+  dateOfBirth: date("date_of_birth"), // User date of birth
   profileImageUrl: varchar("profile_image_url"),
   userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'institution_admin'
   role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system

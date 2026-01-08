@@ -21,6 +21,7 @@ interface AdminUser {
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
+  dateOfBirth: string | null;
   profileImageUrl: string | null;
   userType: string;
   role: string | null;
@@ -35,6 +36,8 @@ interface AdminUser {
 const profileFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   profileImageUrl: z.string().optional(),
 });
 
@@ -74,6 +77,8 @@ export default function AdminProfile() {
     defaultValues: {
       firstName: "",
       lastName: "",
+      phone: "",
+      dateOfBirth: "",
       profileImageUrl: "",
     },
   });
@@ -84,6 +89,8 @@ export default function AdminProfile() {
       form.reset({
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
+        phone: profile.phone || "",
+        dateOfBirth: profile.dateOfBirth || "",
         profileImageUrl: profile.profileImageUrl || "",
       });
       setCurrentPhotoUrl(profile.profileImageUrl || null);
@@ -415,6 +422,40 @@ export default function AdminProfile() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="+61 400 000 000" 
+                            {...field} 
+                            data-testid="input-phone"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Birth</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            {...field} 
+                            data-testid="input-dateOfBirth"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t">
@@ -454,10 +495,6 @@ export default function AdminProfile() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
                 <p className="text-sm" data-testid="text-email">{profile?.email || "Not set"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                <p className="text-sm" data-testid="text-phone">{profile?.phone || "Not set"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Role</p>
