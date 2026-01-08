@@ -2346,17 +2346,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Only allow updating specific fields
-      const allowedFields = ['firstName', 'lastName', 'phone', 'dateOfBirth', 'profileImageUrl'];
+      const allowedFields = [
+        'firstName', 'lastName', 'phone', 'dateOfBirth', 'profileImageUrl',
+        // Personal Address fields
+        'addressLine1', 'addressLine2', 'city', 'stateProvince', 'postalCode', 'country',
+        // Emergency Contact fields
+        'emergencyFirstName', 'emergencyLastName', 'emergencyMobile', 'emergencyEmail', 'emergencyRelationship'
+      ];
       const updates: any = {};
       
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
-          updates[field] = req.body[field];
+          // Convert empty strings to null for nullable fields
+          const value = req.body[field];
+          updates[field] = value === '' ? null : value;
         }
       }
 
+      // Allow partial updates - if all fields are empty/null that's still valid
       if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ message: "No valid fields to update" });
+        // No fields provided, return current profile without error
+        const { password, verificationToken, resetPasswordToken, ...safeUserData } = user;
+        return res.json(safeUserData);
       }
 
       const updatedUser = await storage.updateUser(userId, updates);
