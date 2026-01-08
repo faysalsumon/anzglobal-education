@@ -821,27 +821,31 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           let studentName = 'Student';
           
           if (currentApplication.courseId) {
-            const course = await db.query.courses.findFirst({
-              where: eq(courses.id, currentApplication.courseId),
-              columns: { name: true },
-            });
+            const [course] = await db
+              .select({ name: courses.name })
+              .from(courses)
+              .where(eq(courses.id, currentApplication.courseId))
+              .limit(1);
             courseName = course?.name || 'Course';
           }
           
           if (currentApplication.studentId) {
-            const student = await db.query.studentProfiles.findFirst({
-              where: eq(studentProfiles.id, currentApplication.studentId),
-              columns: { firstName: true, lastName: true },
-            });
+            const [student] = await db
+              .select({ firstName: studentProfiles.firstName, lastName: studentProfiles.lastName })
+              .from(studentProfiles)
+              .where(eq(studentProfiles.id, currentApplication.studentId))
+              .limit(1);
             if (student) {
               studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
             }
           }
 
           // Get assigner name
-          const assigner = await db.query.users.findFirst({
-            where: eq(users.id, adminAccess.userId),
-          });
+          const [assigner] = await db
+            .select({ firstName: users.firstName, lastName: users.lastName, email: users.email })
+            .from(users)
+            .where(eq(users.id, adminAccess.userId))
+            .limit(1);
           const assignerName = assigner 
             ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() || assigner.email || 'Admin'
             : 'Admin';
