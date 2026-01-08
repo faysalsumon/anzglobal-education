@@ -128,7 +128,12 @@ export function AdminTeamPanel() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
-      const response = await apiRequest("POST", "/api/supabase-auth/admin/create-user", data);
+      // Convert "none" to undefined for branchId
+      const payload = {
+        ...data,
+        branchId: data.branchId === "none" || data.branchId === "" ? undefined : data.branchId,
+      };
+      const response = await apiRequest("POST", "/api/supabase-auth/admin/create-user", payload);
       return response;
     },
     onSuccess: () => {
@@ -494,7 +499,7 @@ export function AdminTeamPanel() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No Branch</SelectItem>
+                          <SelectItem value="none">No Branch</SelectItem>
                           {isLoadingBranches ? (
                             <SelectItem value="loading" disabled>Loading branches...</SelectItem>
                           ) : (

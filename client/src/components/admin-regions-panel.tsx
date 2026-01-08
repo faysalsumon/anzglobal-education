@@ -871,12 +871,12 @@ export function AdminRegionsPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pathwayId">Pathway (Optional)</Label>
-                  <Select name="pathwayId" defaultValue={editingVariant?.pathwayId || ""}>
+                  <Select name="pathwayId" defaultValue={editingVariant?.pathwayId || "all"}>
                     <SelectTrigger data-testid="select-pathway">
                       <SelectValue placeholder="All pathways" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Pathways</SelectItem>
+                      <SelectItem value="all">All Pathways</SelectItem>
                       {pathways.map((pathway) => (
                         <SelectItem key={pathway.id} value={pathway.id}>
                           {pathway.name}

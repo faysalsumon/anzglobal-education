@@ -104,14 +104,14 @@ export function RegionSelector({
 
         {showPathway && availablePathways.length > 0 && (
           <Select 
-            value={pathway?.code || ""} 
-            onValueChange={(val) => setPathway(val || null)}
+            value={pathway?.code || "any"} 
+            onValueChange={(val) => setPathway(val === "any" ? null : val)}
           >
             <SelectTrigger className="w-[150px]" data-testid="pathway-select-trigger">
               <SelectValue placeholder="Pathway" />
             </SelectTrigger>
             <SelectContent data-testid="pathway-select-content">
-              <SelectItem value="" data-testid="pathway-select-none">Any pathway</SelectItem>
+              <SelectItem value="any" data-testid="pathway-select-none">Any pathway</SelectItem>
               {availablePathways.map((p) => (
                 <SelectItem key={p.code} value={p.code} data-testid={`pathway-select-${p.code}`}>
                   {p.name}
