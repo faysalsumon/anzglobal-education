@@ -58,6 +58,7 @@ import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
 import { AdminRegionsPanel } from "@/components/admin-regions-panel";
 import { AdminRoleManagementPanel } from "@/components/admin-role-management-panel";
 import { AdminTeamPanel } from "@/components/admin-team-panel";
+import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 
 interface User {
   id: string;
@@ -320,7 +321,7 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'affiliates', 'role-management'];
+    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'institutions', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const superAdminOnlyTabs = ['role-management'];
     
@@ -2219,6 +2220,11 @@ export default function AdminDashboard() {
         {/* Regions Tab */}
         {activeTab === "regions" && (
           <AdminRegionsPanel />
+        )}
+
+        {/* Branches Tab */}
+        {activeTab === "branches" && (
+          <AdminBranchesPanel />
         )}
 
         {/* Role Management Tab - Super Admin Only */}

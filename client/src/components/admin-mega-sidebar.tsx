@@ -30,6 +30,7 @@ import {
   LogOut,
   UsersRound,
   Shield,
+  MapPin,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -104,6 +105,7 @@ export function AdminMegaSidebar({ activeTab, onTabChange, hasFullAdminAccess, i
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
         { icon: Shield, label: "Role Management", value: "role-management", show: isSuperAdmin },
         { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
+        { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
       ],
