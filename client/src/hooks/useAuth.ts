@@ -75,7 +75,8 @@ export function useAuth() {
   const isSuperAdmin = adminRole === "super_admin";
   const isSupportManager = adminRole === "support_manager";
   const isConsultant = adminRole === "support_staff";
-  const isMarketingExecutive = user?.roleName === "marketing_executive";
+  // Check both display name and internal name formats for marketing executive
+  const isMarketingExecutive = user?.roleName === "Marketing Executive" || user?.roleName === "marketing_executive";
   
   const hasFullAdminAccess = isSuperAdmin || isSupportManager;
 
