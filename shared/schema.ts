@@ -276,6 +276,19 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   phone: varchar("phone", { length: 50 }), // User phone number for profile
   dateOfBirth: date("date_of_birth"), // User date of birth
+  // Personal Address fields
+  addressLine1: varchar("address_line_1", { length: 255 }),
+  addressLine2: varchar("address_line_2", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  stateProvince: varchar("state_province", { length: 100 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+  country: varchar("country", { length: 100 }),
+  // Emergency Contact fields
+  emergencyFirstName: varchar("emergency_first_name", { length: 100 }),
+  emergencyLastName: varchar("emergency_last_name", { length: 100 }),
+  emergencyMobile: varchar("emergency_mobile", { length: 50 }),
+  emergencyEmail: varchar("emergency_email", { length: 255 }),
+  emergencyRelationship: varchar("emergency_relationship", { length: 100 }),
   profileImageUrl: varchar("profile_image_url"),
   userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'institution_admin'
   role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system
