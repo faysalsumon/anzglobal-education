@@ -812,6 +812,48 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         metadata: validatedData,
       });
 
+      // Send notification when consultant is assigned
+      if (validatedData.assignedConsultantId && 
+          validatedData.assignedConsultantId !== currentApplication.assignedConsultantId) {
+        try {
+          // Get application details for notification
+          const appDetails = await db.query.applications.findFirst({
+            where: eq(applications.id, applicationId),
+            with: {
+              course: { columns: { name: true } },
+              student: { columns: { firstName: true, lastName: true } },
+            },
+          });
+
+          // Get assigner name
+          const assigner = await db.query.users.findFirst({
+            where: eq(users.id, adminAccess.userId),
+          });
+          const assignerName = assigner 
+            ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() || assigner.email || 'Admin'
+            : 'Admin';
+
+          const studentData = appDetails?.student as { firstName?: string | null; lastName?: string | null } | null;
+          const courseData = appDetails?.course as { name?: string | null } | null;
+          
+          const studentName = studentData 
+            ? `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student'
+            : 'Student';
+          const courseName = courseData?.name || 'Course';
+
+          await notifyApplicationAssigned({
+            consultantUserId: validatedData.assignedConsultantId,
+            studentName,
+            courseName,
+            applicationId,
+            assignedByName: assignerName,
+          });
+          console.log(`[Notification] Sent assignment notification for application ${applicationId} to consultant ${validatedData.assignedConsultantId}`);
+        } catch (notifyError) {
+          console.error("[Notification] Error sending assignment notification:", notifyError);
+        }
+      }
+
       res.json({ application: updatedApplication, message: "Application updated successfully" });
     } catch (error: any) {
       console.error("Error updating application:", error);
