@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 import { storage } from './storage';
 import { db } from './db';
-import { users } from '@shared/schema';
+import { users, roles, branches } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail } from './email-service';
@@ -446,13 +446,32 @@ router.get('/user', async (req: Request, res: Response) => {
       adminRole = adminMember?.role || platformUser.role || null;
     }
 
+    // Get role name if roleId exists
+    let roleName = null;
+    if (platformUser.roleId) {
+      const [role] = await db.select().from(roles).where(eq(roles.id, platformUser.roleId)).limit(1);
+      roleName = role?.displayName || role?.name || null;
+    }
+
+    // Get branch name if branchId exists
+    let branchName = null;
+    if (platformUser.branchId) {
+      const [branch] = await db.select().from(branches).where(eq(branches.id, platformUser.branchId)).limit(1);
+      branchName = branch?.name || null;
+    }
+
     res.json({
       id: platformUser.id,
       email: platformUser.email,
       firstName: platformUser.firstName,
       lastName: platformUser.lastName,
+      phone: platformUser.phone,
       userType: platformUser.userType,
       role: platformUser.role,
+      roleId: platformUser.roleId,
+      roleName: roleName,
+      branchId: platformUser.branchId,
+      branchName: branchName,
       adminRole: adminRole,
       profileImageUrl: platformUser.profileImageUrl,
       isActive: platformUser.isActive,
@@ -885,10 +904,13 @@ router.post('/invitation/accept', async (req: Request, res: Response) => {
 
     // Send welcome email
     try {
+      // Map userType to email template type
+      const emailUserType = invitation.userType === 'platform_admin' ? 'admin' : 
+        (invitation.userType === 'institution_admin' ? 'institution' : invitation.userType) as 'student' | 'institution' | 'admin';
       await sendWelcomeEmail({
         email: invitation.email,
         firstName: firstName || 'Team Member',
-        userType: invitation.userType,
+        userType: emailUserType,
       });
     } catch (emailError) {
       console.error('[Invitation Accept] Welcome email error:', emailError);
