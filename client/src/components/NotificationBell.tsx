@@ -13,20 +13,48 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import type { Notification } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export function NotificationBell() {
   const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
+  const { lastMessage, isConnected } = useWebSocket();
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 30000, // Poll every 30 seconds as safety net
   });
 
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"],
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 30000, // Poll every 30 seconds as safety net
   });
+
+  // Immediately fetch notifications when WebSocket (re)connects to catch missed notifications
+  useEffect(() => {
+    if (isConnected) {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+    }
+  }, [isConnected]);
+
+  // Listen for real-time notifications via WebSocket
+  useEffect(() => {
+    if (lastMessage?.type === 'new_notification' && lastMessage.notification) {
+      // Immediately update the notifications cache with the new notification
+      queryClient.setQueryData<Notification[]>(["/api/notifications"], (old = []) => {
+        // Avoid duplicates
+        const exists = old.some(n => n.id === lastMessage.notification.id);
+        if (exists) return old;
+        return [lastMessage.notification, ...old];
+      });
+      
+      // Update unread count
+      queryClient.setQueryData<{ count: number }>(["/api/notifications/unread-count"], (old) => ({
+        count: (old?.count || 0) + 1,
+      }));
+    }
+  }, [lastMessage]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
