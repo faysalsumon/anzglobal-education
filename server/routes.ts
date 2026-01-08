@@ -239,13 +239,15 @@ async function checkUniversityAccess(
 export async function checkAdminAccess(
   userId: string,
   requiredRoles?: AdminRole[]
-): Promise<{ role: AdminRole; roleName?: string } | null> {
+): Promise<{ role: AdminRole; roleName?: string; userType: string } | null> {
   const user = await storage.getUser(userId);
   
   // Accept both 'admin' and 'platform_admin' userTypes as valid admin access
   if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
     return null;
   }
+  
+  const userType = user.userType;
   
   // NEW: Check role from roles table using roleId
   if (user.roleId) {
@@ -275,7 +277,7 @@ export async function checkAdminAccess(
       }
       
       // Return the properly mapped legacy role (NOT defaulting to super_admin)
-      return { role: legacyRole, roleName };
+      return { role: legacyRole, roleName, userType };
     }
   }
   
@@ -285,7 +287,7 @@ export async function checkAdminAccess(
     if (requiredRoles && !requiredRoles.includes(userRole)) {
       return null;
     }
-    return { role: userRole };
+    return { role: userRole, userType };
   }
   
   // LEGACY: Otherwise check admin_team_members table
@@ -298,7 +300,7 @@ export async function checkAdminAccess(
     return null;
   }
   
-  return { role: adminMember.role as AdminRole };
+  return { role: adminMember.role as AdminRole, userType };
 }
 
 // Configure multer for file uploads
