@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Bell, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function NotificationBell() {
   const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const { lastMessage, isConnected } = useWebSocket();
+  const lastFetchTimeRef = useRef<number>(0);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -31,10 +32,16 @@ export function NotificationBell() {
   });
 
   // Immediately fetch notifications when WebSocket (re)connects to catch missed notifications
+  // Debounce to prevent rapid reconnection floods
   useEffect(() => {
     if (isConnected) {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      const now = Date.now();
+      // Only refetch if at least 5 seconds have passed since last fetch
+      if (now - lastFetchTimeRef.current > 5000) {
+        lastFetchTimeRef.current = now;
+        queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      }
     }
   }, [isConnected]);
 

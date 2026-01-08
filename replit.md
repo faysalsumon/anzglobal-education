@@ -23,7 +23,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_admin" are allowed via OAuth sync; platform_admin requires manual approval.
   - **Login Portals**: `/admin/login` (platform admin), `/institution/login` (institution partners), `/auth` (students) - all using Supabase signInWithPassword.
 - **API**: RESTful.
-- **Real-time**: WebSockets for chat.
+- **Real-time**: WebSockets for chat and instant notifications. Shared `wsClients` map (`server/websocket-clients.ts`) enables cross-module real-time messaging.
 - **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
 - **Database**: PostgreSQL (Neon, Drizzle ORM).
 - **Job Queue**: BullMQ with Redis for background jobs.
