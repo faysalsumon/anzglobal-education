@@ -2308,9 +2308,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Return safe user data (exclude sensitive fields)
+      // Get role name if roleId exists
+      let roleName = null;
+      if (user.roleId) {
+        const [role] = await db.select().from(roles).where(eq(roles.id, user.roleId)).limit(1);
+        roleName = role?.displayName || role?.name || null;
+      }
+
+      // Get branch name if branchId exists
+      let branchName = null;
+      if (user.branchId) {
+        const [branch] = await db.select().from(branches).where(eq(branches.id, user.branchId)).limit(1);
+        branchName = branch?.name || null;
+      }
+
+      // Return safe user data (exclude sensitive fields) with role/branch names
       const { password, verificationToken, resetPasswordToken, ...safeUserData } = user;
-      res.json(safeUserData);
+      res.json({
+        ...safeUserData,
+        roleName,
+        branchName,
+      });
     } catch (error) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ message: "Failed to fetch profile" });

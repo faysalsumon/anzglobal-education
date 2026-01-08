@@ -20,9 +20,14 @@ interface AdminUser {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   profileImageUrl: string | null;
   userType: string;
   role: string | null;
+  roleId: string | null;
+  roleName: string | null;
+  branchId: string | null;
+  branchName: string | null;
   isActive: boolean | null;
   createdAt: string | null;
 }
@@ -244,10 +249,13 @@ export default function AdminProfile() {
   };
 
   const getRoleDisplay = () => {
+    // Prefer the actual role name from the roles table
+    if (profile?.roleName) return profile.roleName;
+    // Fallback to legacy role field
     if (profile?.role === "super_admin") return "Super Admin";
     if (profile?.role === "support_manager") return "Support Manager";
     if (profile?.role === "content_editor") return "Content Editor";
-    return "Admin";
+    return "Team Member";
   };
 
   if (isLoading) {
@@ -448,8 +456,16 @@ export default function AdminProfile() {
                 <p className="text-sm" data-testid="text-email">{profile?.email || "Not set"}</p>
               </div>
               <div>
+                <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                <p className="text-sm" data-testid="text-phone">{profile?.phone || "Not set"}</p>
+              </div>
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">Role</p>
                 <p className="text-sm" data-testid="text-role">{getRoleDisplay()}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Branch</p>
+                <p className="text-sm" data-testid="text-branch">{profile?.branchName || "Not assigned"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Account Status</p>
