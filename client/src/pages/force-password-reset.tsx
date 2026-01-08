@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,74 @@ export default function ForcePasswordReset() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isSessionReady, setIsSessionReady] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Wait for Supabase session to be fully available
+  useEffect(() => {
+    let mounted = true;
+    
+    const checkSession = async () => {
+      if (!supabase) {
+        if (mounted) {
+          toast({
+            title: "Authentication Error",
+            description: "Authentication service not available. Please try again.",
+            variant: "destructive",
+          });
+          setLocation("/admin/login");
+        }
+        return;
+      }
+
+      // Poll for session availability (may take a moment after redirect)
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      const tryGetSession = async (): Promise<boolean> => {
+        const { data: { session } } = await supabase!.auth.getSession();
+        if (session?.access_token) {
+          if (mounted) {
+            setSessionToken(session.access_token);
+            setIsSessionReady(true);
+          }
+          return true;
+        }
+        return false;
+      };
+
+      // Try immediately
+      if (await tryGetSession()) return;
+
+      // If not available, poll with small delay
+      const poll = setInterval(async () => {
+        attempts++;
+        if (await tryGetSession()) {
+          clearInterval(poll);
+          return;
+        }
+        if (attempts >= maxAttempts) {
+          clearInterval(poll);
+          if (mounted) {
+            toast({
+              title: "Session Expired",
+              description: "Please log in again.",
+              variant: "destructive",
+            });
+            setLocation("/admin/login");
+          }
+        }
+      }, 300);
+
+      return () => clearInterval(poll);
+    };
+
+    checkSession();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [supabase, toast, setLocation]);
 
   const form = useForm<PasswordResetFormData>({
     resolver: zodResolver(passwordResetSchema),
@@ -44,6 +113,10 @@ export default function ForcePasswordReset() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: { newPassword: string }) => {
+      // Ensure we have a valid session token before making the request
+      if (!sessionToken) {
+        throw new Error("Session not ready. Please wait a moment and try again.");
+      }
       const response = await apiRequest("POST", "/api/supabase-auth/force-password-reset", data);
       return response;
     },
@@ -80,6 +153,31 @@ export default function ForcePasswordReset() {
     lowercase: /[a-z]/.test(newPassword),
     number: /[0-9]/.test(newPassword),
   };
+
+  // Show loading state while waiting for session
+  if (!isSessionReady) {
+    return (
+      <>
+        <Helmet>
+          <title>Preparing Password Reset - ANZ Global Education</title>
+        </Helmet>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-8 pb-8 text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Preparing Secure Session</h2>
+              <p className="text-muted-foreground">
+                Please wait while we verify your login...
+              </p>
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mt-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
 
   if (isComplete) {
     return (
