@@ -816,14 +816,27 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       if (validatedData.assignedConsultantId && 
           validatedData.assignedConsultantId !== currentApplication.assignedConsultantId) {
         try {
-          // Get application details for notification
-          const appDetails = await db.query.applications.findFirst({
-            where: eq(applications.id, applicationId),
-            with: {
-              course: { columns: { name: true } },
-              student: { columns: { firstName: true, lastName: true } },
-            },
-          });
+          // Get course and student details separately for notification
+          let courseName = 'Course';
+          let studentName = 'Student';
+          
+          if (currentApplication.courseId) {
+            const course = await db.query.courses.findFirst({
+              where: eq(courses.id, currentApplication.courseId),
+              columns: { name: true },
+            });
+            courseName = course?.name || 'Course';
+          }
+          
+          if (currentApplication.studentId) {
+            const student = await db.query.studentProfiles.findFirst({
+              where: eq(studentProfiles.id, currentApplication.studentId),
+              columns: { firstName: true, lastName: true },
+            });
+            if (student) {
+              studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student';
+            }
+          }
 
           // Get assigner name
           const assigner = await db.query.users.findFirst({
@@ -832,14 +845,6 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           const assignerName = assigner 
             ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() || assigner.email || 'Admin'
             : 'Admin';
-
-          const studentData = appDetails?.student as { firstName?: string | null; lastName?: string | null } | null;
-          const courseData = appDetails?.course as { name?: string | null } | null;
-          
-          const studentName = studentData 
-            ? `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student'
-            : 'Student';
-          const courseName = courseData?.name || 'Course';
 
           await notifyApplicationAssigned({
             consultantUserId: validatedData.assignedConsultantId,
