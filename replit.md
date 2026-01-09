@@ -53,6 +53,11 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Profile Management**: Student and Admin profile management with role-based security.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO. Blog system includes full CRUD, draft/published workflow, SEO metadata, categories, tags, and a feature to seed sample blogs.
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications. Business rules enforce stage-specific requirements and role-based permissions.
+- **Draft/Publish Workflow**: Collaborative content creation system for institutions and courses:
+  - **Database Schema**: `publishStatus` field ('draft' | 'published') on both universities and courses tables, with `publishedAt` timestamp and `publishedByUserId` for audit trail
+  - **UI Controls**: Institution and course creation/edit dialogs have "Save Draft" and "Publish" buttons; tables show publish status badges (blue "Published", outline "Draft") and filter dropdowns
+  - **Public Visibility Rule**: Content only appears on public API endpoints when publishStatus='published' AND approvalStatus='approved' AND isActive=true
+  - **Workflow**: Draft → Publish → Approval → Active (content can be saved as draft during creation, then published when ready for review)
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators, color-coded SLA badges, quick filter chips, and bulk actions.
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers.

@@ -392,6 +392,7 @@ export default function AdminDashboard() {
 
   // Institution state
   const [institutionSearchQuery, setInstitutionSearchQuery] = useState("");
+  const [institutionPublishFilter, setInstitutionPublishFilter] = useState<string>("all");
   const [institutionDialogOpen, setInstitutionDialogOpen] = useState(false);
   const [aiExtractorDialogOpen, setAiExtractorDialogOpen] = useState(false);
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
@@ -405,6 +406,7 @@ export default function AdminDashboard() {
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
   const [courseStatusFilter, setCourseStatusFilter] = useState<string>("all");
+  const [coursePublishFilter, setCoursePublishFilter] = useState<string>("all");
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const [courseDialogOpen, setCourseDialogOpen] = useState(false);
   const [aiCourseExtractorDialogOpen, setAiCourseExtractorDialogOpen] = useState(false);
@@ -1095,11 +1097,17 @@ export default function AdminDashboard() {
 
   // Filter institutions
   const filteredInstitutions = institutions?.filter(institution => {
-    return (
+    const matchesSearch = 
       institutionSearchQuery === "" ||
       institution.name?.toLowerCase().includes(institutionSearchQuery.toLowerCase()) ||
-      institution.country?.toLowerCase().includes(institutionSearchQuery.toLowerCase())
-    );
+      institution.country?.toLowerCase().includes(institutionSearchQuery.toLowerCase());
+    
+    const matchesPublishFilter =
+      institutionPublishFilter === "all" ||
+      (institutionPublishFilter === "draft" && institution.publishStatus !== "published") ||
+      (institutionPublishFilter === "published" && institution.publishStatus === "published");
+
+    return matchesSearch && matchesPublishFilter;
   });
 
   // Filter courses
@@ -1114,7 +1122,12 @@ export default function AdminDashboard() {
       (courseStatusFilter === "active" && course.isActive) ||
       (courseStatusFilter === "inactive" && !course.isActive);
 
-    return matchesSearch && matchesStatus;
+    const matchesPublishFilter =
+      coursePublishFilter === "all" ||
+      (coursePublishFilter === "draft" && course.publishStatus !== "published") ||
+      (coursePublishFilter === "published" && course.publishStatus === "published");
+
+    return matchesSearch && matchesStatus && matchesPublishFilter;
   });
 
   // User stats
@@ -1271,7 +1284,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSubmitInstitution = (data: z.infer<typeof institutionSchema>) => {
+  const handleSubmitInstitution = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
     // Transform form data to API format
     const apiData: any = {
       ...data,
@@ -1283,6 +1296,12 @@ export default function AdminDashboard() {
         : undefined,
       scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
       scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
+      publishStatus,
+      // Track who published and when for audit trail
+      ...(publishStatus === 'published' && {
+        publishedAt: new Date().toISOString(),
+        publishedByUserId: user?.id,
+      }),
     };
     
     // Remove hasScholarship as it's not a database field
@@ -1350,7 +1369,7 @@ export default function AdminDashboard() {
     setCourseDialogOpen(true);
   };
 
-  const handleSubmitCourse = (data: z.infer<typeof courseSchema>) => {
+  const handleSubmitCourse = (data: z.infer<typeof courseSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
     // Transform comma-separated strings to arrays for backend
     const transformedData: any = {
       ...data,
@@ -1359,6 +1378,12 @@ export default function AdminDashboard() {
       pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       studyAreas: data.studyAreas ? data.studyAreas.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       careerOutcomes: data.careerOutcomes ? data.careerOutcomes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      publishStatus,
+      // Track who published and when for audit trail
+      ...(publishStatus === 'published' && {
+        publishedAt: new Date().toISOString(),
+        publishedByUserId: user?.id,
+      }),
     };
 
     if (editingCourse) {
@@ -1879,16 +1904,28 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or country..."
-                  value={institutionSearchQuery}
-                  onChange={(e) => setInstitutionSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-sm"
-                  data-testid="input-search-institutions"
-                />
+              {/* Search and Filter */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or country..."
+                    value={institutionSearchQuery}
+                    onChange={(e) => setInstitutionSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                    data-testid="input-search-institutions"
+                  />
+                </div>
+                <Select value={institutionPublishFilter} onValueChange={setInstitutionPublishFilter}>
+                  <SelectTrigger className="w-[130px] h-8 text-sm" data-testid="select-institution-publish-filter">
+                    <SelectValue placeholder="Publish Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="draft">Drafts</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Institutions Table - Compact */}
@@ -1907,6 +1944,7 @@ export default function AdminDashboard() {
                       <TableHead className="py-2 text-xs font-semibold">Location</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Assigned To</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Publish</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Status</TableHead>
                       <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
@@ -1914,7 +1952,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {institutionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-3 text-sm">Loading...</TableCell>
+                        <TableCell colSpan={8} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
@@ -1945,6 +1983,17 @@ export default function AdminDashboard() {
                             {institution.approvalStatus === "rejected" && (
                               <Badge variant="destructive" className="text-xs">
                                 Rejected
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            {institution.publishStatus === "published" ? (
+                              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
+                                Published
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                Draft
                               </Badge>
                             )}
                           </TableCell>
@@ -2043,7 +2092,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">No institutions found</TableCell>
+                        <TableCell colSpan={8} className="text-center">No institutions found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -2176,6 +2225,16 @@ export default function AdminDashboard() {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={coursePublishFilter} onValueChange={setCoursePublishFilter}>
+                  <SelectTrigger className="w-full sm:w-[130px] h-8 text-sm" data-testid="select-course-publish-filter">
+                    <SelectValue placeholder="Publish Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="draft">Drafts</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Courses Table - Compact */}
@@ -2196,6 +2255,7 @@ export default function AdminDashboard() {
                       <TableHead className="py-2 text-xs font-semibold hidden xl:table-cell">Duration</TableHead>
                       <TableHead className="py-2 text-xs font-semibold hidden sm:table-cell">Fees</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Publish</TableHead>
                       <TableHead className="py-2 text-xs font-semibold hidden md:table-cell">Status</TableHead>
                       <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
@@ -2203,7 +2263,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {coursesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-3 text-sm">Loading...</TableCell>
+                        <TableCell colSpan={10} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredCourses && filteredCourses.length > 0 ? (
                       filteredCourses.map((course) => (
@@ -2260,6 +2320,17 @@ export default function AdminDashboard() {
                                   <XCircle className="h-4 w-4 text-destructive" />
                                 </Button>
                               </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            {course.publishStatus === "published" ? (
+                              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
+                                Published
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                Draft
+                              </Badge>
                             )}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
@@ -2319,7 +2390,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center">No courses found</TableCell>
+                        <TableCell colSpan={10} className="text-center">No courses found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -2850,8 +2921,32 @@ export default function AdminDashboard() {
                 <Button type="button" variant="outline" onClick={() => setInstitutionDialogOpen(false)} data-testid="button-admin-cancel">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending} data-testid="button-admin-submit">
-                  {editingInstitution ? "Update" : "Create"}
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending}
+                  onClick={() => {
+                    const formData = institutionForm.getValues();
+                    institutionForm.trigger().then((isValid) => {
+                      if (isValid) handleSubmitInstitution(formData, 'draft');
+                    });
+                  }}
+                  data-testid="button-admin-save-draft"
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  type="button"
+                  disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending}
+                  onClick={() => {
+                    const formData = institutionForm.getValues();
+                    institutionForm.trigger().then((isValid) => {
+                      if (isValid) handleSubmitInstitution(formData, 'published');
+                    });
+                  }}
+                  data-testid="button-admin-publish"
+                >
+                  Publish
                 </Button>
               </DialogFooter>
             </form>
@@ -3760,8 +3855,32 @@ export default function AdminDashboard() {
                 <Button type="button" variant="outline" onClick={() => setCourseDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createCourseMutation.isPending || updateCourseMutation.isPending} data-testid="button-submit-course">
-                  {editingCourse ? "Update" : "Create"}
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
+                  onClick={() => {
+                    const formData = courseForm.getValues();
+                    courseForm.trigger().then((isValid) => {
+                      if (isValid) handleSubmitCourse(formData, 'draft');
+                    });
+                  }}
+                  data-testid="button-course-save-draft"
+                >
+                  Save Draft
+                </Button>
+                <Button 
+                  type="button"
+                  disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
+                  onClick={() => {
+                    const formData = courseForm.getValues();
+                    courseForm.trigger().then((isValid) => {
+                      if (isValid) handleSubmitCourse(formData, 'published');
+                    });
+                  }}
+                  data-testid="button-course-publish"
+                >
+                  Publish
                 </Button>
               </DialogFooter>
             </form>

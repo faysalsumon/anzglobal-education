@@ -1298,8 +1298,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/institutions/filter-metadata", async (req, res) => {
     try {
       const allInstitutions = await storage.getAllUniversities();
+      // Only include published, approved and active institutions in filter metadata
       const approvedInstitutions = allInstitutions.filter(i => 
-        i.approvalStatus === 'approved' && i.isActive
+        i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive
       );
 
       // Extract unique values for each filter category
@@ -1368,8 +1369,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/institutions", async (req, res) => {
     try {
       const allInstitutions = await storage.getAllUniversities();
+      // Only show published, approved, and active institutions publicly
       let institutions = allInstitutions.filter(i => 
-        i.approvalStatus === 'approved' && i.isActive
+        i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive
       );
 
       // Apply filters from query parameters
@@ -1501,15 +1503,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single institution by ID - only show if approved and active
+  // Get single institution by ID - only show if published, approved and active
   app.get("/api/institutions/:id", async (req, res) => {
     try {
       const institution = await storage.getUniversityById(req.params.id);
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
       }
-      // Only return if approved and active
-      if (institution.approvalStatus !== 'approved' || !institution.isActive) {
+      // Only return if published, approved and active
+      if (institution.publishStatus !== 'published' || institution.approvalStatus !== 'approved' || !institution.isActive) {
         return res.status(404).json({ message: "Institution not found" });
       }
       res.json(institution);
@@ -1525,7 +1527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
-      // Count courses per discipline (only approved and active courses from approved institutions)
+      // Count courses per discipline (only published, approved and active courses from published institutions)
       const disciplineCounts: Record<string, number> = {};
       
       allCourses.forEach(course => {
@@ -1533,9 +1535,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const university = allUniversities.find(u => u.id === course.universityId);
         
-        // Only count approved courses from approved institutions
-        if (course.approvalStatus === 'approved' && 
+        // Only count published and approved courses from published and approved institutions
+        if (course.publishStatus === 'published' &&
+            course.approvalStatus === 'approved' && 
             course.isActive &&
+            university?.publishStatus === 'published' &&
             university?.approvalStatus === 'approved' &&
             university?.isActive) {
           disciplineCounts[course.discipline] = (disciplineCounts[course.discipline] || 0) + 1;
@@ -1561,7 +1565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
-      // Count courses per level (only approved and active courses from approved institutions)
+      // Count courses per level (only published, approved and active courses from published institutions)
       const levelCounts: Record<string, number> = {};
       
       allCourses.forEach(course => {
@@ -1569,9 +1573,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const university = allUniversities.find(u => u.id === course.universityId);
         
-        // Only count approved courses from approved institutions
-        if (course.approvalStatus === 'approved' && 
+        // Only count published and approved courses from published and approved institutions
+        if (course.publishStatus === 'published' &&
+            course.approvalStatus === 'approved' && 
             course.isActive &&
+            university?.publishStatus === 'published' &&
             university?.approvalStatus === 'approved' &&
             university?.isActive) {
           levelCounts[course.level] = (levelCounts[course.level] || 0) + 1;
@@ -1646,22 +1652,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Course routes - only show approved and active courses from approved institutions
+  // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
       const { discipline, universityId } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
-      // Filter to only show approved courses from approved institutions
+      // Filter to only show published and approved courses from published and approved institutions
       let courses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
-        const isApprovedAndActive = course.approvalStatus === 'approved' && 
-               course.isActive &&
+        // Check course is published, approved, and active
+        const courseIsPublic = course.publishStatus === 'published' && 
+               course.approvalStatus === 'approved' && 
+               course.isActive;
+        // Check institution is published, approved, and active
+        const institutionIsPublic = university?.publishStatus === 'published' &&
                university?.approvalStatus === 'approved' &&
                university?.isActive;
         
-        if (!isApprovedAndActive) return false;
+        if (!courseIsPublic || !institutionIsPublic) return false;
         
         // Apply universityId filter if provided
         if (universityId && typeof universityId === 'string') {
@@ -1693,11 +1703,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch the associated university
       const university = await storage.getUniversityById(course.universityId);
       
-      // Only return if course and university are approved and active
-      if (course.approvalStatus !== 'approved' || !course.isActive) {
+      // Only return if course is published, approved, and active
+      if (course.publishStatus !== 'published' || course.approvalStatus !== 'approved' || !course.isActive) {
         return res.status(404).json({ message: "Course not found" });
       }
-      if (!university || university.approvalStatus !== 'approved' || !university.isActive) {
+      // Only return if institution is published, approved, and active
+      if (!university || university.publishStatus !== 'published' || university.approvalStatus !== 'approved' || !university.isActive) {
         return res.status(404).json({ message: "Course not found" });
       }
       
@@ -1758,9 +1769,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredCourses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
         
-        // Only include approved courses from approved institutions
-        if (course.approvalStatus !== 'approved' || !course.isActive) return false;
-        if (!university || university.approvalStatus !== 'approved' || !university.isActive) return false;
+        // Only include published and approved courses from published and approved institutions
+        if (course.publishStatus !== 'published' || course.approvalStatus !== 'approved' || !course.isActive) return false;
+        if (!university || university.publishStatus !== 'published' || university.approvalStatus !== 'approved' || !university.isActive) return false;
         
         // Apply filters from natural language query
         

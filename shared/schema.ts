@@ -217,6 +217,12 @@ export const approvalStatusEnum = pgEnum('approval_status', [
   'rejected',
 ]);
 
+// Publish status enum for draft/publish workflow
+export const publishStatusEnum = pgEnum('publish_status', [
+  'draft',
+  'published',
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -487,6 +493,11 @@ export const universities = pgTable("universities", {
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
   
+  // Publish workflow (draft/publish for collaborative content creation)
+  publishStatus: varchar("publish_status", { length: 20 }).notNull().default("draft"), // 'draft', 'published'
+  publishedAt: timestamp("published_at"),
+  publishedByUserId: varchar("published_by_user_id").references(() => users.id), // User who published
+  
   // Audit trail for tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id), // User who created the institution
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id), // User who last updated the institution
@@ -588,6 +599,11 @@ export const courses = pgTable("courses", {
   submittedForApprovalAt: timestamp("submitted_for_approval_at"),
   approvedAt: timestamp("approved_at"),
   approvedBy: varchar("approved_by").references(() => users.id), // Admin who approved
+  
+  // Publish workflow (draft/publish for collaborative content creation)
+  publishStatus: varchar("publish_status", { length: 20 }).notNull().default("draft"), // 'draft', 'published'
+  publishedAt: timestamp("published_at"),
+  publishedByUserId: varchar("published_by_user_id").references(() => users.id), // User who published
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
