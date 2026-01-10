@@ -52,6 +52,16 @@ export async function apiRequest(
     }
   }
   
+  // Debug logging for upload issues
+  if (url.includes('upload')) {
+    console.log('[apiRequest] URL:', url);
+    console.log('[apiRequest] Method:', method);
+    console.log('[apiRequest] isFormData:', isFormData);
+    console.log('[apiRequest] Headers:', JSON.stringify(headers));
+    console.log('[apiRequest] Authorization present:', !!headers["Authorization"]);
+    console.log('[apiRequest] X-CSRF-Token present:', !!headers["X-CSRF-Token"]);
+  }
+  
   const res = await fetch(url, {
     method,
     headers,
