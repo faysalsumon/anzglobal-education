@@ -71,6 +71,7 @@ import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
+import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { MessageCircle } from "lucide-react";
 
 interface User {
@@ -460,6 +461,7 @@ export default function AdminDashboard() {
     'branches': 'Branches',
     'affiliates': 'Affiliates',
     'role-management': 'Role Management',
+    'messages': 'Messages',
   };
   
   const getCurrentBreadcrumbName = () => tabDisplayNames[activeTab] || 'Dashboard';
@@ -1735,16 +1737,15 @@ export default function AdminDashboard() {
                 <NotificationBell />
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <Link href="/chat">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative"
-                        data-testid="button-messages"
-                      >
-                        <MessageCircle className="h-5 w-5" />
-                      </Button>
-                    </Link>
+                    <Button
+                      variant={activeTab === "messages" ? "secondary" : "ghost"}
+                      size="icon"
+                      className="relative"
+                      data-testid="button-messages"
+                      onClick={() => setActiveTab("messages")}
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>Messages</TooltipContent>
                 </Tooltip>
@@ -2871,6 +2872,11 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <AdminTeamPanel />
           </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
+          <AdminMessagesTab />
         )}
                 </div>
               </div>

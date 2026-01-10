@@ -506,7 +506,7 @@ export default function AdminProfile() {
               <NotificationBell />
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <Link href="/chat">
+                  <Link href="/admin/dashboard#messages">
                     <Button
                       variant="ghost"
                       size="icon"
