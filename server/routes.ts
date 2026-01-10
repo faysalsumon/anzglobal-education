@@ -6181,7 +6181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'institution_assigned',
         title: 'Institution Assigned to You',
         message: `${institution.name} has been assigned to you by ${assignerName}`,
-        link: `/university/institutions`,
+        link: `/admin/dashboard#institutions`,
         metadata: {
           institutionId: institution.id,
           institutionName: institution.name,
