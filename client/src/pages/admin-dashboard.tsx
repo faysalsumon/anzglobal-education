@@ -226,6 +226,26 @@ const formatUserType = (userType: string): string => {
   return labels[userType] || userType;
 };
 
+const optionalNumber = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().optional()
+);
+
+const optionalPositiveInt = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().positive().optional()
+);
+
+const optionalYear = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().min(1800).max(new Date().getFullYear()).optional()
+);
+
+const optionalPercentage = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().min(0).max(100).optional()
+);
+
 const institutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   country: z.string().min(1, "Country is required"),
@@ -234,10 +254,10 @@ const institutionSchema = z.object({
   contactPhone: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   providerType: z.string().min(1, "Provider type is required"),
-  numberOfCampuses: z.coerce.number().int().positive().optional().or(z.literal("")),
-  establishedYear: z.coerce.number().int().min(1800).max(new Date().getFullYear()).optional().or(z.literal("")),
-  scholarshipPercentageMin: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
-  scholarshipPercentageMax: z.coerce.number().min(0).max(100).optional().or(z.literal("")),
+  numberOfCampuses: optionalPositiveInt,
+  establishedYear: optionalYear,
+  scholarshipPercentageMin: optionalPercentage,
+  scholarshipPercentageMax: optionalPercentage,
   logo: z.string().optional(),
   topDisciplines: z.string().optional(),
   topCourses: z.string().optional(),
@@ -253,6 +273,26 @@ const institutionSchema = z.object({
   hasScholarship: z.boolean().optional(),
 });
 
+const optionalPositiveNumber = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().positive().optional()
+);
+
+const optionalNonNegativeNumber = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().nonnegative().optional()
+);
+
+const optionalIntPercentage = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().min(0).max(100).optional()
+);
+
+const optionalUrl = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.string().url().optional()
+);
+
 const courseSchema = z.object({
   universityId: z.string().min(1, "Institution is required"),
   title: z.string().min(1, "Title is required"),
@@ -263,11 +303,11 @@ const courseSchema = z.object({
   
   // Duration & Fees
   duration: z.string().optional(),
-  durationMonths: z.coerce.number().int().positive().optional().or(z.literal("")),
-  durationWeeks: z.coerce.number().int().positive().optional().or(z.literal("")),
-  fees: z.coerce.number().positive().optional().or(z.literal("")),
-  applicationFees: z.coerce.number().nonnegative().optional().or(z.literal("")),
-  costOfLiving: z.coerce.number().positive().optional().or(z.literal("")),
+  durationMonths: optionalPositiveInt,
+  durationWeeks: optionalPositiveInt,
+  fees: optionalPositiveNumber,
+  applicationFees: optionalNonNegativeNumber,
+  costOfLiving: optionalPositiveNumber,
   currency: z.string().optional(),
   
   // Location & Dates
@@ -275,7 +315,7 @@ const courseSchema = z.object({
   country: z.string().optional(),
   startDate: z.string().optional(),
   applicationDeadline: z.string().optional(),
-  intakes: z.string().optional(), // Comma-separated, will convert to array
+  intakes: z.string().optional(),
   
   // Requirements
   prerequisites: z.string().optional(),
@@ -284,14 +324,14 @@ const courseSchema = z.object({
   
   // Additional Details
   courseCode: z.string().optional(),
-  scholarshipPercentageMin: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
-  scholarshipPercentageMax: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
-  thumbnailUrl: z.string().url().optional().or(z.literal("")),
-  curriculumUrl: z.string().url().optional().or(z.literal("")),
-  images: z.string().optional(), // Comma-separated URLs, will convert to array
-  pathways: z.string().optional(), // Comma-separated, will convert to array
-  studyAreas: z.string().optional(), // Comma-separated, will convert to array
-  careerOutcomes: z.string().optional(), // Comma-separated, will convert to array
+  scholarshipPercentageMin: optionalIntPercentage,
+  scholarshipPercentageMax: optionalIntPercentage,
+  thumbnailUrl: optionalUrl,
+  curriculumUrl: optionalUrl,
+  images: z.string().optional(),
+  pathways: z.string().optional(),
+  studyAreas: z.string().optional(),
+  careerOutcomes: z.string().optional(),
   careerPath: z.string().optional(),
 });
 
