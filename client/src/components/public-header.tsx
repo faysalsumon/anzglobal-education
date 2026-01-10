@@ -97,12 +97,19 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
 
   const getUserRoleDisplay = () => {
     if (!user?.userType) return "User";
-    if (user.userType === "admin") {
-      const adminRole = user.adminRole || user.role;
-      if (adminRole === "cto") return "CTO";
-      if (adminRole === "support_manager") return "Support Manager";
-      if (adminRole === "support_staff") return "Consultant";
-      return "Admin";
+    
+    // Show the actual role name if available (from RBAC system)
+    if (user.roleName) {
+      // Format role name nicely (capitalize each word)
+      return user.roleName
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    
+    // Fallback to user type display
+    if (user.userType === "admin" || user.userType === "platform_admin") {
+      return "Platform Admin";
     }
     if (user.userType === "university" || user.userType === "institution_admin") return "Institution Admin";
     if (user.userType === "student") return "Student";
