@@ -2556,8 +2556,8 @@ export default function AdminDashboard() {
                               >
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               </Button>
-                              {/* Edit button (for full admins) */}
-                              {hasFullAdminAccess && (
+                              {/* Edit button (for full admins or marketing executives) */}
+                              {(hasFullAdminAccess || isMarketingExecutive) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -2568,7 +2568,7 @@ export default function AdminDashboard() {
                                 </Button>
                               )}
                               {/* Transfer button (for admins to reassign courses) */}
-                              {hasFullAdminAccess && (
+                              {(hasFullAdminAccess || isMarketingExecutive) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
