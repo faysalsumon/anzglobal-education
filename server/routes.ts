@@ -7683,12 +7683,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? conv.participant2Id 
             : conv.participant1Id;
           
-          // Get other participant details
-          const otherUser = await db
-            .select()
+          // Get other participant details with role name from RBAC system
+          const otherUserResult = await db
+            .select({
+              user: users,
+              roleName: roles.name,
+            })
             .from(users)
+            .leftJoin(roles, eq(users.roleId, roles.id))
             .where(eq(users.id, otherParticipantId))
             .limit(1);
+          
+          // Enrich user with proper role (prefer RBAC role, fallback to legacy role if not 'user', then userType)
+          let otherUser = null;
+          if (otherUserResult[0]) {
+            const userData = otherUserResult[0].user;
+            let displayRole = otherUserResult[0].roleName;
+            if (!displayRole) {
+              // If legacy role is 'user' or empty, use userType instead
+              if (userData.role && userData.role !== 'user') {
+                displayRole = userData.role;
+              } else {
+                displayRole = userData.userType === 'platform_admin' ? 'Platform Admin' : 
+                              userData.userType === 'admin' ? 'Admin' : 
+                              userData.userType === 'institution_admin' ? 'Institution Admin' : 'Student';
+              }
+            }
+            otherUser = {
+              ...userData,
+              role: displayRole,
+            };
+          }
           
           // Count unread messages in this conversation
           const unreadMessages = await db
@@ -7712,7 +7737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return {
             ...conv,
-            otherParticipant: otherUser[0] || null,
+            otherParticipant: otherUser,
             unreadCount: unreadMessages.length,
             lastMessage: lastMessage[0] || null,
           };
@@ -11770,7 +11795,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(403).json({ message: "Admin access required for team messaging" });
       }
       
-      // Get all admin users (platform_admin and admin userTypes)
+      // Get all admin users (platform_admin and admin userTypes) with role from RBAC system
       const allAdminUsers = await db
         .select({
           id: users.id,
@@ -11779,10 +11804,13 @@ Sitemap: ${baseUrl}/sitemap.xml
           lastName: users.lastName,
           userType: users.userType,
           roleId: users.roleId,
+          legacyRole: users.role,
           profileImageUrl: users.profileImageUrl,
           isActive: users.isActive,
+          roleName: roles.name,
         })
         .from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
         .where(
           and(
             or(
@@ -11793,24 +11821,30 @@ Sitemap: ${baseUrl}/sitemap.xml
           )
         );
       
-      // Enrich with role names
-      const enrichedUsers = await Promise.all(
-        allAdminUsers.map(async (adminUser) => {
-          let roleName = null;
-          if (adminUser.roleId) {
-            const [role] = await db
-              .select({ name: roles.name })
-              .from(roles)
-              .where(eq(roles.id, adminUser.roleId))
-              .limit(1);
-            roleName = role?.name || null;
+      // Use RBAC role name, fallback to legacy role (if not 'user'), then userType
+      const enrichedUsers = allAdminUsers.map((adminUser) => {
+        // Determine the best role to display
+        let displayRole = adminUser.roleName;
+        if (!displayRole) {
+          // If legacy role is 'user' or empty, use userType instead
+          if (adminUser.legacyRole && adminUser.legacyRole !== 'user') {
+            displayRole = adminUser.legacyRole;
+          } else {
+            displayRole = adminUser.userType === 'platform_admin' ? 'Platform Admin' : 'Admin';
           }
-          return {
-            ...adminUser,
-            role: roleName,
-          };
-        })
-      );
+        }
+        return {
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+          userType: adminUser.userType,
+          roleId: adminUser.roleId,
+          profileImageUrl: adminUser.profileImageUrl,
+          isActive: adminUser.isActive,
+          role: displayRole,
+        };
+      });
       
       // Filter out current user from the list
       const otherAdmins = enrichedUsers.filter(u => u.id !== userId);
