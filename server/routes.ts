@@ -851,11 +851,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Get all institutions created by this user
+      // Get all institutions created by this user OR assigned to this user (via transfer)
       const userInstitutions = await db
         .select()
         .from(universities)
-        .where(eq(universities.userId, userId))
+        .where(or(
+          eq(universities.userId, userId),
+          eq(universities.assignedToUserId, userId)
+        ))
         .orderBy(desc(universities.createdAt));
       
       res.json(userInstitutions);
@@ -6171,6 +6174,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assigner = await storage.getUser(userId);
       const assignerName = assigner ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() : 'Unknown';
       const assigneeName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
+
+      // Create notification for the new assignee
+      await createNotification({
+        userId: assignedToUserId,
+        type: 'institution_assigned',
+        title: 'Institution Assigned to You',
+        message: `${institution.name} has been assigned to you by ${assignerName}`,
+        link: `/university/institutions`,
+        metadata: {
+          institutionId: institution.id,
+          institutionName: institution.name,
+          assignedBy: userId,
+          assignedByName: assignerName
+        }
+      });
 
       res.json({
         ...updatedInstitution,

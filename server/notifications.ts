@@ -14,6 +14,7 @@ export type NotificationType =
   | "institution_approval_request"
   | "institution_approved"
   | "institution_rejected"
+  | "institution_assigned"
   | "internal_note_mention"
   | "general";
 
