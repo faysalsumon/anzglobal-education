@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -21,7 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home, Search, Clock, DollarSign, Loader2 } from "lucide-react";
+import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
@@ -52,6 +52,9 @@ export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
   const [selectedCampusIndex, setSelectedCampusIndex] = useState<number | null>(null);
+  
+  // Gallery lightbox state
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   
   // Course filter states
   const [courseSearch, setCourseSearch] = useState("");
@@ -151,6 +154,57 @@ export default function PublicInstitutionDetail() {
       longitude: campus.longitude,
     }));
   }, [institution?.campusAddresses]);
+
+  // Gallery lightbox navigation
+  const galleryImages = institution?.institutionGallery || [];
+  const openLightbox = useCallback((index: number) => {
+    setLightboxIndex(index);
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxIndex(null);
+  }, []);
+
+  const goToPrevImage = useCallback(() => {
+    if (lightboxIndex !== null && galleryImages.length > 0) {
+      setLightboxIndex((lightboxIndex - 1 + galleryImages.length) % galleryImages.length);
+    }
+  }, [lightboxIndex, galleryImages.length]);
+
+  const goToNextImage = useCallback(() => {
+    if (lightboxIndex !== null && galleryImages.length > 0) {
+      setLightboxIndex((lightboxIndex + 1) % galleryImages.length);
+    }
+  }, [lightboxIndex, galleryImages.length]);
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxIndex === null) return;
+      
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case 'ArrowLeft':
+          goToPrevImage();
+          break;
+        case 'ArrowRight':
+          goToNextImage();
+          break;
+      }
+    };
+
+    if (lightboxIndex !== null) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxIndex, closeLightbox, goToPrevImage, goToNextImage]);
 
   if (isLoading) {
     return (
@@ -324,6 +378,8 @@ export default function PublicInstitutionDetail() {
                       <div 
                         key={index} 
                         className="group relative aspect-[3/2] rounded-md overflow-hidden border hover-elevate cursor-pointer"
+                        onClick={() => openLightbox(index)}
+                        data-testid={`gallery-item-${index}`}
                       >
                         <img
                           src={image}
@@ -331,7 +387,12 @@ export default function PublicInstitutionDetail() {
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           data-testid={`img-gallery-${index}`}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-white text-xs">
+                            <ZoomIn className="h-4 w-4" />
+                            <span>Click to enlarge</span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -750,6 +811,82 @@ export default function PublicInstitutionDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Gallery Lightbox Modal */}
+      {lightboxIndex !== null && galleryImages.length > 0 && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={closeLightbox}
+          data-testid="lightbox-overlay"
+        >
+          {/* Close Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20 z-10"
+            onClick={closeLightbox}
+            data-testid="button-close-lightbox"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+
+          {/* Image Counter */}
+          <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+            {lightboxIndex + 1} / {galleryImages.length}
+          </div>
+
+          {/* Previous Button */}
+          {galleryImages.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrevImage();
+              }}
+              data-testid="button-prev-image"
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Main Image */}
+          <div 
+            className="max-w-[90vw] max-h-[85vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={galleryImages[lightboxIndex]}
+              alt={`${institution?.name || 'Institution'} campus ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              data-testid="lightbox-image"
+            />
+          </div>
+
+          {/* Next Button */}
+          {galleryImages.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNextImage();
+              }}
+              data-testid="button-next-image"
+            >
+              <ChevronRight className="h-8 w-8" />
+            </Button>
+          )}
+
+          {/* Keyboard Instructions */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs flex items-center gap-4">
+            <span>Use arrow keys to navigate</span>
+            <span>Press ESC to close</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
