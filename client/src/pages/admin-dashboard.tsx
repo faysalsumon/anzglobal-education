@@ -72,7 +72,6 @@ import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
-import { MessageCircle } from "lucide-react";
 
 interface User {
   id: string;
@@ -1732,23 +1731,9 @@ export default function AdminDashboard() {
                 </BreadcrumbList>
               </Breadcrumb>
               
-              {/* Platform-wide Notifications, Messages, Profile, and Logout */}
+              {/* Platform-wide Notifications, Profile, and Logout */}
               <div className="flex items-center gap-2">
                 <NotificationBell />
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={activeTab === "messages" ? "secondary" : "ghost"}
-                      size="icon"
-                      className="relative"
-                      data-testid="button-messages"
-                      onClick={() => setActiveTab("messages")}
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Messages</TooltipContent>
-                </Tooltip>
                 
                 {/* Profile Avatar */}
                 <Tooltip delayDuration={0}>
