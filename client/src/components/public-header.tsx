@@ -130,6 +130,11 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
     return "/dashboard";
   };
 
+  const getMessagesUrl = () => {
+    if (isAdmin) return "/admin/dashboard#messages";
+    return "/chat";
+  };
+
   return (
     <header className="sticky top-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border/40">
       <div className="container mx-auto px-4">
@@ -199,7 +204,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     
                     {/* Messages Link */}
                     <DropdownMenuItem asChild>
-                      <Link href="/chat" data-testid="menu-messages">
+                      <Link href={getMessagesUrl()} data-testid="menu-messages">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         Messages
                       </Link>
@@ -314,7 +319,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                         Dashboard
                       </Link>
                       <Link
-                        href="/chat"
+                        href={getMessagesUrl()}
                         className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                         data-testid="mobile-link-messages"
