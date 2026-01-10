@@ -488,6 +488,14 @@ export default function AdminProfile() {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/admin/dashboard#overview" className="text-muted-foreground hover:text-foreground" data-testid="breadcrumb-dashboard">
+                      Admin Dashboard
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
                   <BreadcrumbPage data-testid="breadcrumb-current">My Profile</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>

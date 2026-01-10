@@ -439,6 +439,31 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Tab display name mapping for breadcrumb
+  const tabDisplayNames: Record<string, string> = {
+    'overview': 'Overview',
+    'my-tasks': 'My Tasks',
+    'team-workload': 'Team Workload',
+    'users': 'Users',
+    'institutions': 'Institutions',
+    'courses': 'Courses',
+    'crm-leads': 'Leads',
+    'crm-contacts': 'Contacts',
+    'applications': 'Applications',
+    'data-import': 'Data Import',
+    'web-scraping': 'Web Scraping',
+    'activity-logs': 'Activity Logs',
+    'team': 'Team Invitations',
+    'blogs': 'Blogs',
+    'website-content': 'Website Content',
+    'regions': 'Regions',
+    'branches': 'Branches',
+    'affiliates': 'Affiliates',
+    'role-management': 'Role Management',
+  };
+  
+  const getCurrentBreadcrumbName = () => tabDisplayNames[activeTab] || 'Dashboard';
+
   // Sync active tab to URL hash only when it changes and differs from current hash
   useEffect(() => {
     const currentHash = window.location.hash.replace('#', '');
@@ -1692,7 +1717,15 @@ export default function AdminDashboard() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbPage data-testid="breadcrumb-current">Admin Dashboard</BreadcrumbPage>
+                    <BreadcrumbLink asChild>
+                      <Link href="/admin/dashboard#overview" className="text-muted-foreground hover:text-foreground" data-testid="breadcrumb-dashboard">
+                        Admin Dashboard
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage data-testid="breadcrumb-current">{getCurrentBreadcrumbName()}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
