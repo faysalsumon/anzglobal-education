@@ -605,6 +605,11 @@ export const courses = pgTable("courses", {
   publishedAt: timestamp("published_at"),
   publishedByUserId: varchar("published_by_user_id").references(() => users.id), // User who published
   
+  // Content ownership and assignment (for collaborative workflows)
+  createdByUserId: varchar("created_by_user_id").references(() => users.id), // User who created this course
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id), // User who last updated this course
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // User currently assigned to manage/edit this course
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
