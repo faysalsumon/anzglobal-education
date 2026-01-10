@@ -3123,28 +3123,46 @@ export default function AdminDashboard() {
                   type="button" 
                   variant="secondary"
                   disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending}
-                  onClick={() => {
+                  onClick={async () => {
                     const formData = institutionForm.getValues();
-                    institutionForm.trigger().then((isValid) => {
-                      if (isValid) handleSubmitInstitution(formData, 'draft');
-                    });
+                    const isValid = await institutionForm.trigger();
+                    if (isValid) {
+                      handleSubmitInstitution(formData, 'draft');
+                    } else {
+                      const errors = institutionForm.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   data-testid="button-admin-save-draft"
                 >
-                  Save Draft
+                  {createInstitutionMutation.isPending || updateInstitutionMutation.isPending ? "Saving..." : "Save Draft"}
                 </Button>
                 <Button 
                   type="button"
                   disabled={createInstitutionMutation.isPending || updateInstitutionMutation.isPending}
-                  onClick={() => {
+                  onClick={async () => {
                     const formData = institutionForm.getValues();
-                    institutionForm.trigger().then((isValid) => {
-                      if (isValid) handleSubmitInstitution(formData, 'published');
-                    });
+                    const isValid = await institutionForm.trigger();
+                    if (isValid) {
+                      handleSubmitInstitution(formData, 'published');
+                    } else {
+                      const errors = institutionForm.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   data-testid="button-admin-publish"
                 >
-                  Publish
+                  {createInstitutionMutation.isPending || updateInstitutionMutation.isPending ? "Publishing..." : "Publish"}
                 </Button>
               </DialogFooter>
             </form>
@@ -4111,28 +4129,46 @@ export default function AdminDashboard() {
                   type="button" 
                   variant="secondary"
                   disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
-                  onClick={() => {
+                  onClick={async () => {
                     const formData = courseForm.getValues();
-                    courseForm.trigger().then((isValid) => {
-                      if (isValid) handleSubmitCourse(formData, 'draft');
-                    });
+                    const isValid = await courseForm.trigger();
+                    if (isValid) {
+                      handleSubmitCourse(formData, 'draft');
+                    } else {
+                      const errors = courseForm.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   data-testid="button-course-save-draft"
                 >
-                  Save Draft
+                  {createCourseMutation.isPending || updateCourseMutation.isPending ? "Saving..." : "Save Draft"}
                 </Button>
                 <Button 
                   type="button"
                   disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
-                  onClick={() => {
+                  onClick={async () => {
                     const formData = courseForm.getValues();
-                    courseForm.trigger().then((isValid) => {
-                      if (isValid) handleSubmitCourse(formData, 'published');
-                    });
+                    const isValid = await courseForm.trigger();
+                    if (isValid) {
+                      handleSubmitCourse(formData, 'published');
+                    } else {
+                      const errors = courseForm.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   data-testid="button-course-publish"
                 >
-                  Publish
+                  {createCourseMutation.isPending || updateCourseMutation.isPending ? "Publishing..." : "Publish"}
                 </Button>
               </DialogFooter>
             </form>
