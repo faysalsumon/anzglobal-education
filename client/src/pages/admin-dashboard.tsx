@@ -78,13 +78,30 @@ interface User {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
+  phone?: string | null;
   userType: string;
   role: string | null;
   roleId: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
+  branchCode?: string | null;
+  roleName?: string | null;
   isActive: boolean | null;
   lastLogin: string | null;
   createdAt: string | null;
+  updatedAt?: string | null;
   approvalStatus: string | null;
+}
+
+interface Branch {
+  id: string;
+  name: string;
+  code: string;
+  city: string | null;
+  country: string | null;
+  regionId: string | null;
+  regionName?: string | null;
+  isActive: boolean;
 }
 
 interface Role {
@@ -436,6 +453,9 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [viewEditUserDialogOpen, setViewEditUserDialogOpen] = useState(false);
+  const [viewEditUserMode, setViewEditUserMode] = useState<'view' | 'edit'>('view');
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
 
   // Institution state
   const [institutionSearchQuery, setInstitutionSearchQuery] = useState("");
@@ -592,6 +612,18 @@ export default function AdminDashboard() {
     enabled: hasFullAdminAccess,
   });
 
+  // Fetch branches for branch assignment dropdown
+  const { data: branches } = useQuery<Branch[]>({
+    queryKey: ["/api/admin/branches"],
+    enabled: hasFullAdminAccess,
+  });
+
+  // Fetch single user details for view/edit dialog
+  const { data: userDetails, isLoading: userDetailsLoading, refetch: refetchUserDetails } = useQuery<User>({
+    queryKey: ["/api/super-admin/users", selectedUserForEdit?.id],
+    enabled: !!selectedUserForEdit?.id && viewEditUserDialogOpen,
+  });
+
   // (inquiryLeads query removed - consolidated into CRM Leads)
 
   // Fetch selected institution to get its campusAddresses
@@ -683,6 +715,33 @@ export default function AdminDashboard() {
       toast({
         title: "Status updated",
         description: "User status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update user details mutation (for edit dialog)
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { userId: string; firstName?: string; lastName?: string; email?: string; phone?: string; branchId?: string | null; userType?: string; roleId?: string | null; isActive?: boolean }) => {
+      const { userId, ...updateData } = data;
+      return await apiRequest("PATCH", `/api/super-admin/users/${userId}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users"] });
+      if (selectedUserForEdit?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/super-admin/users", selectedUserForEdit.id] });
+      }
+      setViewEditUserDialogOpen(false);
+      setSelectedUserForEdit(null);
+      toast({
+        title: "User updated",
+        description: "User has been updated successfully",
       });
     },
     onError: (error: any) => {
@@ -1385,6 +1444,24 @@ export default function AdminDashboard() {
     }
   };
 
+  // User handlers
+  const handleViewUser = (user: User) => {
+    setSelectedUserForEdit(user);
+    setViewEditUserMode('view');
+    setViewEditUserDialogOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUserForEdit(user);
+    setViewEditUserMode('edit');
+    setViewEditUserDialogOpen(true);
+  };
+
+  const handleCloseUserDialog = () => {
+    setViewEditUserDialogOpen(false);
+    setSelectedUserForEdit(null);
+  };
+
   // Institution handlers
   const handleCreateInstitution = () => {
     setEditingInstitution(null);
@@ -1893,6 +1970,7 @@ export default function AdminDashboard() {
                       <TableHead className="py-2 text-xs font-semibold">Email</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Type</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Role</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold">Branch</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Status</TableHead>
                       <TableHead className="py-2 text-xs font-semibold text-right">Actions</TableHead>
                     </TableRow>
@@ -1900,7 +1978,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-3 text-sm">Loading...</TableCell>
+                        <TableCell colSpan={8} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredUsers && filteredUsers.length > 0 ? (
                       filteredUsers.map((user) => (
@@ -1936,6 +2014,27 @@ export default function AdminDashboard() {
                                 {roles?.map((role) => (
                                   <SelectItem key={role.id} value={role.id}>
                                     {role.displayName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Select
+                              value={user.branchId ?? "none"}
+                              onValueChange={(value) => updateUserMutation.mutate({
+                                userId: user.id,
+                                branchId: value === "none" ? null : value,
+                              })}
+                            >
+                              <SelectTrigger className="w-[130px] h-7 text-xs" data-testid={`select-branch-${user.id}`}>
+                                <SelectValue placeholder="Assign branch" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Branch</SelectItem>
+                                {branches?.filter(b => b.isActive).map((branch) => (
+                                  <SelectItem key={branch.id} value={branch.id}>
+                                    {branch.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1996,14 +2095,35 @@ export default function AdminDashboard() {
                                   </Button>
                                 </>
                               ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setDeletingUser(user)}
-                                  data-testid={`button-delete-user-${user.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewUser(user)}
+                                    title="View user details"
+                                    data-testid={`button-view-user-${user.id}`}
+                                  >
+                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditUser(user)}
+                                    title="Edit user"
+                                    data-testid={`button-edit-user-${user.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setDeletingUser(user)}
+                                    title="Delete user"
+                                    data-testid={`button-delete-user-${user.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
@@ -2011,7 +2131,7 @@ export default function AdminDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center">No users found</TableCell>
+                        <TableCell colSpan={8} className="text-center">No users found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -3269,6 +3389,176 @@ export default function AdminDashboard() {
               });
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* View/Edit User Dialog */}
+      <Dialog open={viewEditUserDialogOpen} onOpenChange={(open) => { if (!open) handleCloseUserDialog(); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {viewEditUserMode === 'view' ? 'User Details' : 'Edit User'}
+            </DialogTitle>
+            <DialogDescription>
+              {viewEditUserMode === 'view' 
+                ? `Viewing details for ${selectedUserForEdit?.firstName || ''} ${selectedUserForEdit?.lastName || ''}`
+                : `Update details for ${selectedUserForEdit?.firstName || ''} ${selectedUserForEdit?.lastName || ''}`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userDetailsLoading ? (
+            <div className="py-8 text-center">Loading user details...</div>
+          ) : userDetails ? (
+            viewEditUserMode === 'view' ? (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">First Name</label>
+                    <p className="text-sm font-medium">{userDetails.firstName || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Last Name</label>
+                    <p className="text-sm font-medium">{userDetails.lastName || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Email</label>
+                    <p className="text-sm font-medium">{userDetails.email || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Phone</label>
+                    <p className="text-sm font-medium">{userDetails.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">User Type</label>
+                    <p className="text-sm font-medium">{formatUserType(userDetails.userType)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Role</label>
+                    <p className="text-sm font-medium">{userDetails.roleName || userDetails.role || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Branch</label>
+                    <p className="text-sm font-medium">
+                      {userDetails.branchName 
+                        ? `${userDetails.branchName} (${userDetails.branchCode})` 
+                        : 'Not assigned'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Status</label>
+                    <p className="text-sm font-medium">
+                      {userDetails.isActive ? (
+                        <Badge variant="default" className="bg-green-600">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Last Login</label>
+                    <p className="text-sm font-medium">
+                      {userDetails.lastLogin ? new Date(userDetails.lastLogin).toLocaleString() : 'Never'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Created At</label>
+                    <p className="text-sm font-medium">
+                      {userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString() : '-'}
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={handleCloseUserDialog}>
+                    Close
+                  </Button>
+                  <Button onClick={() => setViewEditUserMode('edit')} data-testid="button-switch-to-edit">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit User
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                updateUserMutation.mutate({
+                  userId: userDetails.id,
+                  firstName: formData.get('firstName') as string,
+                  lastName: formData.get('lastName') as string,
+                  email: formData.get('email') as string,
+                  phone: formData.get('phone') as string || undefined,
+                  branchId: (formData.get('branchId') as string) === 'none' ? null : (formData.get('branchId') as string) || null,
+                  userType: formData.get('userType') as string,
+                  roleId: (formData.get('roleId') as string) === 'none' ? null : (formData.get('roleId') as string) || null,
+                  isActive: formData.get('isActive') === 'true',
+                });
+              }} className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" name="firstName" defaultValue={userDetails.firstName || ''} data-testid="input-edit-first-name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" name="lastName" defaultValue={userDetails.lastName || ''} data-testid="input-edit-last-name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" defaultValue={userDetails.email || ''} data-testid="input-edit-email" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" name="phone" defaultValue={userDetails.phone || ''} data-testid="input-edit-phone" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="userType">User Type</Label>
+                    <select name="userType" defaultValue={userDetails.userType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-user-type">
+                      <option value="student">Student</option>
+                      <option value="admin">Admin</option>
+                      <option value="platform_admin">Platform Admin</option>
+                      <option value="institution_admin">Institution Admin</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="roleId">Role</Label>
+                    <select name="roleId" defaultValue={userDetails.roleId || 'none'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-role">
+                      <option value="none">No Role</option>
+                      {roles?.map((role) => (
+                        <option key={role.id} value={role.id}>{role.displayName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="branchId">Branch</Label>
+                    <select name="branchId" defaultValue={userDetails.branchId || 'none'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-branch">
+                      <option value="none">No Branch</option>
+                      {branches?.filter(b => b.isActive).map((branch) => (
+                        <option key={branch.id} value={branch.id}>{branch.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="isActive">Status</Label>
+                    <select name="isActive" defaultValue={userDetails.isActive ? 'true' : 'false'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-status">
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setViewEditUserMode('view')}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateUserMutation.isPending} data-testid="button-save-user">
+                    {updateUserMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">User not found</div>
+          )}
         </DialogContent>
       </Dialog>
 

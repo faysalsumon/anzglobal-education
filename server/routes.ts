@@ -5540,6 +5540,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single user details with branch info (for view/edit dialog)
+  app.get("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      const { branches, roles } = await import('@shared/schema');
+      
+      // Get user with branch and role details
+      const [userData] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+          dateOfBirth: users.dateOfBirth,
+          addressLine1: users.addressLine1,
+          addressLine2: users.addressLine2,
+          city: users.city,
+          stateProvince: users.stateProvince,
+          postalCode: users.postalCode,
+          country: users.country,
+          profileImageUrl: users.profileImageUrl,
+          userType: users.userType,
+          role: users.role,
+          roleId: users.roleId,
+          branchId: users.branchId,
+          isActive: users.isActive,
+          emailVerified: users.emailVerified,
+          lastLogin: users.lastLogin,
+          approvalStatus: users.approvalStatus,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          branchName: branches.name,
+          branchCode: branches.code,
+          roleName: roles.displayName,
+        })
+        .from(users)
+        .leftJoin(branches, eq(users.branchId, branches.id))
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .where(eq(users.id, targetUserId))
+        .limit(1);
+
+      if (!userData) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(userData);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Update user details
   app.patch("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
     try {
@@ -5551,7 +5611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const targetUserId = req.params.id;
-      const { email, firstName, lastName, password } = req.body;
+      const { email, firstName, lastName, password, phone, branchId, userType, roleId, isActive } = req.body;
 
       const updateData: any = { updatedAt: new Date() };
 
@@ -5570,8 +5630,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.email = email.toLowerCase();
       }
 
-      if (firstName) updateData.firstName = firstName;
-      if (lastName) updateData.lastName = lastName;
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (phone !== undefined) updateData.phone = phone;
+      if (branchId !== undefined) updateData.branchId = branchId || null; // Allow unsetting branch
+      if (userType !== undefined) updateData.userType = userType;
+      if (roleId !== undefined) updateData.roleId = roleId || null; // Allow unsetting role
+      if (typeof isActive === 'boolean') updateData.isActive = isActive;
       if (password) {
         updateData.password = await hashPassword(password);
       }
