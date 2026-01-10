@@ -69,8 +69,6 @@ import {
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
 import { 
-  hasPermission, 
-  hasAnyPermission,
   isAdmin as checkIsAdmin, 
   isPlatformAdmin,
   getUserRole,
@@ -211,53 +209,6 @@ const updateAdminTeamMemberRoleSchema = z.object({
   role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
 });
 
-// === NEW PERMISSION-BASED ACCESS CONTROL ===
-// These functions replace the legacy role-based checkAdminAccess
-
-/**
- * Check if user has admin dashboard access (based on userType only)
- * Use this for basic dashboard endpoints that don't need specific permissions
- */
-export async function checkAdminDashboardAccess(userId: string): Promise<{ userType: string; permissions: string[] } | null> {
-  const user = await storage.getUser(userId);
-  
-  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
-    return null;
-  }
-  
-  const permissions = await getUserPermissions(userId);
-  return { userType: user.userType, permissions };
-}
-
-/**
- * Check if user has a specific permission
- * Use this for endpoints that require specific permissions
- */
-export async function checkPermission(userId: string, resource: string, action: string): Promise<boolean> {
-  const user = await storage.getUser(userId);
-  
-  // Must be admin or platform_admin userType
-  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
-    return false;
-  }
-  
-  return await hasPermission(userId, resource, action);
-}
-
-/**
- * Check if user has any of the specified permissions
- */
-export async function checkAnyPermission(userId: string, permissions: Array<{ resource: string; action: string }>): Promise<boolean> {
-  const user = await storage.getUser(userId);
-  
-  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
-    return false;
-  }
-  
-  return await hasAnyPermission(userId, permissions);
-}
-
-
 async function checkUniversityAccess(
   userId: string,
   requiredRoles?: UniversityRole[]
@@ -390,6 +341,13 @@ export async function checkAdminAccess(
         if (requiredRoles.includes(legacyRole)) {
           return { role: legacyRole, roleName, userType };
         }
+        
+        // Special case: super_admin role also satisfies platform_admin requirements
+        // This is because super_admin and platform_admin are the highest privilege levels
+        if (legacyRole === 'super_admin' && requiredRoles.includes('platform_admin')) {
+          return { role: 'platform_admin', roleName, userType };
+        }
+        
         // Mapped role doesn't match required roles - deny
         return null;
       }
