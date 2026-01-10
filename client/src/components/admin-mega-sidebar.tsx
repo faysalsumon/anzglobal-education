@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -195,7 +196,9 @@ export function AdminMegaSidebar({
         <div className="w-16 bg-card border-r border-border flex flex-col h-full">
           {/* Logo - Fixed header height to match main header */}
           <div className="h-14 flex-shrink-0 flex items-center justify-center border-b border-border">
-            <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
+            <Link href="/" data-testid="link-logo-home">
+              <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain cursor-pointer hover:opacity-80 transition-opacity" />
+            </Link>
           </div>
 
           {/* Domain Icons - Scrollable if needed, but typically fits */}
