@@ -516,9 +516,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University> {
+    // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
+    const processedData = { ...data };
+    if (processedData.publishedAt && typeof processedData.publishedAt === 'string') {
+      processedData.publishedAt = new Date(processedData.publishedAt);
+    }
     const [university] = await db
       .update(universities)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...processedData, updatedAt: new Date() })
       .where(eq(universities.id, id))
       .returning();
     return university;
@@ -579,9 +584,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course> {
+    // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
+    const processedData = { ...data };
+    if (processedData.publishedAt && typeof processedData.publishedAt === 'string') {
+      processedData.publishedAt = new Date(processedData.publishedAt);
+    }
     const [course] = await db
       .update(courses)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...processedData, updatedAt: new Date() })
       .where(eq(courses.id, id))
       .returning();
     return course;
