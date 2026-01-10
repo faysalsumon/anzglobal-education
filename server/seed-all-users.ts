@@ -25,8 +25,8 @@ async function seedAllUsers() {
       firstName: "Faysal",
       lastName: "Bahar",
       userType: "platform_admin" as const,  // Highest level admin
-      roleName: "super_admin",
-      description: "Super Admin (Platform Admin)"
+      roleName: "cto",
+      description: "CTO (Platform Admin)"
     },
     {
       email: "jannat@anzglobal.com.au",

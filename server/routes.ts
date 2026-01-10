@@ -198,15 +198,15 @@ async function triggerKnowledgeBaseRebuild(operation: string): Promise<void> {
 }
 
 type UniversityRole = 'super_admin' | 'admin' | 'course_manager' | 'application_manager';
-type AdminRole = 'super_admin' | 'platform_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
+type AdminRole = 'cto' | 'platform_admin' | 'support_manager' | 'support_staff' | 'operations_staff';
 
 const addAdminTeamMemberSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
+  role: z.enum(['cto', 'support_manager', 'support_staff', 'operations_staff']),
 });
 
 const updateAdminTeamMemberRoleSchema = z.object({
-  role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
+  role: z.enum(['cto', 'support_manager', 'support_staff', 'operations_staff']),
 });
 
 async function checkUniversityAccess(
@@ -271,8 +271,8 @@ export async function checkAdminAccess(
       if (userRole) {
         roleName = userRole.name;
         const roleToLegacy: Record<string, AdminRole> = {
-          'super_admin': 'super_admin',
-          'ceo': 'super_admin',
+          'cto': 'cto',
+          'ceo': 'cto',
           'cfo': 'operations_staff',
           'branch_manager': 'support_manager',
           'marketing_executive': 'support_staff',
@@ -283,7 +283,7 @@ export async function checkAdminAccess(
       }
     }
     // LEGACY: Check users.role column
-    else if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+    else if (user.role && ['cto', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
       determinedRole = user.role as AdminRole;
     }
     // LEGACY: Check admin_team_members table
@@ -311,11 +311,11 @@ export async function checkAdminAccess(
       
       // COMPLETE mapping of all roles from the roles table to legacy AdminRole types
       // This mapping is based on the roles table in the database:
-      // super_admin, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
+      // cto, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
       const roleToLegacy: Record<string, AdminRole> = {
-        // Super Admin level - full access
-        'super_admin': 'super_admin',
-        'ceo': 'super_admin',
+        // CTO level - full access (highest role)
+        'cto': 'cto',
+        'ceo': 'cto',
         
         // Operations level - finance, reports
         'cfo': 'operations_staff',
@@ -342,9 +342,9 @@ export async function checkAdminAccess(
           return { role: legacyRole, roleName, userType };
         }
         
-        // Special case: super_admin role also satisfies platform_admin requirements
-        // This is because super_admin and platform_admin are the highest privilege levels
-        if (legacyRole === 'super_admin' && requiredRoles.includes('platform_admin')) {
+        // Special case: cto role also satisfies platform_admin requirements
+        // This is because cto and platform_admin are the highest privilege levels
+        if (legacyRole === 'cto' && requiredRoles.includes('platform_admin')) {
           return { role: 'platform_admin', roleName, userType };
         }
         
@@ -365,7 +365,7 @@ export async function checkAdminAccess(
   }
   
   // TIER 2: LEGACY - Check users.role column
-  if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+  if (user.role && ['cto', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
     const userRole = user.role as AdminRole;
     if (requiredRoles.includes(userRole)) {
       return { role: userRole, userType };
@@ -876,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is creating or updating
       const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
       
       let university;
       let isNewInstitution = false;
@@ -1058,7 +1058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Allow authenticated users to generate content (they may not have a university record yet)
       const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
       
       if (!ownerUniversity && !teamAccess) {
         // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
@@ -1104,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Allow authenticated users to generate content (they may not have a university record yet)
       const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
       
       if (!ownerUniversity && !teamAccess) {
         // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
@@ -1155,7 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Allow authenticated users to generate content (they may not have a university record yet)
       const ownerUniversity = await storage.getUniversityByUserId(userId);
-      const teamAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const teamAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
       
       if (!ownerUniversity && !teamAccess) {
         // User is authenticated but doesn't own a university yet - this is okay for initial profile creation
@@ -1236,8 +1236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user has university access OR admin access
       // support_staff includes marketing_executive role which needs to upload logos
-      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!universityAccess && !adminAccess) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -1284,8 +1284,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has university access OR admin access
-      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!universityAccess && !adminAccess) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -1323,8 +1323,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has university access OR admin access
-      const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
+      const adminAccess = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!universityAccess && !adminAccess) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -2203,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'course_manager']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin', 'course_manager']);
 
       if (!access) {
         return res.status(403).json({ message: "Only course managers and admins can create courses" });
@@ -2231,7 +2231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'course_manager']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin', 'course_manager']);
 
       if (!access) {
         return res.status(403).json({ message: "Only course managers and admins can update courses" });
@@ -4094,7 +4094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/university/team", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
 
       if (!access) {
         return res.status(403).json({ message: "Only super admins and admins can add team members" });
@@ -4159,7 +4159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/university/team/:id/role", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
 
       if (!access) {
         return res.status(403).json({ message: "Only super admins and admins can update roles" });
@@ -4182,7 +4182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/university/team/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin']);
 
       if (!access) {
         return res.status(403).json({ message: "Only super admins and admins can remove team members" });
@@ -4286,7 +4286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has access to this university
-      const access = await checkUniversityAccess(userId, ['super_admin', 'admin', 'application_manager']);
+      const access = await checkUniversityAccess(userId, ['cto', 'admin', 'application_manager']);
       if (!access || access.university.id !== course.universityId) {
         return res.status(403).json({ message: "Only application managers and admins can update application status" });
       }
@@ -4506,10 +4506,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/team", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
 
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const validatedData = addAdminTeamMemberSchema.parse(req.body);
@@ -4564,10 +4564,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/team/:id/role", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
 
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const validatedData = updateAdminTeamMemberRoleSchema.parse(req.body);
@@ -4580,10 +4580,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Admin team member not found" });
       }
 
-      if (targetMember.role === 'super_admin' && role !== 'super_admin') {
-        const superAdminCount = allMembers.filter(m => m.role === 'super_admin' && m.isActive).length;
-        if (superAdminCount <= 1) {
-          return res.status(400).json({ message: "Cannot demote the last super admin" });
+      if (targetMember.role === 'cto' && role !== 'cto') {
+        const ctoCount = allMembers.filter(m => m.role === 'cto' && m.isActive).length;
+        if (ctoCount <= 1) {
+          return res.status(400).json({ message: "Cannot demote the last CTO" });
         }
       }
 
@@ -4598,10 +4598,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/team/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
 
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const allMembers = await storage.getAllAdminTeamMembers();
@@ -4615,10 +4615,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot delete your own admin account" });
       }
 
-      if (targetMember.role === 'super_admin') {
-        const superAdminCount = allMembers.filter(m => m.role === 'super_admin' && m.isActive).length;
-        if (superAdminCount <= 1) {
-          return res.status(400).json({ message: "Cannot delete the last super admin" });
+      if (targetMember.role === 'cto') {
+        const ctoCount = allMembers.filter(m => m.role === 'cto' && m.isActive).length;
+        if (ctoCount <= 1) {
+          return res.status(400).json({ message: "Cannot delete the last CTO" });
         }
       }
 
@@ -4634,7 +4634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/institutions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -4672,7 +4672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/institutions/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -4713,7 +4713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/courses/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -4751,7 +4751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/courses/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -4836,10 +4836,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/assign-role", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { roleId } = req.body;
@@ -4880,10 +4880,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/roles/:roleId/permissions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { roleId } = req.params;
@@ -4917,10 +4917,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/role-management/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       // Get all users with their roles (excluding students and institution admins for this view)
@@ -5216,7 +5216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Only super_admin and support_manager can view users
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -5244,7 +5244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Only super_admin and support_manager can modify users
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -5290,7 +5290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5332,7 +5332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/users/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const adminUserId = req.user.claims.sub;
-      const access = await checkAdminAccess(adminUserId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(adminUserId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5401,7 +5401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/users/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const adminUserId = req.user.claims.sub;
-      const access = await checkAdminAccess(adminUserId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(adminUserId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5461,7 +5461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/pending-approvals/count", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5483,7 +5483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5544,7 +5544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5606,7 +5606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/users/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5643,7 +5643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/users/bulk-delete", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5679,10 +5679,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions/bulk-delete", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { institutionIds } = req.body;
@@ -5710,10 +5710,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions/bulk-update-status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { institutionIds, status } = req.body;
@@ -5745,10 +5745,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/courses/bulk-delete", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { courseIds } = req.body;
@@ -5776,10 +5776,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/courses/bulk-update-status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
 
       const { courseIds, status } = req.body;
@@ -5812,7 +5812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5916,7 +5916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Allow any authenticated admin user to fetch their assigned/created institutions
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6024,7 +6024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has access to AI features
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
         return res.status(403).json({ 
@@ -6073,7 +6073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // SECURITY: Restrict to super_admin only (most trusted role)
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
         return res.status(403).json({ 
@@ -6160,7 +6160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // SECURITY: Restrict to super_admin only (most trusted role)
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
         return res.status(403).json({ 
@@ -6244,7 +6244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6351,7 +6351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6404,7 +6404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6465,7 +6465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6598,7 +6598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6629,7 +6629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6658,7 +6658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6706,7 +6706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6754,7 +6754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6785,7 +6785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6827,7 +6827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       // support_staff includes marketing_executive role which needs to update courses
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6909,7 +6909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6939,7 +6939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -6968,7 +6968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/transfer", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -7040,7 +7040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/publish", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required to publish courses" });
@@ -7077,7 +7077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id/unpublish", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required to unpublish courses" });
@@ -7112,7 +7112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/my-courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -7180,7 +7180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/student-leads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -7219,7 +7219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/leads", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -7268,7 +7268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/leads/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Only super admins and support managers can update leads" });
@@ -7385,7 +7385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/contact", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -7430,7 +7430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/contact/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Only super admins and support managers can update contact submissions" });
@@ -7484,7 +7484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/contact/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
         return res.status(403).json({ message: "Only super admins can delete contact submissions" });
@@ -7504,7 +7504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/applications", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10159,7 +10159,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/csv-import/upload", isAuthenticated, csvUpload.single('file'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
 
       if (!access) {
         return res.status(403).json({ message: "Super admin or support manager access required" });
@@ -10275,7 +10275,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/csv-import", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
 
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -10297,7 +10297,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/csv-import/:batchId/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
 
       if (!access) {
         return res.status(403).json({ message: "Super admin or support manager access required" });
@@ -10460,7 +10460,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/csv-import/:batchId/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
 
       if (!access) {
         return res.status(403).json({ message: "Super admin or support manager access required" });
@@ -10502,7 +10502,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/api/admin/csv-import/templates/:type", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
 
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11027,7 +11027,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       const { isAdmin, role } = await isAdminTeamMember(userId);
       
       // Only super_admin and support_manager can see workload summary
-      if (!isAdmin || !['super_admin', 'support_manager'].includes(role || '')) {
+      if (!isAdmin || !['cto', 'support_manager'].includes(role || '')) {
         return res.status(403).json({ message: "Only super admins and support managers can view workload summary" });
       }
       
@@ -11173,7 +11173,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       const { isAdmin, role } = await isAdminTeamMember(userId);
       
       // Only super_admin and support_manager can delete tasks
-      if (!isAdmin || !['super_admin', 'support_manager'].includes(role || '')) {
+      if (!isAdmin || !['cto', 'support_manager'].includes(role || '')) {
         return res.status(403).json({ message: "Only super admins and support managers can delete tasks" });
       }
       
@@ -11381,10 +11381,10 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(404).json({ message: "Note not found" });
       }
       
-      // Only the author or super_admin can delete a note
+      // Only the author or CTO can delete a note
       const { role } = await isAdminTeamMember(userId);
-      if (note.authorId !== userId && role !== 'super_admin') {
-        return res.status(403).json({ message: "Only the author or super admin can delete this note" });
+      if (note.authorId !== userId && role !== 'cto') {
+        return res.status(403).json({ message: "Only the author or CTO can delete this note" });
       }
       
       await storage.deleteNote(req.params.id);
@@ -11536,9 +11536,9 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(404).json({ message: "Reminder not found" });
       }
       
-      // Only the owner or super_admin can delete a reminder
+      // Only the owner or CTO can delete a reminder
       const { role } = await isAdminTeamMember(userId);
-      if (reminder.userId !== userId && role !== 'super_admin') {
+      if (reminder.userId !== userId && role !== 'cto') {
         return res.status(403).json({ message: "You can only delete your own reminders" });
       }
       
@@ -11665,7 +11665,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/testimonials", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11698,7 +11698,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11737,10 +11737,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.delete("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
       
       const testimonial = await storage.getTestimonialById(req.params.id);
@@ -11829,7 +11829,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/faqs", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11862,7 +11862,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/faqs/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -11901,10 +11901,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.delete("/api/admin/cms/faqs/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
       
       const faq = await storage.getFaqById(req.params.id);
@@ -11992,7 +11992,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/team-members", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12025,7 +12025,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/team-members/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12064,10 +12064,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.delete("/api/admin/cms/team-members/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
       
       const member = await storage.getPublicTeamMemberById(req.params.id);
@@ -12150,7 +12150,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/site-settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12188,7 +12188,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/site-settings/:key", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12227,10 +12227,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.delete("/api/admin/cms/site-settings/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
       
       const setting = await storage.getSiteSettingByKey(req.params.id);
@@ -12322,7 +12322,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/content-snippets", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12361,7 +12361,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/content-snippets/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'platform_admin', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -12400,10 +12400,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.delete("/api/admin/cms/content-snippets/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin']);
+      const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
-        return res.status(403).json({ message: "Super admin access required" });
+        return res.status(403).json({ message: "CTO access required" });
       }
       
       const snippet = await storage.getContentSnippetById(req.params.id);

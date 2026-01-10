@@ -149,7 +149,7 @@ export async function hasAllPermissions(
 }
 
 /**
- * Check if user is a platform admin (super_admin role)
+ * Check if user is a platform admin (CTO role)
  */
 export async function isPlatformAdmin(userId: string): Promise<boolean> {
   try {
@@ -161,7 +161,7 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
 
     if (!user.length) return false;
 
-    // Platform admin must have userType 'platform_admin' AND role 'super_admin'
+    // Platform admin must have userType 'platform_admin' AND role 'cto'
     if (user[0].userType !== "platform_admin") return false;
 
     if (user[0].roleId) {
@@ -170,7 +170,7 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
         .from(roles)
         .where(eq(roles.id, user[0].roleId))
         .limit(1);
-      return role[0]?.name === "super_admin";
+      return role[0]?.name === "cto";
     }
 
     return false;
