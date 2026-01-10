@@ -70,6 +70,7 @@ import { AdminRoleManagementPanel } from "@/components/admin-role-management-pan
 import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
+import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { MessageCircle } from "lucide-react";
 
 interface User {
@@ -388,13 +389,13 @@ export default function AdminDashboard() {
     return null;
   }
   
-  // Default tab based on role: restricted admins use my-tasks, full admins use users
-  const defaultTab = (isConsultant || !hasFullAdminAccess) ? "my-tasks" : "users";
+  // Default tab based on role: all users start with overview
+  const defaultTab = "overview";
   
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const superAdminOnlyTabs = ['role-management'];
     // Marketing Executive can access institutions tab along with full admins
@@ -1696,6 +1697,14 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-4 md:space-y-5">
+        {/* Dashboard Overview Tab */}
+        {activeTab === "overview" && (
+          <AdminDashboardOverview 
+            onNavigate={(tab) => setActiveTab(tab)} 
+            hasFullAdminAccess={hasFullAdminAccess}
+          />
+        )}
+
         {/* My Tasks Tab */}
         {activeTab === "my-tasks" && (
           <div className="space-y-4">

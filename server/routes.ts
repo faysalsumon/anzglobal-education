@@ -2470,6 +2470,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== ADMIN DASHBOARD STATS ENDPOINTS ==========
+
+  // GET /api/crm/tasks/stats - Get task statistics for dashboard (admin only)
+  app.get("/api/crm/tasks/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify user is an admin
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get all tasks assigned to this user
+      const userTasks = await db.select().from(tasks).where(eq(tasks.assignedToId, userId));
+      
+      const now = new Date();
+      const stats = {
+        total: userTasks.length,
+        pending: userTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length,
+        completed: userTasks.filter(t => t.status === 'completed').length,
+        overdue: userTasks.filter(t => 
+          t.dueDate && new Date(t.dueDate) < now && t.status !== 'completed' && t.status !== 'cancelled'
+        ).length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching task stats:", error);
+      res.status(500).json({ message: "Failed to fetch task stats" });
+    }
+  });
+
+  // GET /api/crm/leads/stats - Get lead statistics for dashboard (admin only)
+  app.get("/api/crm/leads/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify user is an admin
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get all leads
+      const allLeads = await db.select().from(crmLeads);
+      
+      // Calculate new leads from last 7 days
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      
+      const stats = {
+        total: allLeads.length,
+        new: allLeads.filter(l => l.createdAt && new Date(l.createdAt) > weekAgo).length,
+        contacted: allLeads.filter(l => l.leadStatus === 'contacted' || l.leadStatus === 'qualified').length,
+        converted: allLeads.filter(l => l.leadStatus === 'converted').length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching lead stats:", error);
+      res.status(500).json({ message: "Failed to fetch lead stats" });
+    }
+  });
+
+  // GET /api/admin/applications/count - Get total applications count (admin only)
+  app.get("/api/admin/applications/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify user is an admin
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const result = await db.select({ count: dsql<number>`count(*)::int` }).from(applications);
+      res.json({ count: result[0]?.count || 0 });
+    } catch (error) {
+      console.error("Error fetching applications count:", error);
+      res.status(500).json({ message: "Failed to fetch applications count" });
+    }
+  });
+
+  // GET /api/admin/courses/count - Get total courses count (admin only)
+  app.get("/api/admin/courses/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify user is an admin
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const result = await db.select({ count: dsql<number>`count(*)::int` }).from(courses);
+      res.json({ count: result[0]?.count || 0 });
+    } catch (error) {
+      console.error("Error fetching courses count:", error);
+      res.status(500).json({ message: "Failed to fetch courses count" });
+    }
+  });
+
+  // GET /api/admin/institutions/count - Get total institutions count (admin only)
+  app.get("/api/admin/institutions/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify user is an admin
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      if (!adminAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const result = await db.select({ count: dsql<number>`count(*)::int` }).from(universities);
+      res.json({ count: result[0]?.count || 0 });
+    } catch (error) {
+      console.error("Error fetching institutions count:", error);
+      res.status(500).json({ message: "Failed to fetch institutions count" });
+    }
+  });
+
   // GET /api/student/profile/completion - Check profile completion status
   app.get("/api/student/profile/completion", isAuthenticated, async (req: any, res) => {
     try {

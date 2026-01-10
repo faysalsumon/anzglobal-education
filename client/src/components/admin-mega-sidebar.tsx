@@ -26,6 +26,7 @@ import {
   UsersRound,
   Shield,
   MapPin,
+  LayoutDashboard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -200,6 +201,34 @@ export function AdminMegaSidebar({
           {/* Domain Icons - Scrollable if needed, but typically fits */}
           <div className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center py-2 gap-1">
+              {/* Dashboard Button - Always at top */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-12 h-12 rounded-xl transition-all",
+                      activeTab === "overview" && "text-primary bg-primary/10 ring-2 ring-primary/30"
+                    )}
+                    onClick={() => {
+                      onTabChange("overview");
+                      setActiveDomain(null);
+                      setIsSubmenuOpen(false);
+                    }}
+                    data-testid="button-dashboard-overview"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  Dashboard
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Separator */}
+              <div className="w-8 h-px bg-border my-1" />
+
               {visibleDomains.map((domain) => {
                 const Icon = domain.icon;
                 const isActive = activeDomain === domain.id;
