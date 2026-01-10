@@ -201,17 +201,8 @@ export default function AdminProfile() {
       const formData = new FormData();
       formData.append("photo", file);
       
-      const response = await fetch("/api/admin/upload-profile-photo", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to upload photo");
-      }
-
+      // Use apiRequest which handles CSRF tokens and auth headers automatically
+      const response = await apiRequest("POST", "/api/admin/upload-profile-photo", formData);
       return await response.json();
     },
     onSuccess: (data) => {

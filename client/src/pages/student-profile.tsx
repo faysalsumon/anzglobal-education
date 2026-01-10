@@ -618,15 +618,8 @@ function StudentProfileContent() {
       const formData = new FormData();
       formData.append('photo', photoFile);
       
-      const response = await fetch('/api/student/upload-profile-photo', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload photo');
-      }
-      
+      // Use apiRequest which handles CSRF tokens and auth headers automatically
+      const response = await apiRequest('POST', '/api/student/upload-profile-photo', formData);
       const data = await response.json();
       return data.photoPath;
     } catch (error) {
