@@ -2406,6 +2406,7 @@ export default function AdminDashboard() {
                       <TableHead className="py-2 text-xs font-semibold hidden lg:table-cell">Level</TableHead>
                       <TableHead className="py-2 text-xs font-semibold hidden xl:table-cell">Duration</TableHead>
                       <TableHead className="py-2 text-xs font-semibold hidden sm:table-cell">Fees</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold hidden lg:table-cell">Assigned To</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Publish</TableHead>
                       <TableHead className="py-2 text-xs font-semibold hidden md:table-cell">Status</TableHead>
@@ -2415,7 +2416,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {coursesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-3 text-sm">Loading...</TableCell>
+                        <TableCell colSpan={11} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
                     ) : filteredCourses && filteredCourses.length > 0 ? (
                       filteredCourses.map((course) => (
@@ -2433,6 +2434,9 @@ export default function AdminDashboard() {
                           <TableCell className="py-2 text-sm hidden xl:table-cell">{course.duration || "-"}</TableCell>
                           <TableCell className="py-2 text-sm hidden sm:table-cell">
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
+                          </TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground hidden lg:table-cell">
+                            {(course as any).assignedToName || (course as any).createdByName || "-"}
                           </TableCell>
                           <TableCell className="py-2">
                             {/* Approval Status Badge */}
@@ -2537,43 +2541,59 @@ export default function AdminDashboard() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {/* Only full admins can edit/delete */}
-                            {hasFullAdminAccess && (
-                              <div className="flex justify-end gap-2">
+                          <TableCell className="py-2">
+                            <div className="flex justify-end gap-1">
+                              {/* View button - opens public course page */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => window.open(`/courses/${course.id}`, '_blank')}
+                                title="View public page"
+                                data-testid={`button-view-course-${course.id}`}
+                              >
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              {/* Edit button (for full admins) */}
+                              {hasFullAdminAccess && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => handleEditCourse(course)}
                                   data-testid={`button-edit-course-${course.id}`}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
+                              )}
+                              {/* Transfer button (for admins to reassign courses) */}
+                              {hasFullAdminAccess && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => setTransferringCourse(course)}
+                                  title="Transfer to another user"
                                   data-testid={`button-transfer-course-${course.id}`}
-                                  title="Transfer to team member"
                                 >
-                                  <UserPlus className="h-4 w-4" />
+                                  <UserPlus className="h-4 w-4 text-primary" />
                                 </Button>
+                              )}
+                              {/* Delete button (only for full admins) */}
+                              {hasFullAdminAccess && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
                                   onClick={() => setDeletingCourse(course)}
                                   data-testid={`button-delete-course-${course.id}`}
                                 >
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center">No courses found</TableCell>
+                        <TableCell colSpan={11} className="text-center">No courses found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
