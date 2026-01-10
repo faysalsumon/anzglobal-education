@@ -55,9 +55,13 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications. Business rules enforce stage-specific requirements and role-based permissions.
 - **Draft/Publish Workflow**: Collaborative content creation system for institutions and courses:
   - **Database Schema**: `publishStatus` field ('draft' | 'published') on both universities and courses tables, with `publishedAt` timestamp and `publishedByUserId` for audit trail
+  - **Ownership Fields (Courses)**: `createdByUserId`, `updatedByUserId`, `assignedToUserId` for tracking content ownership and assignment
   - **UI Controls**: Institution and course creation/edit dialogs have "Save Draft" and "Publish" buttons; tables show publish status badges (blue "Published", outline "Draft") and filter dropdowns
   - **Public Visibility Rule**: Content only appears on public API endpoints when publishStatus='published' AND approvalStatus='approved' AND isActive=true
   - **Workflow**: Draft → Publish → Approval → Active (content can be saved as draft during creation, then published when ready for review)
+  - **Course Transfer System**: Courses can be transferred between team members via `/api/super-admin/courses/:id/transfer` endpoint with automatic `course_assigned` notification
+  - **Team Member View**: `/api/admin/my-courses` endpoint returns only courses created by or assigned to the current user (for non-admin team members)
+  - **Publish/Unpublish Endpoints**: `/api/super-admin/courses/:id/publish` and `/api/super-admin/courses/:id/unpublish` for course visibility control
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators, color-coded SLA badges, quick filter chips, and bulk actions.
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers.
