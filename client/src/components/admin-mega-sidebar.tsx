@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -67,8 +67,10 @@ export function AdminMegaSidebar({
   isMobileMenuOpen = false,
   onMobileMenuToggle
 }: AdminMegaSidebarProps) {
+  const [location] = useLocation();
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
+  const isOnProfilePage = location === "/admin/profile";
 
   const navConfig: NavDomain[] = [
     {
@@ -261,29 +263,33 @@ export function AdminMegaSidebar({
                   </Tooltip>
                 );
               })}
-            </div>
-          </div>
 
-          {/* Profile Button - Fixed at bottom */}
-          <div className="flex-shrink-0 border-t border-border py-2 flex flex-col items-center">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12 rounded-xl transition-all"
-                  data-testid="button-admin-profile"
-                  asChild
-                >
-                  <Link href="/admin/profile">
-                    <UserCircle className="h-5 w-5" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-medium">
-                My Profile
-              </TooltipContent>
-            </Tooltip>
+              {/* Separator before Profile */}
+              <div className="w-8 h-px bg-border my-1" />
+
+              {/* Profile Button - After Tools */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "w-12 h-12 rounded-xl transition-all",
+                      isOnProfilePage && "text-primary bg-primary/10 ring-2 ring-primary/30"
+                    )}
+                    data-testid="button-admin-profile"
+                    asChild
+                  >
+                    <Link href="/admin/profile">
+                      <UserCircle className="h-5 w-5" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  My Profile
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
 
         </div>

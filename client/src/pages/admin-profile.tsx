@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,12 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
-import { Loader2, Upload, Check, Shield, Eye, EyeOff } from "lucide-react";
-import { AdminLayout } from "@/components/admin-layout";
+import { Loader2, Upload, Check, Shield, Eye, EyeOff, Home, Menu, X, MessageCircle, LogOut } from "lucide-react";
+import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface AdminUser {
   id: string;
@@ -92,22 +97,66 @@ type EmergencyContactFormValues = z.infer<typeof emergencyContactFormSchema>;
 
 export default function AdminProfile() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { session } = useSupabaseAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, isAdmin, hasFullAdminAccess, isCTO, isMarketingExecutive } = useAuth();
+  const { session, signOut } = useSupabaseAuth();
+  const [, setLocation] = useLocation();
   const [isUploading, setIsUploading] = useState(false);
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Fetch admin profile - works for all user types
-  const { data: profile, isLoading } = useQuery<AdminUser>({
+  // Redirect unauthenticated users to admin login
+  useEffect(() => {
+    if (isAuthResolved && !isAuthenticated) {
+      setLocation("/admin/login");
+    }
+  }, [isAuthResolved, isAuthenticated, setLocation]);
+
+  // Redirect non-admin users to appropriate dashboard
+  useEffect(() => {
+    if (isAuthResolved && isAuthenticated && !isAdmin) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthResolved, isAuthenticated, isAdmin, setLocation]);
+
+  // Handle tab change - navigate to dashboard with the selected tab (using hash)
+  const handleTabChange = (tab: string) => {
+    // Navigate to the dashboard with the tab as a hash (dashboard uses hash-based routing)
+    setLocation(`/admin/dashboard#${tab}`);
+  };
+
+  const getUserInitials = () => {
+    if (!user?.email) return "U";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    return user.email.substring(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      try {
+        await fetch("/api/logout", { method: "GET", credentials: "include", redirect: "manual" });
+      } catch {}
+      queryClient.clear();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      window.location.href = "/";
+    }
+  };
+
+  // Fetch admin profile - works for all user types (hook called before returns)
+  const { data: profile, isLoading: isProfileLoading } = useQuery<AdminUser>({
     queryKey: ["/api/admin/profile"],
-    enabled: !!user,
+    enabled: !!user && isAuthenticated && isAdmin,
   });
 
-  // Form setup
+  // Form setup (hooks called before returns)
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -382,17 +431,122 @@ export default function AdminProfile() {
     return "Team Member";
   };
 
-  if (isLoading) {
+  // Show loading state while auth is being resolved
+  if (isLoading || !isAuthResolved) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
 
+  // Don't render profile content until authentication is confirmed
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
+
   return (
-    <AdminLayout activeTab="profile" breadcrumbTitle="Profile">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+      {/* Left Mega Sidebar - Same as dashboard */}
+      <AdminMegaSidebar 
+        activeTab="profile" 
+        onTabChange={handleTabChange} 
+        hasFullAdminAccess={hasFullAdminAccess}
+        isCTO={isCTO}
+        isMarketingExecutive={isMarketingExecutive}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 min-w-0 h-full">
+        {/* Top Header with Breadcrumb - Same as dashboard */}
+        <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
+          {/* Mobile menu toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden flex-shrink-0"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            data-testid="button-mobile-menu-toggle"
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          
+          <div className="flex flex-1 items-center justify-between gap-4">
+            <Breadcrumb data-testid="breadcrumb">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/admin/dashboard" data-testid="breadcrumb-home">
+                      <Home className="h-4 w-4" />
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage data-testid="breadcrumb-current">My Profile</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            
+            {/* Platform-wide Notifications, Messages, Profile, and Logout */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                data-testid="button-messages"
+                onClick={() => {
+                  const chatWidget = document.querySelector('[data-testid="chat-widget-toggle"]') as HTMLButtonElement;
+                  if (chatWidget) chatWidget.click();
+                }}
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
+              <NotificationBell />
+              
+              {/* Profile Avatar */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/profile">
+                    <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile-header">
+                      {user?.profileImageUrl && (
+                        <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
+                      )}
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>My Profile</TooltipContent>
+              </Tooltip>
+
+              {/* Logout Button */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Logout</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-auto p-4 lg:p-6">
+          <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-profile-title">
             Admin Profile
@@ -1037,7 +1191,9 @@ export default function AdminProfile() {
             </Card>
           </TabsContent>
         </Tabs>
+          </div>
+        </main>
       </div>
-    </AdminLayout>
+    </div>
   );
 }
