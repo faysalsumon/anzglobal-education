@@ -747,16 +747,20 @@ export default function AdminDashboard() {
   // Transfer institution mutation
   const transferInstitutionMutation = useMutation({
     mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string }) => {
-      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
+      const response = await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
+      // Also invalidate courses since they may have been transferred
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setTransferringInstitution(null);
       setSelectedTransferUserId("");
       toast({
         title: "Institution transferred",
-        description: "Institution has been successfully transferred to the selected user",
+        description: data?.message || "Institution has been successfully transferred to the selected user",
       });
     },
     onError: (error: any) => {

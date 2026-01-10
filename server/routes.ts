@@ -6279,12 +6279,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       });
 
+      // Cascade transfer: Update all courses belonging to this institution
+      const institutionCourses = await db
+        .select({ id: courses.id })
+        .from(courses)
+        .where(eq(courses.universityId, institutionId));
+      
+      let transferredCoursesCount = 0;
+      if (institutionCourses.length > 0) {
+        // Bulk update all courses for this institution
+        await db.update(courses)
+          .set({
+            assignedToUserId,
+            updatedByUserId: userId,
+            updatedAt: new Date(),
+          })
+          .where(eq(courses.universityId, institutionId));
+        
+        transferredCoursesCount = institutionCourses.length;
+      }
+
       // Get the assigner's and assignee's names for the response
       const assigner = await storage.getUser(userId);
       const assignerName = assigner ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() : 'Unknown';
       const assigneeName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
 
-      // Create notification for the new assignee
+      // Create notification for the new assignee about institution
       await createNotification({
         userId: assignedToUserId,
         type: 'institution_assigned',
@@ -6299,10 +6319,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Create additional notification about cascaded course transfers if any
+      if (transferredCoursesCount > 0) {
+        await createNotification({
+          userId: assignedToUserId,
+          type: 'course_assigned',
+          title: 'Courses Also Transferred',
+          message: `${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} from ${institution.name} have also been assigned to you`,
+          link: `/admin/dashboard#courses`,
+          metadata: {
+            institutionId: institution.id,
+            institutionName: institution.name,
+            coursesCount: transferredCoursesCount,
+            assignedBy: userId,
+            assignedByName: assignerName
+          }
+        });
+      }
+
       res.json({
         ...updatedInstitution,
         assignedToName: assigneeName,
-        message: `Institution transferred to ${assigneeName}`,
+        transferredCoursesCount,
+        message: transferredCoursesCount > 0 
+          ? `Institution and ${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} transferred to ${assigneeName}`
+          : `Institution transferred to ${assigneeName}`,
       });
     } catch (error) {
       console.error("Error transferring institution:", error);
