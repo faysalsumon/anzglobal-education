@@ -502,27 +502,58 @@ export function AdminMessagesTab() {
                   {messages.map((message) => {
                     const userData = user as any;
                     const isMine = message.senderId === (userData?.claims?.sub || userData?.id);
+                    const otherParticipant = selectedConversationData?.otherParticipant;
+                    
+                    const senderName = isMine 
+                      ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'You'
+                      : otherParticipant 
+                        ? `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'Team Member'
+                        : 'Team Member';
+                    
+                    const senderInitials = isMine
+                      ? getInitials(userData?.firstName, userData?.lastName, userData?.email)
+                      : otherParticipant 
+                        ? getInitials(otherParticipant.firstName, otherParticipant.lastName, otherParticipant.email)
+                        : 'TM';
+                    
+                    const senderImage = isMine 
+                      ? userData?.profileImageUrl 
+                      : otherParticipant?.profileImageUrl || null;
+                    
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                        className={`flex gap-3 ${isMine ? "flex-row-reverse" : "flex-row"}`}
                         data-testid={`message-${message.id}`}
                       >
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            isMine
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">
-                            {message.content}
-                          </p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {formatDistanceToNow(new Date(message.createdAt), {
-                              addSuffix: true,
-                            })}
-                          </p>
+                        <Avatar className="h-8 w-8 shrink-0">
+                          {senderImage && (
+                            <AvatarImage src={senderImage} alt={senderName} />
+                          )}
+                          <AvatarFallback className={`text-xs ${isMine ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20'}`}>
+                            {senderInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className={`flex flex-col max-w-[70%] ${isMine ? "items-end" : "items-start"}`}>
+                          <div className={`flex items-center gap-2 mb-1 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                            <span className="text-sm font-medium">{senderName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(message.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </div>
+                          <div
+                            className={`rounded-lg px-3 py-2 ${
+                              isMine
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">
+                              {message.content}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     );
