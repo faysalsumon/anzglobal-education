@@ -421,6 +421,8 @@ export default function AdminDashboard() {
   const [rejectingCourse, setRejectingCourse] = useState<Course | null>(null);
   const [courseRejectionReason, setCourseRejectionReason] = useState("");
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
+  const [transferringCourse, setTransferringCourse] = useState<Course | null>(null);
+  const [selectedTransferCourseUserId, setSelectedTransferCourseUserId] = useState<string>("");
   
   // Admin approval state
   const [approvingUser, setApprovingUser] = useState<User | null>(null);
@@ -522,10 +524,20 @@ export default function AdminDashboard() {
   const institutions = hasFullAdminAccess ? allInstitutions : myInstitutions;
   const institutionsLoading = hasFullAdminAccess ? allInstitutionsLoading : myInstitutionsLoading;
 
-  // Courses, Student Leads, Applications: All admin roles
-  const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
+  // Courses: Full admins see all, team members see only assigned/created
+  const { data: allCourses, isLoading: allCoursesLoading } = useQuery<Course[]>({
     queryKey: ["/api/super-admin/courses"],
+    enabled: hasFullAdminAccess,
   });
+
+  const { data: myCourses, isLoading: myCoursesLoading } = useQuery<Course[]>({
+    queryKey: ["/api/admin/my-courses"],
+    enabled: !hasFullAdminAccess && isAdmin,
+  });
+
+  // Use the appropriate courses data based on access level
+  const courses = hasFullAdminAccess ? allCourses : myCourses;
+  const coursesLoading = hasFullAdminAccess ? allCoursesLoading : myCoursesLoading;
 
   // (studentLeads query removed - consolidated into CRM Leads)
 
@@ -756,10 +768,34 @@ export default function AdminDashboard() {
     },
   });
 
-  // Fetch admin users for transfer dropdown
+  // Fetch admin users for transfer dropdown (used for both institution and course transfers)
   const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null }>>({
     queryKey: ["/api/super-admin/admin-users"],
-    enabled: !!transferringInstitution,
+    enabled: !!transferringInstitution || !!transferringCourse,
+  });
+
+  // Transfer course mutation
+  const transferCourseMutation = useMutation({
+    mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string }) => {
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}/transfer`, { assignedToUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
+      setTransferringCourse(null);
+      setSelectedTransferCourseUserId("");
+      toast({
+        title: "Course transferred",
+        description: "Course has been successfully transferred to the selected user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Update institution publish status mutation
@@ -804,6 +840,7 @@ export default function AdminDashboard() {
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setCourseDialogOpen(false);
       courseForm.reset();
       setSelectedCampusIds([]);
@@ -833,6 +870,7 @@ export default function AdminDashboard() {
     },
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setCourseDialogOpen(false);
       setEditingCourse(null);
       courseForm.reset();
@@ -858,6 +896,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setDeletingCourse(null);
       toast({
         title: "Course deleted",
@@ -945,6 +984,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setSelectedCourses(new Set());
       toast({
         title: "Courses deleted",
@@ -966,6 +1006,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setSelectedCourses(new Set());
       toast({
         title: "Status updated",
@@ -987,6 +1028,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       toast({
         title: "Status updated",
         description: "Course status has been updated successfully",
@@ -1016,6 +1058,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       toast({
         title: "Publish status updated",
         description: `Course has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
@@ -1080,6 +1123,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       toast({
         title: "Course approved",
         description: "The course has been approved and is now publicly visible",
@@ -1100,6 +1144,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setRejectingCourse(null);
       setCourseRejectionReason("");
       toast({
@@ -2507,6 +2552,15 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => setTransferringCourse(course)}
+                                  data-testid={`button-transfer-course-${course.id}`}
+                                  title="Transfer to team member"
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setDeletingCourse(course)}
                                   data-testid={`button-delete-course-${course.id}`}
                                 >
@@ -3315,6 +3369,60 @@ export default function AdminDashboard() {
               data-testid="button-confirm-transfer-institution"
             >
               {transferInstitutionMutation.isPending ? "Transferring..." : "Transfer Institution"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Course Dialog */}
+      <Dialog open={!!transferringCourse} onOpenChange={() => { setTransferringCourse(null); setSelectedTransferCourseUserId(""); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer Course</DialogTitle>
+            <DialogDescription>
+              Transfer <strong>{transferringCourse?.title}</strong> to another team member for editing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assign to</label>
+              <Select value={selectedTransferCourseUserId} onValueChange={setSelectedTransferCourseUserId}>
+                <SelectTrigger data-testid="select-transfer-course-user">
+                  <SelectValue placeholder="Select a team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {adminUsers?.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name || user.email} {user.roleName ? `(${user.roleName})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The selected user will be assigned to manage this course.
+              </p>
+            </div>
+            {(transferringCourse as any)?.assignedToName && (
+              <p className="text-sm text-muted-foreground">
+                Currently assigned to: <strong>{(transferringCourse as any).assignedToName}</strong>
+              </p>
+            )}
+            {(transferringCourse as any)?.createdByName && (
+              <p className="text-sm text-muted-foreground">
+                Created by: <strong>{(transferringCourse as any).createdByName}</strong>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTransferringCourse(null); setSelectedTransferCourseUserId(""); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => transferringCourse && selectedTransferCourseUserId && transferCourseMutation.mutate({ id: transferringCourse.id, assignedToUserId: selectedTransferCourseUserId })}
+              disabled={!selectedTransferCourseUserId || transferCourseMutation.isPending}
+              data-testid="button-confirm-transfer-course"
+            >
+              {transferCourseMutation.isPending ? "Transferring..." : "Transfer Course"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -6525,7 +6525,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Institution not found" });
       }
 
-      const newCourse = await storage.createCourse(courseData);
+      // Track who created the course
+      const newCourse = await storage.createCourse({
+        ...courseData,
+        createdByUserId: userId,
+        assignedToUserId: userId, // Initially assign to creator
+      });
       res.status(201).json(newCourse);
     } catch (error) {
       console.error("Error creating course:", error);
@@ -6599,6 +6604,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Track who updated the course
+      updateData.updatedByUserId = userId;
+      updateData.updatedAt = new Date();
+
       const updatedCourse = await storage.updateCourse(courseId, updateData);
       
       // Trigger async knowledge base rebuild
@@ -6667,6 +6676,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating course status:", error);
       res.status(500).json({ message: "Failed to update course status" });
+    }
+  });
+
+  // Transfer course to another user (change assignedToUserId)
+  app.patch("/api/super-admin/courses/:id/transfer", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const courseId = req.params.id;
+      const { assignedToUserId } = req.body;
+
+      if (!assignedToUserId) {
+        return res.status(400).json({ message: "assignedToUserId is required" });
+      }
+
+      // Check if course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Verify the target user exists, is an admin type, and is active
+      const targetUser = await storage.getUser(assignedToUserId);
+      if (!targetUser) {
+        return res.status(400).json({ message: "Specified user does not exist" });
+      }
+      if (targetUser.userType !== 'admin' && targetUser.userType !== 'platform_admin') {
+        return res.status(400).json({ message: "User must be an admin to be assigned courses" });
+      }
+      if (targetUser.isActive === false) {
+        return res.status(400).json({ message: "Cannot assign courses to inactive users" });
+      }
+
+      // Update the course with the new assignee
+      const updatedCourse = await storage.updateCourse(courseId, {
+        assignedToUserId,
+        updatedByUserId: userId,
+        updatedAt: new Date(),
+      });
+
+      // Get the assigner's and assignee's names for the response
+      const assigner = await storage.getUser(userId);
+      const assignerName = assigner ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() : 'Unknown';
+      const assigneeName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
+
+      // Create notification for the new assignee
+      await createNotification({
+        userId: assignedToUserId,
+        type: 'course_assigned',
+        title: 'Course Assigned to You',
+        message: `${assignerName} has assigned the course "${course.title}" to you.`,
+        link: '/admin/dashboard#courses',
+        metadata: {
+          courseId,
+          courseTitle: course.title,
+          assignedByUserId: userId,
+          assignedByName: assignerName,
+        },
+      });
+
+      res.json({ 
+        ...updatedCourse, 
+        message: `Course transferred to ${assigneeName}` 
+      });
+    } catch (error) {
+      console.error("Error transferring course:", error);
+      res.status(500).json({ message: "Failed to transfer course" });
+    }
+  });
+
+  // Publish a course
+  app.patch("/api/super-admin/courses/:id/publish", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required to publish courses" });
+      }
+
+      const courseId = req.params.id;
+
+      // Check if course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Update the course to published
+      const updatedCourse = await storage.updateCourse(courseId, {
+        publishStatus: 'published',
+        publishedAt: new Date(),
+        publishedByUserId: userId,
+        updatedByUserId: userId,
+        updatedAt: new Date(),
+      });
+
+      // Trigger knowledge base rebuild
+      triggerKnowledgeBaseRebuild('course published');
+
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error("Error publishing course:", error);
+      res.status(500).json({ message: "Failed to publish course" });
+    }
+  });
+
+  // Unpublish a course (set back to draft)
+  app.patch("/api/super-admin/courses/:id/unpublish", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required to unpublish courses" });
+      }
+
+      const courseId = req.params.id;
+
+      // Check if course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // Update the course to draft
+      const updatedCourse = await storage.updateCourse(courseId, {
+        publishStatus: 'draft',
+        updatedByUserId: userId,
+        updatedAt: new Date(),
+      });
+
+      // Trigger knowledge base rebuild
+      triggerKnowledgeBaseRebuild('course unpublished');
+
+      res.json(updatedCourse);
+    } catch (error) {
+      console.error("Error unpublishing course:", error);
+      res.status(500).json({ message: "Failed to unpublish course" });
+    }
+  });
+
+  // Get courses assigned to or created by the current admin user
+  app.get("/api/admin/my-courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Fetch courses created by OR assigned to this user
+      const myCourses = await db.select()
+        .from(courses)
+        .where(or(
+          eq(courses.createdByUserId, userId),
+          eq(courses.assignedToUserId, userId)
+        ));
+
+      // Get institution names
+      const allInstitutions = await storage.getAllUniversities();
+
+      // Get user names for creator/editor display
+      const userIds = new Set<string>();
+      myCourses.forEach(course => {
+        if (course.createdByUserId) userIds.add(course.createdByUserId);
+        if (course.updatedByUserId) userIds.add(course.updatedByUserId);
+        if (course.assignedToUserId) userIds.add(course.assignedToUserId);
+      });
+
+      const userMap = new Map<string, { firstName: string; lastName: string }>();
+      if (userIds.size > 0) {
+        const userIdArray = Array.from(userIds);
+        const usersData = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        }).from(users).where(inArray(users.id, userIdArray));
+        
+        usersData.forEach(u => {
+          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '' });
+        });
+      }
+
+      // Enrich courses with institution names and user names
+      const enrichedCourses = myCourses.map(course => {
+        const institution = allInstitutions.find(i => i.id === course.universityId);
+        return {
+          ...course,
+          institutionName: institution?.name || 'Unknown',
+          createdByName: course.createdByUserId && userMap.has(course.createdByUserId) 
+            ? `${userMap.get(course.createdByUserId)!.firstName} ${userMap.get(course.createdByUserId)!.lastName}`.trim()
+            : null,
+          updatedByName: course.updatedByUserId && userMap.has(course.updatedByUserId)
+            ? `${userMap.get(course.updatedByUserId)!.firstName} ${userMap.get(course.updatedByUserId)!.lastName}`.trim()
+            : null,
+          assignedToName: course.assignedToUserId && userMap.has(course.assignedToUserId)
+            ? `${userMap.get(course.assignedToUserId)!.firstName} ${userMap.get(course.assignedToUserId)!.lastName}`.trim()
+            : null,
+        };
+      });
+
+      res.json(enrichedCourses);
+    } catch (error) {
+      console.error("Error fetching my courses:", error);
+      res.status(500).json({ message: "Failed to fetch courses" });
     }
   });
 

@@ -135,7 +135,7 @@ export interface IStorage {
   getUniversityByUserId(userId: string): Promise<University | undefined>;
   getAllUniversities(): Promise<University[]>;
   createUniversity(university: InsertUniversity): Promise<University>;
-  updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University>;
+  updateUniversity(id: string, data: Partial<University>): Promise<University>;
   deleteUniversity(id: string): Promise<void>;
   
   // Course operations
@@ -143,7 +143,7 @@ export interface IStorage {
   getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]>;
   getAllCourses(): Promise<CourseWithUniversity[]>;
   createCourse(course: InsertCourse): Promise<Course>;
-  updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
+  updateCourse(id: string, data: Partial<Course>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
   
   // Sub-discipline operations
@@ -515,7 +515,7 @@ export class DatabaseStorage implements IStorage {
     return university;
   }
 
-  async updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University> {
+  async updateUniversity(id: string, data: Partial<University>): Promise<University> {
     // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
     // Also ensure null values are explicitly passed through for clearing timestamps
     const processedData = { ...data } as Record<string, any>;
@@ -595,15 +595,19 @@ export class DatabaseStorage implements IStorage {
     return course;
   }
 
-  async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course> {
+  async updateCourse(id: string, data: Partial<Course>): Promise<Course> {
     // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
-    const processedData = { ...data };
+    const processedData = { ...data } as Record<string, any>;
     if (processedData.publishedAt && typeof processedData.publishedAt === 'string') {
       processedData.publishedAt = new Date(processedData.publishedAt);
     }
+    // Set updatedAt if not already provided
+    if (!processedData.updatedAt) {
+      processedData.updatedAt = new Date();
+    }
     const [course] = await db
       .update(courses)
-      .set({ ...processedData, updatedAt: new Date() })
+      .set(processedData)
       .where(eq(courses.id, id))
       .returning();
     return course;
