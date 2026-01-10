@@ -6028,6 +6028,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const institutionId = req.params.id;
       const updateData = req.body;
+      
+      console.log('[Routes] PATCH /api/super-admin/institutions/:id - Received updateData:', JSON.stringify(updateData, null, 2));
 
       // If userId is being updated, verify the user exists and is university type
       if (updateData.userId) {
@@ -6045,6 +6047,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       updateData.updatedAt = new Date();
 
       const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
+      
+      console.log('[Routes] PATCH /api/super-admin/institutions/:id - Updated institution publishStatus:', updatedInstitution.publishStatus);
       
       // Trigger async knowledge base rebuild
       triggerKnowledgeBaseRebuild('super-admin institution update');

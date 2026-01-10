@@ -517,15 +517,27 @@ export class DatabaseStorage implements IStorage {
 
   async updateUniversity(id: string, data: Partial<InsertUniversity>): Promise<University> {
     // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
-    const processedData = { ...data };
-    if (processedData.publishedAt && typeof processedData.publishedAt === 'string') {
-      processedData.publishedAt = new Date(processedData.publishedAt);
+    // Also ensure null values are explicitly passed through for clearing timestamps
+    const processedData = { ...data } as Record<string, any>;
+    if (processedData.publishedAt !== undefined) {
+      if (processedData.publishedAt === null) {
+        // Keep null as-is to clear the timestamp
+        processedData.publishedAt = null;
+      } else if (typeof processedData.publishedAt === 'string') {
+        processedData.publishedAt = new Date(processedData.publishedAt);
+      }
     }
+    
+    console.log('[Storage] updateUniversity called with:', { id, publishStatus: processedData.publishStatus, publishedAt: processedData.publishedAt });
+    
     const [university] = await db
       .update(universities)
       .set({ ...processedData, updatedAt: new Date() })
       .where(eq(universities.id, id))
       .returning();
+    
+    console.log('[Storage] updateUniversity result:', { id: university.id, publishStatus: university.publishStatus, publishedAt: university.publishedAt });
+    
     return university;
   }
 
