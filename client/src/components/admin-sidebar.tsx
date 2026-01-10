@@ -70,7 +70,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: BarChart3,
       label: "Team Workload",
       value: "team-workload",
-      show: hasFullAdminAccess, // Only super_admin and support_manager
+      show: hasFullAdminAccess, // Only CTO and support_manager
     },
     {
       icon: UserPlus,

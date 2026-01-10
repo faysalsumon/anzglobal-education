@@ -889,7 +889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const data = insertUniversitySchema.parse({ ...safeData, userId: ownerUniversity.userId });
         university = await storage.updateUniversity(ownerUniversity.id, data);
       } else if (teamAccess) {
-        // User is a team member with admin/super_admin role - they can update (but not approval fields)
+        // User is a team member with admin/institution super_admin role - they can update (but not approval fields)
         const data = insertUniversitySchema.parse({ ...safeData, userId: teamAccess.university.userId });
         university = await storage.updateUniversity(teamAccess.university.id, data);
       } else {
@@ -5215,7 +5215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Only super_admin and support_manager can view users
+      // Only CTO and support_manager can view users
       const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5243,7 +5243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Only super_admin and support_manager can modify users
+      // Only CTO and support_manager can modify users
       const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -5811,7 +5811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      // Allow CTO, support_manager, and support_staff (marketing executives are mapped to support_staff)
       const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
@@ -6066,13 +6066,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered institution data extraction from website
-  // SECURITY: Restricted to super_admin only + rate limited due to SSRF risks
+  // SECURITY: Restricted to CTO only + rate limited due to SSRF risks
   // Only allows extraction from allowlisted educational domains (.edu, .ac.*, university/college domains)
   app.post("/api/admin/extract-institution-data", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
-      // SECURITY: Restrict to super_admin only (most trusted role)
+      // SECURITY: Restrict to CTO only (most trusted role)
       const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
@@ -6153,13 +6153,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered course data extraction from website
-  // SECURITY: Restricted to super_admin only + rate limited due to SSRF risks
+  // SECURITY: Restricted to CTO only + rate limited due to SSRF risks
   // Only allows extraction from allowlisted educational domains (.edu, .ac.*, university/college domains)
   app.post("/api/admin/extract-course-data", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
-      // SECURITY: Restrict to super_admin only (most trusted role)
+      // SECURITY: Restrict to CTO only (most trusted role)
       const access = await checkAdminAccess(userId, ['cto']);
       
       if (!access) {
@@ -6243,7 +6243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/super-admin/institutions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      // Allow CTO, support_manager, and support_staff (marketing executives are mapped to support_staff)
       const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
@@ -6350,7 +6350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      // Allow CTO, support_manager, and support_staff (marketing executives are mapped to support_staff)
       const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
@@ -6403,7 +6403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/super-admin/admin-users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      // Allow CTO, support_manager, and support_staff (marketing executives are mapped to support_staff)
       const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
@@ -6464,7 +6464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/institutions/:id/transfer", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      // Allow super_admin, support_manager, and support_staff (marketing executives are mapped to support_staff)
+      // Allow CTO, support_manager, and support_staff (marketing executives are mapped to support_staff)
       const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
@@ -10963,7 +10963,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
     const user = await storage.getUser(userId);
     // Include platform_admin as an admin type
-    if (user?.userType === 'admin' || user?.userType === 'super_admin' || user?.userType === 'platform_admin') {
+    if (user?.userType === 'admin' || user?.userType === 'platform_admin') {
       return { isAdmin: true, role: user.role || user.userType };
     }
     return { isAdmin: false, role: null };
@@ -11026,9 +11026,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       const userId = req.user.claims.sub;
       const { isAdmin, role } = await isAdminTeamMember(userId);
       
-      // Only super_admin and support_manager can see workload summary
+      // Only CTO and support_manager can see workload summary
       if (!isAdmin || !['cto', 'support_manager'].includes(role || '')) {
-        return res.status(403).json({ message: "Only super admins and support managers can view workload summary" });
+        return res.status(403).json({ message: "Only CTO and support managers can view workload summary" });
       }
       
       const summary = await storage.getTeamWorkloadSummary();
@@ -11172,9 +11172,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       const userId = req.user.claims.sub;
       const { isAdmin, role } = await isAdminTeamMember(userId);
       
-      // Only super_admin and support_manager can delete tasks
+      // Only CTO and support_manager can delete tasks
       if (!isAdmin || !['cto', 'support_manager'].includes(role || '')) {
-        return res.status(403).json({ message: "Only super admins and support managers can delete tasks" });
+        return res.status(403).json({ message: "Only CTO and support managers can delete tasks" });
       }
       
       const existingTask = await storage.getTaskById(req.params.id);

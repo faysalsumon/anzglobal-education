@@ -54,7 +54,7 @@ export function AdminLayout({
   
   const derivedTab = activeTab || getTabFromPath(location);
 
-  const hasFullAdminAccess = user?.role === "super_admin" || user?.role === "support_manager";
+  const hasFullAdminAccess = user?.role === "cto" || user?.role === "support_manager";
 
   const handleTabChange = (tab: string) => {
     const route = TAB_TO_ROUTE_MAP[tab];

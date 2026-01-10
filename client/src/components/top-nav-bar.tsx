@@ -56,7 +56,7 @@ export function TopNavBar() {
   const unreadCount = unreadData?.count || 0;
 
   const hasFullAdminAccess = isAdmin && (
-    user?.adminRole === "super_admin" ||
+    user?.adminRole === "cto" ||
     user?.adminRole === "support_manager"
   );
 
@@ -100,7 +100,7 @@ export function TopNavBar() {
     // For admin users, show their specific admin role
     if (user.userType === "admin") {
       const adminRole = user.adminRole || user.role;
-      if (adminRole === "super_admin") return "Super Admin";
+      if (adminRole === "cto") return "CTO";
       if (adminRole === "support_manager") return "Support Manager";
       if (adminRole === "support_staff") return "Consultant";
       return "Admin";

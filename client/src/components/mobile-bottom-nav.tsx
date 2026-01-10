@@ -31,7 +31,7 @@ export function MobileBottomNav() {
   const unreadCount = unreadData?.count || 0;
 
   const hasFullAdminAccess = isAdmin && (
-    user?.adminRole === "super_admin" ||
+    user?.adminRole === "cto" ||
     user?.adminRole === "support_manager"
   );
 

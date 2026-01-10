@@ -72,13 +72,13 @@ export function useAuth() {
 
   const adminRole = user?.adminRole || user?.role || null;
   
-  const isSuperAdmin = adminRole === "super_admin";
+  const isCTO = adminRole === "cto";
   const isSupportManager = adminRole === "support_manager";
   const isConsultant = adminRole === "support_staff";
   // Check both display name and internal name formats for marketing executive
   const isMarketingExecutive = user?.roleName === "Marketing Executive" || user?.roleName === "marketing_executive";
   
-  const hasFullAdminAccess = isSuperAdmin || isSupportManager;
+  const hasFullAdminAccess = isCTO || isSupportManager;
 
   // Auth is resolved when Supabase has finished loading
   // If there's a session, also wait for the DB user to be fetched
@@ -96,7 +96,7 @@ export function useAuth() {
     isStudent: user?.userType === "student",
     isAdmin: user?.userType === "admin" || user?.userType === "platform_admin",
     adminRole,
-    isSuperAdmin,
+    isCTO,
     isSupportManager,
     isConsultant,
     isMarketingExecutive,

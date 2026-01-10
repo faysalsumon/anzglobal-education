@@ -37,13 +37,13 @@ export function AppSidebar() {
   const { user, isUniversity, isStudent } = useAuth();
   const { signOut } = useSupabaseAuth();
   const isAdmin = user?.userType === "admin";
-  const hasFullAdminAccess = isAdmin && (user?.role === "super_admin" || user?.role === "support_manager");
+  const hasFullAdminAccess = isAdmin && (user?.role === "cto" || user?.role === "support_manager");
   const [profilePictureDialogOpen, setProfilePictureDialogOpen] = useState(false);
 
   // Helper to get portal label based on user type and role
   const getPortalLabel = () => {
     if (isAdmin) {
-      if (user?.role === "super_admin") return "Super Admin Portal";
+      if (user?.role === "cto") return "CTO Portal";
       if (user?.role === "support_manager") return "Support Manager Portal";
       if (user?.role === "support_staff") return "Support Staff Portal";
       if (user?.role === "operations_staff") return "Operations Staff Portal";

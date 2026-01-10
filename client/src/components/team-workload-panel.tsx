@@ -69,7 +69,7 @@ export function TeamWorkloadPanel() {
 
   const getRoleLabel = (role?: string | null) => {
     const roleLabels: Record<string, string> = {
-      super_admin: "Super Admin",
+      cto: "CTO",
       support_manager: "Support Manager",
       consultant: "Consultant",
     };
@@ -77,7 +77,7 @@ export function TeamWorkloadPanel() {
   };
 
   const getRoleBadgeVariant = (role?: string | null): "default" | "secondary" | "outline" => {
-    if (role === "super_admin") return "default";
+    if (role === "cto") return "default";
     if (role === "support_manager") return "secondary";
     return "outline";
   };

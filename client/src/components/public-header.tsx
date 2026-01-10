@@ -99,7 +99,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
     if (!user?.userType) return "User";
     if (user.userType === "admin") {
       const adminRole = user.adminRole || user.role;
-      if (adminRole === "super_admin") return "Super Admin";
+      if (adminRole === "cto") return "CTO";
       if (adminRole === "support_manager") return "Support Manager";
       if (adminRole === "support_staff") return "Consultant";
       return "Admin";

@@ -50,7 +50,7 @@ interface AdminMegaSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   hasFullAdminAccess: boolean;
-  isSuperAdmin?: boolean;
+  isCTO?: boolean;
   isMarketingExecutive?: boolean;
   isMobileMenuOpen?: boolean;
   onMobileMenuToggle?: () => void;
@@ -60,7 +60,7 @@ export function AdminMegaSidebar({
   activeTab, 
   onTabChange, 
   hasFullAdminAccess, 
-  isSuperAdmin = false,
+  isCTO = false,
   isMarketingExecutive = false,
   isMobileMenuOpen = false,
   onMobileMenuToggle
@@ -101,7 +101,7 @@ export function AdminMegaSidebar({
       color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400",
       routes: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
-        { icon: Shield, label: "Role Management", value: "role-management", show: isSuperAdmin },
+        { icon: Shield, label: "Role Management", value: "role-management", show: isCTO },
         { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
         { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },

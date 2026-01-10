@@ -376,7 +376,7 @@ export default function AdminProfile() {
     // Prefer the actual role name from the roles table
     if (profile?.roleName) return profile.roleName;
     // Fallback to legacy role field
-    if (profile?.role === "super_admin") return "Super Admin";
+    if (profile?.role === "cto") return "CTO";
     if (profile?.role === "support_manager") return "Support Manager";
     if (profile?.role === "content_editor") return "Content Editor";
     return "Team Member";

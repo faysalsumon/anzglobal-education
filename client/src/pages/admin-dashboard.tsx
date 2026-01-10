@@ -214,7 +214,7 @@ interface Application {
 }
 
 // Helper function to format user type labels
-// Note: 'Super Admin' is a ROLE, not a user type
+// Note: 'CTO' is a ROLE, not a user type
 const formatUserType = (userType: string): string => {
   const labels: Record<string, string> = {
     platform_admin: "Platform Admin",
@@ -340,7 +340,7 @@ const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isSuperAdmin, isMarketingExecutive, hasFullAdminAccess, isAdmin } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
   const { signOut } = useSupabaseAuth();
 
@@ -403,7 +403,7 @@ export default function AdminDashboard() {
     
     if (hash && validTabs.includes(hash)) {
       // Check access for super-admin-only tabs (role management requires super admin)
-      if (superAdminOnlyTabs.includes(hash) && !isSuperAdmin) {
+      if (superAdminOnlyTabs.includes(hash) && !isCTO) {
         return defaultTab;
       }
       // Check access for full-admin-only tabs
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
   });
 
   // Queries - Conditionally loaded based on role
-  // Users and Institutions: Only for super_admin and support_manager (full admin access)
+  // Users and Institutions: Only for CTO and support_manager (full admin access)
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/super-admin/users"],
     enabled: hasFullAdminAccess, // Only full admins can access users
@@ -1568,7 +1568,7 @@ export default function AdminDashboard() {
   // Handle tab change with scroll to top
   const handleTabChange = (tab: string) => {
     // Prevent non-super admins from accessing role-management tab
-    if (tab === 'role-management' && !isSuperAdmin) {
+    if (tab === 'role-management' && !isCTO) {
       return;
     }
     setActiveTab(tab);
@@ -1582,7 +1582,7 @@ export default function AdminDashboard() {
         activeTab={activeTab} 
         onTabChange={handleTabChange} 
         hasFullAdminAccess={hasFullAdminAccess}
-        isSuperAdmin={isSuperAdmin}
+        isCTO={isCTO}
         isMarketingExecutive={isMarketingExecutive}
         isMobileMenuOpen={isMobileMenuOpen}
         onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1685,8 +1685,8 @@ export default function AdminDashboard() {
                       ? `${user.roleName} Dashboard`
                       : isConsultant 
                         ? "Consultant Dashboard" 
-                        : isSuperAdmin 
-                          ? "Super Admin Dashboard" 
+                        : isCTO 
+                          ? "CTO Dashboard" 
                           : "Admin Dashboard"}
                   </h1>
                   <p className="text-muted-foreground text-xs md:text-sm">
@@ -2348,10 +2348,10 @@ export default function AdminDashboard() {
                     {isConsultant ? "View all courses" : "View and manage all courses"}
                   </CardDescription>
                 </div>
-                {/* Only full admins (super_admin & support_manager) can create courses */}
+                {/* Only full admins (CTO & support_manager) can create courses */}
                 {hasFullAdminAccess && (
                   <div className="flex gap-2">
-                    {isSuperAdmin && (
+                    {isCTO && (
                       <Button size="sm" onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
                         <Sparkles className="h-4 w-4 mr-1" />
                         AI Extract
@@ -2695,8 +2695,8 @@ export default function AdminDashboard() {
           <AdminBranchesPanel />
         )}
 
-        {/* Role Management Tab - Super Admin Only */}
-        {activeTab === "role-management" && isSuperAdmin && (
+        {/* Role Management Tab - CTO Only */}
+        {activeTab === "role-management" && isCTO && (
           <AdminRoleManagementPanel />
         )}
 
@@ -3311,7 +3311,7 @@ export default function AdminDashboard() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="cto">CTO</SelectItem>
                   <SelectItem value="platform_admin">Platform Admin</SelectItem>
                   <SelectItem value="support_manager">Support Manager</SelectItem>
                   <SelectItem value="support_staff">Support Staff</SelectItem>
