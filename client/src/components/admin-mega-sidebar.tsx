@@ -28,6 +28,7 @@ import {
   Shield,
   MapPin,
   LayoutDashboard,
+  UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -261,6 +262,28 @@ export function AdminMegaSidebar({
                 );
               })}
             </div>
+          </div>
+
+          {/* Profile Button - Fixed at bottom */}
+          <div className="flex-shrink-0 border-t border-border py-2 flex flex-col items-center">
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-12 h-12 rounded-xl transition-all"
+                  data-testid="button-admin-profile"
+                  asChild
+                >
+                  <Link href="/admin/profile">
+                    <UserCircle className="h-5 w-5" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                My Profile
+              </TooltipContent>
+            </Tooltip>
           </div>
 
         </div>
