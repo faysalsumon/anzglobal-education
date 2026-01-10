@@ -6085,6 +6085,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Helper to convert empty strings to null for numeric fields
+      const toNullableNumber = (val: any) => (val === '' || val === null || val === undefined) ? null : val;
+
       const newInstitution = await storage.createUniversity({
         name,
         description: description || null,
@@ -6094,10 +6097,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         website: website || null,
         userId: institutionUserId || null,
         providerType: providerType || null,
-        numberOfCampuses: numberOfCampuses || null,
-        establishedYear: establishedYear || null,
-        scholarshipPercentageMin: scholarshipPercentageMin || null,
-        scholarshipPercentageMax: scholarshipPercentageMax || null,
+        numberOfCampuses: toNullableNumber(numberOfCampuses),
+        establishedYear: toNullableNumber(establishedYear),
+        scholarshipPercentageMin: toNullableNumber(scholarshipPercentageMin),
+        scholarshipPercentageMax: toNullableNumber(scholarshipPercentageMax),
         topDisciplines: topDisciplines || null,
         logo: logo || null,
         topCourses: topCourses || null,
@@ -6145,6 +6148,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = req.body;
       
       console.log('[Routes] PATCH /api/super-admin/institutions/:id - Received updateData:', JSON.stringify(updateData, null, 2));
+
+      // Sanitize optional numeric fields - convert empty strings to null for database
+      const numericFields = ['numberOfCampuses', 'establishedYear', 'scholarshipPercentageMin', 'scholarshipPercentageMax'];
+      for (const field of numericFields) {
+        if (updateData[field] === '' || updateData[field] === null) {
+          updateData[field] = undefined;
+        }
+      }
 
       // If userId is being updated, verify the user exists and is university type
       if (updateData.userId) {
