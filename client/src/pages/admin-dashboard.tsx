@@ -747,8 +747,7 @@ export default function AdminDashboard() {
   // Transfer institution mutation
   const transferInstitutionMutation = useMutation({
     mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string }) => {
-      const response = await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
-      return response.json();
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });

@@ -6272,32 +6272,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot assign institutions to inactive users" });
       }
 
-      // Update the institution with the new assignee
-      const updatedInstitution = await storage.updateUniversity(institutionId, {
-        assignedToUserId,
-        updatedByUserId: userId,
-        updatedAt: new Date(),
-      });
-
-      // Cascade transfer: Update all courses belonging to this institution
-      const institutionCourses = await db
-        .select({ id: courses.id })
-        .from(courses)
-        .where(eq(courses.universityId, institutionId));
-      
+      // Use transaction for atomic update of institution and all its courses
       let transferredCoursesCount = 0;
-      if (institutionCourses.length > 0) {
-        // Bulk update all courses for this institution
-        await db.update(courses)
+      const result = await db.transaction(async (tx) => {
+        // Update the institution with the new assignee
+        const [updated] = await tx.update(universities)
           .set({
             assignedToUserId,
             updatedByUserId: userId,
             updatedAt: new Date(),
           })
+          .where(eq(universities.id, institutionId))
+          .returning();
+
+        if (!updated) {
+          throw new Error("Institution not found or update failed");
+        }
+
+        // Cascade transfer: Get count and update all courses belonging to this institution
+        const institutionCourses = await tx
+          .select({ id: courses.id })
+          .from(courses)
           .where(eq(courses.universityId, institutionId));
         
-        transferredCoursesCount = institutionCourses.length;
-      }
+        if (institutionCourses.length > 0) {
+          // Bulk update all courses for this institution
+          await tx.update(courses)
+            .set({
+              assignedToUserId,
+              updatedByUserId: userId,
+              updatedAt: new Date(),
+            })
+            .where(eq(courses.universityId, institutionId));
+          
+          transferredCoursesCount = institutionCourses.length;
+        }
+
+        return updated;
+      });
+
+      // Result can't be undefined here due to the throw above, but TypeScript doesn't know that
+      const updatedInstitution = result;
 
       // Get the assigner's and assignee's names for the response
       const assigner = await storage.getUser(userId);
@@ -6345,8 +6360,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `Institution and ${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} transferred to ${assigneeName}`
           : `Institution transferred to ${assigneeName}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error transferring institution:", error);
+      // Check if error is due to institution not found during transaction
+      if (error?.message?.includes("Institution not found")) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
       res.status(500).json({ message: "Failed to transfer institution" });
     }
   });
