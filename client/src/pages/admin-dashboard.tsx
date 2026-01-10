@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { getCsrfToken } from "@/hooks/useCsrf";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1390,10 +1391,16 @@ export default function AdminDashboard() {
     formData.append("logo", file);
 
     try {
+      // Get CSRF token for file upload
+      const csrfToken = await getCsrfToken();
+      
       const response = await fetch("/api/university/upload-logo", {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: {
+          "X-CSRF-Token": csrfToken,
+        },
       });
 
       if (!response.ok) {
