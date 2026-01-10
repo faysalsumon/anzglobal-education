@@ -5645,6 +5645,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: universities.isActive,
         createdAt: universities.createdAt,
         updatedAt: universities.updatedAt,
+        publishStatus: universities.publishStatus,
+        publishedAt: universities.publishedAt,
+        publishedByUserId: universities.publishedByUserId,
       }).from(universities);
 
       // Get user names for creator/editor display
