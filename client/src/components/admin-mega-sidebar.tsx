@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Users,
@@ -72,6 +74,13 @@ export function AdminMegaSidebar({
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const isOnProfilePage = location === "/admin/profile";
+  
+  // Fetch unread message count
+  const { data: unreadData } = useQuery<{ unreadCount: number }>({
+    queryKey: ["/api/conversations/unread-count"],
+    refetchInterval: 30000, // Poll every 30 seconds
+  });
+  const unreadCount = unreadData?.unreadCount || 0;
 
   const navConfig: NavDomain[] = [
     {
@@ -271,21 +280,27 @@ export function AdminMegaSidebar({
               {/* Messages Button */}
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-12 h-12 rounded-xl transition-all"
-                    onClick={() => {
-                      const chatWidget = document.querySelector('[data-testid="chat-widget-toggle"]') as HTMLButtonElement;
-                      if (chatWidget) chatWidget.click();
-                    }}
-                    data-testid="button-sidebar-messages"
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                  </Button>
+                  <Link href="/chat">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-12 h-12 rounded-xl transition-all relative"
+                      data-testid="button-sidebar-messages"
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs"
+                        >
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  Messages
+                  Messages {unreadCount > 0 && `(${unreadCount} unread)`}
                 </TooltipContent>
               </Tooltip>
 
