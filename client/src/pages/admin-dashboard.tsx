@@ -506,10 +506,21 @@ export default function AdminDashboard() {
     enabled: hasFullAdminAccess, // Only full admins can access users
   });
 
-  const { data: institutions, isLoading: institutionsLoading } = useQuery<Institution[]>({
+  // Full admins see all institutions
+  const { data: allInstitutions, isLoading: allInstitutionsLoading } = useQuery<Institution[]>({
     queryKey: ["/api/super-admin/institutions"],
-    enabled: hasFullAdminAccess, // Only full admins can access institutions
+    enabled: hasFullAdminAccess,
   });
+
+  // Non-full-admin team members see only their assigned/created institutions
+  const { data: myInstitutions, isLoading: myInstitutionsLoading } = useQuery<Institution[]>({
+    queryKey: ["/api/admin/my-institutions"],
+    enabled: !hasFullAdminAccess && isAdmin,
+  });
+
+  // Use the appropriate institutions data based on access level
+  const institutions = hasFullAdminAccess ? allInstitutions : myInstitutions;
+  const institutionsLoading = hasFullAdminAccess ? allInstitutionsLoading : myInstitutionsLoading;
 
   // Courses, Student Leads, Applications: All admin roles
   const { data: courses, isLoading: coursesLoading } = useQuery<Course[]>({
@@ -637,6 +648,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setInstitutionDialogOpen(false);
       institutionForm.reset();
       toast({
@@ -659,6 +671,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setInstitutionDialogOpen(false);
       setEditingInstitution(null);
       institutionForm.reset();
@@ -682,6 +695,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setDeletingInstitution(null);
       toast({
         title: "Institution deleted",
@@ -703,6 +717,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       toast({
         title: "Status updated",
         description: "Institution status has been updated successfully",
@@ -724,6 +739,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setTransferringInstitution(null);
       setSelectedTransferUserId("");
       toast({
@@ -761,6 +777,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       toast({
         title: "Publish status updated",
         description: `Institution has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
@@ -884,6 +901,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setSelectedInstitutions(new Set());
       toast({
         title: "Institutions deleted",
@@ -905,6 +923,7 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setSelectedInstitutions(new Set());
       toast({
         title: "Status updated",
@@ -1017,6 +1036,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       toast({
         title: "Institution approved",
         description: "The institution has been approved and is now publicly visible",
@@ -1037,6 +1057,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
       setRejectingInstitution(null);
       setRejectionReason("");
       toast({

@@ -5696,6 +5696,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get institutions assigned to or created by the current admin user
+  // This endpoint is for team members who don't have full admin access
+  app.get("/api/admin/my-institutions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Allow any authenticated admin user to fetch their assigned/created institutions
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Fetch institutions created by OR assigned to this user
+      const myInstitutions = await db.select({
+        id: universities.id,
+        userId: universities.userId,
+        name: universities.name,
+        description: universities.description,
+        logo: universities.logo,
+        website: universities.website,
+        country: universities.country,
+        establishedYear: universities.establishedYear,
+        contactEmail: universities.contactEmail,
+        contactPhone: universities.contactPhone,
+        numberOfCampuses: universities.numberOfCampuses,
+        providerType: universities.providerType,
+        scholarshipPercentageMin: universities.scholarshipPercentageMin,
+        scholarshipPercentageMax: universities.scholarshipPercentageMax,
+        topDisciplines: universities.topDisciplines,
+        smallDescription: universities.smallDescription,
+        fullDescription: universities.fullDescription,
+        institutionGallery: universities.institutionGallery,
+        topCourses: universities.topCourses,
+        campusAddresses: universities.campusAddresses,
+        tuitionFeesMin: universities.tuitionFeesMin,
+        tuitionFeesMax: universities.tuitionFeesMax,
+        tuitionCurrency: universities.tuitionCurrency,
+        deliveryModes: universities.deliveryModes,
+        intakePeriods: universities.intakePeriods,
+        accreditationStatus: universities.accreditationStatus,
+        rankingBand: universities.rankingBand,
+        facilities: universities.facilities,
+        internationalStudentSupport: universities.internationalStudentSupport,
+        tags: universities.tags,
+        approvalStatus: universities.approvalStatus,
+        rejectionReason: universities.rejectionReason,
+        submittedForApprovalAt: universities.submittedForApprovalAt,
+        approvedAt: universities.approvedAt,
+        approvedBy: universities.approvedBy,
+        createdByUserId: universities.createdByUserId,
+        updatedByUserId: universities.updatedByUserId,
+        assignedToUserId: universities.assignedToUserId,
+        isActive: universities.isActive,
+        createdAt: universities.createdAt,
+        updatedAt: universities.updatedAt,
+        publishStatus: universities.publishStatus,
+        publishedAt: universities.publishedAt,
+        publishedByUserId: universities.publishedByUserId,
+      })
+      .from(universities)
+      .where(or(
+        eq(universities.createdByUserId, userId),
+        eq(universities.assignedToUserId, userId)
+      ));
+
+      // Get user names for creator/editor display
+      const userIds = new Set<string>();
+      myInstitutions.forEach(inst => {
+        if (inst.createdByUserId) userIds.add(inst.createdByUserId);
+        if (inst.updatedByUserId) userIds.add(inst.updatedByUserId);
+        if (inst.assignedToUserId) userIds.add(inst.assignedToUserId);
+      });
+
+      const userMap = new Map<string, { firstName: string; lastName: string }>();
+      if (userIds.size > 0) {
+        const userIdArray = Array.from(userIds);
+        const usersData = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        }).from(users).where(inArray(users.id, userIdArray));
+        
+        usersData.forEach(u => {
+          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '' });
+        });
+      }
+
+      // Enrich institutions with user names
+      const enrichedInstitutions = myInstitutions.map(inst => ({
+        ...inst,
+        createdByName: inst.createdByUserId && userMap.has(inst.createdByUserId) 
+          ? `${userMap.get(inst.createdByUserId)!.firstName} ${userMap.get(inst.createdByUserId)!.lastName}`.trim()
+          : null,
+        updatedByName: inst.updatedByUserId && userMap.has(inst.updatedByUserId)
+          ? `${userMap.get(inst.updatedByUserId)!.firstName} ${userMap.get(inst.updatedByUserId)!.lastName}`.trim()
+          : null,
+        assignedToName: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
+          ? `${userMap.get(inst.assignedToUserId)!.firstName} ${userMap.get(inst.assignedToUserId)!.lastName}`.trim()
+          : null,
+      }));
+
+      res.json(enrichedInstitutions);
+    } catch (error) {
+      console.error("Error fetching my institutions:", error);
+      res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
   // Get AI extraction quota status
   app.get("/api/admin/ai-extraction/quota", isAuthenticated, async (req: any, res) => {
     try {
