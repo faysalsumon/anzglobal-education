@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { Clock, Filter, User, FileText } from "lucide-react";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface ActivityLog {
   id: string;
@@ -109,7 +110,19 @@ export function ActivityFeed({
   }>({
     queryKey: [getEndpoint(), filterEntityType, filterAction, offset, limit],
     queryFn: async () => {
-      const response = await fetch(`${getEndpoint()}?${buildQueryParams()}`);
+      const headers: Record<string, string> = {};
+      
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      }
+      
+      const response = await fetch(`${getEndpoint()}?${buildQueryParams()}`, {
+        headers,
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Failed to fetch activity logs");
       return response.json();
     },
