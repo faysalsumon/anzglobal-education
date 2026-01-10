@@ -240,7 +240,7 @@ async function checkUniversityAccess(
 export async function checkAdminAccess(
   userId: string,
   requiredRoles?: AdminRole[]
-): Promise<{ role: AdminRole; roleName?: string; userType: string } | null> {
+): Promise<{ role: AdminRole | null; roleName?: string; userType: string } | null> {
   const user = await storage.getUser(userId);
   
   // Accept both 'admin' and 'platform_admin' userTypes as valid admin access
@@ -250,15 +250,59 @@ export async function checkAdminAccess(
   
   const userType = user.userType;
   
-  // NEW: Check role from roles table using roleId
+  // If no requiredRoles specified, just check userType (for basic dashboard access)
+  // This allows ALL admin-type users to access dashboards without legacy role assignments
+  if (!requiredRoles || requiredRoles.length === 0) {
+    // Try to determine the user's actual role for return value
+    // Important: We return the ACTUAL role, never fabricate one
+    let determinedRole: AdminRole | null = null;
+    let roleName: string | undefined;
+    
+    // Check role from roles table first (new system)
+    if (user.roleId) {
+      const userRole = await getUserRole(userId);
+      if (userRole) {
+        roleName = userRole.name;
+        // Map new role names to legacy AdminRole type
+        const roleToLegacy: Record<string, AdminRole> = {
+          'super_admin': 'super_admin',
+          'ceo': 'super_admin',
+          'cfo': 'operations_staff',
+          'branch_manager': 'support_manager',
+          'marketing_executive': 'support_staff',
+          'senior_consultant': 'support_staff',
+          'junior_consultant': 'support_staff',
+        };
+        determinedRole = roleToLegacy[roleName] || null;
+      }
+    }
+    // Check legacy role in users table
+    else if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+      determinedRole = user.role as AdminRole;
+    }
+    // Check admin_team_members table
+    else {
+      const adminMember = await storage.getAdminTeamMemberByUserId(userId);
+      if (adminMember?.isActive) {
+        determinedRole = adminMember.role as AdminRole;
+      }
+    }
+    
+    // For basic access (no requiredRoles), access is granted based on userType alone
+    // The role field can be null if user has no assigned role - this is intentional
+    // Downstream code must check for null role if it needs role-specific behavior
+    return { role: determinedRole, roleName, userType };
+  }
+  
+  // When requiredRoles is specified, enforce role-based filtering for sensitive actions
+  
+  // Check role from roles table using roleId (new system)
   if (user.roleId) {
     const userRole = await getUserRole(userId);
     if (userRole) {
-      // Map new role names to legacy AdminRole type for backward compatibility
       const roleName = userRole.name;
       
       // Role mapping: New roles -> Legacy AdminRole types
-      // This ensures proper access control when using new role system
       const roleToLegacy: Record<string, AdminRole> = {
         'super_admin': 'super_admin',
         'ceo': 'super_admin',
@@ -269,15 +313,12 @@ export async function checkAdminAccess(
         'junior_consultant': 'support_staff',
       };
       
-      // Get the mapped legacy role (default to support_staff for unknown roles)
       const legacyRole = roleToLegacy[roleName] || 'support_staff';
       
-      // If requiredRoles is specified, check if user has required access
-      if (requiredRoles && !requiredRoles.includes(legacyRole)) {
+      if (!requiredRoles.includes(legacyRole)) {
         return null;
       }
       
-      // Return the properly mapped legacy role (NOT defaulting to super_admin)
       return { role: legacyRole, roleName, userType };
     }
   }
@@ -285,7 +326,7 @@ export async function checkAdminAccess(
   // LEGACY: Check if user has role directly in users table
   if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
     const userRole = user.role as AdminRole;
-    if (requiredRoles && !requiredRoles.includes(userRole)) {
+    if (!requiredRoles.includes(userRole)) {
       return null;
     }
     return { role: userRole, userType };
@@ -294,10 +335,11 @@ export async function checkAdminAccess(
   // LEGACY: Otherwise check admin_team_members table
   const adminMember = await storage.getAdminTeamMemberByUserId(userId);
   if (!adminMember || !adminMember.isActive) {
+    // No legacy role found - if user is admin type but has no role, deny access for role-gated endpoints
     return null;
   }
   
-  if (requiredRoles && !requiredRoles.includes(adminMember.role as AdminRole)) {
+  if (!requiredRoles.includes(adminMember.role as AdminRole)) {
     return null;
   }
   
@@ -2477,8 +2519,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      // Verify user is an admin (userType-based check only, no role filtering)
+      const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2508,8 +2550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      // Verify user is an admin (userType-based check only, no role filtering)
+      const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2540,8 +2582,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      // Verify user is an admin (userType-based check only, no role filtering)
+      const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2559,8 +2601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      // Verify user is an admin (userType-based check only, no role filtering)
+      const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2578,8 +2620,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
+      // Verify user is an admin (userType-based check only, no role filtering)
+      const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
