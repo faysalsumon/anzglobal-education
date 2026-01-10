@@ -49,27 +49,14 @@ type Conversation = {
   lastMessage: Message | null;
 };
 
-type TeamMemberResponse = {
-  id: number;
-  userId: string;
-  role: string;
-  isActive: boolean;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    profileImageUrl?: string;
-  } | null;
-};
-
-type TeamMember = {
+type AdminTeamMember = {
   id: string;
-  firstName: string;
-  lastName: string;
   email: string;
-  role?: string;
-  profileImageUrl?: string;
+  firstName: string | null;
+  lastName: string | null;
+  userType: string;
+  role: string | null;
+  profileImageUrl: string | null;
   isActive: boolean;
 };
 
@@ -96,24 +83,11 @@ export function AdminMessagesTab() {
     enabled: !!selectedConversation,
   });
 
-  // Fetch team members for starting new conversations
-  const { data: teamMembersRaw, isLoading: loadingTeamMembers } = useQuery<TeamMemberResponse[]>({
-    queryKey: ["/api/admin/team-members"],
+  // Fetch admin team members for starting new conversations
+  const { data: teamMembers = [], isLoading: loadingTeamMembers } = useQuery<AdminTeamMember[]>({
+    queryKey: ["/api/admin/messaging/team"],
     enabled: viewMode === "new-chat",
   });
-
-  // Transform team member data to flat structure
-  const teamMembers: TeamMember[] = (teamMembersRaw || [])
-    .filter((m) => m.user !== null)
-    .map((m) => ({
-      id: m.user!.id,
-      firstName: m.user!.firstName || "",
-      lastName: m.user!.lastName || "",
-      email: m.user!.email,
-      role: m.role,
-      profileImageUrl: m.user!.profileImageUrl,
-      isActive: m.isActive,
-    }));
 
   // Create new conversation mutation
   const createConversationMutation = useMutation({
@@ -248,7 +222,7 @@ export function AdminMessagesTab() {
     if (member.id === currentUserId) return false;
     if (!member.isActive) return false;
     if (!searchQuery) return true;
-    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
+    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase()) || 
            member.email.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -343,19 +317,19 @@ export function AdminMessagesTab() {
                             <AvatarImage src={member.profileImageUrl} alt={member.email} />
                           )}
                           <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(member.firstName, member.lastName, member.email)}
+                            {getInitials(member.firstName || undefined, member.lastName || undefined, member.email)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">
-                            {member.firstName} {member.lastName}
+                            {member.firstName || ''} {member.lastName || ''}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <Badge 
                               variant="secondary" 
-                              className={`text-xs ${getRoleBadgeColor(member.role)}`}
+                              className={`text-xs ${getRoleBadgeColor(member.role || undefined)}`}
                             >
-                              {formatRole(member.role)}
+                              {formatRole(member.role || undefined)}
                             </Badge>
                           </div>
                         </div>

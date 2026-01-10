@@ -10613,23 +10613,81 @@ Sitemap: ${baseUrl}/sitemap.xml
   
   wss.on('connection', async (ws: WebSocket, request) => {
     let userId: string | null = null;
+    let isAuthenticated = false;
     
     console.log('[WS] New WebSocket connection attempt');
     console.log('[WS] Headers:', request.headers.cookie ? 'Has cookie' : 'No cookie');
     
-    try {
-      // Parse cookies from upgrade request
-      const cookies = request.headers.cookie ? parseCookie(request.headers.cookie) : {};
-      const sessionCookieName = 'connect.sid';
-      const signedSessionId = cookies[sessionCookieName];
-      
-      console.log('[WS] Session cookie:', signedSessionId ? 'Found' : 'Missing');
-      
-      if (!signedSessionId) {
-        console.log('[WS] Rejecting: No session cookie');
-        ws.close(1008, 'Unauthorized: No session cookie');
-        return;
+    // Set up auth timeout - close connection if not authenticated within 10 seconds
+    const authTimeout = setTimeout(() => {
+      if (!isAuthenticated) {
+        console.log('[WS] Auth timeout - closing connection');
+        ws.close(1008, 'Authentication timeout');
       }
+    }, 10000);
+    
+    // Handle authentication via first message (Supabase token)
+    const handleAuthMessage = async (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        if (message.type === 'auth' && message.token) {
+          console.log('[WS] Received auth message with token');
+          
+          // Import supabaseAdmin dynamically to avoid circular deps
+          const { supabaseAdmin } = await import('./supabase');
+          
+          if (supabaseAdmin) {
+            try {
+              const { data: { user }, error } = await supabaseAdmin.auth.getUser(message.token);
+              if (!error && user) {
+                const dbUser = await storage.getUserByEmail(user.email!);
+                if (dbUser) {
+                  userId = dbUser.id;
+                  isAuthenticated = true;
+                  clearTimeout(authTimeout);
+                  wsClients.set(userId, ws);
+                  console.log('[WS] ✅ Supabase auth successful:', userId);
+                  ws.send(JSON.stringify({ type: 'auth_success', userId }));
+                  
+                  // Remove auth handler and set up regular message handler
+                  ws.removeListener('message', handleAuthMessage);
+                  setupWebSocketMessageHandler(ws, userId);
+                  return;
+                }
+              }
+            } catch (tokenError) {
+              console.log('[WS] Token verification failed');
+            }
+          }
+          
+          ws.send(JSON.stringify({ type: 'auth_failed', message: 'Invalid token' }));
+          ws.close(1008, 'Authentication failed');
+          return;
+        }
+        
+        // If first message is not auth, try session-based authentication
+        trySessionAuth();
+      } catch (error) {
+        console.error('[WS] Auth message parse error:', error);
+        ws.close(1008, 'Invalid auth message');
+      }
+    };
+    
+    const trySessionAuth = async () => {
+      try {
+        // Fallback: Try session cookie-based authentication
+        // Parse cookies from upgrade request
+        const cookies = request.headers.cookie ? parseCookie(request.headers.cookie) : {};
+        const sessionCookieName = 'connect.sid';
+        const signedSessionId = cookies[sessionCookieName];
+        
+        console.log('[WS] Session cookie:', signedSessionId ? 'Found' : 'Missing');
+        
+        if (!signedSessionId) {
+          console.log('[WS] No session cookie - waiting for auth message');
+          return; // Wait for auth message
+        }
       
       // Unsign the session cookie (Express uses cookie-signature)
       // Express prefixes signed cookies with 's:', so we need to strip it before unsigning
@@ -10667,16 +10725,31 @@ Sitemap: ${baseUrl}/sitemap.xml
       console.log('[WS] Session data structure:', {
         hasPassport: !!sessionData.passport,
         hasUser: !!sessionData.passport?.user,
+        hasSupabaseUser: !!sessionData.supabaseUser,
       });
       
-      if (!sessionData.passport || !sessionData.passport.user) {
-        console.log('[WS] Rejecting: Invalid or expired session - no passport data');
+      // Check for supabaseUser first (Supabase auth), then passport (legacy)
+      let sessionUser = null;
+      if (sessionData.supabaseUser) {
+        // Supabase auth - get user from our database by email
+        const supabaseEmail = sessionData.supabaseUser.email;
+        if (supabaseEmail) {
+          const dbUser = await storage.getUserByEmail(supabaseEmail);
+          if (dbUser) {
+            sessionUser = { claims: { sub: dbUser.id }, id: dbUser.id };
+          }
+        }
+      } else if (sessionData.passport?.user) {
+        sessionUser = sessionData.passport.user;
+      }
+      
+      if (!sessionUser) {
+        console.log('[WS] Rejecting: Invalid or expired session - no user data');
         ws.close(1008, 'Unauthorized: Invalid or expired session');
         return;
       }
       
-      // Get user from session (passport serializes the whole user object)
-      const sessionUser = sessionData.passport.user;
+      // Get user ID from session
       userId = sessionUser.claims?.sub || sessionUser.id;
       
       console.log('[WS] Extracted user ID:', userId || 'None');
@@ -10687,17 +10760,42 @@ Sitemap: ${baseUrl}/sitemap.xml
         return;
       }
       
-      // Successfully authenticated - register client
-      wsClients.set(userId, ws);
-      console.log(`[WS] ✅ Client authenticated successfully: ${userId}`);
-      ws.send(JSON.stringify({ type: 'auth_success', userId }));
-      
-    } catch (error) {
-      console.error('[WS] ❌ Authentication error:', error);
-      ws.close(1011, 'Authentication failed');
-      return;
-    }
+        // Successfully authenticated via session - register client
+        isAuthenticated = true;
+        clearTimeout(authTimeout);
+        wsClients.set(userId, ws);
+        console.log(`[WS] ✅ Session auth successful: ${userId}`);
+        ws.send(JSON.stringify({ type: 'auth_success', userId }));
+        
+        // Remove auth handler and set up regular message handler
+        ws.removeListener('message', handleAuthMessage);
+        setupWebSocketMessageHandler(ws, userId);
+      } catch (error) {
+        console.error('[WS] ❌ Session auth error:', error);
+      }
+    };
     
+    // Register initial auth message handler
+    ws.on('message', handleAuthMessage);
+    
+    // Try session auth immediately on connection
+    trySessionAuth();
+    
+    ws.on('close', () => {
+      clearTimeout(authTimeout);
+      if (userId) {
+        wsClients.delete(userId);
+        console.log(`[WS] Client disconnected: ${userId}`);
+      }
+    });
+    
+    ws.on('error', (error) => {
+      console.error('[WS] WebSocket error:', error);
+    });
+  });
+  
+  // Helper function to set up WebSocket message handling after authentication
+  function setupWebSocketMessageHandler(ws: WebSocket, userId: string) {
     ws.on('message', async (data: Buffer) => {
       if (!userId) {
         ws.send(JSON.stringify({ type: 'error', message: 'Not authenticated' }));
@@ -10819,21 +10917,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
       }
     });
-    
-    ws.on('close', () => {
-      if (userId) {
-        wsClients.delete(userId);
-        console.log(`WebSocket client disconnected: ${userId}`);
-      }
-    });
-    
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      if (userId) {
-        wsClients.delete(userId);
-      }
-    });
-  });
+  }
   
   console.log('WebSocket server initialized on path /ws with session-based authentication');
   
@@ -11666,6 +11750,74 @@ Sitemap: ${baseUrl}/sitemap.xml
       res.json(enrichedMembers);
     } catch (error: any) {
       console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+  
+  // Get all admin users for team messaging (based on userType, not adminTeamMembers table)
+  app.get("/api/admin/messaging/team", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get current user
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Only admin/platform_admin can access team messaging
+      if (!['admin', 'platform_admin'].includes(currentUser.userType)) {
+        return res.status(403).json({ message: "Admin access required for team messaging" });
+      }
+      
+      // Get all admin users (platform_admin and admin userTypes)
+      const allAdminUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          userType: users.userType,
+          roleId: users.roleId,
+          profileImageUrl: users.profileImageUrl,
+          isActive: users.isActive,
+        })
+        .from(users)
+        .where(
+          and(
+            or(
+              eq(users.userType, 'admin'),
+              eq(users.userType, 'platform_admin')
+            ),
+            eq(users.isActive, true)
+          )
+        );
+      
+      // Enrich with role names
+      const enrichedUsers = await Promise.all(
+        allAdminUsers.map(async (adminUser) => {
+          let roleName = null;
+          if (adminUser.roleId) {
+            const [role] = await db
+              .select({ name: roles.name })
+              .from(roles)
+              .where(eq(roles.id, adminUser.roleId))
+              .limit(1);
+            roleName = role?.name || null;
+          }
+          return {
+            ...adminUser,
+            role: roleName,
+          };
+        })
+      );
+      
+      // Filter out current user from the list
+      const otherAdmins = enrichedUsers.filter(u => u.id !== userId);
+      
+      res.json(otherAdmins);
+    } catch (error: any) {
+      console.error("Error fetching admin team for messaging:", error);
       res.status(500).json({ message: "Failed to fetch team members" });
     }
   });
