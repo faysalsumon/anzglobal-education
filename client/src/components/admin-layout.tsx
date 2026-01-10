@@ -49,10 +49,11 @@ export function AdminLayout({
   activeTab,
   breadcrumbTitle
 }: AdminLayoutProps) {
-  const { hasFullAdminAccess } = useAuth();
+  const { hasFullAdminAccess, isCTO, adminRole } = useAuth();
   const [location, setLocation] = useLocation();
   
   const derivedTab = activeTab || getTabFromPath(location);
+  const isMarketingExecutive = adminRole === "marketing_executive" || adminRole === "support_staff";
 
   const handleTabChange = (tab: string) => {
     const route = TAB_TO_ROUTE_MAP[tab];
@@ -74,7 +75,9 @@ export function AdminLayout({
       <AdminMegaSidebar 
         activeTab={derivedTab} 
         onTabChange={handleTabChange} 
-        hasFullAdminAccess={hasFullAdminAccess} 
+        hasFullAdminAccess={hasFullAdminAccess}
+        isCTO={isCTO}
+        isMarketingExecutive={isMarketingExecutive}
       />
 
       <div className="flex flex-col flex-1 lg:ml-0">
