@@ -12,24 +12,21 @@ const csrfConfig = doubleCsrf({
     // For Supabase-authenticated users, use their user ID/email as session identifier
     // This is set by supabaseAuthMiddleware which runs before this
     const supabaseUser = (req as any).supabaseUser;
-    if (supabaseUser?.email) {
-      return `supabase:${supabaseUser.email}`;
-    }
-    if (supabaseUser?.id) {
-      return `supabase:${supabaseUser.id}`;
+    const sessionId = supabaseUser?.email 
+      ? `supabase:${supabaseUser.email}`
+      : supabaseUser?.id 
+        ? `supabase:${supabaseUser.id}`
+        : (req as any).cookies?.["csrf-session"]
+          ? `anon:${(req as any).cookies["csrf-session"]}`
+          : `fallback:${(req as any).cookies?.["csrf"] || req.ip || "anonymous"}`;
+    
+    // Debug logging for CSRF issues
+    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+      console.log(`[CSRF-DEBUG] Session identifier for ${req.method} ${req.path}: ${sessionId}`);
+      console.log(`[CSRF-DEBUG] supabaseUser present: ${!!supabaseUser}, email: ${supabaseUser?.email || "none"}`);
     }
     
-    // For anonymous users, read the stable cookie-based identifier
-    // The cookie is set by csrfTokenEndpoint before token generation
-    const anonId = (req as any).cookies?.["csrf-session"];
-    if (anonId) {
-      return `anon:${anonId}`;
-    }
-    
-    // Fallback: use a temporary identifier based on cookies + IP
-    // This should rarely be used as csrfTokenEndpoint sets the cookie first
-    const fallbackId = (req as any).cookies?.["csrf"] || req.ip || "anonymous";
-    return `fallback:${fallbackId}`;
+    return sessionId;
   },
   cookieName: isProd ? "__Host-csrf" : "csrf",
   cookieOptions: {
@@ -119,6 +116,15 @@ export async function csrfTokenEndpoint(req: Request, res: Response) {
     (req as any).cookies = (req as any).cookies || {};
     (req as any).cookies["csrf-session"] = anonId;
   }
+  
+  // Debug logging for token generation
+  const debugSessionId = supabaseUser?.email 
+    ? `supabase:${supabaseUser.email}`
+    : anonId 
+      ? `anon:${anonId}`
+      : `fallback:${(req as any).cookies?.["csrf"] || req.ip || "anonymous"}`;
+  console.log(`[CSRF-DEBUG] Generating token for session: ${debugSessionId}`);
+  console.log(`[CSRF-DEBUG] supabaseUser present: ${!!supabaseUser}, email: ${supabaseUser?.email || "none"}`);
   
   const csrfToken = csrfConfig.generateCsrfToken(req, res);
   res.json({ csrfToken });
