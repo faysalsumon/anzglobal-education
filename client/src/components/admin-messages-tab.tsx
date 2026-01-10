@@ -252,7 +252,7 @@ export function AdminMessagesTab() {
                 {viewMode === "new-chat" ? "New Message" : "Team Messages"}
               </h2>
             </div>
-            {viewMode === "conversations" && (
+            {viewMode !== "new-chat" && (
               <Button
                 variant="outline"
                 size="sm"
