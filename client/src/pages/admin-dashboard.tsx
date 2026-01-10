@@ -1732,6 +1732,7 @@ export default function AdminDashboard() {
               
               {/* Platform-wide Notifications, Messages, Profile, and Logout */}
               <div className="flex items-center gap-2">
+                <NotificationBell />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1745,7 +1746,6 @@ export default function AdminDashboard() {
                 >
                   <MessageCircle className="h-5 w-5" />
                 </Button>
-                <NotificationBell />
                 
                 {/* Profile Avatar */}
                 <Tooltip delayDuration={0}>
