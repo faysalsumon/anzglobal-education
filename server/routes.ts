@@ -10875,15 +10875,29 @@ Sitemap: ${baseUrl}/sitemap.xml
             .where(eq(users.id, userId))
             .limit(1);
           
+          // Get recipient's user type to determine correct link
+          const recipientUser = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, recipientId))
+            .limit(1);
+          
           const senderName = senderUser[0] ? getUserDisplayName(senderUser[0]) : 'Someone';
           const messagePreview = content.length > 50 ? content.substring(0, 50) + '...' : content;
+          
+          // Route admins to admin dashboard, others to chat page
+          const recipientUserType = recipientUser[0]?.userType;
+          const isRecipientAdmin = recipientUserType === 'admin' || recipientUserType === 'platform_admin';
+          const notificationLink = isRecipientAdmin 
+            ? '/admin/dashboard#messages' 
+            : `/chat?conversationId=${conversationId}`;
           
           await db.insert(notifications).values({
             userId: recipientId,
             type: 'new_message',
             title: `New message from ${senderName}`,
             message: messagePreview,
-            link: `/chat?conversationId=${conversationId}`,
+            link: notificationLink,
             metadata: { conversationId, messageId: newMessage[0].id, senderId: userId },
           });
           
