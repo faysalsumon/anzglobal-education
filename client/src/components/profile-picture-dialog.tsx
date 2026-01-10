@@ -12,9 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useCsrfToken, getCsrfToken } from "@/hooks/useCsrf";
-import { supabase } from "@/lib/supabase";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Upload, Loader2 } from "lucide-react";
 
 interface ProfilePictureDialogProps {
@@ -25,7 +23,6 @@ interface ProfilePictureDialogProps {
 export function ProfilePictureDialog({ open, onOpenChange }: ProfilePictureDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { token: csrfToken } = useCsrfToken();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,35 +32,8 @@ export function ProfilePictureDialog({ open, onOpenChange }: ProfilePictureDialo
       const formData = new FormData();
       formData.append("photo", file);
 
-      // Build headers with CSRF token and Supabase auth
-      const headers: HeadersInit = {};
-      
-      // Get fresh CSRF token
-      const token = csrfToken || await getCsrfToken();
-      if (token) {
-        headers["x-csrf-token"] = token;
-      }
-      
-      // Get Supabase access token
-      if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
-      }
-
-      const response = await fetch("/api/admin/upload-profile-photo", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-        headers,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to upload profile picture");
-      }
-
+      // Use apiRequest which handles CSRF tokens and auth headers automatically
+      const response = await apiRequest("POST", "/api/admin/upload-profile-photo", formData);
       return response.json();
     },
     onSuccess: async () => {
