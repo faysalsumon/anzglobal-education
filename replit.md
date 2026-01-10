@@ -39,6 +39,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
   - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/roles/:roleId/permissions`, `/api/admin/role-management/users`, `/api/admin/users/:id/assign-role`
   - **Role Management UI**: CTO-only panel in admin dashboard (Management > Role Management) for viewing users with roles, assigning roles, and viewing role permissions
+  - **User Management UI**: Admin dashboard User Management tab with View/Edit user dialogs, inline branch assignment dropdowns, role/userType/isActive editing capabilities, and proper null handling for clearing fields
   - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types; server normalizes legacy 'university' values to 'institution_admin' on persist
   - **IMPORTANT**: UniversityRole 'super_admin' (for institution team hierarchy) is SEPARATE from AdminRole 'cto' (for platform admins). Do not confuse the two contexts.
 
