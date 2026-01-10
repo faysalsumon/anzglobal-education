@@ -44,7 +44,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes comprehensive application management with specific stage transitions and a document request system.
 - **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 - **Public Pages**: Landing page, "Study in Australia" page, course detail pages, institution pages, lead generation forms, and contact page.
-- **Dashboards**: Super Admin dashboard for CRUD operations with a comprehensive course creation dialog, and consistent UI/UX across Student, University, and Platform Admin dashboards.
+- **Dashboards**: Super Admin dashboard for CRUD operations with a comprehensive course creation dialog, and consistent UI/UX across Student, University, and Platform Admin dashboards. Admin Dashboard Overview provides at-a-glance stats (tasks, leads, applications, courses, institutions) and quick actions for team members.
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
 - **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs.
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval, schema-aware GPT-4o-mini extraction, and full-website crawling with AI-powered course detection and a review dashboard.
