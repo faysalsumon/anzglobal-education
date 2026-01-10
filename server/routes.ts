@@ -7650,7 +7650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
       
-      res.json({ count: unreadMessages.length });
+      res.json({ unreadCount: unreadMessages.length });
     } catch (error) {
       console.error("Error fetching unread count:", error);
       res.status(500).json({ message: "Failed to fetch unread count" });
