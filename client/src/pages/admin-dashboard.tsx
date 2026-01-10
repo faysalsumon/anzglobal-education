@@ -14,6 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -740,6 +746,35 @@ export default function AdminDashboard() {
     enabled: !!transferringInstitution,
   });
 
+  // Update institution publish status mutation
+  const updateInstitutionPublishStatusMutation = useMutation({
+    mutationFn: async ({ id, publishStatus }: { id: string; publishStatus: 'draft' | 'published' }) => {
+      const payload: any = { publishStatus };
+      if (publishStatus === 'published') {
+        payload.publishedAt = new Date().toISOString();
+        payload.publishedByUserId = user?.id;
+      } else {
+        payload.publishedAt = null;
+        payload.publishedByUserId = null;
+      }
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}`, payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      toast({
+        title: "Publish status updated",
+        description: `Institution has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Course mutations
   const createCourseMutation = useMutation({
     mutationFn: async (data: z.infer<typeof courseSchema>) => {
@@ -936,6 +971,35 @@ export default function AdminDashboard() {
       toast({
         title: "Status updated",
         description: "Course status has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update course publish status mutation
+  const updateCoursePublishStatusMutation = useMutation({
+    mutationFn: async ({ id, publishStatus }: { id: string; publishStatus: 'draft' | 'published' }) => {
+      const payload: any = { publishStatus };
+      if (publishStatus === 'published') {
+        payload.publishedAt = new Date().toISOString();
+        payload.publishedByUserId = user?.id;
+      } else {
+        payload.publishedAt = null;
+        payload.publishedByUserId = null;
+      }
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}`, payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      toast({
+        title: "Publish status updated",
+        description: `Course has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
       });
     },
     onError: (error: any) => {
@@ -1987,15 +2051,37 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell className="py-2">
-                            {institution.publishStatus === "published" ? (
-                              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
-                                Published
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                Draft
-                              </Badge>
-                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild disabled={updateInstitutionPublishStatusMutation.isPending}>
+                                <Button variant="ghost" size="sm" data-testid={`button-publish-status-institution-${institution.id}`}>
+                                  {institution.publishStatus === "published" ? (
+                                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer">
+                                      Published
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs cursor-pointer">
+                                      Draft
+                                    </Badge>
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start">
+                                <DropdownMenuItem
+                                  onClick={() => updateInstitutionPublishStatusMutation.mutate({ id: institution.id, publishStatus: 'draft' })}
+                                  disabled={institution.publishStatus === 'draft'}
+                                  data-testid={`menu-item-draft-institution-${institution.id}`}
+                                >
+                                  Save as Draft
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateInstitutionPublishStatusMutation.mutate({ id: institution.id, publishStatus: 'published' })}
+                                  disabled={institution.publishStatus === 'published'}
+                                  data-testid={`menu-item-publish-institution-${institution.id}`}
+                                >
+                                  Publish
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                           <TableCell className="py-2">
                             <Button
@@ -2323,15 +2409,37 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell className="py-2">
-                            {course.publishStatus === "published" ? (
-                              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
-                                Published
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">
-                                Draft
-                              </Badge>
-                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild disabled={updateCoursePublishStatusMutation.isPending}>
+                                <Button variant="ghost" size="sm" data-testid={`button-publish-status-course-${course.id}`}>
+                                  {course.publishStatus === "published" ? (
+                                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer">
+                                      Published
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs cursor-pointer">
+                                      Draft
+                                    </Badge>
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start">
+                                <DropdownMenuItem
+                                  onClick={() => updateCoursePublishStatusMutation.mutate({ id: course.id, publishStatus: 'draft' })}
+                                  disabled={course.publishStatus === 'draft'}
+                                  data-testid={`menu-item-draft-course-${course.id}`}
+                                >
+                                  Save as Draft
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateCoursePublishStatusMutation.mutate({ id: course.id, publishStatus: 'published' })}
+                                  disabled={course.publishStatus === 'published'}
+                                  data-testid={`menu-item-publish-course-${course.id}`}
+                                >
+                                  Publish
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {/* Only full admins can change status */}
