@@ -18,7 +18,7 @@ import {
   Contact,
   FileText,
   Briefcase,
-  LayoutGrid,
+  Layers,
   Settings,
   Wrench,
   ChevronLeft,
@@ -86,7 +86,7 @@ export function AdminMegaSidebar({
     {
       id: "cms",
       label: "CMS",
-      icon: LayoutGrid,
+      icon: Layers,
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
