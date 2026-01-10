@@ -1145,8 +1145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has university access OR admin access
+      // support_staff includes marketing_executive role which needs to upload logos
       const universityAccess = await checkUniversityAccess(userId, ['super_admin', 'admin']);
-      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      const adminAccess = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!universityAccess && !adminAccess) {
         return res.status(403).json({ message: "Unauthorized" });
