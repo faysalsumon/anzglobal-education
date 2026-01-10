@@ -70,6 +70,7 @@ import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
 import { 
   hasPermission, 
+  hasAnyPermission,
   isAdmin as checkIsAdmin, 
   isPlatformAdmin,
   getUserRole,
@@ -210,6 +211,53 @@ const updateAdminTeamMemberRoleSchema = z.object({
   role: z.enum(['super_admin', 'support_manager', 'support_staff', 'operations_staff']),
 });
 
+// === NEW PERMISSION-BASED ACCESS CONTROL ===
+// These functions replace the legacy role-based checkAdminAccess
+
+/**
+ * Check if user has admin dashboard access (based on userType only)
+ * Use this for basic dashboard endpoints that don't need specific permissions
+ */
+export async function checkAdminDashboardAccess(userId: string): Promise<{ userType: string; permissions: string[] } | null> {
+  const user = await storage.getUser(userId);
+  
+  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
+    return null;
+  }
+  
+  const permissions = await getUserPermissions(userId);
+  return { userType: user.userType, permissions };
+}
+
+/**
+ * Check if user has a specific permission
+ * Use this for endpoints that require specific permissions
+ */
+export async function checkPermission(userId: string, resource: string, action: string): Promise<boolean> {
+  const user = await storage.getUser(userId);
+  
+  // Must be admin or platform_admin userType
+  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
+    return false;
+  }
+  
+  return await hasPermission(userId, resource, action);
+}
+
+/**
+ * Check if user has any of the specified permissions
+ */
+export async function checkAnyPermission(userId: string, permissions: Array<{ resource: string; action: string }>): Promise<boolean> {
+  const user = await storage.getUser(userId);
+  
+  if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
+    return false;
+  }
+  
+  return await hasAnyPermission(userId, permissions);
+}
+
+
 async function checkUniversityAccess(
   userId: string,
   requiredRoles?: UniversityRole[]
@@ -237,13 +285,23 @@ async function checkUniversityAccess(
   return { university: universityData, role: teamMember.role as UniversityRole };
 }
 
+/**
+ * checkAdminAccess - Hybrid authorization using both new permission system and legacy fallbacks
+ * 
+ * When called WITHOUT requiredRoles: Grants access based on userType alone (for dashboard access)
+ * When called WITH requiredRoles: Checks role via new system first, then legacy fallbacks
+ * 
+ * Migration Path:
+ * - New users: Use roleId assignment with permission-based access
+ * - Legacy users: Still supported via admin_team_members table or users.role column
+ */
 export async function checkAdminAccess(
   userId: string,
   requiredRoles?: AdminRole[]
 ): Promise<{ role: AdminRole | null; roleName?: string; userType: string } | null> {
   const user = await storage.getUser(userId);
   
-  // Accept both 'admin' and 'platform_admin' userTypes as valid admin access
+  // Must be admin or platform_admin userType
   if (!user || (user.userType !== 'admin' && user.userType !== 'platform_admin')) {
     return null;
   }
@@ -251,19 +309,16 @@ export async function checkAdminAccess(
   const userType = user.userType;
   
   // If no requiredRoles specified, just check userType (for basic dashboard access)
-  // This allows ALL admin-type users to access dashboards without legacy role assignments
   if (!requiredRoles || requiredRoles.length === 0) {
-    // Try to determine the user's actual role for return value
-    // Important: We return the ACTUAL role, never fabricate one
+    // Try to determine actual role for informational purposes
     let determinedRole: AdminRole | null = null;
     let roleName: string | undefined;
     
-    // Check role from roles table first (new system)
+    // Check new roles table first
     if (user.roleId) {
       const userRole = await getUserRole(userId);
       if (userRole) {
         roleName = userRole.name;
-        // Map new role names to legacy AdminRole type
         const roleToLegacy: Record<string, AdminRole> = {
           'super_admin': 'super_admin',
           'ceo': 'super_admin',
@@ -276,11 +331,11 @@ export async function checkAdminAccess(
         determinedRole = roleToLegacy[roleName] || null;
       }
     }
-    // Check legacy role in users table
+    // LEGACY: Check users.role column
     else if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
       determinedRole = user.role as AdminRole;
     }
-    // Check admin_team_members table
+    // LEGACY: Check admin_team_members table
     else {
       const adminMember = await storage.getAdminTeamMemberByUserId(userId);
       if (adminMember?.isActive) {
@@ -288,62 +343,87 @@ export async function checkAdminAccess(
       }
     }
     
-    // For basic access (no requiredRoles), access is granted based on userType alone
-    // The role field can be null if user has no assigned role - this is intentional
-    // Downstream code must check for null role if it needs role-specific behavior
     return { role: determinedRole, roleName, userType };
   }
   
-  // When requiredRoles is specified, enforce role-based filtering for sensitive actions
+  // When requiredRoles is specified, check using multi-tier approach:
+  // 1. New permission system (via roleId)
+  // 2. Legacy users.role column
+  // 3. Legacy admin_team_members table
   
-  // Check role from roles table using roleId (new system)
+  // TIER 1: Check new roles table using roleId
+  // Complete mapping from new role system to legacy AdminRole types
   if (user.roleId) {
     const userRole = await getUserRole(userId);
     if (userRole) {
       const roleName = userRole.name;
       
-      // Role mapping: New roles -> Legacy AdminRole types
+      // COMPLETE mapping of all roles from the roles table to legacy AdminRole types
+      // This mapping is based on the roles table in the database:
+      // super_admin, ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, university_rep
       const roleToLegacy: Record<string, AdminRole> = {
+        // Super Admin level - full access
         'super_admin': 'super_admin',
         'ceo': 'super_admin',
+        
+        // Operations level - finance, reports
         'cfo': 'operations_staff',
+        
+        // Manager level - team management, application assignment
         'branch_manager': 'support_manager',
+        
+        // Staff level - general access
         'marketing_executive': 'support_staff',
         'senior_consultant': 'support_staff',
         'junior_consultant': 'support_staff',
+        
+        // Non-admin roles (for completeness - these users won't pass userType check anyway)
+        'student': 'support_staff',
+        'university_rep': 'support_staff',
+        'institution_rep': 'support_staff',
       };
       
-      const legacyRole = roleToLegacy[roleName] || 'support_staff';
+      const legacyRole = roleToLegacy[roleName];
       
-      if (!requiredRoles.includes(legacyRole)) {
+      if (legacyRole) {
+        // Role has a legacy mapping - do strict check
+        if (requiredRoles.includes(legacyRole)) {
+          return { role: legacyRole, roleName, userType };
+        }
+        // Mapped role doesn't match required roles - deny
         return null;
       }
       
-      return { role: legacyRole, roleName, userType };
-    }
-  }
-  
-  // LEGACY: Check if user has role directly in users table
-  if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
-    const userRole = user.role as AdminRole;
-    if (!requiredRoles.includes(userRole)) {
+      // FALLBACK for unmapped roles: For admin-type users with roleId but no mapping,
+      // grant access if requiredRoles includes 'support_staff' (most permissive admin level)
+      // This ensures new roles added to the database don't break access until properly mapped
+      console.log(`[RBAC] User ${userId} has unmapped role '${roleName}', using support_staff fallback`);
+      if (requiredRoles.includes('support_staff')) {
+        return { role: 'support_staff', roleName, userType };
+      }
+      // If more restrictive role is required, deny access (safe default)
       return null;
     }
-    return { role: userRole, userType };
   }
   
-  // LEGACY: Otherwise check admin_team_members table
+  // TIER 2: LEGACY - Check users.role column
+  if (user.role && ['super_admin', 'platform_admin', 'support_manager', 'support_staff', 'operations_staff'].includes(user.role)) {
+    const userRole = user.role as AdminRole;
+    if (requiredRoles.includes(userRole)) {
+      return { role: userRole, userType };
+    }
+    return null;
+  }
+  
+  // TIER 3: LEGACY - Check admin_team_members table
   const adminMember = await storage.getAdminTeamMemberByUserId(userId);
-  if (!adminMember || !adminMember.isActive) {
-    // No legacy role found - if user is admin type but has no role, deny access for role-gated endpoints
-    return null;
+  if (adminMember?.isActive) {
+    if (requiredRoles.includes(adminMember.role as AdminRole)) {
+      return { role: adminMember.role as AdminRole, userType };
+    }
   }
   
-  if (!requiredRoles.includes(adminMember.role as AdminRole)) {
-    return null;
-  }
-  
-  return { role: adminMember.role as AdminRole, userType };
+  return null;
 }
 
 // Configure multer for file uploads
