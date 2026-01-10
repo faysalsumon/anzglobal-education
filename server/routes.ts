@@ -6614,7 +6614,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/super-admin/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager']);
+      // support_staff includes marketing_executive role which needs to update courses
+      const access = await checkAdminAccess(userId, ['super_admin', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
