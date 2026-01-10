@@ -29,6 +29,7 @@ import {
   MapPin,
   LayoutDashboard,
   UserCircle,
+  MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -264,10 +265,31 @@ export function AdminMegaSidebar({
                 );
               })}
 
-              {/* Separator before Profile */}
+              {/* Separator before Messages and Profile */}
               <div className="w-8 h-px bg-border my-1" />
 
-              {/* Profile Button - After Tools */}
+              {/* Messages Button */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-12 h-12 rounded-xl transition-all"
+                    onClick={() => {
+                      const chatWidget = document.querySelector('[data-testid="chat-widget-toggle"]') as HTMLButtonElement;
+                      if (chatWidget) chatWidget.click();
+                    }}
+                    data-testid="button-sidebar-messages"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  Messages
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Profile Button - After Messages */}
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
