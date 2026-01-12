@@ -2829,6 +2829,17 @@ export default function AdminDashboard() {
           <AdminMessagesTab />
         )}
 
+              </div>
+              {/* End of space-y-4 md:space-y-5 */}
+            </div>
+            {/* End of space-y-4 */}
+          </div>
+          {/* End of mx-auto container */}
+        </div>
+        {/* End of overflow-y-auto */}
+      </div>
+      {/* End of flex-col flex-1 */}
+
       {/* AI Institution Data Extractor Dialog */}
       <Dialog open={aiExtractorDialogOpen} onOpenChange={setAiExtractorDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
