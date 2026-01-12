@@ -1,0 +1,755 @@
+import { useState, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ArrowLeft, Upload, Save, FileText, Globe } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
+import { GalleryImageManager } from "@/components/gallery-image-manager";
+
+const optionalPositiveInt = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().positive().optional()
+);
+
+const optionalYear = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().int().min(1800).max(2100).optional()
+);
+
+const optionalPercentage = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : val),
+  z.coerce.number().min(0).max(100).optional()
+);
+
+const institutionSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  country: z.string().min(1, "Country is required"),
+  description: z.string().optional(),
+  contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  contactPhone: z.string().optional(),
+  website: z.string().url("Invalid URL").optional().or(z.literal("")),
+  providerType: z.string().min(1, "Provider type is required"),
+  numberOfCampuses: optionalPositiveInt,
+  establishedYear: optionalYear,
+  scholarshipPercentageMin: optionalPercentage,
+  scholarshipPercentageMax: optionalPercentage,
+  logo: z.string().optional(),
+  topDisciplines: z.string().optional(),
+  topCourses: z.string().optional(),
+  institutionGallery: z.array(z.string()).optional(),
+  campusAddresses: z.array(z.object({
+    name: z.string().optional(),
+    address: z.string(),
+    city: z.string(),
+    state: z.string(),
+    postcode: z.string(),
+    country: z.string(),
+  })).optional(),
+  hasScholarship: z.boolean().optional(),
+});
+
+const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
+
+interface Institution {
+  id: string;
+  name: string;
+  description: string | null;
+  country: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  providerType: string | null;
+  numberOfCampuses: number | null;
+  establishedYear: number | null;
+  scholarshipPercentageMin: number | null;
+  scholarshipPercentageMax: number | null;
+  topDisciplines: string[] | null;
+  logo: string | null;
+  topCourses: string[] | null;
+  institutionGallery: string[] | null;
+  campusAddresses: Array<{
+    name?: string;
+    address: string;
+    city: string;
+    state: string;
+    postcode: string;
+    country: string;
+  }> | null;
+  approvalStatus: string | null;
+  publishStatus?: string | null;
+  isActive: boolean;
+}
+
+interface InstitutionEditorProps {
+  institution?: Institution | null;
+  onBack: () => void;
+  userId?: string;
+}
+
+export function InstitutionEditor({ institution, onBack, userId }: InstitutionEditorProps) {
+  const { toast } = useToast();
+  const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasScholarship = institution ? (
+    institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMin !== undefined ||
+    institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax !== undefined
+  ) : false;
+
+  const form = useForm<z.infer<typeof institutionSchema>>({
+    resolver: zodResolver(institutionSchema),
+    defaultValues: {
+      name: institution?.name || "",
+      country: institution?.country || "",
+      description: institution?.description || "",
+      contactEmail: institution?.contactEmail || "",
+      contactPhone: institution?.contactPhone || "",
+      website: institution?.website || "",
+      providerType: institution?.providerType || "",
+      numberOfCampuses: institution?.numberOfCampuses as any,
+      establishedYear: institution?.establishedYear as any,
+      scholarshipPercentageMin: institution?.scholarshipPercentageMin as any,
+      scholarshipPercentageMax: institution?.scholarshipPercentageMax as any,
+      logo: institution?.logo || "",
+      topDisciplines: institution?.topDisciplines?.join(", ") || "",
+      topCourses: institution?.topCourses?.join(", ") || "",
+      institutionGallery: institution?.institutionGallery || [],
+      campusAddresses: institution?.campusAddresses || [],
+      hasScholarship,
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/super-admin/universities", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/universities"] });
+      toast({ title: "Success", description: "Institution created successfully" });
+      onBack();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/super-admin/universities/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/universities"] });
+      toast({ title: "Success", description: "Institution updated successfully" });
+      onBack();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    try {
+      const response = await apiRequest("POST", "/api/university/upload-logo", formData);
+      const data = await response.json();
+      form.setValue("logo", data.logoPath);
+      setLogoPreview(data.logoPath);
+      toast({ title: "Logo uploaded", description: "Institution logo has been uploaded successfully." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
+    const apiData: any = {
+      ...data,
+      topDisciplines: data.topDisciplines 
+        ? data.topDisciplines.split(',').map(d => d.trim()).filter(Boolean)
+        : undefined,
+      topCourses: data.topCourses
+        ? data.topCourses.split(',').map(c => c.trim()).filter(Boolean)
+        : undefined,
+      scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
+      scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
+      publishStatus,
+      ...(publishStatus === 'published' && {
+        publishedAt: new Date().toISOString(),
+        publishedByUserId: userId,
+      }),
+    };
+    
+    delete apiData.hasScholarship;
+    
+    if (institution?.id) {
+      updateMutation.mutate({ id: institution.id, data: apiData });
+    } else {
+      createMutation.mutate(apiData);
+    }
+  };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onBack}
+            data-testid="button-back-to-institutions"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Institutions
+          </Button>
+          <div className="h-6 w-px bg-border" />
+          <h1 className="text-lg font-semibold">
+            {institution ? "Edit Institution" : "Create Institution"}
+          </h1>
+          {institution?.publishStatus && (
+            <Badge variant={institution.publishStatus === 'published' ? 'default' : 'outline'}>
+              {institution.publishStatus === 'published' ? 'Published' : 'Draft'}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={onBack}
+            disabled={isSubmitting}
+            data-testid="button-discard"
+          >
+            Discard
+          </Button>
+          <Button 
+            variant="secondary"
+            disabled={isSubmitting}
+            onClick={async () => {
+              const formData = form.getValues();
+              const isValid = await form.trigger();
+              if (isValid) {
+                handleSubmit(formData, 'draft');
+              } else {
+                const errors = form.formState.errors;
+                const errorFields = Object.keys(errors).join(', ');
+                toast({
+                  title: "Validation Error",
+                  description: `Please fix the following fields: ${errorFields}`,
+                  variant: "destructive",
+                });
+              }
+            }}
+            data-testid="button-save-draft"
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            {isSubmitting ? "Saving..." : "Save Draft"}
+          </Button>
+          <Button 
+            disabled={isSubmitting}
+            onClick={async () => {
+              const formData = form.getValues();
+              const isValid = await form.trigger();
+              if (isValid) {
+                handleSubmit(formData, 'published');
+              } else {
+                const errors = form.formState.errors;
+                const errorFields = Object.keys(errors).join(', ');
+                toast({
+                  title: "Validation Error",
+                  description: `Please fix the following fields: ${errorFields}`,
+                  variant: "destructive",
+                });
+              }
+            }}
+            data-testid="button-publish"
+          >
+            <Globe className="h-4 w-4 mr-1" />
+            {isSubmitting ? "Publishing..." : "Publish"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        <Form {...form}>
+          <form className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Basic Information</CardTitle>
+                    <CardDescription>Essential details about the institution</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Institution Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., University of Sydney" data-testid="input-institution-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Australia" data-testid="input-institution-country" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="providerType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Provider Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-institution-providerType">
+                                  <SelectValue placeholder="Select provider type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {PROVIDER_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} placeholder="Brief description of the institution" rows={4} data-testid="input-institution-description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="establishedYear"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Established Year</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="1950" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-institution-establishedYear" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="numberOfCampuses"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Campuses</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" placeholder="1" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-institution-numberOfCampuses" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contact Information</CardTitle>
+                    <CardDescription>How to reach the institution</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="contactEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" placeholder="contact@university.edu" data-testid="input-institution-contactEmail" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="contactPhone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="+61 2 1234 5678" data-testid="input-institution-contactPhone" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="https://university.edu" data-testid="input-institution-website" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Academic Information</CardTitle>
+                    <CardDescription>Disciplines, courses, and scholarships</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="topDisciplines"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Top Disciplines (comma-separated)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Computer Science, Business, Engineering" data-testid="input-institution-topDisciplines" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="topCourses"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Top Courses (comma-separated)</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Bachelor of IT, Master of Business, Diploma in Nursing" data-testid="input-institution-topCourses" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="space-y-3 pt-2">
+                      <FormLabel>Scholarships Available?</FormLabel>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={form.watch("hasScholarship") === true ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => form.setValue("hasScholarship", true)}
+                          data-testid="button-institution-scholarshipYes"
+                        >
+                          Yes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={form.watch("hasScholarship") === false ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            form.setValue("hasScholarship", false);
+                            form.setValue("scholarshipPercentageMin", "" as any);
+                            form.setValue("scholarshipPercentageMax", "" as any);
+                          }}
+                          data-testid="button-institution-scholarshipNo"
+                        >
+                          No
+                        </Button>
+                      </div>
+                      {form.watch("hasScholarship") === true && (
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          <FormField
+                            control={form.control}
+                            name="scholarshipPercentageMin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Scholarship Min %</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-institution-scholarshipPercentageMin" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="scholarshipPercentageMax"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Scholarship Max %</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="number" placeholder="20" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-institution-scholarshipPercentageMax" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {form.watch("numberOfCampuses") && Number(form.watch("numberOfCampuses")) > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Campus Addresses</CardTitle>
+                      <CardDescription>
+                        {form.watch("numberOfCampuses")} campus{Number(form.watch("numberOfCampuses") ?? 0) > 1 ? "es" : ""} to configure
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {Array.from({ length: Number(form.watch("numberOfCampuses") ?? 0) }).map((_, index) => {
+                        const campusAddresses = form.watch("campusAddresses") || [];
+                        const currentAddress = campusAddresses[index] || { name: "", address: "", city: "", state: "", postcode: "", country: "" };
+
+                        return (
+                          <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                            <h4 className="font-medium text-sm">Campus {index + 1}</h4>
+                            
+                            <div className="space-y-2">
+                              <FormLabel>Campus Name</FormLabel>
+                              <Input
+                                value={currentAddress.name || ""}
+                                onChange={(e) => {
+                                  const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                  newAddresses[index] = { ...currentAddress, name: e.target.value };
+                                  form.setValue("campusAddresses", newAddresses);
+                                }}
+                                placeholder="e.g., Sydney Campus, Melbourne CBD"
+                                data-testid={`input-institution-campusName-${index}`}
+                              />
+                              <FormDescription className="text-xs">
+                                A friendly name to identify this campus
+                              </FormDescription>
+                            </div>
+
+                            <div className="space-y-2">
+                              <FormLabel>Street Address</FormLabel>
+                              <GoogleAddressAutocomplete
+                                value={currentAddress.address || ""}
+                                onAddressSelect={(components: AddressComponents) => {
+                                  const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                  newAddresses[index] = {
+                                    ...currentAddress,
+                                    address: components.address,
+                                    city: components.city,
+                                    state: components.state,
+                                    postcode: components.postcode,
+                                    country: components.country,
+                                  };
+                                  form.setValue("campusAddresses", newAddresses);
+                                }}
+                                onInputChange={(value: string) => {
+                                  const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                  newAddresses[index] = { ...currentAddress, address: value };
+                                  form.setValue("campusAddresses", newAddresses);
+                                }}
+                                placeholder="Start typing an address..."
+                                testId={`input-institution-campusAddress-${index}`}
+                              />
+                              <FormDescription className="text-xs">
+                                Start typing to search for an address, or enter manually
+                              </FormDescription>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <FormLabel>City</FormLabel>
+                                <Input
+                                  value={currentAddress.city || ""}
+                                  onChange={(e) => {
+                                    const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                    newAddresses[index] = { ...currentAddress, city: e.target.value };
+                                    form.setValue("campusAddresses", newAddresses);
+                                  }}
+                                  placeholder="Sydney"
+                                  data-testid={`input-institution-campusCity-${index}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <FormLabel>State/Province</FormLabel>
+                                <Input
+                                  value={currentAddress.state || ""}
+                                  onChange={(e) => {
+                                    const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                    newAddresses[index] = { ...currentAddress, state: e.target.value };
+                                    form.setValue("campusAddresses", newAddresses);
+                                  }}
+                                  placeholder="NSW"
+                                  data-testid={`input-institution-campusState-${index}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <FormLabel>Postcode</FormLabel>
+                                <Input
+                                  value={currentAddress.postcode || ""}
+                                  onChange={(e) => {
+                                    const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                    newAddresses[index] = { ...currentAddress, postcode: e.target.value };
+                                    form.setValue("campusAddresses", newAddresses);
+                                  }}
+                                  placeholder="2000"
+                                  data-testid={`input-institution-campusPostcode-${index}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <FormLabel>Country</FormLabel>
+                                <Input
+                                  value={currentAddress.country || ""}
+                                  onChange={(e) => {
+                                    const newAddresses = [...(form.watch("campusAddresses") || [])];
+                                    newAddresses[index] = { ...currentAddress, country: e.target.value };
+                                    form.setValue("campusAddresses", newAddresses);
+                                  }}
+                                  placeholder="Australia"
+                                  data-testid={`input-institution-campusCountry-${index}`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Logo</CardTitle>
+                    <CardDescription>Upload institution logo (resized to 160x160px)</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col items-center gap-4">
+                      {logoPreview && (
+                        <div className="w-24 h-24 rounded-full border border-border bg-background flex items-center justify-center overflow-hidden">
+                          <img
+                            src={logoPreview}
+                            alt="Institution logo"
+                            className="w-full h-full object-cover"
+                            data-testid="img-institution-logo-preview"
+                          />
+                        </div>
+                      )}
+                      <input
+                        ref={logoFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        data-testid="input-institution-logo-file"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => logoFileInputRef.current?.click()}
+                        className="w-full"
+                        data-testid="button-institution-upload-logo"
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {logoPreview ? "Change Logo" : "Upload Logo"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gallery Images</CardTitle>
+                    <CardDescription>Campus and facility photos</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <GalleryImageManager
+                      value={form.watch("institutionGallery") || []}
+                      onChange={(urls) => form.setValue("institutionGallery", urls)}
+                      institutionName={form.watch("name")}
+                      institutionLocation={form.watch("country")}
+                      institutionProviderType={form.watch("providerType")}
+                    />
+                  </CardContent>
+                </Card>
+
+                {institution && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Status</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Approval Status</span>
+                        <Badge variant={institution.approvalStatus === 'approved' ? 'default' : 'outline'}>
+                          {institution.approvalStatus || 'Pending'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Active</span>
+                        <Badge variant={institution.isActive ? 'default' : 'secondary'}>
+                          {institution.isActive ? 'Yes' : 'No'}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </form>
+        </Form>
+      </div>
+    </div>
+  );
+}
