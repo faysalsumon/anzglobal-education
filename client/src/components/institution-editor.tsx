@@ -208,81 +208,88 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
   return (
     <div className="h-full flex flex-col">
-      <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onBack}
-            data-testid="button-back-to-institutions"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Institutions
-          </Button>
-          <div className="h-6 w-px bg-border" />
-          <h1 className="text-lg font-semibold">
-            {institution ? "Edit Institution" : "Create Institution"}
-          </h1>
-          {institution?.publishStatus && (
-            <Badge variant={institution.publishStatus === 'published' ? 'default' : 'outline'}>
-              {institution.publishStatus === 'published' ? 'Published' : 'Draft'}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={onBack}
-            disabled={isSubmitting}
-            data-testid="button-discard"
-          >
-            Discard
-          </Button>
-          <Button 
-            variant="secondary"
-            disabled={isSubmitting}
-            onClick={async () => {
-              const formData = form.getValues();
-              const isValid = await form.trigger();
-              if (isValid) {
-                handleSubmit(formData, 'draft');
-              } else {
-                const errors = form.formState.errors;
-                const errorFields = Object.keys(errors).join(', ');
-                toast({
-                  title: "Validation Error",
-                  description: `Please fix the following fields: ${errorFields}`,
-                  variant: "destructive",
-                });
-              }
-            }}
-            data-testid="button-save-draft"
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            {isSubmitting ? "Saving..." : "Save Draft"}
-          </Button>
-          <Button 
-            disabled={isSubmitting}
-            onClick={async () => {
-              const formData = form.getValues();
-              const isValid = await form.trigger();
-              if (isValid) {
-                handleSubmit(formData, 'published');
-              } else {
-                const errors = form.formState.errors;
-                const errorFields = Object.keys(errors).join(', ');
-                toast({
-                  title: "Validation Error",
-                  description: `Please fix the following fields: ${errorFields}`,
-                  variant: "destructive",
-                });
-              }
-            }}
-            data-testid="button-publish"
-          >
-            <Globe className="h-4 w-4 mr-1" />
-            {isSubmitting ? "Publishing..." : "Publish"}
-          </Button>
+      <div className="sticky top-0 z-10 bg-background border-b px-4 sm:px-6 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onBack}
+              data-testid="button-back-to-institutions"
+            >
+              <ArrowLeft className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Back to Institutions</span>
+            </Button>
+            <div className="hidden sm:block h-6 w-px bg-border" />
+            <h1 className="text-base sm:text-lg font-semibold">
+              {institution?.id ? "Edit Institution" : "Create Institution"}
+            </h1>
+            {institution?.publishStatus && (
+              <Badge variant={institution.publishStatus === 'published' ? 'default' : 'outline'}>
+                {institution.publishStatus === 'published' ? 'Published' : 'Draft'}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onBack}
+              disabled={isSubmitting}
+              data-testid="button-discard"
+            >
+              Discard
+            </Button>
+            <Button 
+              variant="secondary"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={async () => {
+                const formData = form.getValues();
+                const isValid = await form.trigger();
+                if (isValid) {
+                  handleSubmit(formData, 'draft');
+                } else {
+                  const errors = form.formState.errors;
+                  const errorFields = Object.keys(errors).join(', ');
+                  toast({
+                    title: "Validation Error",
+                    description: `Please fix the following fields: ${errorFields}`,
+                    variant: "destructive",
+                  });
+                }
+              }}
+              data-testid="button-save-draft"
+            >
+              <FileText className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">{isSubmitting ? "Saving..." : "Save Draft"}</span>
+              <span className="sm:hidden">{isSubmitting ? "..." : "Save"}</span>
+            </Button>
+            <Button 
+              size="sm"
+              disabled={isSubmitting}
+              onClick={async () => {
+                const formData = form.getValues();
+                const isValid = await form.trigger();
+                if (isValid) {
+                  handleSubmit(formData, 'published');
+                } else {
+                  const errors = form.formState.errors;
+                  const errorFields = Object.keys(errors).join(', ');
+                  toast({
+                    title: "Validation Error",
+                    description: `Please fix the following fields: ${errorFields}`,
+                    variant: "destructive",
+                  });
+                }
+              }}
+              data-testid="button-publish"
+            >
+              <Globe className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">{isSubmitting ? "Publishing..." : "Publish"}</span>
+              <span className="sm:hidden">{isSubmitting ? "..." : "Publish"}</span>
+            </Button>
+          </div>
         </div>
       </div>
 
