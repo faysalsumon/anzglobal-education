@@ -65,6 +65,12 @@ import {
   updateSiteSettingSchema,
   insertContentSnippetSchema,
   updateContentSnippetSchema,
+  // Tags imports
+  tags,
+  courseTags,
+  insertTagSchema,
+  updateTagSchema,
+  insertCourseTagSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
@@ -1749,9 +1755,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const { discipline, universityId } = req.query;
+      const { discipline, universityId, tags: tagSlugs } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
+      
+      // Parse tag slugs from query (can be string or string[])
+      let requestedTagSlugs: string[] = [];
+      if (tagSlugs) {
+        if (Array.isArray(tagSlugs)) {
+          requestedTagSlugs = tagSlugs.filter(t => typeof t === 'string') as string[];
+        } else if (typeof tagSlugs === 'string') {
+          requestedTagSlugs = [tagSlugs];
+        }
+      }
+      
+      // If tags are requested, get course IDs that have those tags
+      let courseIdsWithTags: Set<string> | null = null;
+      if (requestedTagSlugs.length > 0) {
+        // Find tag IDs from slugs
+        const matchingTags = await db
+          .select({ id: tags.id })
+          .from(tags)
+          .where(inArray(tags.slug, requestedTagSlugs));
+        const tagIds = matchingTags.map(t => t.id);
+        
+        if (tagIds.length > 0) {
+          // Find courses that have ALL the requested tags
+          const courseTagRecords = await db
+            .select({ courseId: courseTags.courseId, tagId: courseTags.tagId })
+            .from(courseTags)
+            .where(inArray(courseTags.tagId, tagIds));
+          
+          // Group by courseId and count matching tags
+          const courseTagCounts: Record<string, number> = {};
+          courseTagRecords.forEach(ct => {
+            courseTagCounts[ct.courseId] = (courseTagCounts[ct.courseId] || 0) + 1;
+          });
+          
+          // Only include courses that have ALL requested tags
+          courseIdsWithTags = new Set(
+            Object.entries(courseTagCounts)
+              .filter(([_, count]) => count >= tagIds.length)
+              .map(([courseId]) => courseId)
+          );
+        } else {
+          courseIdsWithTags = new Set(); // No matching tags means no courses
+        }
+      }
       
       // Filter to only show published and approved courses from published and approved institutions
       let courses = allCourses.filter(course => {
@@ -1767,6 +1817,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!courseIsPublic || !institutionIsPublic) return false;
         
+        // Apply tag filter if provided
+        if (courseIdsWithTags !== null && !courseIdsWithTags.has(course.id)) {
+          return false;
+        }
+        
         // Apply universityId filter if provided
         if (universityId && typeof universityId === 'string') {
           if (course.universityId !== universityId) return false;
@@ -1780,7 +1835,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       });
       
-      res.json(courses);
+      // Fetch tags for all courses
+      const courseIds = courses.map(c => c.id);
+      let courseTagsMap: Record<string, Array<{ id: number; name: string; slug: string; category: string; color: string | null }>> = {};
+      
+      if (courseIds.length > 0) {
+        const courseTagsWithDetails = await db
+          .select({
+            courseId: courseTags.courseId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagSlug: tags.slug,
+            tagCategory: tags.category,
+            tagColor: tags.color,
+          })
+          .from(courseTags)
+          .innerJoin(tags, eq(courseTags.tagId, tags.id))
+          .where(and(inArray(courseTags.courseId, courseIds), eq(tags.isActive, true)));
+        
+        courseTagsWithDetails.forEach(ct => {
+          if (!courseTagsMap[ct.courseId]) {
+            courseTagsMap[ct.courseId] = [];
+          }
+          courseTagsMap[ct.courseId].push({
+            id: ct.tagId,
+            name: ct.tagName,
+            slug: ct.tagSlug,
+            category: ct.tagCategory,
+            color: ct.tagColor,
+          });
+        });
+      }
+      
+      // Attach tags to each course
+      const coursesWithTags = courses.map(course => ({
+        ...course,
+        tags: courseTagsMap[course.id] || [],
+      }));
+      
+      res.json(coursesWithTags);
     } catch (error) {
       console.error("Error fetching courses:", error);
       res.status(500).json({ message: "Failed to fetch courses" });
@@ -12726,6 +12819,367 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END CMS CONTENT BLOCKS API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // COURSE TAGS API ENDPOINTS
+  // E-commerce style tagging for course categorization
+  // ============================================
+
+  // Get all tags (with optional category filter)
+  app.get("/api/admin/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const { category, includeInactive } = req.query;
+      
+      // Build conditions array
+      const conditions = [];
+      if (category) {
+        conditions.push(eq(tags.category, category as string));
+      }
+      if (!includeInactive) {
+        conditions.push(eq(tags.isActive, true));
+      }
+      
+      const allTags = conditions.length > 0
+        ? await db.select().from(tags).where(and(...conditions)).orderBy(tags.category, tags.displayOrder, tags.name)
+        : await db.select().from(tags).orderBy(tags.category, tags.displayOrder, tags.name);
+      
+      // Get usage counts for each tag
+      const tagsWithCounts = await Promise.all(
+        allTags.map(async (tag) => {
+          const countResult = await db
+            .select({ count: dsql<number>`count(*)::int` })
+            .from(courseTags)
+            .where(eq(courseTags.tagId, tag.id));
+          return {
+            ...tag,
+            courseCount: countResult[0]?.count || 0,
+          };
+        })
+      );
+      
+      res.json(tagsWithCounts);
+    } catch (error: any) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ message: "Failed to fetch tags" });
+    }
+  });
+
+  // Get tags grouped by category (for course editor picker)
+  app.get("/api/admin/tags/grouped", isAuthenticated, async (req: any, res) => {
+    try {
+      const allTags = await db
+        .select()
+        .from(tags)
+        .where(eq(tags.isActive, true))
+        .orderBy(tags.category, tags.displayOrder, tags.name);
+      
+      // Group by category
+      const grouped: Record<string, typeof allTags> = {};
+      allTags.forEach(tag => {
+        if (!grouped[tag.category]) {
+          grouped[tag.category] = [];
+        }
+        grouped[tag.category].push(tag);
+      });
+      
+      res.json(grouped);
+    } catch (error: any) {
+      console.error("Error fetching grouped tags:", error);
+      res.status(500).json({ message: "Failed to fetch tags" });
+    }
+  });
+
+  // Public endpoint - get all active tags
+  app.get("/api/public/tags", async (req, res) => {
+    try {
+      const { category } = req.query;
+      
+      const allTags = category
+        ? await db.select().from(tags).where(and(eq(tags.isActive, true), eq(tags.category, category as string))).orderBy(tags.category, tags.displayOrder, tags.name)
+        : await db.select().from(tags).where(eq(tags.isActive, true)).orderBy(tags.category, tags.displayOrder, tags.name);
+      
+      res.json(allTags);
+    } catch (error: any) {
+      console.error("Error fetching public tags:", error);
+      res.status(500).json({ message: "Failed to fetch tags" });
+    }
+  });
+
+  // Get single tag by ID
+  app.get("/api/admin/tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const tag = await db.select().from(tags).where(eq(tags.id, req.params.id)).limit(1);
+      if (!tag.length) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      res.json(tag[0]);
+    } catch (error: any) {
+      console.error("Error fetching tag:", error);
+      res.status(500).json({ message: "Failed to fetch tag" });
+    }
+  });
+
+  // Create new tag (admin only)
+  app.post("/api/admin/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const validatedData = insertTagSchema.parse(req.body);
+      
+      // Auto-generate slug if not provided
+      if (!validatedData.slug) {
+        validatedData.slug = validatedData.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      const [newTag] = await db.insert(tags).values(validatedData).returning();
+      
+      res.status(201).json(newTag);
+    } catch (error: any) {
+      console.error("Error creating tag:", error);
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "A tag with this slug already exists" });
+      }
+      res.status(400).json({ message: error.message || "Failed to create tag" });
+    }
+  });
+
+  // Update tag (admin only)
+  app.patch("/api/admin/tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const validatedData = updateTagSchema.parse(req.body);
+      
+      const [updatedTag] = await db
+        .update(tags)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(tags.id, req.params.id))
+        .returning();
+      
+      if (!updatedTag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      
+      res.json(updatedTag);
+    } catch (error: any) {
+      console.error("Error updating tag:", error);
+      res.status(400).json({ message: error.message || "Failed to update tag" });
+    }
+  });
+
+  // Delete tag (admin only)
+  app.delete("/api/admin/tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+      
+      // First delete all course-tag associations
+      await db.delete(courseTags).where(eq(courseTags.tagId, req.params.id));
+      
+      // Then delete the tag
+      const [deletedTag] = await db.delete(tags).where(eq(tags.id, req.params.id)).returning();
+      
+      if (!deletedTag) {
+        return res.status(404).json({ message: "Tag not found" });
+      }
+      
+      res.json({ message: "Tag deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting tag:", error);
+      res.status(500).json({ message: "Failed to delete tag" });
+    }
+  });
+
+  // Get tags for a specific course
+  app.get("/api/courses/:courseId/tags", async (req, res) => {
+    try {
+      const courseTg = await db
+        .select({ tag: tags })
+        .from(courseTags)
+        .innerJoin(tags, eq(courseTags.tagId, tags.id))
+        .where(eq(courseTags.courseId, req.params.courseId));
+      
+      res.json(courseTg.map(ct => ct.tag));
+    } catch (error: any) {
+      console.error("Error fetching course tags:", error);
+      res.status(500).json({ message: "Failed to fetch course tags" });
+    }
+  });
+
+  // Set tags for a course (replace all)
+  app.put("/api/admin/courses/:courseId/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { tagIds } = req.body;
+      
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ message: "tagIds must be an array" });
+      }
+      
+      // Delete existing tags for this course
+      await db.delete(courseTags).where(eq(courseTags.courseId, req.params.courseId));
+      
+      // Insert new tags
+      if (tagIds.length > 0) {
+        await db.insert(courseTags).values(
+          tagIds.map((tagId: string) => ({
+            courseId: req.params.courseId,
+            tagId,
+          }))
+        );
+      }
+      
+      // Fetch and return the updated tags
+      const updatedTags = await db
+        .select({ tag: tags })
+        .from(courseTags)
+        .innerJoin(tags, eq(courseTags.tagId, tags.id))
+        .where(eq(courseTags.courseId, req.params.courseId));
+      
+      res.json(updatedTags.map(ct => ct.tag));
+    } catch (error: any) {
+      console.error("Error updating course tags:", error);
+      res.status(500).json({ message: "Failed to update course tags" });
+    }
+  });
+
+  // Add a single tag to a course
+  app.post("/api/admin/courses/:courseId/tags/:tagId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      await db.insert(courseTags).values({
+        courseId: req.params.courseId,
+        tagId: req.params.tagId,
+      }).onConflictDoNothing();
+      
+      res.json({ message: "Tag added to course" });
+    } catch (error: any) {
+      console.error("Error adding tag to course:", error);
+      res.status(500).json({ message: "Failed to add tag to course" });
+    }
+  });
+
+  // Remove a tag from a course
+  app.delete("/api/admin/courses/:courseId/tags/:tagId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      await db.delete(courseTags).where(
+        and(
+          eq(courseTags.courseId, req.params.courseId),
+          eq(courseTags.tagId, req.params.tagId)
+        )
+      );
+      
+      res.json({ message: "Tag removed from course" });
+    } catch (error: any) {
+      console.error("Error removing tag from course:", error);
+      res.status(500).json({ message: "Failed to remove tag from course" });
+    }
+  });
+
+  // Seed initial tags (CTO only, one-time operation)
+  app.post("/api/admin/tags/seed", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+      
+      const initialTags = [
+        // Feature tags
+        { name: 'Scholarship Available', slug: 'scholarship-available', category: 'feature' as const, color: '#22C55E' },
+        { name: 'Work Placement', slug: 'work-placement', category: 'feature' as const, color: '#3B82F6' },
+        { name: 'Internship Included', slug: 'internship-included', category: 'feature' as const, color: '#8B5CF6' },
+        { name: 'Fast-Track Option', slug: 'fast-track', category: 'feature' as const, color: '#F59E0B' },
+        { name: 'Flexible Schedule', slug: 'flexible-schedule', category: 'feature' as const, color: '#06B6D4' },
+        { name: 'Industry Certified', slug: 'industry-certified', category: 'feature' as const, color: '#10B981' },
+        
+        // Delivery tags
+        { name: 'Online', slug: 'online', category: 'delivery' as const, color: '#6366F1' },
+        { name: 'On Campus', slug: 'on-campus', category: 'delivery' as const, color: '#EC4899' },
+        { name: 'Hybrid', slug: 'hybrid', category: 'delivery' as const, color: '#14B8A6' },
+        { name: 'Evening Classes', slug: 'evening-classes', category: 'delivery' as const, color: '#F97316' },
+        { name: 'Weekend Classes', slug: 'weekend-classes', category: 'delivery' as const, color: '#84CC16' },
+        
+        // Career tags
+        { name: 'High Demand', slug: 'high-demand', category: 'career' as const, color: '#EF4444' },
+        { name: 'PR Pathway', slug: 'pr-pathway', category: 'career' as const, color: '#22C55E' },
+        { name: 'Graduate Employment', slug: 'graduate-employment', category: 'career' as const, color: '#3B82F6' },
+        { name: 'Career Change', slug: 'career-change', category: 'career' as const, color: '#A855F7' },
+        
+        // Skill tags
+        { name: 'Hands-on Training', slug: 'hands-on-training', category: 'skill' as const, color: '#F59E0B' },
+        { name: 'Research Focus', slug: 'research-focus', category: 'skill' as const, color: '#6366F1' },
+        { name: 'Project-Based', slug: 'project-based', category: 'skill' as const, color: '#EC4899' },
+        { name: 'Industry Projects', slug: 'industry-projects', category: 'skill' as const, color: '#14B8A6' },
+        
+        // Industry tags
+        { name: 'Healthcare', slug: 'healthcare', category: 'industry' as const, color: '#EF4444' },
+        { name: 'Technology', slug: 'technology', category: 'industry' as const, color: '#3B82F6' },
+        { name: 'Finance', slug: 'finance', category: 'industry' as const, color: '#22C55E' },
+        { name: 'Construction', slug: 'construction', category: 'industry' as const, color: '#F97316' },
+        { name: 'Hospitality', slug: 'hospitality', category: 'industry' as const, color: '#A855F7' },
+        
+        // Audience tags
+        { name: 'International Students', slug: 'international-students', category: 'audience' as const, color: '#06B6D4' },
+        { name: 'Working Professionals', slug: 'working-professionals', category: 'audience' as const, color: '#8B5CF6' },
+        { name: 'School Leavers', slug: 'school-leavers', category: 'audience' as const, color: '#10B981' },
+        { name: 'Career Changers', slug: 'career-changers', category: 'audience' as const, color: '#F59E0B' },
+      ];
+      
+      // Insert tags, ignoring conflicts
+      for (const tag of initialTags) {
+        await db.insert(tags).values(tag).onConflictDoNothing();
+      }
+      
+      const allTags = await db.select().from(tags).orderBy(tags.category, tags.name);
+      res.json({ message: `Seeded ${initialTags.length} tags`, tags: allTags });
+    } catch (error: any) {
+      console.error("Error seeding tags:", error);
+      res.status(500).json({ message: "Failed to seed tags" });
+    }
+  });
+
+  // ============================================
+  // END COURSE TAGS API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available

@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -126,6 +127,26 @@ interface Course {
   publishStatus?: string | null;
 }
 
+interface TagType {
+  id: string;
+  name: string;
+  slug: string;
+  category: 'feature' | 'delivery' | 'career' | 'skill' | 'industry' | 'audience';
+  description: string | null;
+  color: string | null;
+  displayOrder: number;
+  isActive: boolean;
+}
+
+const TAG_CATEGORY_LABELS: Record<string, { label: string; description: string }> = {
+  feature: { label: 'Features', description: 'Course features' },
+  delivery: { label: 'Delivery', description: 'How the course is delivered' },
+  career: { label: 'Career', description: 'Career outcomes' },
+  skill: { label: 'Skills', description: 'Skills and learning approaches' },
+  industry: { label: 'Industry', description: 'Industry sectors' },
+  audience: { label: 'Audience', description: 'Target students' },
+};
+
 interface CourseEditorProps {
   course?: Course | null;
   institutions: Institution[];
@@ -137,11 +158,38 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const { toast } = useToast();
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>(course?.universityId || "");
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>(course?.campusLocations || []);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/super-admin/universities", selectedInstitutionId],
     enabled: !!selectedInstitutionId,
   });
+
+  const { data: groupedTags } = useQuery<Record<string, TagType[]>>({
+    queryKey: ["/api/admin/tags/grouped"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/tags/grouped", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch tags");
+      return res.json();
+    },
+  });
+
+  const { data: courseTags } = useQuery<TagType[]>({
+    queryKey: ["/api/courses", course?.id, "tags"],
+    queryFn: async () => {
+      if (!course?.id) return [];
+      const res = await fetch(`/api/courses/${course.id}/tags`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch course tags");
+      return res.json();
+    },
+    enabled: !!course?.id,
+  });
+
+  useEffect(() => {
+    if (courseTags) {
+      setSelectedTagIds(courseTags.map(t => String(t.id)));
+    }
+  }, [courseTags]);
 
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
@@ -194,7 +242,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       const response = await apiRequest("POST", "/api/super-admin/courses", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (newCourse: any) => {
+      if (newCourse?.id && selectedTagIds.length > 0) {
+        await saveTagsMutation.mutateAsync({ courseId: newCourse.id, tagIds: selectedTagIds });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course created successfully" });
       onBack();
@@ -207,10 +258,14 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const response = await apiRequest("PATCH", `/api/super-admin/courses/${id}`, data);
-      return response.json();
+      return { ...(await response.json()), id };
     },
-    onSuccess: () => {
+    onSuccess: async (result: any) => {
+      if (result?.id) {
+        await saveTagsMutation.mutateAsync({ courseId: result.id, tagIds: selectedTagIds });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
       toast({ title: "Success", description: "Course updated successfully" });
       onBack();
     },
@@ -219,7 +274,32 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     },
   });
 
-  const handleSubmit = (data: z.infer<typeof courseSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
+  const saveTagsMutation = useMutation({
+    mutationFn: async ({ courseId, tagIds }: { courseId: string; tagIds: string[] }) => {
+      return apiRequest("PUT", `/api/admin/courses/${courseId}/tags`, { tagIds });
+    },
+    onError: (error: any) => {
+      console.error("Failed to save course tags:", error);
+    },
+  });
+
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTagIds(prev =>
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const handleRemoveTag = (tagId: string) => {
+    setSelectedTagIds(prev => prev.filter(id => id !== tagId));
+  };
+
+  const getSelectedTags = (): TagType[] => {
+    if (!groupedTags) return [];
+    const allTags = Object.values(groupedTags).flat();
+    return allTags.filter(tag => selectedTagIds.includes(String(tag.id)));
+  };
+
+  const handleSubmit = async (data: z.infer<typeof courseSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
     const transformedData: any = {
       ...data,
       campusLocations: selectedCampusIds,
@@ -857,6 +937,81 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               </div>
 
               <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Course Tags
+                    </CardTitle>
+                    <CardDescription>Select tags to help students find this course</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedTagIds.length > 0 && (
+                      <div className="mb-3">
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          Selected ({selectedTagIds.length})
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {getSelectedTags().map((tag) => (
+                            <Badge
+                              key={tag.id}
+                              style={{ backgroundColor: tag.color || '#3B82F6' }}
+                              className="cursor-pointer pr-1"
+                              data-testid={`selected-tag-${tag.slug}`}
+                            >
+                              {tag.name}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTag(String(tag.id))}
+                                className="ml-1 hover:bg-white/20 rounded-full p-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => (
+                      <div key={category}>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                          {TAG_CATEGORY_LABELS[category]?.label || category}
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {categoryTags.map((tag: TagType) => {
+                            const isSelected = selectedTagIds.includes(String(tag.id));
+                            return (
+                              <Tooltip key={tag.id}>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant={isSelected ? "default" : "outline"}
+                                    style={isSelected ? { backgroundColor: tag.color || '#3B82F6' } : {}}
+                                    className={`cursor-pointer transition-all ${isSelected ? '' : 'hover:bg-muted'}`}
+                                    onClick={() => handleTagToggle(String(tag.id))}
+                                    data-testid={`tag-option-${tag.slug}`}
+                                  >
+                                    {tag.name}
+                                  </Badge>
+                                </TooltipTrigger>
+                                {tag.description && (
+                                  <TooltipContent>
+                                    <p>{tag.description}</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {!groupedTags && (
+                      <p className="text-sm text-muted-foreground">Loading tags...</p>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Scholarships</CardTitle>

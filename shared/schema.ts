@@ -633,6 +633,51 @@ export const courses = pgTable("courses", {
 }));
 
 // ============================================
+// COURSE TAGS SYSTEM
+// E-commerce style tagging for course categorization and filtering
+// ============================================
+
+// Tag category enum for organizing tags
+export const tagCategoryEnum = pgEnum('tag_category', [
+  'feature',    // Course features: Scholarship Available, Work Placement, Fast-Track
+  'delivery',   // Delivery modes: Online, On-Campus, Hybrid, Evening Classes
+  'career',     // Career outcomes: High Demand, Industry Certified, Graduate Employment
+  'skill',      // Skills: Hands-on Training, Research Focus, Project-Based
+  'industry',   // Industry sectors: Healthcare, Technology, Finance, Construction
+  'audience',   // Target audience: International Students, Working Professionals, School Leavers
+]);
+
+// Tags table - central registry of all course tags
+export const tags = pgTable("tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  category: tagCategoryEnum("category").notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #FF5000
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIdx: index("tags_category_idx").on(table.category),
+  slugIdx: index("tags_slug_idx").on(table.slug),
+  activeIdx: index("tags_active_idx").on(table.isActive),
+}));
+
+// Course-Tags junction table for many-to-many relationship
+export const courseTags = pgTable("course_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  courseTagUnique: unique("course_tag_unique").on(table.courseId, table.tagId),
+  courseIdx: index("course_tags_course_idx").on(table.courseId),
+  tagIdx: index("course_tags_tag_idx").on(table.tagId),
+}));
+
+// ============================================
 // GLOBAL REGION SYSTEM TABLES
 // Supports multi-region platform with domain-based detection
 // ============================================
@@ -2206,6 +2251,43 @@ export const insertSubDisciplineSchema = createInsertSchema(subDisciplines).omit
 export type InsertSubDiscipline = z.infer<typeof insertSubDisciplineSchema>;
 export type SubDiscipline = typeof subDisciplines.$inferSelect;
 
+// Tag schemas for course tagging system
+export const insertTagSchema = createInsertSchema(tags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(1, "Tag name is required").max(100),
+  slug: z.string().min(1, "Slug is required").max(100),
+  category: z.enum(['feature', 'delivery', 'career', 'skill', 'industry', 'audience']),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color").optional().nullable(),
+});
+
+export const updateTagSchema = insertTagSchema.partial();
+
+export type Tag = typeof tags.$inferSelect;
+export type InsertTag = z.infer<typeof insertTagSchema>;
+export type UpdateTag = z.infer<typeof updateTagSchema>;
+
+// Course-Tag association schema
+export const insertCourseTagSchema = createInsertSchema(courseTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CourseTag = typeof courseTags.$inferSelect;
+export type InsertCourseTag = z.infer<typeof insertCourseTagSchema>;
+
+// Tag with usage count for admin display
+export interface TagWithCount extends Tag {
+  courseCount: number;
+}
+
+// Course with tags for API responses
+export interface CourseWithTags {
+  id: string;
+  tags: Tag[];
+}
 
 export const insertStudentProfileSchema = createInsertSchema(studentProfiles).omit({
   id: true,

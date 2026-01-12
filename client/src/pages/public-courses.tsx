@@ -814,6 +814,36 @@ export default function PublicCourses() {
                         <div className="flex flex-wrap items-start gap-2 flex-1 min-w-0">
                           <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
                           <Badge variant="outline" className="text-xs">{course.subject}</Badge>
+                          {/* Course Tags */}
+                          {course.tags && course.tags.length > 0 && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => {
+                            // Convert hex color to rgba for background (with alpha for transparency)
+                            const hexToRgba = (hex: string, alpha: number) => {
+                              const r = parseInt(hex.slice(1, 3), 16);
+                              const g = parseInt(hex.slice(3, 5), 16);
+                              const b = parseInt(hex.slice(5, 7), 16);
+                              return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                            };
+                            return (
+                              <Badge 
+                                key={tag.id}
+                                variant="secondary"
+                                className="text-xs"
+                                style={tag.color ? { 
+                                  backgroundColor: hexToRgba(tag.color, 0.15), 
+                                  color: tag.color, 
+                                  borderColor: hexToRgba(tag.color, 0.3) 
+                                } : undefined}
+                                data-testid={`badge-tag-${course.id}-${tag.slug}`}
+                              >
+                                {tag.name}
+                              </Badge>
+                            );
+                          })}
+                          {course.tags && course.tags.length > 2 && (
+                            <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
+                              +{course.tags.length - 2}
+                            </Badge>
+                          )}
                         </div>
                         <Button
                           variant="ghost"

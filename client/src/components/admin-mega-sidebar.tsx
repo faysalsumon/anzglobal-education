@@ -32,6 +32,7 @@ import {
   LayoutDashboard,
   UserCircle,
   MessageCircle,
+  Tag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -106,6 +107,7 @@ export function AdminMegaSidebar({
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
+        { icon: Tag, label: "Course Tags", value: "tags", show: hasFullAdminAccess },
       ],
     },
     {

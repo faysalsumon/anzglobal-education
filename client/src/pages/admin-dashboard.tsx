@@ -74,6 +74,7 @@ import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { InstitutionEditor } from "@/components/institution-editor";
 import { CourseEditor } from "@/components/course-editor";
+import { AdminTagsPanel } from "@/components/admin-tags-panel";
 
 interface User {
   id: string;
@@ -2773,6 +2774,12 @@ export default function AdminDashboard() {
         {activeTab === "website-content" && (
           <div className="space-y-4">
             <AdminCmsPanel />
+          </div>
+        )}
+
+        {activeTab === "tags" && hasFullAdminAccess && (
+          <div className="space-y-4">
+            <AdminTagsPanel isCTO={isCTO} />
           </div>
         )}
 
