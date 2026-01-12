@@ -36,6 +36,8 @@ import {
   Check,
   Users,
   Key,
+  Edit2,
+  Layers,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -47,6 +49,8 @@ interface Role {
   userType: string;
   isActive: boolean;
   createdAt: string | null;
+  hierarchyLevel: number | null;
+  defaultScope: 'global' | 'region' | 'branch' | 'self' | null;
 }
 
 interface Permission {
@@ -81,6 +85,9 @@ export function AdminRoleManagementPanel() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [selectedNewRoleId, setSelectedNewRoleId] = useState<string>("");
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editHierarchyLevel, setEditHierarchyLevel] = useState<number>(50);
+  const [editDefaultScope, setEditDefaultScope] = useState<string>("branch");
 
   const { data: users, isLoading: usersLoading } = useQuery<UserWithRole[]>({
     queryKey: ["/api/admin/role-management/users"],
@@ -116,6 +123,69 @@ export function AdminRoleManagementPanel() {
       });
     },
   });
+
+  const updateHierarchyMutation = useMutation({
+    mutationFn: async ({ roleId, hierarchyLevel, defaultScope }: { 
+      roleId: string; 
+      hierarchyLevel: number; 
+      defaultScope: string;
+    }) => {
+      return apiRequest("PATCH", `/api/admin/roles/${roleId}/hierarchy`, { 
+        hierarchyLevel, 
+        defaultScope 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/roles"] });
+      toast({
+        title: "Hierarchy Updated",
+        description: "Role hierarchy settings have been updated successfully.",
+      });
+      setEditingRoleId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update hierarchy. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditHierarchy = (role: Role) => {
+    setEditingRoleId(role.id);
+    setEditHierarchyLevel(role.hierarchyLevel ?? 50);
+    setEditDefaultScope(role.defaultScope ?? "branch");
+  };
+
+  const handleSaveHierarchy = () => {
+    if (!editingRoleId) return;
+    updateHierarchyMutation.mutate({
+      roleId: editingRoleId,
+      hierarchyLevel: editHierarchyLevel,
+      defaultScope: editDefaultScope,
+    });
+  };
+
+  const getScopeLabel = (scope: string | null) => {
+    switch (scope) {
+      case 'global': return 'Global (All Data)';
+      case 'region': return 'Region (Country)';
+      case 'branch': return 'Branch (Office)';
+      case 'self': return 'Self (Own Data)';
+      default: return 'Not Set';
+    }
+  };
+
+  const getScopeBadgeColor = (scope: string | null) => {
+    switch (scope) {
+      case 'global': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'region': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'branch': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'self': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+  };
 
   const filteredUsers = users?.filter(user => {
     const matchesSearch = 
@@ -347,34 +417,67 @@ export function AdminRoleManagementPanel() {
 
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-base">Available Roles</CardTitle>
-          <CardDescription className="text-xs">
-            Click on a role to view its permissions
-          </CardDescription>
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            <div>
+              <CardTitle className="text-base">Role Hierarchy</CardTitle>
+              <CardDescription className="text-xs">
+                Configure data visibility scope for each role (lower level = higher authority)
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rolesLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-28 w-full" />
               ))
-            ) : roles?.map((role) => (
+            ) : roles?.sort((a, b) => (a.hierarchyLevel ?? 100) - (b.hierarchyLevel ?? 100)).map((role) => (
               <Card 
                 key={role.id} 
-                className="p-3 cursor-pointer hover-elevate"
-                onClick={() => setSelectedRoleId(role.id)}
+                className="p-3"
                 data-testid={`card-role-${role.id}`}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-medium text-sm">{role.displayName}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {role.description || `Role for ${role.userType}`}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Level {role.hierarchyLevel ?? 'N/A'}
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {role.userType === "platform_admin" ? "Platform" : "Admin"}
+                  <div className="flex items-center gap-1">
+                    <Badge variant="outline" className="text-[10px]">
+                      {role.userType === "platform_admin" ? "Platform" : "Admin"}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleEditHierarchy(role)}
+                      data-testid={`button-edit-hierarchy-${role.id}`}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    className={`text-[10px] ${getScopeBadgeColor(role.defaultScope)}`}
+                    variant="secondary"
+                  >
+                    {getScopeLabel(role.defaultScope)}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setSelectedRoleId(role.id)}
+                    data-testid={`button-view-perms-${role.id}`}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Permissions
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -483,6 +586,85 @@ export function AdminRoleManagementPanel() {
                       data-testid="button-confirm-assign"
                     >
                       {assignRoleMutation.isPending ? "Assigning..." : "Assign Role"}
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingRoleId} onOpenChange={() => setEditingRoleId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Edit Role Hierarchy
+            </DialogTitle>
+            <DialogDescription>
+              Configure hierarchy level and data visibility scope for this role
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const role = roles?.find(r => r.id === editingRoleId);
+              if (!role) return null;
+              
+              return (
+                <>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">{role.displayName}</p>
+                    <p className="text-xs text-muted-foreground">{role.description || `Role for ${role.userType}`}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Hierarchy Level</label>
+                    <p className="text-xs text-muted-foreground">
+                      Lower number = higher authority. Users can see data from roles with higher level numbers.
+                    </p>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={editHierarchyLevel}
+                      onChange={(e) => setEditHierarchyLevel(parseInt(e.target.value) || 50)}
+                      data-testid="input-hierarchy-level"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Default Data Scope</label>
+                    <p className="text-xs text-muted-foreground">
+                      Determines what data users with this role can see by default.
+                    </p>
+                    <Select value={editDefaultScope} onValueChange={setEditDefaultScope}>
+                      <SelectTrigger data-testid="select-default-scope">
+                        <SelectValue placeholder="Select scope..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">Global - See all data</SelectItem>
+                        <SelectItem value="region">Region - See data in their country</SelectItem>
+                        <SelectItem value="branch">Branch - See data in their office</SelectItem>
+                        <SelectItem value="self">Self - See only own data</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingRoleId(null)}
+                      data-testid="button-cancel-hierarchy"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveHierarchy}
+                      disabled={updateHierarchyMutation.isPending}
+                      data-testid="button-save-hierarchy"
+                    >
+                      {updateHierarchyMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>
                 </>

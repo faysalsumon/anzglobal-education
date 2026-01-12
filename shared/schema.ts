@@ -223,6 +223,14 @@ export const publishStatusEnum = pgEnum('publish_status', [
   'published',
 ]);
 
+// Role scope enum - determines data visibility level for hierarchy
+export const roleScopeEnum = pgEnum('role_scope', [
+  'global',   // Can see all data across all regions/branches (CTO, CEO, CFO)
+  'region',   // Can see all data within their assigned region (Regional Manager)
+  'branch',   // Can see all data within their assigned branch (Branch Manager, Consultants)
+  'self',     // Can only see their own data (Data Entry agents)
+]);
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -299,6 +307,8 @@ export const users = pgTable("users", {
   userType: varchar("user_type", { length: 20 }).notNull().default("student"), // 'platform_admin', 'admin', 'student', 'institution_admin'
   role: varchar("role", { length: 50 }).default("user"), // Legacy field - use roleId for new system
   roleId: varchar("role_id"), // References roles table for granular permissions (added later to avoid circular reference)
+  profileId: varchar("profile_id"), // References profiles table for CRUD permission bundles
+  regionId: varchar("region_id"), // Assigned region for staff (used with branchId for hierarchy)
   branchId: varchar("branch_id"), // Assigned branch/office location for staff
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
@@ -328,6 +338,8 @@ export const roles = pgTable("roles", {
   displayName: varchar("display_name", { length: 100 }).notNull(), // e.g., 'Super Admin', 'CEO', 'Junior Consultant'
   description: text("description"),
   userType: varchar("user_type", { length: 20 }).notNull(), // Which user type this role belongs to
+  hierarchyLevel: integer("hierarchy_level").default(100), // Lower number = higher authority (CTO=10, Junior=70)
+  defaultScope: roleScopeEnum("default_scope").default("branch"), // Data visibility scope for this role
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -375,6 +387,46 @@ export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => 
   }),
 }));
 
+// Profiles table - CRUD permission bundles (Salesforce/Zoho style)
+// Profiles determine WHAT actions users can perform (Create, Read, Update, Delete)
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 50 }).notNull().unique(), // e.g., 'full_access', 'standard', 'data_entry', 'read_only'
+  displayName: varchar("display_name", { length: 100 }).notNull(), // e.g., 'Full Access', 'Standard', 'Data Entry', 'Read Only'
+  description: text("description"),
+  isSystemProfile: boolean("is_system_profile").default(false), // True for built-in profiles that can't be deleted
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Profile permissions table - defines CRUD access per module for each profile
+// Modules: leads, applications, courses, institutions, users, reports, settings
+export const profilePermissions = pgTable("profile_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  module: varchar("module", { length: 50 }).notNull(), // e.g., 'leads', 'applications', 'courses'
+  canCreate: boolean("can_create").default(false),
+  canRead: boolean("can_read").default(false),
+  canUpdate: boolean("can_update").default(false),
+  canDelete: boolean("can_delete").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("profile_permissions_unique").on(table.profileId, table.module),
+]);
+
+// Relations for profiles
+export const profilesRelations = relations(profiles, ({ many }) => ({
+  profilePermissions: many(profilePermissions),
+}));
+
+export const profilePermissionsRelations = relations(profilePermissions, ({ one }) => ({
+  profile: one(profiles, {
+    fields: [profilePermissions.profileId],
+    references: [profiles.id],
+  }),
+}));
+
 // Invitation status enum
 export const invitationStatusEnum = pgEnum('invitation_status', [
   'pending',   // Invitation sent, awaiting acceptance
@@ -388,7 +440,10 @@ export const invitations = pgTable("invitations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull(),
   roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  profileId: varchar("profile_id"), // Optional: references profiles table for CRUD permissions
   userType: varchar("user_type", { length: 20 }).notNull().default("admin"), // 'platform_admin' or 'admin' only
+  regionId: varchar("region_id"), // Assigned region for the new team member
+  branchId: varchar("branch_id"), // Assigned branch for the new team member
   tokenHash: varchar("token_hash").notNull(), // Hashed invitation token for security
   status: invitationStatusEnum("status").notNull().default("pending"),
   invitedById: varchar("invited_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -3467,6 +3522,33 @@ export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 // Role with permissions (for API responses)
 export interface RoleWithPermissions extends Role {
   permissions: Permission[];
+}
+
+// Profiles
+export const insertProfileSchema = createInsertSchema(profiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateProfileSchema = insertProfileSchema.partial();
+
+export type Profile = typeof profiles.$inferSelect;
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
+
+// Profile Permissions
+export const insertProfilePermissionSchema = createInsertSchema(profilePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ProfilePermission = typeof profilePermissions.$inferSelect;
+export type InsertProfilePermission = z.infer<typeof insertProfilePermissionSchema>;
+
+// Profile with permissions (for API responses)
+export interface ProfileWithPermissions extends Profile {
+  permissions: ProfilePermission[];
 }
 
 // Invitations

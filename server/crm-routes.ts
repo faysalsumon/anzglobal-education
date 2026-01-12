@@ -12,9 +12,11 @@ import {
   updateCrmLeadSchema,
   insertCrmContactSchema,
   updateCrmContactSchema,
+  branches,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, inArray } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
+import { getUserAccessContext, checkCrudPermission, type UserAccessContext } from "./access-policy-service";
 
 const router = Router();
 
@@ -67,9 +69,14 @@ async function requireAdmin(req: any, res: any, next: any) {
 // CRM LEADS ROUTES
 // ============================================
 
-// Get all leads with filtering and pagination
-router.get("/leads", requireAdmin, async (req, res) => {
+// Get all leads with filtering and pagination (with hierarchy-based visibility)
+router.get("/leads", requireAdmin, async (req: any, res) => {
   try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
     const { 
       status, 
       rating,
@@ -84,7 +91,49 @@ router.get("/leads", requireAdmin, async (req, res) => {
       offset = "0"
     } = req.query;
 
+    // Get user's access context for hierarchy-based filtering
+    const accessContext = await getUserAccessContext(userId);
+    
+    // Check read permission for leads module
+    const canRead = await checkCrudPermission(userId, 'leads', 'read');
+    if (!canRead) {
+      return res.status(403).json({ message: "You don't have permission to view leads" });
+    }
+
     let conditions: any[] = [];
+
+    // Apply hierarchy-based visibility filter
+    if (accessContext) {
+      if (accessContext.defaultScope === 'self') {
+        // Self scope: only see leads assigned to you or owned by you
+        conditions.push(
+          or(
+            eq(crmLeads.assignedTo, userId),
+            eq(crmLeads.leadOwner, userId)
+          )
+        );
+      } else if (accessContext.defaultScope === 'branch' || accessContext.defaultScope === 'region') {
+        // Branch/Region scope: filter by branch names matching the user's allowed branches
+        if (accessContext.allowedBranchIds.length > 0) {
+          const allowedBranches = await db
+            .select({ name: branches.name })
+            .from(branches)
+            .where(inArray(branches.id, accessContext.allowedBranchIds));
+          
+          const branchNames = allowedBranches.map(b => b.name);
+          if (branchNames.length > 0) {
+            conditions.push(
+              or(
+                inArray(crmLeads.branch, branchNames),
+                eq(crmLeads.assignedTo, userId),
+                eq(crmLeads.leadOwner, userId)
+              )
+            );
+          }
+        }
+      }
+      // Global scope: no additional filtering needed
+    }
 
     if (status) {
       conditions.push(eq(crmLeads.leadStatus, status as any));
@@ -102,7 +151,6 @@ router.get("/leads", requireAdmin, async (req, res) => {
     const assignedFilter = assignedToId || assignedTo;
     if (assignedFilter) {
       if (assignedFilter === 'unassigned') {
-        const { isNull } = await import("drizzle-orm");
         conditions.push(isNull(crmLeads.assignedTo));
       } else {
         conditions.push(eq(crmLeads.assignedTo, assignedFilter as string));

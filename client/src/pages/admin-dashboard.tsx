@@ -67,6 +67,7 @@ import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
 import { AdminRegionsPanel } from "@/components/admin-regions-panel";
 import { AdminRoleManagementPanel } from "@/components/admin-role-management-panel";
+import { AdminProfileManagementPanel } from "@/components/admin-profile-management-panel";
 import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -418,9 +419,9 @@ export default function AdminDashboard() {
   // Initialize activeTab from hash with access control validation
   const getInitialTab = () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'messages'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
-    const superAdminOnlyTabs = ['role-management'];
+    const superAdminOnlyTabs = ['role-management', 'profile-management'];
     // Marketing Executive can access institutions tab along with full admins
     const marketingExecutiveTabs = ['institutions'];
     
@@ -466,6 +467,7 @@ export default function AdminDashboard() {
     'branches': 'Branches',
     'affiliates': 'Affiliates',
     'role-management': 'Role Management',
+    'profile-management': 'Permission Profiles',
     'messages': 'Messages',
   };
   
@@ -1619,8 +1621,8 @@ export default function AdminDashboard() {
 
   // Handle tab change with scroll to top
   const handleTabChange = (tab: string) => {
-    // Prevent non-super admins from accessing role-management tab
-    if (tab === 'role-management' && !isCTO) {
+    // Prevent non-CTO from accessing role-management and profile-management tabs
+    if ((tab === 'role-management' || tab === 'profile-management') && !isCTO) {
       return;
     }
     setActiveTab(tab);
@@ -2813,6 +2815,11 @@ export default function AdminDashboard() {
         {/* Role Management Tab - CTO Only */}
         {activeTab === "role-management" && isCTO && (
           <AdminRoleManagementPanel />
+        )}
+
+        {/* Profile Management Tab - CTO Only */}
+        {activeTab === "profile-management" && isCTO && (
+          <AdminProfileManagementPanel />
         )}
 
         {/* Activity Logs Tab */}

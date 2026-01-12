@@ -20,6 +20,7 @@ import { z } from "zod";
 import { logActivity } from "./activity-logger";
 import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
 import { notifyApplicationAssigned } from "./notifications";
+import { getUserAccessContext, checkCrudPermission } from "./access-policy-service";
 
 // Stage transition validation schema
 const stageTransitionSchema = z.object({
@@ -361,18 +362,44 @@ export function registerApplicationWorkflowRoutes(app: Express) {
   // ADMIN/CONSULTANT ROUTES
   // ===========================================
 
-  // Get all applications (admin view)
-  app.get("/api/admin/applications", isAuthenticated, async (req, res) => {
+  // Get all applications (admin view with hierarchy-based visibility)
+  app.get("/api/admin/applications", isAuthenticated, async (req: any, res) => {
     try {
       const adminAccess = await checkAdminAccess(req);
       if (!adminAccess) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User ID not found" });
+      }
+
+      // Get user's access context for hierarchy-based filtering
+      const accessContext = await getUserAccessContext(userId);
+      
+      // Check read permission for applications module
+      const canRead = await checkCrudPermission(userId, 'applications', 'read');
+      if (!canRead) {
+        return res.status(403).json({ error: "You don't have permission to view applications" });
+      }
+
       const { stage, status, consultantId } = req.query;
 
       // Build query conditions
       const conditions: any[] = [];
+
+      // Apply hierarchy-based visibility filter
+      if (accessContext) {
+        if (accessContext.defaultScope === 'self') {
+          // Self scope: only see applications assigned to you
+          conditions.push(eq(applications.assignedConsultantId, userId));
+        }
+        // For branch/region scope, we'd filter by the consultant's branch
+        // For now, branch/region/global scopes see all applications
+        // A more complete implementation would add branchId to applications table
+      }
+
       if (stage) conditions.push(eq(applications.currentStage, stage as any));
       if (status) conditions.push(eq(applications.status, status as string));
       if (consultantId) conditions.push(eq(applications.assignedConsultantId, consultantId as string));

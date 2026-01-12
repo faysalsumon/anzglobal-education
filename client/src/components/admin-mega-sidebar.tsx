@@ -33,6 +33,7 @@ import {
   UserCircle,
   MessageCircle,
   Tag,
+  UserCog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -118,6 +119,7 @@ export function AdminMegaSidebar({
       routes: [
         { icon: Users, label: "Users", value: "users", show: hasFullAdminAccess },
         { icon: Shield, label: "Role Management", value: "role-management", show: isCTO },
+        { icon: UserCog, label: "Profiles", value: "profile-management", show: isCTO },
         { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
         { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },

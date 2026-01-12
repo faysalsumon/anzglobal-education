@@ -5048,6 +5048,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PROFILE MANAGEMENT ROUTES ====================
+
+  // Get all profiles (admin only)
+  app.get("/api/admin/profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getAllProfiles } = await import('./access-policy-service');
+      const allProfiles = await getAllProfiles();
+      res.json(allProfiles);
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
+      res.status(500).json({ message: "Failed to fetch profiles" });
+    }
+  });
+
+  // Get profile with permissions (admin only)
+  app.get("/api/admin/profiles/:profileId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getProfileWithPermissions } = await import('./access-policy-service');
+      const result = await getProfileWithPermissions(req.params.profileId);
+      
+      if (!result.profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Get all regions (for user assignment dropdown)
+  app.get("/api/admin/regions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getAllRegions } = await import('./access-policy-service');
+      const regionList = await getAllRegions();
+      res.json(regionList);
+    } catch (error) {
+      console.error("Error fetching regions:", error);
+      res.status(500).json({ message: "Failed to fetch regions" });
+    }
+  });
+
+  // Get branches for a region (for cascading dropdown)
+  app.get("/api/admin/regions/:regionId/branches", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getBranchesForRegion } = await import('./access-policy-service');
+      const branchList = await getBranchesForRegion(req.params.regionId);
+      res.json(branchList);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+      res.status(500).json({ message: "Failed to fetch branches" });
+    }
+  });
+
+  // Update role hierarchy settings (CTO only)
+  app.patch("/api/admin/roles/:roleId/hierarchy", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+
+      const { roleId } = req.params;
+      const { hierarchyLevel, defaultScope } = req.body;
+
+      // Validate inputs
+      if (hierarchyLevel !== undefined && (hierarchyLevel < 1 || hierarchyLevel > 100)) {
+        return res.status(400).json({ message: "Hierarchy level must be between 1 and 100" });
+      }
+
+      if (defaultScope !== undefined && !['global', 'region', 'branch', 'self'].includes(defaultScope)) {
+        return res.status(400).json({ message: "Invalid scope. Must be global, region, branch, or self" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      if (hierarchyLevel !== undefined) updateData.hierarchyLevel = hierarchyLevel;
+      if (defaultScope !== undefined) updateData.defaultScope = defaultScope;
+
+      const [updatedRole] = await db
+        .update(roles)
+        .set(updateData)
+        .where(eq(roles.id, roleId))
+        .returning();
+
+      if (!updatedRole) {
+        return res.status(404).json({ message: "Role not found" });
+      }
+
+      // Clear access context cache since role settings changed
+      const { clearAccessContextCache } = await import('./access-policy-service');
+      clearAccessContextCache();
+
+      res.json(updatedRole);
+    } catch (error) {
+      console.error("Error updating role hierarchy:", error);
+      res.status(500).json({ message: "Failed to update role hierarchy" });
+    }
+  });
+
+  // Update user's profile and scope assignment (CTO only)
+  app.patch("/api/admin/users/:id/access", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const targetUserId = req.params.id;
+      const { profileId, regionId, branchId } = req.body;
+
+      const updateData: any = { updatedAt: new Date() };
+      if (profileId !== undefined) updateData.profileId = profileId || null;
+      if (regionId !== undefined) updateData.regionId = regionId || null;
+      if (branchId !== undefined) updateData.branchId = branchId || null;
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Invalidate access context cache for this user
+      const { invalidateAccessContextCache } = await import('./access-policy-service');
+      invalidateAccessContextCache(targetUserId);
+
+      const { password: _, verificationToken, verificationTokenExpiry, resetPasswordToken, resetPasswordExpiry, ...userData } = updatedUser;
+      res.json(userData);
+    } catch (error) {
+      console.error("Error updating user access:", error);
+      res.status(500).json({ message: "Failed to update user access" });
+    }
+  });
+
+  // Get user's access context (for debugging/display)
+  app.get("/api/admin/users/:id/access-context", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { getUserAccessContext } = await import('./access-policy-service');
+      const context = await getUserAccessContext(req.params.id);
+      
+      if (!context) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(context);
+    } catch (error) {
+      console.error("Error fetching user access context:", error);
+      res.status(500).json({ message: "Failed to fetch user access context" });
+    }
+  });
+
   // ==================== TEAM INVITATION ROUTES ====================
   
   // Get all invitations (platform_admin and admin only)
@@ -5644,9 +5838,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const targetUserId = req.params.id;
-      const { branches, roles } = await import('@shared/schema');
+      const { branches, roles, regions, profiles } = await import('@shared/schema');
       
-      // Get user with branch and role details
+      // Get user with branch, role, region, and profile details
       const [userData] = await db
         .select({
           id: users.id,
@@ -5666,6 +5860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: users.role,
           roleId: users.roleId,
           branchId: users.branchId,
+          regionId: users.regionId,
+          profileId: users.profileId,
           isActive: users.isActive,
           emailVerified: users.emailVerified,
           lastLogin: users.lastLogin,
@@ -5675,10 +5871,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           branchName: branches.name,
           branchCode: branches.code,
           roleName: roles.displayName,
+          regionName: regions.name,
+          regionCode: regions.code,
+          profileName: profiles.name,
         })
         .from(users)
         .leftJoin(branches, eq(users.branchId, branches.id))
         .leftJoin(roles, eq(users.roleId, roles.id))
+        .leftJoin(regions, eq(users.regionId, regions.id))
+        .leftJoin(profiles, eq(users.profileId, profiles.id))
         .where(eq(users.id, targetUserId))
         .limit(1);
 
@@ -5704,7 +5905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const targetUserId = req.params.id;
-      const { email, firstName, lastName, password, phone, branchId, userType, roleId, isActive } = req.body;
+      const { email, firstName, lastName, password, phone, branchId, regionId, profileId, userType, roleId, isActive } = req.body;
 
       const updateData: any = { updatedAt: new Date() };
 
@@ -5727,6 +5928,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (lastName !== undefined) updateData.lastName = lastName;
       if (phone !== undefined) updateData.phone = phone;
       if (branchId !== undefined) updateData.branchId = branchId || null; // Allow unsetting branch
+      if (regionId !== undefined) updateData.regionId = regionId || null; // Allow unsetting region
+      if (profileId !== undefined) updateData.profileId = profileId || null; // Allow unsetting profile
       if (userType !== undefined) updateData.userType = userType;
       if (roleId !== undefined) updateData.roleId = roleId || null; // Allow unsetting role
       if (typeof isActive === 'boolean') updateData.isActive = isActive;
