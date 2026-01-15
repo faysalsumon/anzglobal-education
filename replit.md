@@ -29,19 +29,40 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Job Queue**: BullMQ with Redis for background jobs.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage.
-- **Authorization**: Scalable Role-Based Access Control (RBAC) with granular permissions:
+- **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions:
   - **User Types (4 only)**: `platform_admin`, `admin`, `student`, `institution_admin` - strictly enforced, roles are separate from user types
-  - **Database Schema**: `roles`, `permissions`, and `role_permissions` tables for dynamic role management
-  - **9 Roles**: cto (highest platform role, formerly super_admin), ceo, cfo, branch_manager, marketing_executive, senior_consultant, junior_consultant, student, institution_rep
-  - **CTO Role**: The 'cto' role has full platform access. Both 'cto' and 'ceo' map to highest admin privileges. The CTO role replaced 'super_admin' as of January 2026.
-  - **30+ Permissions**: Resource:action format (e.g., 'dashboard:read', 'users:write', 'applications:approve')
+  - **Database Schema**: `roles`, `permissions`, `role_permissions`, `profiles`, `profile_permissions` tables for dynamic role and permission management
+  - **9 Roles with Hierarchy Levels**: Lower number = higher authority
+    - CTO (10): Highest platform role, full global access
+    - CEO (15): Global access, strategic oversight
+    - CFO (20): Global access, financial oversight
+    - Branch Manager (40): Regional/branch-level management
+    - Marketing Executive (55): Marketing operations
+    - Senior Consultant (60): Senior team member
+    - Junior Consultant (70): Junior team member
+    - Student (100): Customer role (no hierarchy)
+    - Institution Rep (100): Customer role (no hierarchy)
+  - **"Profiles DO, Roles SEE" Design Pattern**: Profiles determine CRUD actions, Roles determine data visibility scope
+  - **4 Permission Profiles**: Full Access (all CRUD), Standard (create/read/update), Data Entry (create/read), Read Only (read)
+  - **7 Modules**: leads, applications, courses, institutions, users, reports, tasks
+  - **Scope Levels**: global (sees all) → region (sees region's branches) → branch (sees own branch) → self (own data only)
+  - **Hierarchy Rules**:
+    - Higher authority (lower level number) can view/edit data of lower authority users
+    - Same-level users can view but NOT edit each other's data
+    - Data flows upward automatically (junior's data visible to senior, manager, etc.)
+  - **Access Policy Service** (`server/access-policy-service.ts`): getAccessContext(), checkCrudPermission(), getEffectiveScope() with 5-min caching
+  - **Organization Structure**: Regions (countries like Australia, UK, India) → Branches (offices like Sydney, Melbourne, Brisbane)
   - **Permission Service** (`server/permission-service.ts`): Caching (5-min TTL), hasPermission(), getUserPermissions(), isPlatformAdmin()
   - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
-  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/roles/:roleId/permissions`, `/api/admin/role-management/users`, `/api/admin/users/:id/assign-role`
-  - **Role Management UI**: CTO-only panel in admin dashboard (Management > Role Management) for viewing users with roles, assigning roles, and viewing role permissions
-  - **User Management UI**: Admin dashboard User Management tab with View/Edit user dialogs, inline branch assignment dropdowns, role/userType/isActive editing capabilities, and proper null handling for clearing fields
+  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/profiles`, `/api/admin/profiles/:id/permissions`, `/api/admin/regions-lookup`, `/api/admin/branches-lookup`, `/api/admin/users/:id/access`
+  - **Role Management UI**: CTO-only panel in admin dashboard (Management > Role Management) for viewing users with roles, assigning roles, editing hierarchy levels
+  - **Profile Management UI**: CTO-only panel for viewing permission profiles with CRUD matrix display
+  - **User Management UI**: Region → Branch → Role → Profile assignment flow with edit dialog, proper null handling for clearing fields
+  - **Team Invitation Flow**: Supports Region/Branch/Profile assignment for new team members (optional fields)
+  - **Direct User Creation**: Admin can create users with temp password, supporting Region/Branch/Profile assignment
   - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types; server normalizes legacy 'university' values to 'institution_admin' on persist
   - **IMPORTANT**: UniversityRole 'super_admin' (for institution team hierarchy) is SEPARATE from AdminRole 'cto' (for platform admins). Do not confuse the two contexts.
+  - **Known Limitations**: CRM leads currently use branch names (text) instead of branchIds; applications use assignedConsultantId for self-scope filtering
 
 ### Feature Specifications
 - **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes comprehensive application management with specific stage transitions and a document request system.

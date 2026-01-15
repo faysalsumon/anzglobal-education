@@ -5292,7 +5292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { email, roleId, userType, note } = req.body;
+      const { email, roleId, userType, note, regionId, branchId, profileId } = req.body;
 
       if (!email || !roleId) {
         return res.status(400).json({ message: "Email and role are required" });
@@ -5308,6 +5308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userType: validUserType,
         invitedById: userId,
         note,
+        regionId: regionId === 'none' ? null : regionId,
+        branchId: branchId === 'none' ? null : branchId,
+        profileId: profileId === 'none' ? null : profileId,
       });
 
       if (!result.success) {

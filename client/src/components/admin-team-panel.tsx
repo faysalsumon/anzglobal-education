@@ -24,6 +24,9 @@ const inviteFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   roleId: z.string().min(1, "Please select a role"),
   userType: z.enum(["admin", "platform_admin"]),
+  regionId: z.string().optional(),
+  branchId: z.string().optional(),
+  profileId: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -36,10 +39,26 @@ const createUserFormSchema = z.object({
   phone: z.string().optional(),
   roleId: z.string().min(1, "Please select a role"),
   userType: z.enum(["admin", "platform_admin"]),
+  regionId: z.string().optional(),
   branchId: z.string().optional(),
+  profileId: z.string().optional(),
 });
 
 type CreateUserFormData = z.infer<typeof createUserFormSchema>;
+
+interface Region {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+}
+
+interface Profile {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+}
 
 function getStatusBadge(status: string, expiresAt: Date) {
   const isExpired = new Date() > new Date(expiresAt);
@@ -74,6 +93,9 @@ export function AdminTeamPanel() {
       email: "",
       roleId: "",
       userType: "admin",
+      regionId: "",
+      branchId: "",
+      profileId: "",
       note: "",
     },
   });
@@ -87,7 +109,9 @@ export function AdminTeamPanel() {
       phone: "",
       roleId: "",
       userType: "admin",
+      regionId: "",
       branchId: "",
+      profileId: "",
     },
   });
 
@@ -101,6 +125,14 @@ export function AdminTeamPanel() {
 
   const { data: branches = [], isLoading: isLoadingBranches } = useQuery<Branch[]>({
     queryKey: ["/api/admin/branches"],
+  });
+
+  const { data: regions = [], isLoading: isLoadingRegions } = useQuery<Region[]>({
+    queryKey: ["/api/admin/regions"],
+  });
+
+  const { data: profiles = [], isLoading: isLoadingProfiles } = useQuery<Profile[]>({
+    queryKey: ["/api/admin/profiles"],
   });
 
   const createInvitationMutation = useMutation({
@@ -128,10 +160,12 @@ export function AdminTeamPanel() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
-      // Convert "none" to undefined for branchId
+      // Convert "none" to undefined for optional fields
       const payload = {
         ...data,
+        regionId: data.regionId === "none" || data.regionId === "" ? undefined : data.regionId,
         branchId: data.branchId === "none" || data.branchId === "" ? undefined : data.branchId,
+        profileId: data.profileId === "none" || data.profileId === "" ? undefined : data.profileId,
       };
       const response = await apiRequest("POST", "/api/supabase-auth/admin/create-user", payload);
       return response;
@@ -291,6 +325,93 @@ export function AdminTeamPanel() {
                         <SelectContent>
                           <SelectItem value="admin">Admin (Staff)</SelectItem>
                           <SelectItem value="platform_admin">Platform Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={inviteForm.control}
+                  name="regionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Region (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-invite-region">
+                            <SelectValue placeholder="Select a region" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No Region</SelectItem>
+                          {isLoadingRegions ? (
+                            <SelectItem value="loading" disabled>Loading regions...</SelectItem>
+                          ) : (
+                            regions.filter(r => r.isActive).map((region) => (
+                              <SelectItem key={region.id} value={region.id}>
+                                {region.name} ({region.code})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={inviteForm.control}
+                  name="branchId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-invite-branch">
+                            <SelectValue placeholder="Select a branch" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No Branch</SelectItem>
+                          {isLoadingBranches ? (
+                            <SelectItem value="loading" disabled>Loading branches...</SelectItem>
+                          ) : (
+                            branches.filter(b => b.isActive).map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                {branch.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={inviteForm.control}
+                  name="profileId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Permission Profile (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-invite-profile">
+                            <SelectValue placeholder="Select a profile" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No Profile</SelectItem>
+                          {isLoadingProfiles ? (
+                            <SelectItem value="loading" disabled>Loading profiles...</SelectItem>
+                          ) : (
+                            profiles.filter(p => p.isActive).map((profile) => (
+                              <SelectItem key={profile.id} value={profile.id}>
+                                {profile.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -486,29 +607,89 @@ export function AdminTeamPanel() {
                     )}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createUserForm.control}
+                    name="regionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Region (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-create-region">
+                              <SelectValue placeholder="Select a region" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Region</SelectItem>
+                            {isLoadingRegions ? (
+                              <SelectItem value="loading" disabled>Loading regions...</SelectItem>
+                            ) : (
+                              regions.filter(r => r.isActive).map((region) => (
+                                <SelectItem key={region.id} value={region.id}>
+                                  {region.name} ({region.code})
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="branchId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Branch (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-create-branch">
+                              <SelectValue placeholder="Select a branch" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Branch</SelectItem>
+                            {isLoadingBranches ? (
+                              <SelectItem value="loading" disabled>Loading branches...</SelectItem>
+                            ) : (
+                              branches.filter(b => b.isActive).map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id}>
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-3 w-3" />
+                                    {branch.name}
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={createUserForm.control}
-                  name="branchId"
+                  name="profileId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Branch (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>Permission Profile (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-create-branch">
-                            <SelectValue placeholder="Select a branch" />
+                          <SelectTrigger data-testid="select-create-profile">
+                            <SelectValue placeholder="Select a profile" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">No Branch</SelectItem>
-                          {isLoadingBranches ? (
-                            <SelectItem value="loading" disabled>Loading branches...</SelectItem>
+                          <SelectItem value="none">No Profile</SelectItem>
+                          {isLoadingProfiles ? (
+                            <SelectItem value="loading" disabled>Loading profiles...</SelectItem>
                           ) : (
-                            branches.map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="h-3 w-3" />
-                                  {branch.name}
-                                </div>
+                            profiles.filter(p => p.isActive).map((profile) => (
+                              <SelectItem key={profile.id} value={profile.id}>
+                                {profile.name}
                               </SelectItem>
                             ))
                           )}

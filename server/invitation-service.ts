@@ -20,6 +20,9 @@ export interface CreateInvitationData {
   userType: 'platform_admin' | 'admin';
   invitedById: string;
   note?: string;
+  regionId?: string | null;
+  branchId?: string | null;
+  profileId?: string | null;
 }
 
 export interface InvitationResult {
@@ -66,6 +69,9 @@ export async function createInvitation(data: CreateInvitationData): Promise<Invi
       invitedById: data.invitedById,
       expiresAt,
       note: data.note,
+      regionId: data.regionId || null,
+      branchId: data.branchId || null,
+      profileId: data.profileId || null,
     }).returning();
 
     const inviter = await db.select({

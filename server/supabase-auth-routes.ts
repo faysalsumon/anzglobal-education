@@ -972,7 +972,7 @@ router.post('/admin/create-user', async (req: any, res: Response) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const { email, firstName, lastName, phone, roleId, branchId, userType } = req.body;
+    const { email, firstName, lastName, phone, roleId, regionId, branchId, profileId, userType } = req.body;
 
     if (!email || !firstName || !lastName || !roleId || !userType) {
       return res.status(400).json({ error: 'Email, first name, last name, role, and user type are required' });
@@ -1018,7 +1018,9 @@ router.post('/admin/create-user', async (req: any, res: Response) => {
       phone: phone || null,
       userType,
       roleId,
+      regionId: regionId || null,
       branchId: branchId || null,
+      profileId: profileId || null,
       emailVerified: true,
       isActive: true,
       approvalStatus: 'approved',

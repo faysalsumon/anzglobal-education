@@ -654,6 +654,18 @@ export default function AdminDashboard() {
     enabled: hasFullAdminAccess,
   });
 
+  // Fetch regions for region assignment dropdown
+  const { data: regions } = useQuery<{ id: string; name: string; code: string; isActive: boolean }[]>({
+    queryKey: ["/api/admin/regions"],
+    enabled: hasFullAdminAccess,
+  });
+
+  // Fetch profiles for permission profile assignment dropdown
+  const { data: profilesList } = useQuery<{ id: string; name: string; description: string | null; isActive: boolean }[]>({
+    queryKey: ["/api/admin/profiles"],
+    enabled: hasFullAdminAccess,
+  });
+
   // Fetch single user details for view/edit dialog
   const { data: userDetails, isLoading: userDetailsLoading, refetch: refetchUserDetails } = useQuery<User>({
     queryKey: ["/api/super-admin/users", selectedUserForEdit?.id],
@@ -764,7 +776,7 @@ export default function AdminDashboard() {
 
   // Update user details mutation (for edit dialog)
   const updateUserMutation = useMutation({
-    mutationFn: async (data: { userId: string; firstName?: string; lastName?: string; email?: string; phone?: string; branchId?: string | null; userType?: string; roleId?: string | null; isActive?: boolean }) => {
+    mutationFn: async (data: { userId: string; firstName?: string; lastName?: string; email?: string; phone?: string; branchId?: string | null; regionId?: string | null; profileId?: string | null; userType?: string; roleId?: string | null; isActive?: boolean }) => {
       const { userId, ...updateData } = data;
       return await apiRequest("PATCH", `/api/super-admin/users/${userId}`, updateData);
     },
@@ -2966,11 +2978,25 @@ export default function AdminDashboard() {
                     <p className="text-sm font-medium">{userDetails.roleName || userDetails.role || '-'}</p>
                   </div>
                   <div>
+                    <label className="text-xs font-medium text-muted-foreground">Region</label>
+                    <p className="text-sm font-medium">
+                      {(userDetails as any).regionName 
+                        ? `${(userDetails as any).regionName} (${(userDetails as any).regionCode})` 
+                        : 'Not assigned'}
+                    </p>
+                  </div>
+                  <div>
                     <label className="text-xs font-medium text-muted-foreground">Branch</label>
                     <p className="text-sm font-medium">
                       {userDetails.branchName 
                         ? `${userDetails.branchName} (${userDetails.branchCode})` 
                         : 'Not assigned'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Permission Profile</label>
+                    <p className="text-sm font-medium">
+                      {(userDetails as any).profileName || 'Not assigned'}
                     </p>
                   </div>
                   <div>
@@ -3016,7 +3042,9 @@ export default function AdminDashboard() {
                   lastName: formData.get('lastName') as string,
                   email: formData.get('email') as string,
                   phone: formData.get('phone') as string || undefined,
+                  regionId: (formData.get('regionId') as string) === 'none' ? null : (formData.get('regionId') as string) || null,
                   branchId: (formData.get('branchId') as string) === 'none' ? null : (formData.get('branchId') as string) || null,
+                  profileId: (formData.get('profileId') as string) === 'none' ? null : (formData.get('profileId') as string) || null,
                   userType: formData.get('userType') as string,
                   roleId: (formData.get('roleId') as string) === 'none' ? null : (formData.get('roleId') as string) || null,
                   isActive: formData.get('isActive') === 'true',
@@ -3058,11 +3086,29 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="regionId">Region</Label>
+                    <select name="regionId" defaultValue={(userDetails as any).regionId || 'none'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-region">
+                      <option value="none">No Region</option>
+                      {regions?.filter(r => r.isActive).map((region) => (
+                        <option key={region.id} value={region.id}>{region.name} ({region.code})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="branchId">Branch</Label>
                     <select name="branchId" defaultValue={userDetails.branchId || 'none'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-branch">
                       <option value="none">No Branch</option>
                       {branches?.filter(b => b.isActive).map((branch) => (
                         <option key={branch.id} value={branch.id}>{branch.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profileId">Permission Profile</Label>
+                    <select name="profileId" defaultValue={(userDetails as any).profileId || 'none'} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" data-testid="select-edit-profile">
+                      <option value="none">No Profile</option>
+                      {profilesList?.filter(p => p.isActive).map((profile) => (
+                        <option key={profile.id} value={profile.id}>{profile.name}</option>
                       ))}
                     </select>
                   </div>
