@@ -15,6 +15,9 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/ui/google-address-autocomplete";
 import { GalleryImageManager } from "@/components/gallery-image-manager";
+import { InstitutionContactsPanel } from "@/components/institution-contacts-panel";
+import { InstitutionBusinessTermsPanel } from "@/components/institution-business-terms-panel";
+import { InstitutionDocumentsPanel } from "@/components/institution-documents-panel";
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -756,6 +759,23 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
             </div>
           </form>
         </Form>
+
+        {institution && (
+          <div className="space-y-6 mt-6">
+            <InstitutionContactsPanel
+              institutionId={institution.id}
+              institutionName={institution.name}
+            />
+            <InstitutionBusinessTermsPanel
+              institutionId={institution.id}
+              institutionName={institution.name}
+            />
+            <InstitutionDocumentsPanel
+              institutionId={institution.id}
+              institutionName={institution.name}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

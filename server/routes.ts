@@ -11284,6 +11284,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.use('/api/crm', isAuthenticated, crmRouter.default);
   console.log('CRM routes registered for leads and contacts management');
 
+  // Register Institution CRM routes for contacts, business terms, and documents
+  const institutionCrmRouter = await import('./institution-crm-routes');
+  app.use('/api/admin/institution-crm', isAuthenticated, institutionCrmRouter.default);
+  console.log('Institution CRM routes registered for contacts, business terms, and documents');
+
   // Register region management routes for global scalability
   const { registerRegionRoutes } = await import('./region-routes');
   registerRegionRoutes(app);
