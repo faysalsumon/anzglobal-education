@@ -1,7 +1,7 @@
 # ANZ Global Education Platform
 
 ## Overview
-ANZ Global Education is an AI-powered platform designed to connect international students with global universities. Its primary purpose is to streamline course discovery, student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform aims to enhance access to education, reduce administrative burdens for universities, and capitalize on the growing international education market.
+ANZ Global Education is an AI-powered platform connecting international students with global universities. It aims to streamline course discovery, student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform seeks to enhance access to education, reduce administrative burdens, and capitalize on the international education market.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -13,106 +13,64 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Color Palette**: Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000.
 - **Typography**: Nunito, Open Sans.
 - **Accessibility**: WCAG AA standards, dual navigation, 3-column admin dashboard with dark mode.
-- **AI Chat Agent**: Features a floating human avatar ("Zan from ANZ Global Education") with a sales-focused personality to guide users towards registration and course search. It employs topic guardrails to restrict discussions to international education and uses a RAG-powered knowledge base.
+- **AI Chat Agent**: Features a floating human avatar ("Zan from ANZ Global Education") with a sales-focused personality, guiding users towards registration and course search. It employs topic guardrails and a RAG-powered knowledge base.
 
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
 - **Backend**: Node.js Express.js in TypeScript.
-- **Authentication**: Supabase-only authentication system (Replit Auth completely removed as of December 2025):
-  - **Supabase Auth**: Email/password authentication with JWT tokens, password reset flows, and TOTP 2FA support. Uses `@supabase/supabase-js` with server-side JWT verification and automatic user sync.
-  - **Google OAuth**: Integrated via Supabase Auth with secure server-side user type validation. User type (student/institution) is stored in localStorage before OAuth redirect, then sanitized on the backend to prevent privilege escalation - only "student" and "institution_admin" are allowed via OAuth sync; platform_admin requires manual approval.
-  - **Login Portals**: `/admin/login` (platform admin), `/institution/login` (institution partners), `/auth` (students) - all using Supabase signInWithPassword.
+- **Authentication**: Supabase-only authentication with email/password, JWT tokens, password reset, TOTP 2FA, and Google OAuth.
 - **API**: RESTful.
-- **Real-time**: WebSockets for chat and instant notifications. Shared `wsClients` map (`server/websocket-clients.ts`) enables cross-module real-time messaging. WebSocket authentication uses Supabase tokens sent as the first message after connection (not in URL for security) - server validates via `supabaseAdmin.auth.getUser()` with 10-second auth timeout.
-- **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping extraction).
+- **Real-time**: WebSockets for chat and instant notifications, with Supabase token validation.
+- **AI Integration**: OpenAI API (GPT-4o for content generation, GPT-4o-mini for web scraping).
 - **Database**: PostgreSQL (Neon, Drizzle ORM).
 - **Job Queue**: BullMQ with Redis for background jobs.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage.
-- **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions:
-  - **User Types (4 only)**: `platform_admin`, `admin`, `student`, `institution_admin` - strictly enforced, roles are separate from user types
-  - **Database Schema**: `roles`, `permissions`, `role_permissions`, `profiles`, `profile_permissions` tables for dynamic role and permission management
-  - **9 Roles with Hierarchy Levels**: Lower number = higher authority
-    - CTO (10): Highest platform role, full global access
-    - CEO (15): Global access, strategic oversight
-    - CFO (20): Global access, financial oversight
-    - Branch Manager (40): Regional/branch-level management
-    - Marketing Executive (55): Marketing operations
-    - Senior Consultant (60): Senior team member
-    - Junior Consultant (70): Junior team member
-    - Student (100): Customer role (no hierarchy)
-    - Institution Rep (100): Customer role (no hierarchy)
-  - **"Profiles DO, Roles SEE" Design Pattern**: Profiles determine CRUD actions, Roles determine data visibility scope
-  - **4 Permission Profiles**: Full Access (all CRUD), Standard (create/read/update), Data Entry (create/read), Read Only (read)
-  - **7 Modules**: leads, applications, courses, institutions, users, reports, tasks
-  - **Scope Levels**: global (sees all) → region (sees region's branches) → branch (sees own branch) → self (own data only)
-  - **Hierarchy Rules**:
-    - Higher authority (lower level number) can view/edit data of lower authority users
-    - Same-level users can view but NOT edit each other's data
-    - Data flows upward automatically (junior's data visible to senior, manager, etc.)
-  - **Access Policy Service** (`server/access-policy-service.ts`): getAccessContext(), checkCrudPermission(), getEffectiveScope() with 5-min caching
-  - **Organization Structure**: Regions (countries like Australia, UK, India) → Branches (offices like Sydney, Melbourne, Brisbane)
-  - **Permission Service** (`server/permission-service.ts`): Caching (5-min TTL), hasPermission(), getUserPermissions(), isPlatformAdmin()
-  - **Permission Middleware** (`server/permission-middleware.ts`): requirePermission(), requireAdmin(), requirePlatformAdmin()
-  - **API Endpoints**: `/api/auth/permissions`, `/api/admin/roles`, `/api/admin/profiles`, `/api/admin/profiles/:id/permissions`, `/api/admin/regions-lookup`, `/api/admin/branches-lookup`, `/api/admin/users/:id/access`
-  - **Role Management UI**: CTO-only panel in admin dashboard (Management > Role Management) for viewing users with roles, assigning roles, editing hierarchy levels
-  - **Profile Management UI**: CTO-only panel for viewing permission profiles with CRUD matrix display
-  - **User Management UI**: Region → Branch → Role → Profile assignment flow with edit dialog, proper null handling for clearing fields
-  - **Team Invitation Flow**: Supports Region/Branch/Profile assignment for new team members (optional fields)
-  - **Direct User Creation**: Admin can create users with temp password, supporting Region/Branch/Profile assignment
-  - **Legacy Support**: `checkAdminAccess()` maps new roles to legacy AdminRole types; server normalizes legacy 'university' values to 'institution_admin' on persist
-  - **IMPORTANT**: UniversityRole 'super_admin' (for institution team hierarchy) is SEPARATE from AdminRole 'cto' (for platform admins). Do not confuse the two contexts.
-  - **Known Limitations**: CRM leads currently use branch names (text) instead of branchIds; applications use assignedConsultantId for self-scope filtering
+- **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions, utilizing "Profiles DO, Roles SEE" design pattern.
+  - **User Types**: `platform_admin`, `admin`, `student`, `institution_admin`.
+  - **Roles**: 9 distinct roles (e.g., CTO, CEO, Branch Manager, Student) with defined hierarchy levels.
+  - **Permission Profiles**: Four profiles (Full Access, Standard, Data Entry, Read Only).
+  - **Scope Levels**: Global, region, branch, self.
+  - **Modules**: Leads, applications, courses, institutions, users, reports, tasks.
+  - **Access Policy Service**: Manages access context, CRUD permissions, and effective scope with caching.
+  - **Organization Structure**: Regions → Branches.
 
 ### Feature Specifications
-- **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes comprehensive application management with specific stage transitions and a document request system.
+- **Institution Portal**: Manages courses, applications, and teams, with AI-powered content generation and DALL-E integration. Includes application management with stage transitions and document requests.
 - **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
 - **Public Pages**: Landing page, "Study in Australia" page, course detail pages, institution pages, lead generation forms, and contact page.
-- **Dashboards**: CTO dashboard for CRUD operations with a comprehensive course creation dialog, and consistent UI/UX across Student, University, and Platform Admin dashboards. Admin Dashboard Overview provides at-a-glance stats (tasks, leads, applications, courses, institutions) and quick actions for team members.
+- **Dashboards**: CTO dashboard with CRUD operations, comprehensive course creation dialog, and consistent UI/UX across Student, University, and Platform Admin dashboards. Admin Dashboard Overview provides stats and quick actions.
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
 - **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs.
-- **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval, schema-aware GPT-4o-mini extraction, and full-website crawling with AI-powered course detection and a review dashboard.
-- **Activity Logging**: CRM-style audit trail tracking all admin actions with field-level change tracking and user attribution.
-- **CRM System (Phase 1)**: Unified lead management with task assignment, internal notes with @mentions, and follow-up reminders. Integrates into the admin dashboard with dedicated tabs for leads, tasks, and team workload.
+- **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval, schema-aware GPT-4o-mini extraction, and full-website crawling with AI-powered course detection.
+- **Activity Logging**: CRM-style audit trail tracking admin actions with field-level change tracking.
+- **CRM System (Phase 1)**: Unified lead management with task assignment, internal notes, and follow-up reminders.
 - **Profile Management**: Student and Admin profile management with role-based security.
-- **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO. Blog system includes full CRUD, draft/published workflow, SEO metadata, categories, tags, and a feature to seed sample blogs.
-- **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications. Business rules enforce stage-specific requirements and role-based permissions.
-- **Draft/Publish Workflow**: Collaborative content creation system for institutions and courses:
-  - **Database Schema**: `publishStatus` field ('draft' | 'published') on both universities and courses tables, with `publishedAt` timestamp and `publishedByUserId` for audit trail
-  - **Ownership Fields (Courses)**: `createdByUserId`, `updatedByUserId`, `assignedToUserId` for tracking content ownership and assignment
-  - **UI Controls**: Institution and course creation/edit dialogs have "Save Draft" and "Publish" buttons; tables show publish status badges (blue "Published", outline "Draft") and filter dropdowns
-  - **Public Visibility Rule**: Content only appears on public API endpoints when publishStatus='published' AND approvalStatus='approved' AND isActive=true
-  - **Workflow**: Draft → Publish → Approval → Active (content can be saved as draft during creation, then published when ready for review)
-  - **Course Transfer System**: Courses can be transferred between team members via `/api/super-admin/courses/:id/transfer` endpoint with automatic `course_assigned` notification
-  - **Team Member View**: `/api/admin/my-courses` endpoint returns only courses created by or assigned to the current user (for non-admin team members)
-  - **Publish/Unpublish Endpoints**: `/api/super-admin/courses/:id/publish` and `/api/super-admin/courses/:id/unpublish` for course visibility control
+- **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
+- **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications.
+- **Draft/Publish Workflow**: Collaborative content creation for institutions and courses with `publishStatus`, `publishedAt`, `publishedByUserId` fields. Content is only public when published and approved. Includes course transfer system.
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators, color-coded SLA badges, quick filter chips, and bulk actions.
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
-- **Institution Tags System**: E-commerce style tagging for institution categorization, similar to course tags:
-  - **Database Schema**: `institution_tags_registry` (tag definitions) and `institution_tags` (junction table for many-to-many relationship)
-  - **7 Tag Categories**: type (Public University, Private, TAFE), specialization (Research-Intensive, Teaching-Focused), experience (Campus Life, Online Learning), location (Urban, Regional), financial (Scholarship-Friendly, Affordable), accreditation (Top 100, AACSB), services (Career Services, Visa Support)
-  - **API Endpoints**: `/api/admin/institution-tags` (CRUD), `/api/admin/institution-tags/grouped` (for picker UI), `/api/admin/institutions/:id/tags` (assign tags), `/api/public/institution-tags` (public filter)
-  - **Admin UI**: Tag picker in institution editor (sidebar card) with categorized dropdown, visual badges with colors, auto-save on toggle
-  - **Seed Data**: POST `/api/admin/institution-tags/seed` creates 35 initial tags across all categories
+- **Unified Tag Manager**: Consolidated tagging system for courses and institutions with 13 categories, flexible assignment, and an Admin UI for management.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers.
-- **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content including Testimonials, FAQs, Team Members, Site Settings, and Content Snippets. Supports CRUD operations, draft/published workflow, and audit trails.
+- **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content including Testimonials, FAQs, Team Members, Site Settings, and Content Snippets.
 
 ### Security Implementations
-- **CSRF Protection**: Double-submit CSRF token pattern using `csrf-csrf` package.
-- **API Logging Sanitization**: Sensitive fields are redacted from logs; response bodies logged only on errors.
-- **Session Security**: HTTPOnly cookies with SameSite protection. Sessions stored in PostgreSQL.
+- **CSRF Protection**: Double-submit CSRF token pattern.
+- **API Logging Sanitization**: Sensitive fields redacted from logs.
+- **Session Security**: HTTPOnly cookies with SameSite protection; sessions stored in PostgreSQL.
 - **Role-Based Access Control**: All API routes protected by authentication and `userType` checks.
 
 ### System Design Choices
-- **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini for structured data extraction, Playwright/Cheerio for scraping, and BullMQ for job queuing. Includes intelligent heuristics for course detection and an auto-approval system. Redis availability is checked at startup with graceful fallback.
-- **Student Application Portal**: Utilizes an 11-stage workflow (Assessment to Visa-Lodgment/Outcome) with dedicated database tables and a Student Portal UI.
+- **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini for structured data extraction, Playwright/Cheerio for scraping, and BullMQ for job queuing. Includes intelligent heuristics and auto-approval.
+- **Student Application Portal**: Utilizes an 11-stage workflow with dedicated database tables and a Student Portal UI.
 
 ## External Dependencies
-- **Authentication Service**: Supabase Auth (exclusive - all authentication flows use Supabase).
+- **Authentication Service**: Supabase Auth.
 - **AI Service**: OpenAI API (GPT-4o, GPT-4o-mini).
 - **Vector Database**: Pinecone.
 - **Database**: PostgreSQL (Neon).
-- **Job Queue**: Redis (BullMQ dependency).
+- **Job Queue**: Redis (via BullMQ).
 - **Object Storage**: Replit Object Storage.
 - **CDN**: Google Fonts CDN.
 - **Mapping/Location**: Google Maps JavaScript API, Google Places API.

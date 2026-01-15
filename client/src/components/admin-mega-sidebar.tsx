@@ -108,7 +108,7 @@ export function AdminMegaSidebar({
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
-        { icon: Tag, label: "Course Tags", value: "tags", show: hasFullAdminAccess },
+        { icon: Tag, label: "Tag Manager", value: "tags", show: hasFullAdminAccess },
       ],
     },
     {

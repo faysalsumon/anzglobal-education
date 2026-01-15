@@ -835,22 +835,39 @@ export const courses = pgTable("courses", {
 // E-commerce style tagging for course categorization and filtering
 // ============================================
 
-// Tag category enum for organizing tags
+// Tag category enum for organizing tags (unified for courses and institutions)
 export const tagCategoryEnum = pgEnum('tag_category', [
+  // Course-specific categories
   'feature',    // Course features: Scholarship Available, Work Placement, Fast-Track
   'delivery',   // Delivery modes: Online, On-Campus, Hybrid, Evening Classes
   'career',     // Career outcomes: High Demand, Industry Certified, Graduate Employment
   'skill',      // Skills: Hands-on Training, Research Focus, Project-Based
   'industry',   // Industry sectors: Healthcare, Technology, Finance, Construction
   'audience',   // Target audience: International Students, Working Professionals, School Leavers
+  // Institution-specific categories
+  'type',        // Institution type: Public University, Private University, TAFE, College
+  'specialization', // Focus areas: Research-Intensive, Teaching-Focused, Industry-Partnerships
+  'experience',  // Student experience: Campus Life, Online Learning, International Support
+  'location',    // Location features: Urban, Suburban, Regional, Multi-Campus
+  'financial',   // Financial: Scholarship-Friendly, Affordable, Work-Study Programs
+  'accreditation', // Rankings/Accreditation: Top 100, AACSB, EQUIS, Nationally Recognized
+  'services',    // Student services: Career Services, Housing, Visa Support, Mentorship
 ]);
 
-// Tags table - central registry of all course tags
+// Enum for what entity types a tag applies to
+export const tagAppliesToEnum = pgEnum('tag_applies_to', [
+  'courses',      // Tag applies to courses only
+  'institutions', // Tag applies to institutions only
+  'both',         // Tag applies to both courses and institutions
+]);
+
+// Tags table - unified registry for all tags (courses and institutions)
 export const tags = pgTable("tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   category: tagCategoryEnum("category").notNull(),
+  appliesTo: tagAppliesToEnum("applies_to").default('courses').notNull(), // What entity types this tag applies to
   description: text("description"),
   color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #FF5000
   displayOrder: integer("display_order").default(0),
@@ -861,6 +878,7 @@ export const tags = pgTable("tags", {
   categoryIdx: index("tags_category_idx").on(table.category),
   slugIdx: index("tags_slug_idx").on(table.slug),
   activeIdx: index("tags_active_idx").on(table.isActive),
+  appliesToIdx: index("tags_applies_to_idx").on(table.appliesTo),
 }));
 
 // Course-Tags junction table for many-to-many relationship
@@ -876,44 +894,15 @@ export const courseTags = pgTable("course_tags", {
 }));
 
 // ============================================
-// INSTITUTION TAGS SYSTEM
-// E-commerce style tagging for institution categorization and filtering
+// INSTITUTION TAGS JUNCTION
+// Uses unified tags table with appliesTo='institutions' or 'both'
 // ============================================
 
-// Institution tag category enum for organizing institution-specific tags
-export const institutionTagCategoryEnum = pgEnum('institution_tag_category', [
-  'type',        // Institution type: Public University, Private University, TAFE, College
-  'specialization', // Focus areas: Research-Intensive, Teaching-Focused, Industry-Partnerships
-  'experience',  // Student experience: Campus Life, Online Learning, International Support
-  'location',    // Location features: Urban, Suburban, Regional, Multi-Campus
-  'financial',   // Financial: Scholarship-Friendly, Affordable, Work-Study Programs
-  'accreditation', // Rankings/Accreditation: Top 100, AACSB, EQUIS, Nationally Recognized
-  'services',    // Student services: Career Services, Housing, Visa Support, Mentorship
-]);
-
-// Institution tags table - central registry of all institution-specific tags
-export const institutionTagsRegistry = pgTable("institution_tags_registry", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name", { length: 100 }).notNull(),
-  slug: varchar("slug", { length: 100 }).notNull().unique(),
-  category: institutionTagCategoryEnum("category").notNull(),
-  description: text("description"),
-  color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #3465A5
-  displayOrder: integer("display_order").default(0),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  categoryIdx: index("institution_tags_registry_category_idx").on(table.category),
-  slugIdx: index("institution_tags_registry_slug_idx").on(table.slug),
-  activeIdx: index("institution_tags_registry_active_idx").on(table.isActive),
-}));
-
-// Institution-Tags junction table for many-to-many relationship
+// Institution-Tags junction table for many-to-many relationship (references unified tags table)
 export const institutionTags = pgTable("institution_tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
-  tagId: varchar("tag_id").notNull().references(() => institutionTagsRegistry.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   institutionTagUnique: unique("institution_tag_unique").on(table.institutionId, table.tagId),
@@ -2019,20 +2008,22 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   courseComparisons: many(courseComparisons),
 }));
 
-// Institution tags relations
-export const institutionTagsRegistryRelations = relations(institutionTagsRegistry, ({ many }) => ({
-  institutionTags: many(institutionTags),
-}));
-
+// Institution tags relations (now uses unified tags table)
 export const institutionTagsRelations = relations(institutionTags, ({ one }) => ({
   institution: one(universities, {
     fields: [institutionTags.institutionId],
     references: [universities.id],
   }),
-  tag: one(institutionTagsRegistry, {
+  tag: one(tags, {
     fields: [institutionTags.tagId],
-    references: [institutionTagsRegistry.id],
+    references: [tags.id],
   }),
+}));
+
+// Tags relations - unified for both courses and institutions
+export const tagsRelations = relations(tags, ({ many }) => ({
+  courseTags: many(courseTags),
+  institutionTags: many(institutionTags),
 }));
 
 export const studentProfilesRelations = relations(studentProfiles, ({ one, many }) => ({
@@ -2514,7 +2505,7 @@ export const insertSubDisciplineSchema = createInsertSchema(subDisciplines).omit
 export type InsertSubDiscipline = z.infer<typeof insertSubDisciplineSchema>;
 export type SubDiscipline = typeof subDisciplines.$inferSelect;
 
-// Tag schemas for course tagging system
+// Tag schemas for unified tagging system (courses and institutions)
 export const insertTagSchema = createInsertSchema(tags).omit({
   id: true,
   createdAt: true,
@@ -2522,7 +2513,12 @@ export const insertTagSchema = createInsertSchema(tags).omit({
 }).extend({
   name: z.string().min(1, "Tag name is required").max(100),
   slug: z.string().min(1, "Slug is required").max(100),
-  category: z.enum(['feature', 'delivery', 'career', 'skill', 'industry', 'audience']),
+  // All categories: course-specific + institution-specific
+  category: z.enum([
+    'feature', 'delivery', 'career', 'skill', 'industry', 'audience', // Course categories
+    'type', 'specialization', 'experience', 'location', 'financial', 'accreditation', 'services' // Institution categories
+  ]),
+  appliesTo: z.enum(['courses', 'institutions', 'both']).default('courses'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color").optional().nullable(),
 });
 
@@ -2541,32 +2537,16 @@ export const insertCourseTagSchema = createInsertSchema(courseTags).omit({
 export type CourseTag = typeof courseTags.$inferSelect;
 export type InsertCourseTag = z.infer<typeof insertCourseTagSchema>;
 
-// Tag with usage count for admin display
+// Tag with usage counts for admin display (unified for courses and institutions)
 export interface TagWithCount extends Tag {
   courseCount: number;
+  institutionCount: number;
 }
 
 // ============================================
-// INSTITUTION TAG SCHEMAS AND TYPES
+// INSTITUTION TAG JUNCTION SCHEMAS AND TYPES
+// Note: Uses unified tags table - institutions can use tags with appliesTo='institutions' or 'both'
 // ============================================
-
-// Institution tag registry schema
-export const insertInstitutionTagRegistrySchema = createInsertSchema(institutionTagsRegistry).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  name: z.string().min(1, "Tag name is required").max(100),
-  slug: z.string().min(1, "Slug is required").max(100),
-  category: z.enum(['type', 'specialization', 'experience', 'location', 'financial', 'accreditation', 'services']),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color").optional().nullable(),
-});
-
-export const updateInstitutionTagRegistrySchema = insertInstitutionTagRegistrySchema.partial();
-
-export type InstitutionTagRegistry = typeof institutionTagsRegistry.$inferSelect;
-export type InsertInstitutionTagRegistry = z.infer<typeof insertInstitutionTagRegistrySchema>;
-export type UpdateInstitutionTagRegistry = z.infer<typeof updateInstitutionTagRegistrySchema>;
 
 // Institution-Tag association schema
 export const insertInstitutionTagSchema = createInsertSchema(institutionTags).omit({
@@ -2577,15 +2557,16 @@ export const insertInstitutionTagSchema = createInsertSchema(institutionTags).om
 export type InstitutionTag = typeof institutionTags.$inferSelect;
 export type InsertInstitutionTag = z.infer<typeof insertInstitutionTagSchema>;
 
-// Institution tag with usage count for admin display
-export interface InstitutionTagWithCount extends InstitutionTagRegistry {
-  institutionCount: number;
-}
+// Backward-compatible type alias (institutions now use unified Tag type)
+export type InstitutionTagRegistry = Tag;
+export type InsertInstitutionTagRegistry = InsertTag;
+export type UpdateInstitutionTagRegistry = UpdateTag;
+export type InstitutionTagWithCount = TagWithCount;
 
 // Institution with tags for API responses
 export interface InstitutionWithTags {
   institution: University;
-  tags: InstitutionTagRegistry[];
+  tags: Tag[];
 }
 
 // Course with tags for API responses

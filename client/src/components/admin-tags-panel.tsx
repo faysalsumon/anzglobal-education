@@ -23,23 +23,41 @@ interface TagType {
   id: string;
   name: string;
   slug: string;
-  category: 'feature' | 'delivery' | 'career' | 'skill' | 'industry' | 'audience';
+  category: 'feature' | 'delivery' | 'career' | 'skill' | 'industry' | 'audience' | 'type' | 'specialization' | 'experience' | 'location' | 'financial' | 'accreditation' | 'services';
+  appliesTo: 'courses' | 'institutions' | 'both';
   description: string | null;
   color: string | null;
   displayOrder: number;
   isActive: boolean;
   courseCount?: number;
+  institutionCount?: number;
   createdAt: string | null;
   updatedAt: string | null;
 }
 
+// All tag categories: course-specific + institution-specific
 const TAG_CATEGORIES = [
-  { value: 'feature', label: 'Features', description: 'Course features like scholarships, work placement' },
-  { value: 'delivery', label: 'Delivery', description: 'How the course is delivered' },
-  { value: 'career', label: 'Career', description: 'Career outcomes and pathways' },
-  { value: 'skill', label: 'Skills', description: 'Skills and learning approaches' },
-  { value: 'industry', label: 'Industry', description: 'Industry sectors' },
-  { value: 'audience', label: 'Audience', description: 'Target student audiences' },
+  // Course categories
+  { value: 'feature', label: 'Features', description: 'Course features like scholarships, work placement', appliesTo: 'courses' },
+  { value: 'delivery', label: 'Delivery', description: 'How the course is delivered', appliesTo: 'courses' },
+  { value: 'career', label: 'Career', description: 'Career outcomes and pathways', appliesTo: 'courses' },
+  { value: 'skill', label: 'Skills', description: 'Skills and learning approaches', appliesTo: 'courses' },
+  { value: 'industry', label: 'Industry', description: 'Industry sectors', appliesTo: 'both' },
+  { value: 'audience', label: 'Audience', description: 'Target student audiences', appliesTo: 'courses' },
+  // Institution categories
+  { value: 'type', label: 'Institution Type', description: 'Public University, Private, TAFE, College', appliesTo: 'institutions' },
+  { value: 'specialization', label: 'Specialization', description: 'Focus areas like research, teaching', appliesTo: 'institutions' },
+  { value: 'experience', label: 'Experience', description: 'Campus life, online learning, support', appliesTo: 'institutions' },
+  { value: 'location', label: 'Location', description: 'Urban, regional, multi-campus', appliesTo: 'institutions' },
+  { value: 'financial', label: 'Financial', description: 'Scholarships, affordability', appliesTo: 'both' },
+  { value: 'accreditation', label: 'Accreditation', description: 'Rankings and certifications', appliesTo: 'institutions' },
+  { value: 'services', label: 'Services', description: 'Career services, housing, visa support', appliesTo: 'institutions' },
+] as const;
+
+const APPLIES_TO_OPTIONS = [
+  { value: 'courses', label: 'Courses Only', description: 'Tag applies only to courses' },
+  { value: 'institutions', label: 'Institutions Only', description: 'Tag applies only to institutions' },
+  { value: 'both', label: 'Both', description: 'Tag applies to both courses and institutions' },
 ] as const;
 
 const PRESET_COLORS = [
@@ -51,7 +69,8 @@ const PRESET_COLORS = [
 const tagFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   slug: z.string().optional(),
-  category: z.enum(['feature', 'delivery', 'career', 'skill', 'industry', 'audience']),
+  category: z.enum(['feature', 'delivery', 'career', 'skill', 'industry', 'audience', 'type', 'specialization', 'experience', 'location', 'financial', 'accreditation', 'services']),
+  appliesTo: z.enum(['courses', 'institutions', 'both']).default('courses'),
   description: z.string().optional(),
   color: z.string().optional(),
   displayOrder: z.coerce.number().optional(),
@@ -68,6 +87,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [appliesToFilter, setAppliesToFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<TagType | null>(null);
   const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
@@ -78,6 +98,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
       name: "",
       slug: "",
       category: "feature",
+      appliesTo: "courses",
       description: "",
       color: "#3B82F6",
       displayOrder: 0,
@@ -158,6 +179,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
       name: "",
       slug: "",
       category: "feature",
+      appliesTo: "courses",
       description: "",
       color: "#3B82F6",
       displayOrder: 0,
@@ -172,6 +194,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
       name: tag.name,
       slug: tag.slug,
       category: tag.category,
+      appliesTo: tag.appliesTo || "courses",
       description: tag.description || "",
       color: tag.color || "#3B82F6",
       displayOrder: tag.displayOrder,
@@ -192,7 +215,8 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
     const matchesSearch = tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tag.slug.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === "all" || tag.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesAppliesTo = appliesToFilter === "all" || tag.appliesTo === appliesToFilter;
+    return matchesSearch && matchesCategory && matchesAppliesTo;
   });
 
   const groupedTags = TAG_CATEGORIES.map(cat => ({
@@ -202,26 +226,44 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
 
   const getCategoryBadgeColor = (category: string) => {
     const colors: Record<string, string> = {
+      // Course categories
       feature: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
       delivery: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
       career: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
       skill: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
       industry: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
       audience: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200",
+      // Institution categories
+      type: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+      specialization: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
+      experience: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+      location: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200",
+      financial: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+      accreditation: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+      services: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900 dark:text-fuchsia-200",
     };
     return colors[category] || "bg-gray-100 text-gray-800";
+  };
+
+  const getAppliesToBadgeColor = (appliesTo: string) => {
+    const colors: Record<string, string> = {
+      courses: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      institutions: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      both: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    };
+    return colors[appliesTo] || "bg-gray-100 text-gray-800";
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <h2 className="text-2xl font-bold flex flex-wrap items-center gap-2" data-testid="heading-tag-manager">
             <Tag className="h-6 w-6" />
-            Course Tags
+            Tag Manager
           </h2>
           <p className="text-muted-foreground mt-1">
-            Manage e-commerce style tags for course categorization and filtering
+            Manage tags for courses and institutions - assign to either or both
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -263,6 +305,17 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
             {TAG_CATEGORIES.map((cat) => (
               <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={appliesToFilter} onValueChange={setAppliesToFilter}>
+          <SelectTrigger className="w-[160px]" data-testid="select-applies-to-filter">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="courses">Courses Only</SelectItem>
+            <SelectItem value="institutions">Institutions Only</SelectItem>
+            <SelectItem value="both">Both</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -322,8 +375,9 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
                 <TableRow>
                   <TableHead>Tag</TableHead>
                   <TableHead>Slug</TableHead>
+                  <TableHead>Applies To</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Courses</TableHead>
+                  <TableHead className="text-center">Usage</TableHead>
                   <TableHead className="text-center">Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -331,7 +385,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
               <TableBody>
                 {filteredTags.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No tags found
                     </TableCell>
                   </TableRow>
@@ -350,11 +404,36 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
                       <TableCell className="text-muted-foreground font-mono text-sm">
                         {tag.slug}
                       </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            tag.appliesTo === 'both' 
+                              ? 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300' 
+                              : tag.appliesTo === 'institutions' 
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                                : 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300'
+                          }
+                        >
+                          {tag.appliesTo === 'both' ? 'Both' : tag.appliesTo === 'institutions' ? 'Institutions' : 'Courses'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="max-w-[200px] truncate text-sm">
                         {tag.description || '-'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline">{tag.courseCount || 0}</Badge>
+                        <div className="flex flex-wrap justify-center gap-1">
+                          {(tag.appliesTo === 'courses' || tag.appliesTo === 'both') && (
+                            <Badge variant="outline" className="text-xs">
+                              {tag.courseCount || 0} courses
+                            </Badge>
+                          )}
+                          {(tag.appliesTo === 'institutions' || tag.appliesTo === 'both') && (
+                            <Badge variant="outline" className="text-xs">
+                              {tag.institutionCount || 0} institutions
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         {tag.isActive ? (
@@ -399,7 +478,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
           <DialogHeader>
             <DialogTitle>{editingTag ? "Edit Tag" : "Create New Tag"}</DialogTitle>
             <DialogDescription>
-              {editingTag ? "Update the tag details below" : "Add a new tag for course categorization"}
+              {editingTag ? "Update the tag details below" : "Add a new tag for courses or institutions"}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -436,6 +515,32 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="appliesTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Applies To</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-tag-applies-to">
+                          <SelectValue placeholder="Select where tag applies" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {APPLIES_TO_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Choose whether this tag applies to courses, institutions, or both
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
