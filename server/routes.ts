@@ -71,6 +71,12 @@ import {
   insertTagSchema,
   updateTagSchema,
   insertCourseTagSchema,
+  // Institution tags imports
+  institutionTagsRegistry,
+  institutionTags,
+  insertInstitutionTagRegistrySchema,
+  updateInstitutionTagRegistrySchema,
+  insertInstitutionTagSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
 import { z } from "zod";
@@ -13391,6 +13397,368 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END COURSE TAGS API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // INSTITUTION TAGS API ENDPOINTS
+  // E-commerce style tagging for institution categorization
+  // ============================================
+
+  // Get all institution tags (with optional category filter)
+  app.get("/api/admin/institution-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'consultant']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { category, includeInactive } = req.query;
+      
+      const conditions = [];
+      if (category) {
+        conditions.push(eq(institutionTagsRegistry.category, category as string));
+      }
+      if (!includeInactive) {
+        conditions.push(eq(institutionTagsRegistry.isActive, true));
+      }
+      
+      const allTags = conditions.length > 0
+        ? await db.select().from(institutionTagsRegistry).where(and(...conditions)).orderBy(institutionTagsRegistry.category, institutionTagsRegistry.displayOrder, institutionTagsRegistry.name)
+        : await db.select().from(institutionTagsRegistry).orderBy(institutionTagsRegistry.category, institutionTagsRegistry.displayOrder, institutionTagsRegistry.name);
+      
+      // Get usage counts for each tag
+      const tagsWithCounts = await Promise.all(
+        allTags.map(async (tag) => {
+          const countResult = await db
+            .select({ count: dsql<number>`count(*)::int` })
+            .from(institutionTags)
+            .where(eq(institutionTags.tagId, tag.id));
+          return {
+            ...tag,
+            institutionCount: countResult[0]?.count || 0,
+          };
+        })
+      );
+      
+      res.json(tagsWithCounts);
+    } catch (error: any) {
+      console.error("Error fetching institution tags:", error);
+      res.status(500).json({ message: "Failed to fetch institution tags" });
+    }
+  });
+
+  // Get institution tags grouped by category (for institution editor picker)
+  app.get("/api/admin/institution-tags/grouped", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'consultant']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const allTags = await db
+        .select()
+        .from(institutionTagsRegistry)
+        .where(eq(institutionTagsRegistry.isActive, true))
+        .orderBy(institutionTagsRegistry.category, institutionTagsRegistry.displayOrder, institutionTagsRegistry.name);
+      
+      // Group by category
+      const grouped: Record<string, typeof allTags> = {};
+      allTags.forEach(tag => {
+        if (!grouped[tag.category]) {
+          grouped[tag.category] = [];
+        }
+        grouped[tag.category].push(tag);
+      });
+      
+      res.json(grouped);
+    } catch (error: any) {
+      console.error("Error fetching grouped institution tags:", error);
+      res.status(500).json({ message: "Failed to fetch institution tags" });
+    }
+  });
+
+  // Public endpoint - get all active institution tags
+  app.get("/api/public/institution-tags", async (req, res) => {
+    try {
+      const { category } = req.query;
+      
+      const allTags = category
+        ? await db.select().from(institutionTagsRegistry).where(and(eq(institutionTagsRegistry.isActive, true), eq(institutionTagsRegistry.category, category as string))).orderBy(institutionTagsRegistry.category, institutionTagsRegistry.displayOrder, institutionTagsRegistry.name)
+        : await db.select().from(institutionTagsRegistry).where(eq(institutionTagsRegistry.isActive, true)).orderBy(institutionTagsRegistry.category, institutionTagsRegistry.displayOrder, institutionTagsRegistry.name);
+      
+      res.json(allTags);
+    } catch (error: any) {
+      console.error("Error fetching public institution tags:", error);
+      res.status(500).json({ message: "Failed to fetch institution tags" });
+    }
+  });
+
+  // Get single institution tag by ID
+  app.get("/api/admin/institution-tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'consultant']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const tag = await db.select().from(institutionTagsRegistry).where(eq(institutionTagsRegistry.id, req.params.id)).limit(1);
+      if (!tag.length) {
+        return res.status(404).json({ message: "Institution tag not found" });
+      }
+      res.json(tag[0]);
+    } catch (error: any) {
+      console.error("Error fetching institution tag:", error);
+      res.status(500).json({ message: "Failed to fetch institution tag" });
+    }
+  });
+
+  // Create new institution tag (admin only)
+  app.post("/api/admin/institution-tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const validatedData = insertInstitutionTagRegistrySchema.parse(req.body);
+      
+      // Auto-generate slug if not provided
+      if (!validatedData.slug) {
+        validatedData.slug = validatedData.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      const [newTag] = await db.insert(institutionTagsRegistry).values(validatedData).returning();
+      
+      res.status(201).json(newTag);
+    } catch (error: any) {
+      console.error("Error creating institution tag:", error);
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "An institution tag with this slug already exists" });
+      }
+      res.status(400).json({ message: error.message || "Failed to create institution tag" });
+    }
+  });
+
+  // Update institution tag (admin only)
+  app.patch("/api/admin/institution-tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const validatedData = updateInstitutionTagRegistrySchema.parse(req.body);
+      
+      const [updatedTag] = await db
+        .update(institutionTagsRegistry)
+        .set({ ...validatedData, updatedAt: new Date() })
+        .where(eq(institutionTagsRegistry.id, req.params.id))
+        .returning();
+      
+      if (!updatedTag) {
+        return res.status(404).json({ message: "Institution tag not found" });
+      }
+      
+      res.json(updatedTag);
+    } catch (error: any) {
+      console.error("Error updating institution tag:", error);
+      res.status(400).json({ message: error.message || "Failed to update institution tag" });
+    }
+  });
+
+  // Delete institution tag (admin only)
+  app.delete("/api/admin/institution-tags/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+      
+      // First delete all institution-tag associations
+      await db.delete(institutionTags).where(eq(institutionTags.tagId, req.params.id));
+      
+      // Then delete the tag
+      const [deletedTag] = await db.delete(institutionTagsRegistry).where(eq(institutionTagsRegistry.id, req.params.id)).returning();
+      
+      if (!deletedTag) {
+        return res.status(404).json({ message: "Institution tag not found" });
+      }
+      
+      res.json({ message: "Institution tag deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting institution tag:", error);
+      res.status(500).json({ message: "Failed to delete institution tag" });
+    }
+  });
+
+  // Get tags for a specific institution
+  app.get("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'consultant']);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { institutionId } = req.params;
+      
+      const tagsForInstitution = await db
+        .select({
+          id: institutionTagsRegistry.id,
+          name: institutionTagsRegistry.name,
+          slug: institutionTagsRegistry.slug,
+          category: institutionTagsRegistry.category,
+          color: institutionTagsRegistry.color,
+          description: institutionTagsRegistry.description,
+        })
+        .from(institutionTags)
+        .innerJoin(institutionTagsRegistry, eq(institutionTags.tagId, institutionTagsRegistry.id))
+        .where(eq(institutionTags.institutionId, institutionId));
+      
+      res.json(tagsForInstitution);
+    } catch (error: any) {
+      console.error("Error fetching institution tags:", error);
+      res.status(500).json({ message: "Failed to fetch institution tags" });
+    }
+  });
+
+  // Set tags for an institution (replace all)
+  app.put("/api/admin/institutions/:institutionId/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'consultant']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { institutionId } = req.params;
+      const { tagIds } = req.body;
+      
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ message: "tagIds must be an array" });
+      }
+      
+      // Delete existing tags
+      await db.delete(institutionTags).where(eq(institutionTags.institutionId, institutionId));
+      
+      // Add new tags
+      if (tagIds.length > 0) {
+        const newTags = tagIds.map((tagId: string) => ({
+          institutionId,
+          tagId,
+        }));
+        await db.insert(institutionTags).values(newTags);
+      }
+      
+      // Return updated tags
+      const updatedTags = await db
+        .select({
+          id: institutionTagsRegistry.id,
+          name: institutionTagsRegistry.name,
+          slug: institutionTagsRegistry.slug,
+          category: institutionTagsRegistry.category,
+          color: institutionTagsRegistry.color,
+        })
+        .from(institutionTags)
+        .innerJoin(institutionTagsRegistry, eq(institutionTags.tagId, institutionTagsRegistry.id))
+        .where(eq(institutionTags.institutionId, institutionId));
+      
+      res.json(updatedTags);
+    } catch (error: any) {
+      console.error("Error setting institution tags:", error);
+      res.status(500).json({ message: "Failed to set institution tags" });
+    }
+  });
+
+  // Seed initial institution tags
+  app.post("/api/admin/institution-tags/seed", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+      
+      const initialTags = [
+        // Type tags
+        { name: 'Public University', slug: 'public-university', category: 'type' as const, color: '#3465A5' },
+        { name: 'Private University', slug: 'private-university', category: 'type' as const, color: '#6366F1' },
+        { name: 'TAFE', slug: 'tafe', category: 'type' as const, color: '#10B981' },
+        { name: 'College', slug: 'college', category: 'type' as const, color: '#F59E0B' },
+        { name: 'Vocational', slug: 'vocational', category: 'type' as const, color: '#8B5CF6' },
+        
+        // Specialization tags
+        { name: 'Research-Intensive', slug: 'research-intensive', category: 'specialization' as const, color: '#3B82F6' },
+        { name: 'Teaching-Focused', slug: 'teaching-focused', category: 'specialization' as const, color: '#22C55E' },
+        { name: 'Industry Partnerships', slug: 'industry-partnerships', category: 'specialization' as const, color: '#FF5000' },
+        { name: 'Innovation Hub', slug: 'innovation-hub', category: 'specialization' as const, color: '#A855F7' },
+        { name: 'STEM Focus', slug: 'stem-focus', category: 'specialization' as const, color: '#06B6D4' },
+        
+        // Experience tags
+        { name: 'Campus Life', slug: 'campus-life', category: 'experience' as const, color: '#EC4899' },
+        { name: 'Online Learning', slug: 'online-learning', category: 'experience' as const, color: '#6366F1' },
+        { name: 'Hybrid Programs', slug: 'hybrid-programs', category: 'experience' as const, color: '#14B8A6' },
+        { name: 'International Support', slug: 'international-support', category: 'experience' as const, color: '#F97316' },
+        { name: 'Student Clubs', slug: 'student-clubs', category: 'experience' as const, color: '#84CC16' },
+        
+        // Location tags
+        { name: 'Urban', slug: 'urban', category: 'location' as const, color: '#64748B' },
+        { name: 'Suburban', slug: 'suburban', category: 'location' as const, color: '#78716C' },
+        { name: 'Regional', slug: 'regional', category: 'location' as const, color: '#22C55E' },
+        { name: 'Multi-Campus', slug: 'multi-campus', category: 'location' as const, color: '#3B82F6' },
+        { name: 'City Center', slug: 'city-center', category: 'location' as const, color: '#EF4444' },
+        
+        // Financial tags
+        { name: 'Scholarship-Friendly', slug: 'scholarship-friendly', category: 'financial' as const, color: '#22C55E' },
+        { name: 'Affordable', slug: 'affordable', category: 'financial' as const, color: '#10B981' },
+        { name: 'Work-Study Programs', slug: 'work-study-programs', category: 'financial' as const, color: '#3B82F6' },
+        { name: 'Payment Plans', slug: 'payment-plans', category: 'financial' as const, color: '#6366F1' },
+        { name: 'Financial Aid', slug: 'financial-aid', category: 'financial' as const, color: '#F59E0B' },
+        
+        // Accreditation tags
+        { name: 'Top 100 World', slug: 'top-100-world', category: 'accreditation' as const, color: '#EF4444' },
+        { name: 'AACSB Accredited', slug: 'aacsb-accredited', category: 'accreditation' as const, color: '#3465A5' },
+        { name: 'EQUIS', slug: 'equis', category: 'accreditation' as const, color: '#6366F1' },
+        { name: 'AMBA', slug: 'amba', category: 'accreditation' as const, color: '#8B5CF6' },
+        { name: 'Nationally Recognized', slug: 'nationally-recognized', category: 'accreditation' as const, color: '#22C55E' },
+        
+        // Services tags
+        { name: 'Career Services', slug: 'career-services', category: 'services' as const, color: '#3B82F6' },
+        { name: 'Housing Available', slug: 'housing-available', category: 'services' as const, color: '#F97316' },
+        { name: 'Visa Support', slug: 'visa-support', category: 'services' as const, color: '#22C55E' },
+        { name: 'Mentorship Programs', slug: 'mentorship-programs', category: 'services' as const, color: '#A855F7' },
+        { name: 'Health Services', slug: 'health-services', category: 'services' as const, color: '#EF4444' },
+      ];
+      
+      // Insert tags, ignoring conflicts
+      for (const tag of initialTags) {
+        await db.insert(institutionTagsRegistry).values(tag).onConflictDoNothing();
+      }
+      
+      const allTags = await db.select().from(institutionTagsRegistry).orderBy(institutionTagsRegistry.category, institutionTagsRegistry.name);
+      res.json({ message: `Seeded ${initialTags.length} institution tags`, tags: allTags });
+    } catch (error: any) {
+      console.error("Error seeding institution tags:", error);
+      res.status(500).json({ message: "Failed to seed institution tags" });
+    }
+  });
+
+  // ============================================
+  // END INSTITUTION TAGS API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available

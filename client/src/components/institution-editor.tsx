@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -99,10 +101,81 @@ interface InstitutionEditorProps {
   userId?: string;
 }
 
+interface InstitutionTagItem {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  color: string | null;
+  description?: string | null;
+}
+
+const INSTITUTION_TAG_CATEGORY_LABELS: Record<string, string> = {
+  type: "Institution Type",
+  specialization: "Specialization",
+  experience: "Student Experience",
+  location: "Location",
+  financial: "Financial",
+  accreditation: "Accreditation",
+  services: "Services",
+};
+
 export function InstitutionEditor({ institution, onBack, userId }: InstitutionEditorProps) {
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
+  // Fetch grouped tags for picker
+  const { data: groupedTags } = useQuery<Record<string, InstitutionTagItem[]>>({
+    queryKey: ["/api/admin/institution-tags/grouped"],
+    enabled: !!institution,
+  });
+
+  // Fetch current institution tags
+  const { data: institutionCurrentTags, isLoading: loadingTags } = useQuery<InstitutionTagItem[]>({
+    queryKey: ["/api/admin/institutions", institution?.id, "tags"],
+    enabled: !!institution?.id,
+  });
+
+  // Sync selected tags when data loads
+  useEffect(() => {
+    if (institutionCurrentTags) {
+      setSelectedTagIds(institutionCurrentTags.map(t => t.id));
+    }
+  }, [institutionCurrentTags]);
+
+  // Update tags mutation
+  const updateTagsMutation = useMutation({
+    mutationFn: async (tagIds: string[]) => {
+      const response = await apiRequest("PUT", `/api/admin/institutions/${institution?.id}/tags`, { tagIds });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/institutions", institution?.id, "tags"] });
+      toast({ title: "Success", description: "Tags updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Toggle a tag selection
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev => {
+      const newIds = prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId];
+      // Auto-save when tags change
+      updateTagsMutation.mutate(newIds);
+      return newIds;
+    });
+  };
+
+  // Get all available tags as flat array for display
+  const allTags = groupedTags ? Object.values(groupedTags).flat() : [];
+  const selectedTags = allTags.filter(t => selectedTagIds.includes(t.id));
 
   const hasScholarship = institution ? (
     institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMin !== undefined ||
@@ -733,6 +806,100 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                     />
                   </CardContent>
                 </Card>
+
+                {institution && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex flex-wrap items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Tags
+                      </CardTitle>
+                      <CardDescription>Categorize this institution for better search and recommendations</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-wrap gap-2 min-h-[40px]" data-testid="container-selected-tags">
+                        {selectedTags.length === 0 && !loadingTags && (
+                          <span className="text-sm text-muted-foreground" data-testid="text-no-tags">No tags selected</span>
+                        )}
+                        {loadingTags && (
+                          <span className="text-sm text-muted-foreground" data-testid="text-loading-tags">Loading tags...</span>
+                        )}
+                        {selectedTags.map((tag) => (
+                          <div key={tag.id} className="flex flex-wrap items-center gap-1" data-testid={`container-tag-${tag.slug}`}>
+                            <Badge
+                              variant="secondary"
+                              data-testid={`badge-tag-${tag.slug}`}
+                            >
+                              {tag.name}
+                            </Badge>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleTag(tag.id)}
+                              aria-label={`Remove ${tag.name} tag`}
+                              data-testid={`button-remove-tag-${tag.slug}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Popover open={tagPickerOpen} onOpenChange={setTagPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-between"
+                            data-testid="button-add-tags"
+                          >
+                            <span className="flex flex-wrap items-center gap-2">
+                              <Tag className="h-4 w-4" />
+                              Add Tags
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search tags..." data-testid="input-tag-search" />
+                            <CommandList className="max-h-64" data-testid="list-tags">
+                              <CommandEmpty data-testid="text-no-tags-found">No tags found.</CommandEmpty>
+                              {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => (
+                                <CommandGroup key={category} heading={INSTITUTION_TAG_CATEGORY_LABELS[category] || category}>
+                                  {categoryTags.map((tag) => {
+                                    const isSelected = selectedTagIds.includes(tag.id);
+                                    return (
+                                      <CommandItem
+                                        key={tag.id}
+                                        value={tag.name}
+                                        onSelect={() => toggleTag(tag.id)}
+                                        className="flex flex-wrap items-center gap-2 cursor-pointer"
+                                        data-testid={`option-tag-${tag.slug}`}
+                                      >
+                                        <div
+                                          className="w-3 h-3 rounded-full border"
+                                          style={{ backgroundColor: tag.color || '#888', borderColor: tag.color || '#888' }}
+                                        />
+                                        <span className="flex-1">{tag.name}</span>
+                                        {isSelected && <Check className="h-4 w-4" />}
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              ))}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+
+                      {updateTagsMutation.isPending && (
+                        <p className="text-xs text-muted-foreground" data-testid="text-saving-tags">Saving tags...</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {institution && (
                   <Card>

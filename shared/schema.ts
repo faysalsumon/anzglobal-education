@@ -876,6 +876,52 @@ export const courseTags = pgTable("course_tags", {
 }));
 
 // ============================================
+// INSTITUTION TAGS SYSTEM
+// E-commerce style tagging for institution categorization and filtering
+// ============================================
+
+// Institution tag category enum for organizing institution-specific tags
+export const institutionTagCategoryEnum = pgEnum('institution_tag_category', [
+  'type',        // Institution type: Public University, Private University, TAFE, College
+  'specialization', // Focus areas: Research-Intensive, Teaching-Focused, Industry-Partnerships
+  'experience',  // Student experience: Campus Life, Online Learning, International Support
+  'location',    // Location features: Urban, Suburban, Regional, Multi-Campus
+  'financial',   // Financial: Scholarship-Friendly, Affordable, Work-Study Programs
+  'accreditation', // Rankings/Accreditation: Top 100, AACSB, EQUIS, Nationally Recognized
+  'services',    // Student services: Career Services, Housing, Visa Support, Mentorship
+]);
+
+// Institution tags table - central registry of all institution-specific tags
+export const institutionTagsRegistry = pgTable("institution_tags_registry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  category: institutionTagCategoryEnum("category").notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #3465A5
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIdx: index("institution_tags_registry_category_idx").on(table.category),
+  slugIdx: index("institution_tags_registry_slug_idx").on(table.slug),
+  activeIdx: index("institution_tags_registry_active_idx").on(table.isActive),
+}));
+
+// Institution-Tags junction table for many-to-many relationship
+export const institutionTags = pgTable("institution_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  tagId: varchar("tag_id").notNull().references(() => institutionTagsRegistry.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  institutionTagUnique: unique("institution_tag_unique").on(table.institutionId, table.tagId),
+  institutionIdx: index("institution_tags_institution_idx").on(table.institutionId),
+  tagIdx: index("institution_tags_tag_idx").on(table.tagId),
+}));
+
+// ============================================
 // GLOBAL REGION SYSTEM TABLES
 // Supports multi-region platform with domain-based detection
 // ============================================
@@ -1961,6 +2007,7 @@ export const universitiesRelations = relations(universities, ({ one, many }) => 
   }),
   courses: many(courses),
   teamMembers: many(universityTeamMembers),
+  institutionTags: many(institutionTags),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -1970,6 +2017,22 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   }),
   applications: many(applications),
   courseComparisons: many(courseComparisons),
+}));
+
+// Institution tags relations
+export const institutionTagsRegistryRelations = relations(institutionTagsRegistry, ({ many }) => ({
+  institutionTags: many(institutionTags),
+}));
+
+export const institutionTagsRelations = relations(institutionTags, ({ one }) => ({
+  institution: one(universities, {
+    fields: [institutionTags.institutionId],
+    references: [universities.id],
+  }),
+  tag: one(institutionTagsRegistry, {
+    fields: [institutionTags.tagId],
+    references: [institutionTagsRegistry.id],
+  }),
 }));
 
 export const studentProfilesRelations = relations(studentProfiles, ({ one, many }) => ({
@@ -2481,6 +2544,48 @@ export type InsertCourseTag = z.infer<typeof insertCourseTagSchema>;
 // Tag with usage count for admin display
 export interface TagWithCount extends Tag {
   courseCount: number;
+}
+
+// ============================================
+// INSTITUTION TAG SCHEMAS AND TYPES
+// ============================================
+
+// Institution tag registry schema
+export const insertInstitutionTagRegistrySchema = createInsertSchema(institutionTagsRegistry).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(1, "Tag name is required").max(100),
+  slug: z.string().min(1, "Slug is required").max(100),
+  category: z.enum(['type', 'specialization', 'experience', 'location', 'financial', 'accreditation', 'services']),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color").optional().nullable(),
+});
+
+export const updateInstitutionTagRegistrySchema = insertInstitutionTagRegistrySchema.partial();
+
+export type InstitutionTagRegistry = typeof institutionTagsRegistry.$inferSelect;
+export type InsertInstitutionTagRegistry = z.infer<typeof insertInstitutionTagRegistrySchema>;
+export type UpdateInstitutionTagRegistry = z.infer<typeof updateInstitutionTagRegistrySchema>;
+
+// Institution-Tag association schema
+export const insertInstitutionTagSchema = createInsertSchema(institutionTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InstitutionTag = typeof institutionTags.$inferSelect;
+export type InsertInstitutionTag = z.infer<typeof insertInstitutionTagSchema>;
+
+// Institution tag with usage count for admin display
+export interface InstitutionTagWithCount extends InstitutionTagRegistry {
+  institutionCount: number;
+}
+
+// Institution with tags for API responses
+export interface InstitutionWithTags {
+  institution: University;
+  tags: InstitutionTagRegistry[];
 }
 
 // Course with tags for API responses

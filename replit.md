@@ -88,6 +88,12 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **Publish/Unpublish Endpoints**: `/api/super-admin/courses/:id/publish` and `/api/super-admin/courses/:id/unpublish` for course visibility control
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators, color-coded SLA badges, quick filter chips, and bulk actions.
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
+- **Institution Tags System**: E-commerce style tagging for institution categorization, similar to course tags:
+  - **Database Schema**: `institution_tags_registry` (tag definitions) and `institution_tags` (junction table for many-to-many relationship)
+  - **7 Tag Categories**: type (Public University, Private, TAFE), specialization (Research-Intensive, Teaching-Focused), experience (Campus Life, Online Learning), location (Urban, Regional), financial (Scholarship-Friendly, Affordable), accreditation (Top 100, AACSB), services (Career Services, Visa Support)
+  - **API Endpoints**: `/api/admin/institution-tags` (CRUD), `/api/admin/institution-tags/grouped` (for picker UI), `/api/admin/institutions/:id/tags` (assign tags), `/api/public/institution-tags` (public filter)
+  - **Admin UI**: Tag picker in institution editor (sidebar card) with categorized dropdown, visual badges with colors, auto-save on toggle
+  - **Seed Data**: POST `/api/admin/institution-tags/seed` creates 35 initial tags across all categories
 - **Maps & Location**: Google Maps integration for campus locations with custom markers.
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content including Testimonials, FAQs, Team Members, Site Settings, and Content Snippets. Supports CRUD operations, draft/published workflow, and audit trails.
 
