@@ -868,12 +868,16 @@ function ContactFormDialog({
                 <SelectTrigger data-testid="select-assigned-to">
                   <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
-                <SelectContent>
-                  {admins.map((admin) => (
-                    <SelectItem key={admin.id} value={admin.id} data-testid={`option-assign-${admin.id}`}>
-                      {admin.firstName} {admin.lastName}
-                    </SelectItem>
-                  ))}
+                <SelectContent position="popper" className="z-[9999]">
+                  {admins && admins.length > 0 ? (
+                    admins.map((admin) => (
+                      <SelectItem key={admin.id} value={admin.id} data-testid={`option-assign-${admin.id}`}>
+                        {admin.firstName} {admin.lastName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>No team members available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
