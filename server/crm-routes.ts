@@ -562,6 +562,7 @@ router.get("/contacts", requireAdmin, async (req, res) => {
       type, 
       ownerId,
       owner,
+      assignedTo,
       search,
       country,
       nationality,
@@ -578,8 +579,11 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     if (ownerId || owner) {
       conditions.push(eq(crmContacts.contactOwner, (ownerId || owner) as string));
     }
+    if (assignedTo) {
+      conditions.push(eq(crmContacts.assignedTo, assignedTo as string));
+    }
     if (unassigned === "true") {
-      conditions.push(isNull(crmContacts.contactOwner));
+      conditions.push(isNull(crmContacts.assignedTo));
     }
     if (country) {
       conditions.push(eq(crmContacts.country, country as string));

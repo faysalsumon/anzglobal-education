@@ -119,7 +119,7 @@ export function CrmContactsPanel() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [nationalityFilter, setNationalityFilter] = useState<string>("all");
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [selectedContact, setSelectedContact] = useState<CrmContact | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -141,18 +141,18 @@ export function CrmContactsPanel() {
     contacts: CrmContact[];
     total: number;
   }>({
-    queryKey: ["/api/crm/contacts", typeFilter, searchQuery, countryFilter, nationalityFilter, ownerFilter],
+    queryKey: ["/api/crm/contacts", typeFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (searchQuery) params.append("search", searchQuery);
       if (countryFilter !== "all") params.append("country", countryFilter);
       if (nationalityFilter !== "all") params.append("nationality", nationalityFilter);
-      if (ownerFilter !== "all") {
-        if (ownerFilter === "unassigned") {
+      if (assignedFilter !== "all") {
+        if (assignedFilter === "unassigned") {
           params.append("unassigned", "true");
         } else {
-          params.append("owner", ownerFilter);
+          params.append("assignedTo", assignedFilter);
         }
       }
       const response = await fetch(`/api/crm/contacts?${params.toString()}`, { credentials: 'include' });
@@ -283,11 +283,11 @@ export function CrmContactsPanel() {
     setTypeFilter("all");
     setCountryFilter("all");
     setNationalityFilter("all");
-    setOwnerFilter("all");
+    setAssignedFilter("all");
     setSearchQuery("");
   };
 
-  const activeFiltersCount = [typeFilter, countryFilter, nationalityFilter, ownerFilter]
+  const activeFiltersCount = [typeFilter, countryFilter, nationalityFilter, assignedFilter]
     .filter(f => f !== 'all').length;
 
   const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
@@ -417,12 +417,12 @@ export function CrmContactsPanel() {
               </div>
               <div className="space-y-2">
                 <Label>Assigned To</Label>
-                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                  <SelectTrigger data-testid="select-owner-filter">
-                    <SelectValue placeholder="All Owners" />
+                <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+                  <SelectTrigger data-testid="select-assigned-filter">
+                    <SelectValue placeholder="All Team Members" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Owners</SelectItem>
+                    <SelectItem value="all">All Team Members</SelectItem>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     {admins?.map((admin) => (
                       <SelectItem key={admin.id} value={admin.id}>
