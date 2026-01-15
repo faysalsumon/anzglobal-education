@@ -14,7 +14,7 @@ import {
   updateCrmContactSchema,
   branches,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, inArray } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import { getUserAccessContext, checkCrudPermission, type UserAccessContext } from "./access-policy-service";
 
@@ -600,20 +600,32 @@ router.get("/contacts", requireAdmin, async (req, res) => {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    // Create aliases for user joins
+    const ownerUsers = aliasedTable(users, "owner_users");
+    const assignedUsers = aliasedTable(users, "assigned_users");
+
     const [contacts, totalResult] = await Promise.all([
       db
         .select({
           contact: crmContacts,
           ownerUser: {
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            email: users.email,
-            profileImageUrl: users.profileImageUrl,
+            id: ownerUsers.id,
+            firstName: ownerUsers.firstName,
+            lastName: ownerUsers.lastName,
+            email: ownerUsers.email,
+            profileImageUrl: ownerUsers.profileImageUrl,
+          },
+          assignedUser: {
+            id: assignedUsers.id,
+            firstName: assignedUsers.firstName,
+            lastName: assignedUsers.lastName,
+            email: assignedUsers.email,
+            profileImageUrl: assignedUsers.profileImageUrl,
           },
         })
         .from(crmContacts)
-        .leftJoin(users, eq(crmContacts.contactOwner, users.id))
+        .leftJoin(ownerUsers, eq(crmContacts.contactOwner, ownerUsers.id))
+        .leftJoin(assignedUsers, eq(crmContacts.assignedTo, assignedUsers.id))
         .where(whereClause)
         .orderBy(desc(crmContacts.createdAt))
         .limit(parseInt(limit as string))
@@ -622,9 +634,10 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     ]);
 
     res.json({
-      contacts: contacts.map(({ contact, ownerUser }) => ({
+      contacts: contacts.map(({ contact, ownerUser, assignedUser }) => ({
         ...contact,
-        ownerUser,
+        ownerUser: ownerUser?.id ? ownerUser : null,
+        assignedUser: assignedUser?.id ? assignedUser : null,
       })),
       total: totalResult[0]?.count || 0,
       limit: parseInt(limit as string),
@@ -652,9 +665,12 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
     }
 
     // Get related data
-    const [ownerUser, sourceLead] = await Promise.all([
+    const [ownerUser, assignedUser, sourceLead] = await Promise.all([
       contact.contactOwner
         ? db.select().from(users).where(eq(users.id, contact.contactOwner)).limit(1)
+        : Promise.resolve([]),
+      contact.assignedTo
+        ? db.select().from(users).where(eq(users.id, contact.assignedTo)).limit(1)
         : Promise.resolve([]),
       contact.sourceLeadId
         ? db.select().from(crmLeads).where(eq(crmLeads.id, contact.sourceLeadId)).limit(1)
@@ -664,6 +680,7 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
     res.json({
       ...contact,
       ownerUser: ownerUser[0] || null,
+      assignedUser: assignedUser[0] || null,
       sourceLead: sourceLead[0] || null,
     });
   } catch (error) {

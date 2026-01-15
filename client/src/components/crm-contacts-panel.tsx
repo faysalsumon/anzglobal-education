@@ -52,7 +52,6 @@ interface CrmContact {
   email: string;
   mobile: string | null;
   phone: string | null;
-  skype: string | null;
   nationality: string | null;
   country: string | null;
   addressLine1: string | null;
@@ -65,10 +64,18 @@ interface CrmContact {
   emergencyContactRelation: string | null;
   notes: string | null;
   contactOwner: string | null;
+  assignedTo: string | null;
   sourceLeadId: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   ownerUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    profileImageUrl: string | null;
+  } | null;
+  assignedUser?: {
     id: string;
     firstName: string;
     lastName: string;
@@ -853,30 +860,22 @@ function ContactFormDialog({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Contact Owner</Label>
+              <Label>Assign To</Label>
               <Select
-                value={formData.contactOwner || ""}
-                onValueChange={(value) => setFormData({ ...formData, contactOwner: value })}
+                value={formData.assignedTo || ""}
+                onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
               >
-                <SelectTrigger data-testid="select-contact-owner">
-                  <SelectValue placeholder="Select owner" />
+                <SelectTrigger data-testid="select-assigned-to">
+                  <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
                 <SelectContent>
                   {admins.map((admin) => (
-                    <SelectItem key={admin.id} value={admin.id}>
+                    <SelectItem key={admin.id} value={admin.id} data-testid={`option-assign-${admin.id}`}>
                       {admin.firstName} {admin.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Skype</Label>
-              <Input
-                value={formData.skype || ""}
-                onChange={(e) => setFormData({ ...formData, skype: e.target.value })}
-                data-testid="input-skype"
-              />
             </div>
           </TabsContent>
           <TabsContent value="address" className="space-y-4 mt-4">
@@ -1047,12 +1046,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                 <span>{contact.phone}</span>
               </div>
             )}
-            {contact.skype && (
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <span>Skype: {contact.skype}</span>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1083,13 +1076,25 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
           <CardContent className="space-y-3">
             {contact.ownerUser && (
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Owner</span>
+                <span className="text-muted-foreground">Created By</span>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
                     <AvatarFallback>{contact.ownerUser.firstName?.[0]}</AvatarFallback>
                   </Avatar>
                   <span>{contact.ownerUser.firstName} {contact.ownerUser.lastName}</span>
+                </div>
+              </div>
+            )}
+            {contact.assignedUser && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Assigned To</span>
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                    <AvatarFallback>{contact.assignedUser.firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <span>{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
                 </div>
               </div>
             )}

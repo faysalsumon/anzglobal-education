@@ -1882,6 +1882,7 @@ export const crmContacts = pgTable("crm_contacts", {
   
   // Record Information
   contactOwner: varchar("contact_owner").references(() => users.id),
+  assignedTo: varchar("assigned_to").references(() => users.id),
   workdriveFolderUrl: text("workdrive_folder_url"),
   workdriveFolderId: text("workdrive_folder_id"),
   
@@ -1907,6 +1908,7 @@ export const crmContacts = pgTable("crm_contacts", {
 }, (table) => ({
   contactTypeIdx: index("crm_contacts_type_idx").on(table.contactType),
   contactOwnerIdx: index("crm_contacts_owner_idx").on(table.contactOwner),
+  assignedToIdx: index("crm_contacts_assigned_idx").on(table.assignedTo),
   emailIdx: index("crm_contacts_email_idx").on(table.email),
   createdAtIdx: index("crm_contacts_created_at_idx").on(table.createdAt),
   sourceLeadIdx: index("crm_contacts_source_lead_idx").on(table.sourceLeadId),
