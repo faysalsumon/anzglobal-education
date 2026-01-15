@@ -576,6 +576,149 @@ export const universities = pgTable("universities", {
   activeApprovedIdx: index("universities_active_approved_idx").on(table.isActive, table.approvalStatus),
 }));
 
+// Institution contact role enum
+export const institutionContactRoleEnum = pgEnum('institution_contact_role', [
+  'primary',
+  'academic',
+  'finance',
+  'marketing',
+  'admissions',
+  'international',
+  'other',
+]);
+
+// Institution Contacts junction table - links institutions to CRM contacts
+export const institutionContacts = pgTable("institution_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  contactId: varchar("contact_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
+  contactRole: institutionContactRoleEnum("contact_role").notNull().default("other"),
+  isPrimary: boolean("is_primary").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+}, (table) => ({
+  institutionIdx: index("institution_contacts_institution_idx").on(table.institutionId),
+  contactIdx: index("institution_contacts_contact_idx").on(table.contactId),
+  uniqueInstitutionContact: unique("institution_contacts_unique").on(table.institutionId, table.contactId),
+}));
+
+// Institution Business Terms table - confidential partnership details (separate for audit trails)
+export const institutionBusinessTerms = pgTable("institution_business_terms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }).unique(),
+  
+  // Commission structure
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }),
+  bonusStructure: text("bonus_structure"),
+  
+  // Contract details
+  contractStartDate: date("contract_start_date"),
+  contractEndDate: date("contract_end_date"),
+  contractStatus: varchar("contract_status", { length: 20 }).default("active"),
+  
+  // Payment terms
+  paymentTerms: text("payment_terms"),
+  paymentFrequency: varchar("payment_frequency", { length: 20 }),
+  bankDetails: text("bank_details"),
+  
+  // Special conditions and notes
+  specialConditions: text("special_conditions"),
+  internalNotes: text("internal_notes"),
+  
+  // Audit trail
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
+}, (table) => ({
+  institutionIdx: index("institution_business_terms_institution_idx").on(table.institutionId),
+  contractStatusIdx: index("institution_business_terms_status_idx").on(table.contractStatus),
+}));
+
+// Institution document category enum
+export const institutionDocumentCategoryEnum = pgEnum('institution_document_category', [
+  'application_forms',
+  'brochures',
+  'contracts',
+  'marketing',
+  'agreements',
+  'other',
+]);
+
+// Institution Documents table - file storage with folder structure
+export const institutionDocuments = pgTable("institution_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  
+  // File info
+  fileName: text("file_name").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: varchar("mime_type", { length: 100 }),
+  
+  // Organization
+  category: institutionDocumentCategoryEnum("category").notNull().default("other"),
+  description: text("description"),
+  
+  // Visibility
+  isConfidential: boolean("is_confidential").default(true),
+  
+  // Audit trail
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  uploadedByUserId: varchar("uploaded_by_user_id").references(() => users.id),
+}, (table) => ({
+  institutionIdx: index("institution_documents_institution_idx").on(table.institutionId),
+  categoryIdx: index("institution_documents_category_idx").on(table.category),
+}));
+
+// Relations for institution contacts
+export const institutionContactsRelations = relations(institutionContacts, ({ one }) => ({
+  institution: one(universities, {
+    fields: [institutionContacts.institutionId],
+    references: [universities.id],
+  }),
+  contact: one(crmContacts, {
+    fields: [institutionContacts.contactId],
+    references: [crmContacts.id],
+  }),
+  createdBy: one(users, {
+    fields: [institutionContacts.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Relations for institution business terms
+export const institutionBusinessTermsRelations = relations(institutionBusinessTerms, ({ one }) => ({
+  institution: one(universities, {
+    fields: [institutionBusinessTerms.institutionId],
+    references: [universities.id],
+  }),
+  createdBy: one(users, {
+    fields: [institutionBusinessTerms.createdByUserId],
+    references: [users.id],
+  }),
+  updatedBy: one(users, {
+    fields: [institutionBusinessTerms.updatedByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Relations for institution documents
+export const institutionDocumentsRelations = relations(institutionDocuments, ({ one }) => ({
+  institution: one(universities, {
+    fields: [institutionDocuments.institutionId],
+    references: [universities.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [institutionDocuments.uploadedByUserId],
+    references: [users.id],
+  }),
+}));
+
 // Sub-disciplines table (for categorizing courses within main disciplines)
 export const subDisciplines = pgTable("sub_disciplines", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3404,6 +3547,54 @@ export interface CrmContactWithRelations extends CrmContact {
   } | null;
   sourceLead?: CrmLead | null;
 }
+
+// ============================================
+// INSTITUTION CONTACTS, BUSINESS TERMS, DOCUMENTS
+// ============================================
+
+// Institution Contacts
+export const insertInstitutionContactSchema = createInsertSchema(institutionContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateInstitutionContactSchema = insertInstitutionContactSchema.partial();
+
+export type InstitutionContact = typeof institutionContacts.$inferSelect;
+export type InsertInstitutionContact = z.infer<typeof insertInstitutionContactSchema>;
+export type UpdateInstitutionContact = z.infer<typeof updateInstitutionContactSchema>;
+
+// Institution Contact with CRM Contact details
+export interface InstitutionContactWithDetails extends InstitutionContact {
+  contact: CrmContact;
+}
+
+// Institution Business Terms
+export const insertInstitutionBusinessTermsSchema = createInsertSchema(institutionBusinessTerms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateInstitutionBusinessTermsSchema = insertInstitutionBusinessTermsSchema.partial();
+
+export type InstitutionBusinessTerms = typeof institutionBusinessTerms.$inferSelect;
+export type InsertInstitutionBusinessTerms = z.infer<typeof insertInstitutionBusinessTermsSchema>;
+export type UpdateInstitutionBusinessTerms = z.infer<typeof updateInstitutionBusinessTermsSchema>;
+
+// Institution Documents
+export const insertInstitutionDocumentSchema = createInsertSchema(institutionDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateInstitutionDocumentSchema = insertInstitutionDocumentSchema.partial();
+
+export type InstitutionDocument = typeof institutionDocuments.$inferSelect;
+export type InsertInstitutionDocument = z.infer<typeof insertInstitutionDocumentSchema>;
+export type UpdateInstitutionDocument = z.infer<typeof updateInstitutionDocumentSchema>;
 
 // ============================================
 // GLOBAL REGION SYSTEM SCHEMAS AND TYPES
