@@ -63,13 +63,6 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
 
   const { data: terms, isLoading } = useQuery<BusinessTerms | null>({
     queryKey: ["/api/admin/institution-crm/institutions", institutionId, "business-terms"],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/institution-crm/institutions/${institutionId}/business-terms`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch business terms");
-      return res.json();
-    },
     enabled: !!institutionId,
   });
 
@@ -122,9 +115,9 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
   };
 
   return (
-    <Card>
+    <Card data-testid="card-institution-business-terms">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
@@ -145,7 +138,7 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading business terms...</div>
+          <div className="text-center py-8 text-muted-foreground" data-testid="text-loading-business-terms">Loading business terms...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -216,7 +209,7 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
                   </SelectTrigger>
                   <SelectContent>
                     {CONTRACT_STATUSES.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
+                      <SelectItem key={status.value} value={status.value} data-testid={`option-status-${status.value}`}>
                         {status.label}
                       </SelectItem>
                     ))}
@@ -239,7 +232,7 @@ export function InstitutionBusinessTermsPanel({ institutionId, institutionName }
                     </SelectTrigger>
                     <SelectContent>
                       {PAYMENT_FREQUENCIES.map((freq) => (
-                        <SelectItem key={freq.value} value={freq.value}>
+                        <SelectItem key={freq.value} value={freq.value} data-testid={`option-frequency-${freq.value}`}>
                           {freq.label}
                         </SelectItem>
                       ))}

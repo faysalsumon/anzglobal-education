@@ -57,16 +57,12 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
   const [isConfidential, setIsConfidential] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const documentsUrl = selectedCategory === "all"
+    ? `/api/admin/institution-crm/institutions/${institutionId}/documents`
+    : `/api/admin/institution-crm/institutions/${institutionId}/documents?category=${selectedCategory}`;
+
   const { data: documents = [], isLoading } = useQuery<InstitutionDocument[]>({
-    queryKey: ["/api/admin/institution-crm/institutions", institutionId, "documents", selectedCategory],
-    queryFn: async () => {
-      const url = selectedCategory === "all"
-        ? `/api/admin/institution-crm/institutions/${institutionId}/documents`
-        : `/api/admin/institution-crm/institutions/${institutionId}/documents?category=${selectedCategory}`;
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch documents");
-      return res.json();
-    },
+    queryKey: [documentsUrl],
     enabled: !!institutionId,
   });
 
@@ -85,7 +81,10 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
     },
     onSuccess: () => {
       toast({ title: "Document uploaded successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/institution-crm/institutions", institutionId, "documents"] });
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.includes(`/api/admin/institution-crm/institutions/${institutionId}/documents`);
+      }});
       setIsUploadDialogOpen(false);
       resetUploadForm();
     },
@@ -104,7 +103,10 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
     },
     onSuccess: () => {
       toast({ title: "Document deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/institution-crm/institutions", institutionId, "documents"] });
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.includes(`/api/admin/institution-crm/institutions/${institutionId}/documents`);
+      }});
     },
     onError: (error: any) => {
       toast({
@@ -184,9 +186,9 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
   }, {} as Record<string, InstitutionDocument[]>);
 
   return (
-    <Card>
+    <Card data-testid="card-institution-documents">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
             <CardTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
@@ -228,7 +230,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
                     </SelectTrigger>
                     <SelectContent>
                       {DOCUMENT_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
+                        <SelectItem key={cat.value} value={cat.value} data-testid={`option-category-${cat.value}`}>
                           {cat.label}
                         </SelectItem>
                       ))}
@@ -260,7 +262,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)} data-testid="button-cancel-upload">
                   Cancel
                 </Button>
                 <Button
@@ -278,20 +280,20 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading documents...</div>
+          <div className="text-center py-8 text-muted-foreground" data-testid="text-loading-documents">Loading documents...</div>
         ) : documents.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground" data-testid="text-no-documents">
             No documents uploaded yet. Click "Upload Document" to get started.
           </div>
         ) : (
           <Tabs defaultValue="all" onValueChange={setSelectedCategory}>
             <TabsList className="mb-4 flex-wrap">
-              <TabsTrigger value="all">All ({documents.length})</TabsTrigger>
+              <TabsTrigger value="all" data-testid="tab-documents-all">All ({documents.length})</TabsTrigger>
               {DOCUMENT_CATEGORIES.map((cat) => {
                 const count = groupedDocuments[cat.value]?.length || 0;
                 if (count === 0) return null;
                 return (
-                  <TabsTrigger key={cat.value} value={cat.value}>
+                  <TabsTrigger key={cat.value} value={cat.value} data-testid={`tab-documents-${cat.value}`}>
                     {cat.label} ({count})
                   </TabsTrigger>
                 );
