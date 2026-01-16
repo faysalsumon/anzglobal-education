@@ -17,19 +17,107 @@ export type NotificationType =
   | "institution_assigned"
   | "course_assigned"
   | "internal_note_mention"
+  | "lead_mention"
+  | "lead_assigned"
+  | "lead_status_changed"
+  | "task_assigned"
+  | "task_due_reminder"
+  | "task_completed"
   | "general";
+
+/**
+ * Notification Link Registry
+ * 
+ * This registry maps notification types to their deep-link URL templates.
+ * When adding a new notification type:
+ * 1. Add the type to NotificationType above
+ * 2. Add a link template here with the required data parameters
+ * 3. Create a helper function below for easy notification creation
+ * 
+ * Templates use data properties for dynamic URLs.
+ * Example: { leadId: "123", showNotes: true } -> "/admin?tab=crm-leads&leadId=123&showNotes=true"
+ */
+type NotificationLinkGenerator = (data: Record<string, any>) => string;
+
+const NOTIFICATION_LINK_REGISTRY: Record<NotificationType, NotificationLinkGenerator | null> = {
+  // Application notifications
+  application_submitted: (data) => `/university/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  application_status_changed: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  application_assigned: (data) => `/admin/applications/${data.applicationId}`,
+  
+  // Course notifications
+  new_course_published: (data) => `/courses/${data.courseId}`,
+  course_assigned: (data) => `/admin?tab=courses&courseId=${data.courseId}`,
+  
+  // Institution notifications
+  institution_approval_request: (data) => `/admin?tab=institutions&institutionId=${data.institutionId}`,
+  institution_approved: (data) => `/university/profile`,
+  institution_rejected: (data) => `/university/profile`,
+  institution_assigned: (data) => `/admin?tab=institutions&institutionId=${data.institutionId}`,
+  
+  // Team notifications
+  team_member_added: () => `/university/profile`,
+  
+  // Profile notifications
+  profile_update: (data) => data.userType === 'student' ? `/student/profile` : `/admin/profile`,
+  
+  // Document notifications
+  document_uploaded: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  
+  // Message notifications
+  message_received: (data) => data.chatId ? `/messages?chatId=${data.chatId}` : `/messages`,
+  
+  // CRM Lead notifications
+  lead_mention: (data) => `/admin?tab=crm-leads&leadId=${data.leadId}&showNotes=true`,
+  lead_assigned: (data) => `/admin?tab=crm-leads&leadId=${data.leadId}`,
+  lead_status_changed: (data) => `/admin?tab=crm-leads&leadId=${data.leadId}`,
+  
+  // Internal note mentions
+  internal_note_mention: (data) => {
+    if (data.entityType === 'lead') return `/admin?tab=crm-leads&leadId=${data.entityId}&showNotes=true`;
+    if (data.entityType === 'application') return `/admin/applications/${data.entityId}`;
+    if (data.entityType === 'institution') return `/admin?tab=institutions&institutionId=${data.entityId}`;
+    return `/admin`;
+  },
+  
+  // Task notifications
+  task_assigned: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
+  task_due_reminder: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
+  task_completed: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
+  
+  // General fallback (no auto-link)
+  general: null,
+};
+
+/**
+ * Get the deep-link URL for a notification based on its type and data
+ */
+export function getNotificationLink(type: NotificationType, data?: Record<string, any>): string | null {
+  const generator = NOTIFICATION_LINK_REGISTRY[type];
+  if (!generator) return null;
+  return generator(data || {});
+}
 
 interface CreateNotificationParams {
   userId: string;
   type: NotificationType;
   title: string;
   message: string;
-  link?: string;
+  link?: string;  // Optional - will be auto-generated from registry if not provided
   metadata?: Record<string, any>;
 }
 
+/**
+ * Create a notification with automatic link generation
+ * 
+ * If no link is provided, it will be auto-generated based on the notification type
+ * and the metadata/data provided.
+ */
 export async function createNotification(params: CreateNotificationParams) {
   const { userId, type, title, message, link, metadata } = params;
+  
+  // Auto-generate link if not explicitly provided
+  const finalLink = link ?? getNotificationLink(type, metadata);
   
   const [notification] = await db
     .insert(notifications)
@@ -38,7 +126,7 @@ export async function createNotification(params: CreateNotificationParams) {
       type,
       title,
       message,
-      link: link || null,
+      link: finalLink || null,
       metadata: metadata ? JSON.stringify(metadata) : null,
       isRead: false,
     })
@@ -208,12 +296,161 @@ export async function notifyApplicationAssigned(params: {
     type: "application_assigned",
     title: "New Application Assigned",
     message: `${params.assignedByName} assigned you an application from ${params.studentName} for ${params.courseName}`,
-    link: `/admin/applications/${params.applicationId}`,
     metadata: {
       applicationId: params.applicationId,
       studentName: params.studentName,
       courseName: params.courseName,
       assignedByName: params.assignedByName,
+    },
+  });
+}
+
+// ==========================================
+// CRM Lead Notification Helpers
+// ==========================================
+
+/**
+ * Notify a user that they were mentioned in a lead note
+ */
+export async function notifyLeadMention(params: {
+  userId: string;
+  leadId: string;
+  leadName: string;
+  noteId: string;
+  mentionedByName: string;
+  mentionedById: string;
+}) {
+  return createNotification({
+    userId: params.userId,
+    type: "lead_mention",
+    title: "You were mentioned in a note",
+    message: `${params.mentionedByName} mentioned you in a note on ${params.leadName}`,
+    metadata: {
+      leadId: params.leadId,
+      noteId: params.noteId,
+      mentionedBy: params.mentionedById,
+      leadName: params.leadName,
+    },
+  });
+}
+
+/**
+ * Notify a consultant that a lead was assigned to them
+ */
+export async function notifyLeadAssigned(params: {
+  userId: string;
+  leadId: string;
+  leadName: string;
+  assignedByName: string;
+}) {
+  return createNotification({
+    userId: params.userId,
+    type: "lead_assigned",
+    title: "New Lead Assigned",
+    message: `${params.assignedByName} assigned you a new lead: ${params.leadName}`,
+    metadata: {
+      leadId: params.leadId,
+      leadName: params.leadName,
+      assignedByName: params.assignedByName,
+    },
+  });
+}
+
+/**
+ * Notify about a lead status change
+ */
+export async function notifyLeadStatusChange(params: {
+  userId: string;
+  leadId: string;
+  leadName: string;
+  oldStatus: string;
+  newStatus: string;
+  changedByName: string;
+}) {
+  return createNotification({
+    userId: params.userId,
+    type: "lead_status_changed",
+    title: "Lead Status Updated",
+    message: `${params.leadName} status changed from ${params.oldStatus} to ${params.newStatus}`,
+    metadata: {
+      leadId: params.leadId,
+      leadName: params.leadName,
+      oldStatus: params.oldStatus,
+      newStatus: params.newStatus,
+      changedByName: params.changedByName,
+    },
+  });
+}
+
+// ==========================================
+// Task Notification Helpers
+// ==========================================
+
+/**
+ * Notify a user that a task was assigned to them
+ */
+export async function notifyTaskAssigned(params: {
+  userId: string;
+  taskId: string;
+  taskTitle: string;
+  assignedByName: string;
+  dueDate?: string;
+}) {
+  const dueMessage = params.dueDate ? ` (due ${params.dueDate})` : '';
+  return createNotification({
+    userId: params.userId,
+    type: "task_assigned",
+    title: "New Task Assigned",
+    message: `${params.assignedByName} assigned you a task: ${params.taskTitle}${dueMessage}`,
+    metadata: {
+      taskId: params.taskId,
+      taskTitle: params.taskTitle,
+      assignedByName: params.assignedByName,
+      dueDate: params.dueDate,
+    },
+  });
+}
+
+/**
+ * Notify about an upcoming task due date
+ */
+export async function notifyTaskDueReminder(params: {
+  userId: string;
+  taskId: string;
+  taskTitle: string;
+  dueDate: string;
+}) {
+  return createNotification({
+    userId: params.userId,
+    type: "task_due_reminder",
+    title: "Task Due Soon",
+    message: `Your task "${params.taskTitle}" is due ${params.dueDate}`,
+    metadata: {
+      taskId: params.taskId,
+      taskTitle: params.taskTitle,
+      dueDate: params.dueDate,
+    },
+  });
+}
+
+/**
+ * Notify the task creator that their task was completed
+ */
+export async function notifyTaskCompleted(params: {
+  userId: string;
+  taskId: string;
+  taskTitle: string;
+  completedByName: string;
+}) {
+  return createNotification({
+    userId: params.userId,
+    type: "task_completed",
+    title: "Task Completed",
+    message: `${params.completedByName} completed the task: ${params.taskTitle}`,
+    metadata: {
+      taskId: params.taskId,
+      taskTitle: params.taskTitle,
+      completedByName: params.completedByName,
     },
   });
 }
