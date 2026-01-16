@@ -6,7 +6,6 @@ import {
   crmContacts, 
   leadStatusHistory, 
   leadNotes,
-  notifications,
   users,
   courses,
   universities,
@@ -20,6 +19,7 @@ import {
 import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import { getUserAccessContext, checkCrudPermission, type UserAccessContext } from "./access-policy-service";
+import { notifyLeadMention, notifyLeadAssigned } from "./notifications";
 
 const router = Router();
 
@@ -1002,7 +1002,7 @@ router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
       })
       .returning();
 
-    // Create notifications for mentioned users
+    // Create notifications for mentioned users using centralized notification system
     if (mentions && mentions.length > 0) {
       const lead = await db.select().from(crmLeads).where(eq(crmLeads.id, leadId)).limit(1);
       const leadName = lead[0] ? `${lead[0].firstName} ${lead[0].lastName}` : 'a lead';
@@ -1011,18 +1011,13 @@ router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
       const notifierName = notifier ? `${notifier.firstName || ''} ${notifier.lastName || ''}`.trim() : 'Someone';
       
       for (const mentionedUserId of mentions) {
-        await db.insert(notifications).values({
+        await notifyLeadMention({
           userId: mentionedUserId,
-          type: 'lead_mention',
-          title: 'You were mentioned in a note',
-          message: `${notifierName} mentioned you in a note on ${leadName}`,
-          link: `/admin?tab=crm-leads&leadId=${leadId}&showNotes=true`,
-          data: JSON.stringify({
-            leadId,
-            noteId: newNote.id,
-            mentionedBy: userId,
-          }),
-          isRead: false,
+          leadId,
+          leadName,
+          noteId: newNote.id,
+          mentionedByName: notifierName,
+          mentionedById: userId,
         });
       }
     }

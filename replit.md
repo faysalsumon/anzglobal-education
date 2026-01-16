@@ -64,6 +64,15 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 ### System Design Choices
 - **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini for structured data extraction, Playwright/Cheerio for scraping, and BullMQ for job queuing. Includes intelligent heuristics and auto-approval.
 - **Student Application Portal**: Utilizes an 11-stage workflow with dedicated database tables and a Student Portal UI.
+- **Centralized Notification System**: Located in `server/notifications.ts`, provides:
+  - **Notification Link Registry**: Maps each notification type to its deep-link URL template for direct navigation
+  - **Auto-generated Links**: If no link is provided, the system auto-generates based on notification type and metadata
+  - **Helper Functions**: Type-safe helper functions for each notification type (e.g., `notifyLeadMention`, `notifyLeadAssigned`, `notifyTaskAssigned`)
+  - **Real-time Delivery**: Automatic WebSocket push to connected users
+  - **Adding New Notification Types**: 
+    1. Add the type to `NotificationType` union
+    2. Add a link template to `NOTIFICATION_LINK_REGISTRY`
+    3. Create a helper function for easy notification creation
 
 ## External Dependencies
 - **Authentication Service**: Supabase Auth.
