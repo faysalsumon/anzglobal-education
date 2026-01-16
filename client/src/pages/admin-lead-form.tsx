@@ -11,8 +11,10 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ChevronsUpDown, Check, Search } from "lucide-react";
 import { LeadNotes } from "@/components/lead-notes";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -44,13 +46,19 @@ interface CrmLead {
   universityId: string | null;
   courseName: string | null;
   interestedIn: string | null;
-  productInterest: string | null;
   intakeMonth: string | null;
   intakeYear: string | null;
   notes: string | null;
   referrer: string | null;
   assignedTo: string | null;
   leadOwner: string | null;
+  createdByUserId: string | null;
+}
+
+interface Course {
+  id: string;
+  title: string;
+  institutionName?: string;
 }
 
 const COUNTRIES = [
@@ -77,11 +85,17 @@ export default function AdminLeadForm() {
   const params = useParams<{ id?: string }>();
   const isEditing = !!params.id;
   const { toast } = useToast();
+  const [courseSearchOpen, setCourseSearchOpen] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CrmLead>>({
     leadStatus: 'not_contacted',
     leadRating: 'cold',
     leadCreationMethod: 'manually',
+  });
+
+  // Get current user for auto-assignment
+  const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
+    queryKey: ["/api/auth/me"],
   });
 
   const { data: branchesData } = useQuery<{ id: string; name: string; code: string; city: string | null }[]>({
@@ -114,8 +128,15 @@ export default function AdminLeadForm() {
     },
   });
 
-  const { data: courses } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ["/api/courses"],
+  // Fetch courses for searchable dropdown
+  const { data: coursesData } = useQuery<Course[]>({
+    queryKey: ["/api/public/courses"],
+    queryFn: async () => {
+      const response = await fetch("/api/public/courses?limit=500");
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.courses || [];
+    },
   });
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<CrmLead>({
@@ -134,6 +155,17 @@ export default function AdminLeadForm() {
       setFormData(existingLead);
     }
   }, [existingLead]);
+
+  // Auto-assign new leads to current user
+  useEffect(() => {
+    if (!isEditing && currentUser && !formData.assignedTo) {
+      setFormData(prev => ({
+        ...prev,
+        assignedTo: currentUser.id,
+        createdByUserId: currentUser.id,
+      }));
+    }
+  }, [isEditing, currentUser, formData.assignedTo]);
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmLead>) => {
@@ -404,47 +436,97 @@ export default function AdminLeadForm() {
                 <CardTitle>Interest & Course Preferences</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="interestedIn">Interested In</Label>
-                    <Select
-                      value={formData.interestedIn || ""}
-                      onValueChange={(value) => setFormData({ ...formData, interestedIn: value })}
-                    >
-                      <SelectTrigger id="interestedIn" data-testid="select-interested-in">
-                        <SelectValue placeholder="Select interest area" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="higher_education">Higher Education</SelectItem>
-                        <SelectItem value="vocational">Vocational Training</SelectItem>
-                        <SelectItem value="english_language">English Language</SelectItem>
-                        <SelectItem value="pathway_programs">Pathway Programs</SelectItem>
-                        <SelectItem value="short_courses">Short Courses</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productInterest">Product Interest</Label>
-                    <Input
-                      id="productInterest"
-                      value={formData.productInterest || ""}
-                      onChange={(e) => setFormData({ ...formData, productInterest: e.target.value })}
-                      placeholder="Specific product or service interest"
-                      data-testid="input-product-interest"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="interestedIn">Interested In</Label>
+                  <Select
+                    value={formData.interestedIn || ""}
+                    onValueChange={(value) => setFormData({ ...formData, interestedIn: value })}
+                  >
+                    <SelectTrigger id="interestedIn" data-testid="select-interested-in">
+                      <SelectValue placeholder="Select interest area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="higher_education">Higher Education</SelectItem>
+                      <SelectItem value="vocational">Vocational Training</SelectItem>
+                      <SelectItem value="english_language">English Language</SelectItem>
+                      <SelectItem value="pathway_programs">Pathway Programs</SelectItem>
+                      <SelectItem value="short_courses">Short Courses</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="courseName">Course Name / Interest</Label>
-                  <Input
-                    id="courseName"
-                    value={formData.courseName || ""}
-                    onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
-                    placeholder="Enter course name or area of interest"
-                    data-testid="input-course-name"
-                  />
+                  <Label>Course Name / Interest</Label>
+                  <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={courseSearchOpen}
+                        className="w-full justify-between"
+                        data-testid="button-select-course"
+                      >
+                        {formData.courseId && coursesData ? (
+                          <span className="truncate">
+                            {coursesData.find(c => c.id === formData.courseId)?.title || formData.courseName || "Select a course"}
+                          </span>
+                        ) : formData.courseName ? (
+                          <span className="truncate">{formData.courseName}</span>
+                        ) : (
+                          <span className="text-muted-foreground">Search and select a course...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search courses..." />
+                        <CommandList>
+                          <CommandEmpty>No courses found.</CommandEmpty>
+                          <CommandGroup heading="Available Courses">
+                            {formData.courseId && (
+                              <CommandItem
+                                value="clear"
+                                onSelect={() => {
+                                  setFormData({ ...formData, courseId: null, courseName: null });
+                                  setCourseSearchOpen(false);
+                                }}
+                                className="cursor-pointer text-muted-foreground"
+                              >
+                                <span>Clear selection</span>
+                              </CommandItem>
+                            )}
+                            {coursesData?.map((course) => (
+                              <CommandItem
+                                key={course.id}
+                                value={`${course.title} ${course.institutionName || ''}`}
+                                onSelect={() => {
+                                  setFormData({ 
+                                    ...formData, 
+                                    courseId: course.id,
+                                    courseName: course.title
+                                  });
+                                  setCourseSearchOpen(false);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span>{course.title}</span>
+                                  {course.institutionName && (
+                                    <span className="text-xs text-muted-foreground">{course.institutionName}</span>
+                                  )}
+                                </div>
+                                {formData.courseId === course.id && (
+                                  <Check className="ml-auto h-4 w-4" />
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

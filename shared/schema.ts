@@ -1859,6 +1859,9 @@ export const crmLeads = pgTable("crm_leads", {
   convertedContactId: varchar("converted_contact_id"),
   convertedAt: timestamp("converted_at"),
   
+  // Created by tracking
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1905,6 +1908,24 @@ export const leadNotes = pgTable("lead_notes", {
   leadIdIdx: index("lead_notes_lead_idx").on(table.leadId),
   createdByIdx: index("lead_notes_created_by_idx").on(table.createdById),
   createdAtIdx: index("lead_notes_created_at_idx").on(table.createdAt),
+}));
+
+// Lead History/Activity Log - tracks all changes to leads
+export const leadHistory = pgTable("lead_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 50 }).notNull(), // 'created', 'updated', 'status_changed', 'assigned', 'note_added', etc.
+  fieldName: varchar("field_name", { length: 100 }), // The field that was changed
+  oldValue: text("old_value"), // Previous value (JSON stringified if complex)
+  newValue: text("new_value"), // New value (JSON stringified if complex)
+  description: text("description"), // Human-readable description of the change
+  changedByUserId: varchar("changed_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  leadIdIdx: index("lead_history_lead_idx").on(table.leadId),
+  changedByIdx: index("lead_history_changed_by_idx").on(table.changedByUserId),
+  createdAtIdx: index("lead_history_created_at_idx").on(table.createdAt),
+  actionIdx: index("lead_history_action_idx").on(table.action),
 }));
 
 // CRM Contacts table - categorized organization contacts
@@ -3622,6 +3643,26 @@ export interface LeadNoteWithAuthor extends LeadNote {
     email: string | null;
     profileImageUrl: string | null;
   };
+}
+
+// Lead History
+export const insertLeadHistorySchema = createInsertSchema(leadHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LeadHistory = typeof leadHistory.$inferSelect;
+export type InsertLeadHistory = z.infer<typeof insertLeadHistorySchema>;
+
+// Lead History with author details for display
+export interface LeadHistoryWithAuthor extends LeadHistory {
+  changedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
 }
 
 // CRM Contacts

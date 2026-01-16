@@ -6,6 +6,7 @@ import {
   crmContacts, 
   leadStatusHistory, 
   leadNotes,
+  leadHistory,
   users,
   courses,
   universities,
@@ -317,9 +318,18 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
 
     const validated = insertCrmLeadSchema.parse(req.body);
     
+    // Get creator's name for history
+    const [creator] = await db
+      .select({ firstName: users.firstName, lastName: users.lastName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const creatorName = creator ? `${creator.firstName || ''} ${creator.lastName || ''}`.trim() : 'Unknown';
+    
     const [newLead] = await db.insert(crmLeads).values({
       ...validated,
       leadOwner: userId,
+      createdByUserId: validated.createdByUserId || userId, // Set createdByUserId
     }).returning();
 
     // Create initial status history
@@ -329,6 +339,14 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
       toStatus: newLead.leadStatus,
       changedBy: userId,
       notes: "Lead created",
+    });
+
+    // Create lead history entry for creation
+    await db.insert(leadHistory).values({
+      leadId: newLead.id,
+      action: "created",
+      description: `Lead created by ${creatorName}`,
+      changedByUserId: userId,
     });
 
     // Log activity
@@ -373,7 +391,64 @@ router.patch("/leads/:id", requireAdmin, async (req: any, res) => {
       return res.status(404).json({ message: "Lead not found" });
     }
 
-    // Check if status is being changed
+    // Get user's name for history
+    const [updater] = await db
+      .select({ firstName: users.firstName, lastName: users.lastName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const updaterName = updater ? `${updater.firstName || ''} ${updater.lastName || ''}`.trim() : 'Unknown';
+
+    // Track field changes for lead history
+    const fieldLabelMap: Record<string, string> = {
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      email: 'Email',
+      phone: 'Phone',
+      mobile: 'Mobile',
+      city: 'City',
+      country: 'Country',
+      nationality: 'Nationality',
+      leadStatus: 'Status',
+      leadRating: 'Rating',
+      branch: 'Branch',
+      assignedTo: 'Assigned To',
+      leadOwner: 'Lead Owner',
+      courseName: 'Course Name',
+      courseId: 'Course',
+      interestedIn: 'Interested In',
+      intakeMonth: 'Intake Month',
+      intakeYear: 'Intake Year',
+      notes: 'Notes',
+    };
+
+    // Log each field change to lead_history
+    const historyPromises: Promise<any>[] = [];
+    for (const [key, value] of Object.entries(validated)) {
+      const existingValue = (existingLead as any)[key];
+      // Only log if value actually changed
+      if (value !== existingValue && key !== 'statusChangeNotes') {
+        const fieldLabel = fieldLabelMap[key] || key;
+        historyPromises.push(
+          db.insert(leadHistory).values({
+            leadId: id,
+            action: "updated",
+            fieldName: key,
+            oldValue: existingValue != null ? String(existingValue) : null,
+            newValue: value != null ? String(value) : null,
+            description: `${fieldLabel} changed by ${updaterName}`,
+            changedByUserId: userId,
+          })
+        );
+      }
+    }
+    
+    // Execute all history inserts in parallel
+    if (historyPromises.length > 0) {
+      await Promise.all(historyPromises);
+    }
+
+    // Check if status is being changed (keep existing status history for backwards compatibility)
     if (validated.leadStatus && validated.leadStatus !== existingLead.leadStatus) {
       await db.insert(leadStatusHistory).values({
         leadId: id,
@@ -452,7 +527,7 @@ router.delete("/leads/:id", requireAdmin, async (req: any, res) => {
   }
 });
 
-// Get lead status history
+// Get lead status history (legacy)
 router.get("/leads/:id/history", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -480,6 +555,39 @@ router.get("/leads/:id/history", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error fetching lead history:", error);
     res.status(500).json({ message: "Failed to fetch lead history" });
+  }
+});
+
+// Get lead activity log (full field-level change history)
+router.get("/leads/:id/activity-log", requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const activityLog = await db
+      .select({
+        log: leadHistory,
+        changedBy: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(leadHistory)
+      .leftJoin(users, eq(leadHistory.changedByUserId, users.id))
+      .where(eq(leadHistory.leadId, id))
+      .orderBy(desc(leadHistory.createdAt));
+
+    res.json({
+      activityLog: activityLog.map(r => ({
+        ...r.log,
+        changedBy: r.changedBy,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching lead activity log:", error);
+    res.status(500).json({ message: "Failed to fetch lead activity log" });
   }
 });
 
