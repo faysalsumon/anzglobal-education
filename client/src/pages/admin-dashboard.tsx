@@ -2594,8 +2594,8 @@ export default function AdminDashboard() {
                     {isConsultant ? "View all courses" : "View and manage all courses"}
                   </CardDescription>
                 </div>
-                {/* Only full admins (CTO & support_manager) can create courses */}
-                {hasFullAdminAccess && (
+                {/* Full admins and marketing executives can create courses */}
+                {(hasFullAdminAccess || isMarketingExecutive) && (
                   <div className="flex gap-2">
                     {isCTO && (
                       <Button size="sm" onClick={() => setAiCourseExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract-course">
