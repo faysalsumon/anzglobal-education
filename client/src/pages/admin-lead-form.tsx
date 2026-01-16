@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Save, Loader2, ChevronsUpDown, Check, Search } from "lucide-react";
 import { LeadNotes } from "@/components/lead-notes";
+import { LeadActivityLog } from "@/components/lead-activity-log";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
@@ -174,6 +175,7 @@ export default function AdminLeadForm() {
     },
     onSuccess: (newLead: CrmLead) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", newLead.id, "activity-log"] });
       toast({ title: "Lead created", description: "New lead has been added successfully" });
       navigate(`/admin/leads/${newLead.id}/edit`);
     },
@@ -186,8 +188,9 @@ export default function AdminLeadForm() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
       return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "activity-log"] });
       toast({ title: "Lead updated", description: "Lead has been updated successfully" });
       navigate("/admin");
     },
@@ -625,10 +628,13 @@ export default function AdminLeadForm() {
             </Card>
 
             {isEditing && params.id ? (
-              <LeadNotes 
-                leadId={params.id} 
-                leadName={`${formData.firstName || ''} ${formData.lastName || ''}`}
-              />
+              <>
+                <LeadNotes 
+                  leadId={params.id} 
+                  leadName={`${formData.firstName || ''} ${formData.lastName || ''}`}
+                />
+                <LeadActivityLog leadId={params.id} />
+              </>
             ) : (
               <Card>
                 <CardHeader>

@@ -329,7 +329,7 @@ router.post("/leads", requireAdmin, async (req: any, res) => {
     const [newLead] = await db.insert(crmLeads).values({
       ...validated,
       leadOwner: userId,
-      createdByUserId: validated.createdByUserId || userId, // Set createdByUserId
+      createdByUserId: userId, // Always use authenticated user ID (server-derived)
     }).returning();
 
     // Create initial status history
