@@ -161,7 +161,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
-    queryKey: ["/api/super-admin/universities", selectedInstitutionId],
+    queryKey: ["/api/super-admin/institutions", selectedInstitutionId],
     enabled: !!selectedInstitutionId,
   });
 

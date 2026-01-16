@@ -207,11 +207,11 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/super-admin/universities", data);
+      const response = await apiRequest("POST", "/api/super-admin/institutions", data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/universities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       toast({ title: "Success", description: "Institution created successfully" });
       onBack();
     },
@@ -222,11 +222,11 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await apiRequest("PATCH", `/api/super-admin/universities/${id}`, data);
+      const response = await apiRequest("PATCH", `/api/super-admin/institutions/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/universities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       toast({ title: "Success", description: "Institution updated successfully" });
       onBack();
     },
