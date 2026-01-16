@@ -7198,11 +7198,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new course
+  // Create new course (support_staff includes marketing_executive role)
   app.post("/api/super-admin/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
