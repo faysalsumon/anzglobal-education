@@ -137,12 +137,13 @@ export default function AdminLeadForm() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmLead>) => {
-      return apiRequest("POST", "/api/crm/leads", data);
+      const response = await apiRequest("POST", "/api/crm/leads", data);
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newLead: CrmLead) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       toast({ title: "Lead created", description: "New lead has been added successfully" });
-      navigate("/admin");
+      navigate(`/admin/leads/${newLead.id}/edit`);
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create lead", variant: "destructive" });
