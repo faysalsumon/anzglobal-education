@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
+import { LeadNotes } from "@/components/lead-notes";
 
 // Helper to get auth headers for fetch requests
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -966,6 +967,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
       <Tabs defaultValue="details" className="w-full">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="history">Status History</TabsTrigger>
         </TabsList>
         
@@ -1078,7 +1080,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
             {lead.notes && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Notes</CardTitle>
+                  <CardTitle className="text-lg">Legacy Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">{lead.notes}</p>
@@ -1086,6 +1088,13 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="notes" className="mt-4">
+          <LeadNotes 
+            leadId={lead.id} 
+            leadName={`${lead.firstName} ${lead.lastName}`}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
