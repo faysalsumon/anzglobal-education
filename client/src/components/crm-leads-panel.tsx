@@ -598,92 +598,128 @@ export function CrmLeadsPanel() {
               {leadsData?.leads?.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
+                  className="p-4 border rounded-lg hover-elevate cursor-pointer"
                   onClick={() => { setSelectedLead(lead); setInitialTab('details'); }}
                   data-testid={`card-lead-${lead.id}`}
                 >
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {lead.firstName?.[0]}{lead.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
-                        {lead.firstName} {lead.lastName}
-                      </span>
-                      <Badge variant="outline" className={statusColors[lead.leadStatus]}>
-                        {statusLabels[lead.leadStatus]}
-                      </Badge>
-                      <Badge variant="outline" className={ratingColors[lead.leadRating]}>
-                        {lead.leadRating}
-                      </Badge>
-                      {lead.leadCreationMethod === 'website_form' && (
-                        <Badge variant="secondary" className="text-xs">
-                          Website Inquiry
-                        </Badge>
-                      )}
-                    </div>
-                    {lead.courseName && (
-                      <div className="flex items-center gap-1 text-sm text-primary mt-1" data-testid={`text-lead-course-${lead.id}`}>
-                        <BookOpen className="h-3 w-3" />
-                        {lead.courseId ? (
-                          <a 
-                            href={`/courses/${lead.courseId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {lead.courseName}
-                          </a>
-                        ) : (
-                          <span className="font-medium">{lead.courseName}</span>
+                  {/* Mobile: Stack vertically, Desktop: Horizontal layout */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    {/* Avatar + Name + Badges section */}
+                    <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarFallback>
+                          {lead.firstName?.[0]}{lead.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        {/* Name and badges row */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium" data-testid={`text-lead-name-${lead.id}`}>
+                            {lead.firstName} {lead.lastName}
+                          </span>
+                        </div>
+                        {/* Badges on their own row for clarity */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <Badge variant="outline" className={`${statusColors[lead.leadStatus]} text-xs`}>
+                            {statusLabels[lead.leadStatus]}
+                          </Badge>
+                          <Badge variant="outline" className={`${ratingColors[lead.leadRating]} text-xs`}>
+                            {lead.leadRating}
+                          </Badge>
+                          {lead.leadCreationMethod === 'website_form' && (
+                            <Badge variant="secondary" className="text-xs">
+                              Website
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Course name */}
+                        {lead.courseName && (
+                          <div className="flex items-center gap-1 text-sm text-primary mt-1.5" data-testid={`text-lead-course-${lead.id}`}>
+                            <BookOpen className="h-3 w-3 shrink-0" />
+                            {lead.courseId ? (
+                              <a 
+                                href={`/courses/${lead.courseId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium hover:underline truncate"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {lead.courseName}
+                              </a>
+                            ) : (
+                              <span className="font-medium truncate">{lead.courseName}</span>
+                            )}
+                          </div>
                         )}
+                        {/* Date and Assigned - visible on mobile */}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1.5 sm:hidden">
+                          {lead.createdAt && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(lead.createdAt), "MMM d, yyyy")}
+                            </span>
+                          )}
+                          {lead.assignedToUser && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {lead.assignedToUser.firstName} {lead.assignedToUser.lastName}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {lead.email}
+                      {/* View button - visible on mobile, aligned right */}
+                      <Button variant="ghost" size="icon" className="sm:hidden shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Contact info - horizontal on desktop, vertical on mobile */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground pl-13 sm:pl-0">
+                      <span className="flex items-center gap-1 truncate">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{lead.email}</span>
                       </span>
                       {lead.phone && (
                         <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
+                          <Phone className="h-3 w-3 shrink-0" />
                           {lead.phone}
                         </span>
                       )}
                       {lead.country && (
                         <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
+                          <MapPin className="h-3 w-3 shrink-0" />
                           {lead.country}
                         </span>
                       )}
                       {lead.branch && (
                         <span className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
+                          <Building2 className="h-3 w-3 shrink-0" />
                           {lead.branch}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    {lead.createdAt && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(lead.createdAt), "MMM d, yyyy")}
-                      </div>
-                    )}
-                    {lead.assignedToUser && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <User className="h-3 w-3" />
-                        {lead.assignedToUser.firstName} {lead.assignedToUser.lastName}
-                      </div>
-                    )}
+                  
+                  {/* Date/Assigned + View button - desktop only */}
+                  <div className="hidden sm:flex items-center justify-end gap-4 mt-2">
+                    <div className="text-right text-sm text-muted-foreground">
+                      {lead.createdAt && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(lead.createdAt), "MMM d, yyyy")}
+                        </div>
+                      )}
+                      {lead.assignedToUser && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <User className="h-3 w-3" />
+                          {lead.assignedToUser.firstName} {lead.assignedToUser.lastName}
+                        </div>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
