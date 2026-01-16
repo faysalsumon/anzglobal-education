@@ -314,8 +314,11 @@ export function CrmLeadsPanel() {
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
       return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "activity-log"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", variables.id, "status-history"] });
       toast({ title: "Lead updated", description: "Lead status has been updated" });
     },
     onError: () => {
@@ -958,6 +961,8 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id, "activity-log"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id, "status-history"] });
       setAssigneePopoverOpen(false);
       toast({ title: "Assignee updated", description: "Lead has been reassigned" });
     },
@@ -968,28 +973,31 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold" data-testid="text-lead-detail-name">
-            {lead.firstName} {lead.lastName}
-          </h2>
-          <p className="text-muted-foreground">{lead.email}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold truncate" data-testid="text-lead-detail-name">
+              {lead.firstName} {lead.lastName}
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base truncate">{lead.email}</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
           {lead.leadStatus !== 'converted' && (
-            <Button variant="outline" onClick={onConvert} data-testid="button-convert-lead">
+            <Button variant="outline" onClick={onConvert} data-testid="button-convert-lead" className="flex-1 sm:flex-none">
               <ArrowRight className="h-4 w-4 mr-2" />
-              Convert to Contact
+              <span className="hidden sm:inline">Convert to Contact</span>
+              <span className="sm:hidden">Convert</span>
             </Button>
           )}
-          <Button variant="outline" onClick={onEdit} data-testid="button-edit-lead">
+          <Button variant="outline" onClick={onEdit} data-testid="button-edit-lead" className="flex-1 sm:flex-none">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button variant="destructive" onClick={onDelete} data-testid="button-delete-lead">
+          <Button variant="destructive" onClick={onDelete} data-testid="button-delete-lead" className="flex-1 sm:flex-none">
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
@@ -1014,24 +1022,27 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
       {lead.courseName && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="py-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Course Interest</h4>
-                <p className="text-lg font-medium mt-1" data-testid="text-detail-course-name">{lead.courseName}</p>
-                {lead.interestedIn && (
-                  <p className="text-sm text-muted-foreground mt-1">{lead.interestedIn}</p>
-                )}
+            <div className="flex flex-col sm:flex-row items-start gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Course Interest</h4>
+                  <p className="text-base sm:text-lg font-medium mt-1 break-words" data-testid="text-detail-course-name">{lead.courseName}</p>
+                  {lead.interestedIn && (
+                    <p className="text-sm text-muted-foreground mt-1">{lead.interestedIn}</p>
+                  )}
+                </div>
               </div>
               {lead.courseId && (
                 <a 
                   href={`/courses/${lead.courseId}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
                 >
-                  <Button variant="outline" size="sm" data-testid="button-view-course">
+                  <Button variant="outline" data-testid="button-view-course" className="w-full sm:w-auto">
                     <Eye className="h-4 w-4 mr-2" />
                     View Course
                   </Button>
