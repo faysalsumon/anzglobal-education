@@ -1016,6 +1016,7 @@ router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
           type: 'lead_mention',
           title: 'You were mentioned in a note',
           message: `${notifierName} mentioned you in a note on ${leadName}`,
+          link: `/admin?tab=crm-leads&leadId=${leadId}&showNotes=true`,
           data: JSON.stringify({
             leadId,
             noteId: newNote.id,

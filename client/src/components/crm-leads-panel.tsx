@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
@@ -154,6 +154,7 @@ const statusLabels: Record<string, string> = {
 export function CrmLeadsPanel() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const searchString = useSearch();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -167,6 +168,7 @@ export function CrmLeadsPanel() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [initialTab, setInitialTab] = useState<string>("details");
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -207,6 +209,45 @@ export function CrmLeadsPanel() {
     },
     enabled: !!selectedLead?.id,
   });
+
+  // Handle URL parameters for deep-linking to specific lead and notes tab
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const leadId = params.get('leadId');
+    const showNotes = params.get('showNotes');
+    
+    if (leadId && leadsData?.leads) {
+      // Find the lead in the loaded data
+      const lead = leadsData.leads.find(l => l.id === leadId);
+      if (lead) {
+        setSelectedLead(lead);
+        if (showNotes === 'true') {
+          setInitialTab('notes');
+        }
+        // Clear URL params after handling
+        navigate('/admin?tab=crm-leads', { replace: true });
+      } else {
+        // Lead not in current filter, fetch it directly
+        (async () => {
+          try {
+            const headers = await getAuthHeaders();
+            const response = await fetch(`/api/crm/leads/${leadId}`, { credentials: 'include', headers });
+            if (response.ok) {
+              const fetchedLead = await response.json();
+              setSelectedLead(fetchedLead);
+              if (showNotes === 'true') {
+                setInitialTab('notes');
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch lead from URL param:', error);
+          }
+          // Clear URL params after handling
+          navigate('/admin?tab=crm-leads', { replace: true });
+        })();
+      }
+    }
+  }, [searchString, leadsData?.leads, navigate]);
 
   // Fetch branches from database
   const { data: branchesData } = useQuery<{ id: string; name: string; code: string; city: string | null }[]>({
@@ -530,7 +571,7 @@ export function CrmLeadsPanel() {
                     key={status}
                     status={status}
                     leads={getLeadsByStatus(status)}
-                    onSelectLead={setSelectedLead}
+                    onSelectLead={(lead) => { setSelectedLead(lead); setInitialTab('details'); }}
                   />
                 ))}
               </div>
@@ -548,7 +589,7 @@ export function CrmLeadsPanel() {
                 <div
                   key={lead.id}
                   className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
-                  onClick={() => setSelectedLead(lead)}
+                  onClick={() => { setSelectedLead(lead); setInitialTab('details'); }}
                   data-testid={`card-lead-${lead.id}`}
                 >
                   <Avatar className="h-10 w-10">
@@ -630,7 +671,7 @@ export function CrmLeadsPanel() {
                       </div>
                     )}
                   </div>
-                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setInitialTab('details'); }}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -964,7 +1005,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
         </Card>
       )}
 
-      <Tabs defaultValue="details" className="w-full">
+      <Tabs value={initialTab} onValueChange={setInitialTab} className="w-full">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
