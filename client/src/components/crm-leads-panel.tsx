@@ -203,16 +203,20 @@ export function CrmLeadsPanel() {
     },
   });
 
+  // Derive branchId from the selected branch name for filtering admins
+  const selectedBranchId = formData.branch 
+    ? branchesData?.find(b => b.name === formData.branch)?.id 
+    : undefined;
+
   // Fetch admins with optional branch filtering - when a branch is selected in the form, filter users
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
-    queryKey: ["/api/admin/users", (formData as any).branchId],
+    queryKey: ["/api/admin/users", selectedBranchId],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("userType", "admin");
       // If a branch is selected in the form, filter admins by the branch ID
-      const branchId = (formData as any).branchId;
-      if (branchId) {
-        params.append("branchId", branchId);
+      if (selectedBranchId) {
+        params.append("branchId", selectedBranchId);
       }
       const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch admins");
@@ -283,16 +287,12 @@ export function CrmLeadsPanel() {
   });
 
   const handleCreateLead = () => {
-    // Strip branchId from formData - it's only used for frontend admin filtering
-    const { branchId, ...leadData } = formData as any;
-    createMutation.mutate(leadData);
+    createMutation.mutate(formData);
   };
 
   const handleUpdateLead = () => {
     if (selectedLead) {
-      // Strip branchId from formData - it's only used for frontend admin filtering
-      const { branchId, ...leadData } = formData as any;
-      updateMutation.mutate({ id: selectedLead.id, data: leadData });
+      updateMutation.mutate({ id: selectedLead.id, data: formData });
     }
   };
 
@@ -670,6 +670,7 @@ export function CrmLeadsPanel() {
         onSubmit={handleCreateLead}
         isLoading={createMutation.isPending}
         admins={admins || []}
+        branchesData={branchesData || []}
       />
 
       <LeadFormDialog
@@ -681,6 +682,7 @@ export function CrmLeadsPanel() {
         onSubmit={handleUpdateLead}
         isLoading={updateMutation.isPending}
         admins={admins || []}
+        branchesData={branchesData || []}
       />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
@@ -746,6 +748,7 @@ interface LeadFormDialogProps {
   onSubmit: () => void;
   isLoading: boolean;
   admins: { id: string; firstName: string; lastName: string }[];
+  branchesData: { id: string; name: string; code: string; city: string | null }[];
 }
 
 function LeadFormDialog({
@@ -757,6 +760,7 @@ function LeadFormDialog({
   onSubmit,
   isLoading,
   admins,
+  branchesData,
 }: LeadFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -852,14 +856,10 @@ function LeadFormDialog({
                   value={formData.branch || ""}
                   onValueChange={(value) => {
                     // When branch changes, clear assigned user since they may not be in the new branch
-                    // Find the branch ID for filtering admins
-                    const selectedBranch = branchesData?.find(b => b.name === value);
                     setFormData({ 
                       ...formData, 
                       branch: value, 
-                      assignedTo: undefined,
-                      // Store branchId separately for admin filtering
-                      branchId: selectedBranch?.id 
+                      assignedTo: undefined
                     });
                   }}
                 >
