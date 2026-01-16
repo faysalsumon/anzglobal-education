@@ -131,12 +131,12 @@ export default function AdminLeadForm() {
 
   // Fetch courses for searchable dropdown
   const { data: coursesData } = useQuery<Course[]>({
-    queryKey: ["/api/public/courses"],
+    queryKey: ["/api/courses"],
     queryFn: async () => {
-      const response = await fetch("/api/public/courses?limit=500");
+      const response = await fetch("/api/courses");
       if (!response.ok) return [];
       const data = await response.json();
-      return data.courses || [];
+      return Array.isArray(data) ? data : [];
     },
   });
 
