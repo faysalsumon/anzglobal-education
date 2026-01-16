@@ -38,7 +38,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
@@ -528,6 +530,7 @@ export default function AdminDashboard() {
   const [selectedInstitutions, setSelectedInstitutions] = useState<Set<string>>(new Set());
   const [transferringInstitution, setTransferringInstitution] = useState<Institution | null>(null);
   const [selectedTransferUserId, setSelectedTransferUserId] = useState<string>("");
+  const [assigningInstitutionId, setAssigningInstitutionId] = useState<string | null>(null);
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
@@ -943,10 +946,33 @@ export default function AdminDashboard() {
     },
   });
 
-  // Fetch admin users for transfer dropdown (used for both institution and course transfers)
+  // Fetch admin users for transfer dropdown and inline assignment (used for institution and course transfers)
   const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null }>>({
     queryKey: ["/api/super-admin/admin-users"],
-    enabled: !!transferringInstitution || !!transferringCourse,
+    enabled: !!transferringInstitution || !!transferringCourse || !!assigningInstitutionId || activeTab === 'institutions',
+  });
+
+  // Inline assignment mutation for institutions (quick assign from table)
+  const assignInstitutionMutation = useMutation({
+    mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string | null }) => {
+      return await apiRequest("PATCH", `/api/super-admin/institutions/${id}/transfer`, { assignedToUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
+      setAssigningInstitutionId(null);
+      toast({
+        title: "Assignment updated",
+        description: "Institution has been reassigned",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update assignment",
+        variant: "destructive",
+      });
+    },
   });
 
   // Transfer course mutation
@@ -2277,8 +2303,82 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="py-2 font-medium text-sm">{institution.name}</TableCell>
                           <TableCell className="py-2 text-sm text-muted-foreground">{institution.country}</TableCell>
-                          <TableCell className="py-2 text-sm text-muted-foreground">
-                            {institution.assignedToName || institution.createdByName || "-"}
+                          <TableCell className="py-2 text-sm">
+                            <Popover 
+                              open={assigningInstitutionId === institution.id} 
+                              onOpenChange={(open) => setAssigningInstitutionId(open ? institution.id : null)}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="ghost"
+                                  data-testid={`button-assign-institution-${institution.id}`}
+                                >
+                                  {institution.assignedToName ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">{institution.assignedToName}</span>
+                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                  ) : institution.createdByName ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">{institution.createdByName}</span>
+                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <UserPlus className="h-4 w-4" />
+                                      <span>Assign</span>
+                                      <ChevronsUpDown className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[250px] p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Search team members..." />
+                                  <CommandList>
+                                    <CommandEmpty>No team members found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {!adminUsers ? (
+                                        <div className="py-2 px-3 text-sm text-muted-foreground">Loading...</div>
+                                      ) : (
+                                        <>
+                                          <CommandItem
+                                            value="unassigned"
+                                            onSelect={() => assignInstitutionMutation.mutate({ id: institution.id, assignedToUserId: null })}
+                                            className="cursor-pointer"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <User className="h-4 w-4 text-muted-foreground" />
+                                              <span>Unassigned</span>
+                                            </div>
+                                            {!institution.assignedToUserId && <Check className="ml-auto h-4 w-4" />}
+                                          </CommandItem>
+                                          {adminUsers.map((adminUser) => (
+                                            <CommandItem
+                                              key={adminUser.id}
+                                              value={`${adminUser.name} ${adminUser.email}`}
+                                              onSelect={() => assignInstitutionMutation.mutate({ id: institution.id, assignedToUserId: adminUser.id })}
+                                              className="cursor-pointer"
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <Avatar className="h-6 w-6">
+                                                  <AvatarFallback>{adminUser.name?.[0]?.toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col">
+                                                  <span className="text-sm">{adminUser.name}</span>
+                                                  <span className="text-xs text-muted-foreground">{adminUser.email}</span>
+                                                </div>
+                                              </div>
+                                              {institution.assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4" />}
+                                            </CommandItem>
+                                          ))}
+                                        </>
+                                      )}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </TableCell>
                           <TableCell className="py-2">
                             {institution.approvalStatus === "approved" && (
