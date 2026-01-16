@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
@@ -151,6 +152,7 @@ const statusLabels: Record<string, string> = {
 
 export function CrmLeadsPanel() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -161,11 +163,8 @@ export function CrmLeadsPanel() {
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isConvertOpen, setIsConvertOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<CrmLead>>({});
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   
   const sensors = useSensors(
@@ -219,56 +218,17 @@ export function CrmLeadsPanel() {
     },
   });
 
-  // Derive branchId from the selected branch name for filtering admins
-  const selectedBranchId = formData.branch 
-    ? branchesData?.find(b => b.name === formData.branch)?.id 
-    : undefined;
-
-  // Fetch admins with optional branch filtering - when a branch is selected in the form, filter users
+  // Fetch admins for filter dropdown
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
-    queryKey: ["/api/admin/users", selectedBranchId],
+    queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("userType", "admin");
-      // If a branch is selected in the form, filter admins by the branch ID
-      if (selectedBranchId) {
-        params.append("branchId", selectedBranchId);
-      }
       const headers = await getAuthHeaders();
       const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include', headers });
       if (!response.ok) throw new Error("Failed to fetch admins");
       const data = await response.json();
       return data.users || [];
-    },
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: Partial<CrmLead>) => {
-      return apiRequest("POST", "/api/crm/leads", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
-      setIsCreateOpen(false);
-      setFormData({});
-      toast({ title: "Lead created", description: "New lead has been added successfully" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create lead", variant: "destructive" });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
-      return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
-      setIsEditOpen(false);
-      setFormData({});
-      toast({ title: "Lead updated", description: "Lead has been updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update lead", variant: "destructive" });
     },
   });
 
@@ -303,15 +263,18 @@ export function CrmLeadsPanel() {
     },
   });
 
-  const handleCreateLead = () => {
-    createMutation.mutate(formData);
-  };
-
-  const handleUpdateLead = () => {
-    if (selectedLead) {
-      updateMutation.mutate({ id: selectedLead.id, data: formData });
-    }
-  };
+  const statusUpdateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CrmLead> }) => {
+      return apiRequest("PATCH", `/api/crm/leads/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      toast({ title: "Lead updated", description: "Lead status has been updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update lead status", variant: "destructive" });
+    },
+  });
 
   const handleDeleteLead = () => {
     if (selectedLead) {
@@ -325,18 +288,16 @@ export function CrmLeadsPanel() {
     }
   };
 
-  const openEditDialog = (lead: CrmLead) => {
-    setFormData({ ...lead });
-    setSelectedLead(lead);
-    setIsEditOpen(true);
+  const openEditPage = (lead: CrmLead) => {
+    navigate(`/admin/leads/${lead.id}/edit`);
   };
 
-  if (selectedLead && !isEditOpen && !isDeleteOpen && !isConvertOpen) {
+  if (selectedLead && !isDeleteOpen && !isConvertOpen) {
     return (
       <LeadDetailView
         lead={leadDetail || selectedLead}
         onBack={() => setSelectedLead(null)}
-        onEdit={() => openEditDialog(selectedLead)}
+        onEdit={() => openEditPage(selectedLead)}
         onDelete={() => setIsDeleteOpen(true)}
         onConvert={() => setIsConvertOpen(true)}
       />
@@ -367,7 +328,7 @@ export function CrmLeadsPanel() {
     
     const lead = leadsData?.leads?.find(l => l.id === leadId);
     if (lead && lead.leadStatus !== newStatus) {
-      updateMutation.mutate({ 
+      statusUpdateMutation.mutate({ 
         id: leadId, 
         data: { leadStatus: newStatus } 
       });
@@ -409,7 +370,7 @@ export function CrmLeadsPanel() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-lead">
+          <Button onClick={() => navigate("/admin/leads/new")} data-testid="button-create-lead">
             <Plus className="h-4 w-4 mr-2" />
             Add Lead
           </Button>
@@ -678,30 +639,6 @@ export function CrmLeadsPanel() {
         </CardContent>
       </Card>
 
-      <LeadFormDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        title="Create New Lead"
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleCreateLead}
-        isLoading={createMutation.isPending}
-        admins={admins || []}
-        branchesData={branchesData || []}
-      />
-
-      <LeadFormDialog
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-        title="Edit Lead"
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleUpdateLead}
-        isLoading={updateMutation.isPending}
-        admins={admins || []}
-        branchesData={branchesData || []}
-      />
-
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -753,292 +690,6 @@ export function CrmLeadsPanel() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-interface LeadFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  formData: Partial<CrmLead>;
-  setFormData: (data: Partial<CrmLead>) => void;
-  onSubmit: () => void;
-  isLoading: boolean;
-  admins: { id: string; firstName: string; lastName: string }[];
-  branchesData: { id: string; name: string; code: string; city: string | null }[];
-}
-
-function LeadFormDialog({
-  open,
-  onOpenChange,
-  title,
-  formData,
-  setFormData,
-  onSubmit,
-  isLoading,
-  admins,
-  branchesData,
-}: LeadFormDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="contact">Contact</TabsTrigger>
-            <TabsTrigger value="interest">Interest</TabsTrigger>
-          </TabsList>
-          <TabsContent value="basic" className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>First Name *</Label>
-                <Input
-                  value={formData.firstName || ""}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  data-testid="input-first-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Last Name *</Label>
-                <Input
-                  value={formData.lastName || ""}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  data-testid="input-last-name"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Lead Status</Label>
-                <Select
-                  value={formData.leadStatus || "not_contacted"}
-                  onValueChange={(value: any) => setFormData({ ...formData, leadStatus: value })}
-                >
-                  <SelectTrigger data-testid="select-lead-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_contacted">Not Contacted</SelectItem>
-                    <SelectItem value="contacted">Contacted</SelectItem>
-                    <SelectItem value="qualified">Qualified</SelectItem>
-                    <SelectItem value="unqualified">Unqualified</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Lead Rating</Label>
-                <Select
-                  value={formData.leadRating || "cold"}
-                  onValueChange={(value: any) => setFormData({ ...formData, leadRating: value })}
-                >
-                  <SelectTrigger data-testid="select-lead-rating">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cold">Cold</SelectItem>
-                    <SelectItem value="warm">Warm</SelectItem>
-                    <SelectItem value="hot">Hot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Lead Source</Label>
-                <Select
-                  value={formData.leadSource || ""}
-                  onValueChange={(value) => setFormData({ ...formData, leadSource: value })}
-                >
-                  <SelectTrigger data-testid="select-lead-source">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="website">Website</SelectItem>
-                    <SelectItem value="referral">Referral</SelectItem>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="google">Google</SelectItem>
-                    <SelectItem value="walk_in">Walk In</SelectItem>
-                    <SelectItem value="event">Event</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Branch</Label>
-                <Select
-                  value={formData.branch || ""}
-                  onValueChange={(value) => {
-                    // When branch changes, clear assigned user since they may not be in the new branch
-                    setFormData({ 
-                      ...formData, 
-                      branch: value, 
-                      assignedTo: undefined
-                    });
-                  }}
-                >
-                  <SelectTrigger data-testid="select-branch">
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branchesData?.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.name}>
-                        {branch.name}{branch.city ? ` (${branch.city})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Assigned To</Label>
-              <Select
-                value={formData.assignedTo || ""}
-                onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
-              >
-                <SelectTrigger data-testid="select-assigned-to">
-                  <SelectValue placeholder="Select consultant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {admins.map((admin) => (
-                    <SelectItem key={admin.id} value={admin.id}>
-                      {admin.firstName} {admin.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </TabsContent>
-          <TabsContent value="contact" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={formData.email || ""}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                data-testid="input-email"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Phone *</Label>
-                <Input
-                  value={formData.phone || ""}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  data-testid="input-phone"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Mobile</Label>
-                <Input
-                  value={formData.mobile || ""}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  data-testid="input-mobile"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nationality</Label>
-                <Input
-                  value={formData.nationality || ""}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  data-testid="input-nationality"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Input
-                  value={formData.country || ""}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                  data-testid="input-country"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>City</Label>
-              <Input
-                value={formData.city || ""}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                data-testid="input-city"
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="interest" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Product Interest</Label>
-              <Input
-                value={formData.productInterest || ""}
-                onChange={(e) => setFormData({ ...formData, productInterest: e.target.value })}
-                placeholder="e.g., Bachelor of IT, Diploma of Business"
-                data-testid="input-product-interest"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Intake Month</Label>
-                <Select
-                  value={formData.intakeMonth || ""}
-                  onValueChange={(value) => setFormData({ ...formData, intakeMonth: value })}
-                >
-                  <SelectTrigger data-testid="select-intake-month">
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="January">January</SelectItem>
-                    <SelectItem value="February">February</SelectItem>
-                    <SelectItem value="March">March</SelectItem>
-                    <SelectItem value="April">April</SelectItem>
-                    <SelectItem value="May">May</SelectItem>
-                    <SelectItem value="June">June</SelectItem>
-                    <SelectItem value="July">July</SelectItem>
-                    <SelectItem value="August">August</SelectItem>
-                    <SelectItem value="September">September</SelectItem>
-                    <SelectItem value="October">October</SelectItem>
-                    <SelectItem value="November">November</SelectItem>
-                    <SelectItem value="December">December</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Intake Year</Label>
-                <Select
-                  value={formData.intakeYear || ""}
-                  onValueChange={(value) => setFormData({ ...formData, intakeYear: value })}
-                >
-                  <SelectTrigger data-testid="select-intake-year">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2024">2024</SelectItem>
-                    <SelectItem value="2025">2025</SelectItem>
-                    <SelectItem value="2026">2026</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={formData.notes || ""}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes about the lead..."
-                data-testid="input-notes"
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onSubmit} disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Lead"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

@@ -63,6 +63,7 @@ import AuthCallback from "@/pages/auth-callback";
 import AdminPendingApproval from "@/pages/admin-pending-approval";
 import AcceptInvitation from "@/pages/accept-invitation";
 import ForcePasswordReset from "@/pages/force-password-reset";
+import AdminLeadForm from "@/pages/admin-lead-form";
 
 interface RouterProps {
   user: any;
@@ -111,6 +112,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
       <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
       <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
+      <Route path="/admin/leads/new" component={AdminLeadForm} />
+      <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
       <Route path="/university/profile" component={UniversityProfile} />
       <Route path="/university/dashboard" component={Home} />
       <Route path="/university/institutions" component={UniversityInstitutions} />
