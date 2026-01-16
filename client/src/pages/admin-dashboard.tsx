@@ -2325,7 +2325,15 @@ export default function AdminDashboard() {
                               data-testid={`checkbox-institution-${institution.id}`}
                             />
                           </TableCell>
-                          <TableCell className="py-2 font-medium text-sm">{institution.name}</TableCell>
+                          <TableCell className="py-2">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8" data-testid={`img-institution-logo-${institution.id}`}>
+                                <AvatarImage src={institution.logo || undefined} alt={institution.name} />
+                                <AvatarFallback className="text-xs">{institution.name?.[0]?.toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-sm" data-testid={`text-institution-name-${institution.id}`}>{institution.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="py-2 text-sm text-muted-foreground">{institution.country}</TableCell>
                           <TableCell className="py-2 text-sm">
                             <Popover 
