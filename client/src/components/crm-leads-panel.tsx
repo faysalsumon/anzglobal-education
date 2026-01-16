@@ -19,6 +19,19 @@ import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+
+// Helper to get auth headers for fetch requests
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+  }
+  return headers;
+}
 import { 
   Search, 
   Plus, 
@@ -177,7 +190,8 @@ export function CrmLeadsPanel() {
       if (countryFilter !== "all") params.append("country", countryFilter);
       if (assignedFilter !== "all") params.append("assignedTo", assignedFilter);
       if (searchQuery) params.append("search", searchQuery);
-      const response = await fetch(`/api/crm/leads?${params.toString()}`, { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/leads?${params.toString()}`, { credentials: 'include', headers });
       if (!response.ok) throw new Error("Failed to fetch leads");
       return response.json();
     },
@@ -186,7 +200,8 @@ export function CrmLeadsPanel() {
   const { data: leadDetail } = useQuery<CrmLead & { statusHistory: StatusHistory[] }>({
     queryKey: ["/api/crm/leads", selectedLead?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/crm/leads/${selectedLead?.id}`, { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/leads/${selectedLead?.id}`, { credentials: 'include', headers });
       if (!response.ok) throw new Error("Failed to fetch lead details");
       return response.json();
     },
@@ -197,7 +212,8 @@ export function CrmLeadsPanel() {
   const { data: branchesData } = useQuery<{ id: string; name: string; code: string; city: string | null }[]>({
     queryKey: ["/api/admin/branches"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/branches", { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/admin/branches", { credentials: 'include', headers });
       if (!response.ok) throw new Error("Failed to fetch branches");
       return response.json();
     },
@@ -218,7 +234,8 @@ export function CrmLeadsPanel() {
       if (selectedBranchId) {
         params.append("branchId", selectedBranchId);
       }
-      const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include', headers });
       if (!response.ok) throw new Error("Failed to fetch admins");
       const data = await response.json();
       return data.users || [];
