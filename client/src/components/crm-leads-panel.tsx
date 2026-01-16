@@ -338,10 +338,12 @@ export function CrmLeadsPanel() {
     return (
       <LeadDetailView
         lead={leadDetail || selectedLead}
-        onBack={() => setSelectedLead(null)}
+        onBack={() => { setSelectedLead(null); setInitialTab('details'); }}
         onEdit={() => openEditPage(selectedLead)}
         onDelete={() => setIsDeleteOpen(true)}
         onConvert={() => setIsConvertOpen(true)}
+        activeTab={initialTab}
+        onTabChange={setInitialTab}
       />
     );
   }
@@ -926,9 +928,11 @@ interface LeadDetailViewProps {
   onEdit: () => void;
   onDelete: () => void;
   onConvert: () => void;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
-function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetailViewProps) {
+function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, onTabChange }: LeadDetailViewProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -1005,7 +1009,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert }: LeadDetai
         </Card>
       )}
 
-      <Tabs value={initialTab} onValueChange={setInitialTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
