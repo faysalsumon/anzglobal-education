@@ -4928,6 +4928,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get admin users with optional branch filtering
+  app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { userType, branchId } = req.query;
+
+      let conditions: any[] = [];
+      
+      // Filter by user type if specified
+      if (userType) {
+        conditions.push(eq(users.userType, userType as string));
+      }
+      
+      // Filter by branchId if specified
+      if (branchId) {
+        conditions.push(eq(users.branchId, branchId as string));
+      }
+
+      const query = conditions.length > 0 
+        ? db.select().from(users).where(and(...conditions))
+        : db.select().from(users);
+      
+      const allUsers = await query;
+      
+      // Sanitize sensitive fields
+      const sanitizedUsers = allUsers.map(({ 
+        password, 
+        verificationToken, 
+        verificationTokenExpiry, 
+        resetPasswordToken, 
+        resetPasswordExpiry,
+        ...safeUser 
+      }) => safeUser);
+      
+      res.json({ users: sanitizedUsers });
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   // Update user's role (super admin only)
   app.patch("/api/admin/users/:id/assign-role", isAuthenticated, async (req: any, res) => {
     try {
