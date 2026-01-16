@@ -193,10 +193,27 @@ export function CrmLeadsPanel() {
     enabled: !!selectedLead?.id,
   });
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
-    queryKey: ["/api/admin/users"],
+  // Fetch branches from database
+  const { data: branchesData } = useQuery<{ id: string; name: string; code: string; city: string | null }[]>({
+    queryKey: ["/api/admin/branches"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/users?userType=admin", { credentials: 'include' });
+      const response = await fetch("/api/admin/branches", { credentials: 'include' });
+      if (!response.ok) throw new Error("Failed to fetch branches");
+      return response.json();
+    },
+  });
+
+  // Fetch admins with optional branch filtering - when a branch is selected in the form, filter users
+  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
+    queryKey: ["/api/admin/users", formData.branch],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append("userType", "admin");
+      // If a branch is selected in the form, filter admins by that branch
+      if (formData.branch) {
+        params.append("branchId", formData.branch);
+      }
+      const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch admins");
       const data = await response.json();
       return data.users || [];
@@ -436,16 +453,16 @@ export function CrmLeadsPanel() {
               <CollapsibleContent>
                 <div className="flex flex-wrap gap-3 pt-2 border-t">
                   <Select value={branchFilter} onValueChange={setBranchFilter}>
-                    <SelectTrigger className="w-[130px]" data-testid="select-branch-filter">
+                    <SelectTrigger className="w-[160px]" data-testid="select-branch-filter">
                       <SelectValue placeholder="Branch" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Branches</SelectItem>
-                      <SelectItem value="Melbourne">Melbourne</SelectItem>
-                      <SelectItem value="Sydney">Sydney</SelectItem>
-                      <SelectItem value="Brisbane">Brisbane</SelectItem>
-                      <SelectItem value="Perth">Perth</SelectItem>
-                      <SelectItem value="Adelaide">Adelaide</SelectItem>
+                      {branchesData?.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.name}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -828,18 +845,20 @@ function LeadFormDialog({
                 <Label>Branch</Label>
                 <Select
                   value={formData.branch || ""}
-                  onValueChange={(value) => setFormData({ ...formData, branch: value })}
+                  onValueChange={(value) => {
+                    // When branch changes, clear assigned user since they may not be in the new branch
+                    setFormData({ ...formData, branch: value, assignedTo: undefined });
+                  }}
                 >
                   <SelectTrigger data-testid="select-branch">
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Melbourne">Melbourne</SelectItem>
-                    <SelectItem value="Sydney">Sydney</SelectItem>
-                    <SelectItem value="Brisbane">Brisbane</SelectItem>
-                    <SelectItem value="Perth">Perth</SelectItem>
-                    <SelectItem value="Adelaide">Adelaide</SelectItem>
-                    <SelectItem value="Hobart">Hobart</SelectItem>
+                    {branchesData?.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}{branch.city ? ` (${branch.city})` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
