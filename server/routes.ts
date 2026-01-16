@@ -5096,7 +5096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all regions (for user assignment dropdown)
+  // Get all regions (full data for management panel)
   app.get("/api/admin/regions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -5106,8 +5106,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const { getAllRegions } = await import('./access-policy-service');
-      const regionList = await getAllRegions();
+      // Return all region fields for admin panel
+      const regionList = await db
+        .select()
+        .from(regions)
+        .orderBy(regions.displayOrder, regions.name);
       res.json(regionList);
     } catch (error) {
       console.error("Error fetching regions:", error);

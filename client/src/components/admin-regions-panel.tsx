@@ -74,6 +74,17 @@ export function AdminRegionsPanel() {
   const [editingPathway, setEditingPathway] = useState<Pathway | null>(null);
   const [editingVariant, setEditingVariant] = useState<CourseVariant | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  
+  // State for region form switches
+  const [regionIsActive, setRegionIsActive] = useState(true);
+  const [regionIsDefault, setRegionIsDefault] = useState(false);
+  
+  // State for pathway form switches
+  const [pathwayRequiresVisa, setPathwayRequiresVisa] = useState(true);
+  const [pathwayIsActive, setPathwayIsActive] = useState(true);
+  
+  // State for variant form switches
+  const [variantIsActive, setVariantIsActive] = useState(true);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery<Region[]>({
     queryKey: ["/api/admin/regions"],
@@ -205,8 +216,8 @@ export function AdminRegionsPanel() {
       timezone: formData.get("timezone") as string,
       flagEmoji: formData.get("flagEmoji") as string,
       displayOrder: parseInt(formData.get("displayOrder") as string) || 1,
-      isActive: formData.get("isActive") === "on",
-      isDefault: formData.get("isDefault") === "on",
+      isActive: regionIsActive,
+      isDefault: regionIsDefault,
     };
 
     if (editingRegion) {
@@ -232,7 +243,7 @@ export function AdminRegionsPanel() {
       pteScore: formData.get("pteScore") as string || null,
       toeflScore: formData.get("toeflScore") as string || null,
       academicRequirements: formData.get("academicRequirements") as string || null,
-      isActive: formData.get("isActive") === "on",
+      isActive: variantIsActive,
     };
 
     if (editingVariant) {
@@ -279,6 +290,8 @@ export function AdminRegionsPanel() {
               <Button
                 onClick={() => {
                   setEditingRegion(null);
+                  setRegionIsActive(true);
+                  setRegionIsDefault(false);
                   setRegionDialogOpen(true);
                 }}
                 data-testid="button-add-region"
@@ -350,6 +363,8 @@ export function AdminRegionsPanel() {
                               variant="ghost"
                               onClick={() => {
                                 setEditingRegion(region);
+                                setRegionIsActive(region.isActive);
+                                setRegionIsDefault(region.isDefault);
                                 setRegionDialogOpen(true);
                               }}
                               data-testid={`button-edit-region-${region.id}`}
@@ -385,6 +400,8 @@ export function AdminRegionsPanel() {
               <Button
                 onClick={() => {
                   setEditingPathway(null);
+                  setPathwayRequiresVisa(true);
+                  setPathwayIsActive(true);
                   setPathwayDialogOpen(true);
                 }}
                 data-testid="button-add-pathway"
@@ -440,6 +457,8 @@ export function AdminRegionsPanel() {
                               variant="ghost"
                               onClick={() => {
                                 setEditingPathway(pathway);
+                                setPathwayRequiresVisa(pathway.requiresVisa);
+                                setPathwayIsActive(pathway.isActive);
                                 setPathwayDialogOpen(true);
                               }}
                               data-testid={`button-edit-pathway-${pathway.id}`}
@@ -467,6 +486,7 @@ export function AdminRegionsPanel() {
               <Button
                 onClick={() => {
                   setEditingVariant(null);
+                  setVariantIsActive(true);
                   setVariantDialogOpen(true);
                 }}
                 data-testid="button-add-variant"
@@ -541,6 +561,7 @@ export function AdminRegionsPanel() {
                               variant="ghost"
                               onClick={() => {
                                 setEditingVariant(variant);
+                                setVariantIsActive(variant.isActive);
                                 setVariantDialogOpen(true);
                               }}
                               data-testid={`button-edit-variant-${variant.id}`}
@@ -705,8 +726,8 @@ export function AdminRegionsPanel() {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="isActive"
-                    name="isActive"
-                    defaultChecked={editingRegion?.isActive ?? true}
+                    checked={regionIsActive}
+                    onCheckedChange={setRegionIsActive}
                     data-testid="switch-is-active"
                   />
                   <Label htmlFor="isActive">Active</Label>
@@ -714,8 +735,8 @@ export function AdminRegionsPanel() {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="isDefault"
-                    name="isDefault"
-                    defaultChecked={editingRegion?.isDefault ?? false}
+                    checked={regionIsDefault}
+                    onCheckedChange={setRegionIsDefault}
                     data-testid="switch-is-default"
                   />
                   <Label htmlFor="isDefault">Default Region</Label>
@@ -748,8 +769,8 @@ export function AdminRegionsPanel() {
                 code: formData.get("code") as string,
                 name: formData.get("name") as string,
                 description: formData.get("description") as string,
-                requiresVisa: formData.get("requiresVisa") === "on",
-                isActive: formData.get("isActive") === "on",
+                requiresVisa: pathwayRequiresVisa,
+                isActive: pathwayIsActive,
                 displayOrder: parseInt(formData.get("displayOrder") as string) || 1,
               });
             }}
@@ -791,8 +812,8 @@ export function AdminRegionsPanel() {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="requiresVisa"
-                    name="requiresVisa"
-                    defaultChecked={editingPathway?.requiresVisa ?? true}
+                    checked={pathwayRequiresVisa}
+                    onCheckedChange={setPathwayRequiresVisa}
                     data-testid="switch-requires-visa"
                   />
                   <Label htmlFor="requiresVisa">Requires Visa</Label>
@@ -800,8 +821,8 @@ export function AdminRegionsPanel() {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="pathway-isActive"
-                    name="isActive"
-                    defaultChecked={editingPathway?.isActive ?? true}
+                    checked={pathwayIsActive}
+                    onCheckedChange={setPathwayIsActive}
                     data-testid="switch-pathway-active"
                   />
                   <Label htmlFor="pathway-isActive">Active</Label>
@@ -1016,8 +1037,8 @@ export function AdminRegionsPanel() {
               <div className="flex items-center gap-2">
                 <Switch
                   id="variant-isActive"
-                  name="isActive"
-                  defaultChecked={editingVariant?.isActive ?? true}
+                  checked={variantIsActive}
+                  onCheckedChange={setVariantIsActive}
                   data-testid="switch-variant-active"
                 />
                 <Label htmlFor="variant-isActive">Active</Label>
