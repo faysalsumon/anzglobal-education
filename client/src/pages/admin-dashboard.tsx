@@ -43,7 +43,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { performLogout } from "@/lib/logout";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -366,6 +366,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { signOut } = useSupabaseAuth();
 
   const handleLogout = () => {
@@ -416,31 +417,42 @@ export default function AdminDashboard() {
   // Default tab based on role: all users start with overview
   const defaultTab = "overview";
   
-  // Initialize activeTab from hash with access control validation
+  // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const hash = window.location.hash.replace('#', '');
     const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     // Marketing Executive can access institutions tab along with full admins
     const marketingExecutiveTabs = ['institutions'];
     
-    if (hash && validTabs.includes(hash)) {
+    // First check query parameters (for notification deep-linking like /admin?tab=crm-leads&leadId=xxx)
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabFromQuery = searchParams.get('tab');
+    
+    // Fall back to hash if no query param
+    const hash = window.location.hash.replace('#', '');
+    const tabCandidate = tabFromQuery || hash;
+    
+    const validateTabAccess = (tab: string): string => {
+      if (!tab || !validTabs.includes(tab)) {
+        return defaultTab;
+      }
       // Check access for super-admin-only tabs (role management requires super admin)
-      if (superAdminOnlyTabs.includes(hash) && !isCTO) {
+      if (superAdminOnlyTabs.includes(tab) && !isCTO) {
         return defaultTab;
       }
       // Check access for full-admin-only tabs
-      if (fullAdminOnlyTabs.includes(hash) && !hasFullAdminAccess) {
+      if (fullAdminOnlyTabs.includes(tab) && !hasFullAdminAccess) {
         return defaultTab; // Restricted admin - use default
       }
       // Marketing Executive tabs - accessible by full admins OR marketing executives
-      if (marketingExecutiveTabs.includes(hash) && !hasFullAdminAccess && !isMarketingExecutive) {
+      if (marketingExecutiveTabs.includes(tab) && !hasFullAdminAccess && !isMarketingExecutive) {
         return defaultTab;
       }
-      return hash; // Valid tab with proper access
-    }
-    return defaultTab; // No hash or invalid hash
+      return tab; // Valid tab with proper access
+    };
+    
+    return validateTabAccess(tabCandidate);
   };
   
   const [activeTab, setActiveTab] = useState(getInitialTab);
@@ -480,6 +492,18 @@ export default function AdminDashboard() {
       window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${activeTab}`);
     }
   }, [activeTab]);
+  
+  // Listen for URL search param changes (for notification deep-linking while on admin page)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(searchString);
+    const tabFromQuery = searchParams.get('tab');
+    if (tabFromQuery && tabFromQuery !== activeTab) {
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages'];
+      if (validTabs.includes(tabFromQuery)) {
+        setActiveTab(tabFromQuery);
+      }
+    }
+  }, [searchString, activeTab]);
   
   // User state
   const [userSearchQuery, setUserSearchQuery] = useState("");
