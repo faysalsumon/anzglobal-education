@@ -168,6 +168,7 @@ interface Course {
   subject: string;
   isActive: boolean;
   institutionName?: string;
+  institutionLogo?: string | null;
   createdAt: string | null;
   approvalStatus: string;
   publishStatus: 'draft' | 'published';
@@ -2750,7 +2751,15 @@ export default function AdminDashboard() {
                               data-testid={`checkbox-course-${course.id}`}
                             />
                           </TableCell>
-                          <TableCell className="py-2 font-medium text-sm min-w-[200px]">{course.title}</TableCell>
+                          <TableCell className="py-2 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8" data-testid={`img-course-institution-logo-${course.id}`}>
+                                <AvatarImage src={course.institutionLogo || undefined} alt={course.institutionName || 'Institution'} />
+                                <AvatarFallback className="text-xs">{course.institutionName?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-sm" data-testid={`text-course-title-${course.id}`}>{course.title}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="py-2 text-sm text-muted-foreground hidden md:table-cell">{course.institutionName}</TableCell>
                           <TableCell className="py-2 text-sm hidden lg:table-cell">{course.level || "-"}</TableCell>
                           <TableCell className="py-2 text-sm hidden xl:table-cell">{course.duration || "-"}</TableCell>

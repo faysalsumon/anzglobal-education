@@ -7182,12 +7182,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getAllUniversities()
       ]);
 
-      // Add institution name to each course
+      // Add institution name and logo to each course
       const coursesWithInstitution = allCourses.map(course => {
         const institution = allInstitutions.find(i => i.id === course.universityId);
         return {
           ...course,
-          institutionName: institution?.name || 'Unknown'
+          institutionName: institution?.name || 'Unknown',
+          institutionLogo: institution?.logo || null
         };
       });
 
@@ -7568,12 +7569,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Enrich courses with institution names and user names
+      // Enrich courses with institution names, logos and user names
       const enrichedCourses = myCourses.map(course => {
         const institution = allInstitutions.find(i => i.id === course.universityId);
         return {
           ...course,
           institutionName: institution?.name || 'Unknown',
+          institutionLogo: institution?.logo || null,
           createdByName: course.createdByUserId && userMap.has(course.createdByUserId) 
             ? `${userMap.get(course.createdByUserId)!.firstName} ${userMap.get(course.createdByUserId)!.lastName}`.trim()
             : null,
