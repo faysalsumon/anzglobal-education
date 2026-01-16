@@ -23,8 +23,13 @@ import { getUserAccessContext, checkCrudPermission, type UserAccessContext } fro
 
 const router = Router();
 
-// Helper to get user id from request
+// Helper to get user id from request (supports Supabase auth)
 function getUserId(req: any): string | null {
+  // First check Supabase auth
+  if (req.supabaseUser?.id) {
+    return req.supabaseUser.id;
+  }
+  // Fallback to legacy passport auth
   if (!req.user) return null;
   return req.user.claims?.sub || req.user.id || null;
 }
@@ -44,10 +49,14 @@ async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; ro
   return { isAdmin: false, role: null };
 }
 
-// Middleware to check admin access with proper error handling
+// Middleware to check admin access with proper error handling (supports Supabase auth)
 async function requireAdmin(req: any, res: any, next: any) {
   try {
-    if (!req.isAuthenticated?.() || !req.user) {
+    // Check Supabase auth first, then fallback to legacy passport auth
+    const hasSupabaseAuth = !!req.supabaseUser?.id;
+    const hasPassportAuth = req.isAuthenticated?.() && req.user;
+    
+    if (!hasSupabaseAuth && !hasPassportAuth) {
       return res.status(401).json({ message: "Authentication required" });
     }
     
