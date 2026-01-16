@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
@@ -56,7 +58,10 @@ import {
   LayoutGrid,
   ChevronDown,
   GripVertical,
-  Globe
+  Globe,
+  Check,
+  ChevronsUpDown,
+  UserPlus
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -933,6 +938,34 @@ interface LeadDetailViewProps {
 }
 
 function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, onTabChange }: LeadDetailViewProps) {
+  const { toast } = useToast();
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
+
+  const { data: teamMembers } = useQuery<{ id: string; firstName: string; lastName: string; email: string; profileImageUrl: string | null }[]>({
+    queryKey: ["/api/crm/team-members"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/crm/team-members", { credentials: 'include', headers });
+      if (!response.ok) throw new Error("Failed to fetch team members");
+      return response.json();
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: async (assignedToUserId: string | null) => {
+      return apiRequest("PATCH", `/api/crm/leads/${lead.id}`, { assignedTo: assignedToUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", lead.id] });
+      setAssigneePopoverOpen(false);
+      toast({ title: "Assignee updated", description: "Lead has been reassigned" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update assignee", variant: "destructive" });
+    },
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -1069,18 +1102,76 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
                     <span>{lead.branch}</span>
                   </div>
                 )}
-                {lead.assignedToUser && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Assigned To</span>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={lead.assignedToUser.profileImageUrl || undefined} />
-                        <AvatarFallback>{lead.assignedToUser.firstName?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <span>{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Assigned To</span>
+                  <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        data-testid="button-assign-lead"
+                      >
+                        {lead.assignedToUser ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={lead.assignedToUser.profileImageUrl || undefined} />
+                              <AvatarFallback>{lead.assignedToUser.firstName?.[0]}</AvatarFallback>
+                            </Avatar>
+                            <span>{lead.assignedToUser.firstName} {lead.assignedToUser.lastName}</span>
+                            <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <UserPlus className="h-4 w-4" />
+                            <span>Assign</span>
+                            <ChevronsUpDown className="h-3 w-3" />
+                          </div>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[250px] p-0" align="end">
+                      <Command>
+                        <CommandInput placeholder="Search team members..." />
+                        <CommandList>
+                          <CommandEmpty>No team members found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="unassigned"
+                              onSelect={() => assignMutation.mutate(null)}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span>Unassigned</span>
+                              </div>
+                              {!lead.assignedTo && <Check className="ml-auto h-4 w-4" />}
+                            </CommandItem>
+                            {teamMembers?.map((member) => (
+                              <CommandItem
+                                key={member.id}
+                                value={`${member.firstName} ${member.lastName} ${member.email}`}
+                                onSelect={() => assignMutation.mutate(member.id)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={member.profileImageUrl || undefined} />
+                                    <AvatarFallback>{member.firstName?.[0]}</AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col">
+                                    <span className="text-sm">{member.firstName} {member.lastName}</span>
+                                    <span className="text-xs text-muted-foreground">{member.email}</span>
+                                  </div>
+                                </div>
+                                {lead.assignedTo === member.id && <Check className="ml-auto h-4 w-4" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 {lead.ownerUser && (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Owner</span>
