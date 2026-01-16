@@ -1887,6 +1887,26 @@ export const leadStatusHistory = pgTable("lead_status_history", {
   createdAtIdx: index("lead_status_history_created_idx").on(table.createdAt),
 }));
 
+// Note visibility enum for lead notes
+export const noteVisibilityEnum = pgEnum("note_visibility", ["public", "private", "selected"]);
+
+// Lead Notes table - individual notes with @mentions and visibility controls
+export const leadNotes = pgTable("lead_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
+  title: text("title"),
+  content: text("content").notNull(),
+  mentions: text("mentions").array().default(sql`'{}'::text[]`), // Array of user IDs mentioned
+  visibility: noteVisibilityEnum("visibility").notNull().default("public"),
+  visibleTo: text("visible_to").array().default(sql`'{}'::text[]`), // Array of user IDs who can see (when visibility is 'selected')
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  leadIdIdx: index("lead_notes_lead_idx").on(table.leadId),
+  createdByIdx: index("lead_notes_created_by_idx").on(table.createdById),
+  createdAtIdx: index("lead_notes_created_at_idx").on(table.createdAt),
+}));
+
 // CRM Contacts table - categorized organization contacts
 export const crmContacts = pgTable("crm_contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3583,6 +3603,26 @@ export const insertLeadStatusHistorySchema = createInsertSchema(leadStatusHistor
 
 export type LeadStatusHistory = typeof leadStatusHistory.$inferSelect;
 export type InsertLeadStatusHistory = z.infer<typeof insertLeadStatusHistorySchema>;
+
+// Lead Notes
+export const insertLeadNoteSchema = createInsertSchema(leadNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type LeadNote = typeof leadNotes.$inferSelect;
+export type InsertLeadNote = z.infer<typeof insertLeadNoteSchema>;
+
+// Lead Note with author details for display
+export interface LeadNoteWithAuthor extends LeadNote {
+  author: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  };
+}
 
 // CRM Contacts
 export const insertCrmContactSchema = createInsertSchema(crmContacts).omit({
