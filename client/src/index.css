@@ -461,3 +461,34 @@
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }
+/* Mention Styling for Tiptap Editor */
+.mention {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mention:hover {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+.dark .mention {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+.dark .mention:hover {
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+/* Tiptap Editor Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

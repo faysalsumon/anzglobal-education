@@ -888,6 +888,7 @@ router.get("/leads/:id/notes", requireAdmin, async (req: any, res) => {
 
     // Get user's access context for hierarchy-based filtering
     const viewerContext = await getUserAccessContext(userId);
+    const hierarchyLevel = viewerContext?.hierarchyLevel ?? 100;
     
     // Fetch all notes for this lead with author details
     const notes = await db
@@ -913,7 +914,7 @@ router.get("/leads/:id/notes", requireAdmin, async (req: any, res) => {
 
     // Filter notes based on visibility and user's hierarchy
     // Top-level managers (hierarchyLevel <= 2) can see all notes
-    const isTopManager = viewerContext.hierarchyLevel <= 2;
+    const isTopManager = hierarchyLevel <= 2;
     
     const filteredNotes = notes.filter(note => {
       // Top managers see everything

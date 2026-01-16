@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { LeadNotes } from "@/components/lead-notes";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -540,24 +541,34 @@ export default function AdminLeadForm() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Additional Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes || ""}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Add any additional notes about this lead..."
-                    rows={4}
-                    data-testid="textarea-notes"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            {isEditing && params.id ? (
+              <LeadNotes 
+                leadId={params.id} 
+                leadName={`${formData.firstName || ''} ${formData.lastName || ''}`}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes || ""}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Add any additional notes about this lead..."
+                      rows={4}
+                      data-testid="textarea-notes"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Save the lead first to enable @mention and note history features.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex justify-end gap-4">
               <Button type="button" variant="outline" onClick={() => navigate("/admin")} data-testid="button-cancel">
