@@ -5,6 +5,8 @@ import {
   crmLeads, 
   crmContacts, 
   leadStatusHistory, 
+  leadNotes,
+  notifications,
   users,
   courses,
   universities,
@@ -12,6 +14,7 @@ import {
   updateCrmLeadSchema,
   insertCrmContactSchema,
   updateCrmContactSchema,
+  insertLeadNoteSchema,
   branches,
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable } from "drizzle-orm";
@@ -867,6 +870,210 @@ router.get("/branches", requireAdmin, async (req, res) => {
     { value: "Canberra", label: "Canberra" },
   ];
   res.json(branches);
+});
+
+// ============================================
+// LEAD NOTES ROUTES
+// ============================================
+
+// Get notes for a lead with visibility filtering
+router.get("/leads/:id/notes", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    const { id: leadId } = req.params;
+
+    // Get user's access context for hierarchy-based filtering
+    const viewerContext = await getUserAccessContext(userId);
+    
+    // Fetch all notes for this lead with author details
+    const notes = await db
+      .select({
+        id: leadNotes.id,
+        leadId: leadNotes.leadId,
+        title: leadNotes.title,
+        content: leadNotes.content,
+        mentions: leadNotes.mentions,
+        visibility: leadNotes.visibility,
+        visibleTo: leadNotes.visibleTo,
+        createdById: leadNotes.createdById,
+        createdAt: leadNotes.createdAt,
+        authorFirstName: users.firstName,
+        authorLastName: users.lastName,
+        authorEmail: users.email,
+        authorProfileImage: users.profileImageUrl,
+      })
+      .from(leadNotes)
+      .leftJoin(users, eq(leadNotes.createdById, users.id))
+      .where(eq(leadNotes.leadId, leadId))
+      .orderBy(desc(leadNotes.createdAt));
+
+    // Filter notes based on visibility and user's hierarchy
+    // Top-level managers (hierarchyLevel <= 2) can see all notes
+    const isTopManager = viewerContext.hierarchyLevel <= 2;
+    
+    const filteredNotes = notes.filter(note => {
+      // Top managers see everything
+      if (isTopManager) return true;
+      
+      // Public notes visible to all
+      if (note.visibility === 'public') return true;
+      
+      // Author can always see their own notes
+      if (note.createdById === userId) return true;
+      
+      // Private notes only visible to author (already handled above)
+      if (note.visibility === 'private') return false;
+      
+      // Selected visibility - check if user is in visibleTo list
+      if (note.visibility === 'selected') {
+        return note.visibleTo?.includes(userId) || false;
+      }
+      
+      return false;
+    });
+
+    // Transform to include nested author object
+    const transformedNotes = filteredNotes.map(note => ({
+      id: note.id,
+      leadId: note.leadId,
+      title: note.title,
+      content: note.content,
+      mentions: note.mentions,
+      visibility: note.visibility,
+      visibleTo: note.visibleTo,
+      createdById: note.createdById,
+      createdAt: note.createdAt,
+      author: {
+        id: note.createdById,
+        firstName: note.authorFirstName,
+        lastName: note.authorLastName,
+        email: note.authorEmail,
+        profileImageUrl: note.authorProfileImage,
+      }
+    }));
+
+    res.json(transformedNotes);
+  } catch (error) {
+    console.error("Error fetching lead notes:", error);
+    res.status(500).json({ message: "Failed to fetch lead notes" });
+  }
+});
+
+// Create a new note for a lead
+router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    const { id: leadId } = req.params;
+    const { title, content, mentions, visibility, visibleTo } = req.body;
+
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ message: "Note content is required" });
+    }
+
+    // Insert the note
+    const [newNote] = await db
+      .insert(leadNotes)
+      .values({
+        leadId,
+        title: title || null,
+        content,
+        mentions: mentions || [],
+        visibility: visibility || 'public',
+        visibleTo: visibleTo || [],
+        createdById: userId,
+      })
+      .returning();
+
+    // Create notifications for mentioned users
+    if (mentions && mentions.length > 0) {
+      const lead = await db.select().from(crmLeads).where(eq(crmLeads.id, leadId)).limit(1);
+      const leadName = lead[0] ? `${lead[0].firstName} ${lead[0].lastName}` : 'a lead';
+      
+      const notifier = await storage.getUser(userId);
+      const notifierName = notifier ? `${notifier.firstName || ''} ${notifier.lastName || ''}`.trim() : 'Someone';
+      
+      for (const mentionedUserId of mentions) {
+        await db.insert(notifications).values({
+          userId: mentionedUserId,
+          type: 'lead_mention',
+          title: 'You were mentioned in a note',
+          message: `${notifierName} mentioned you in a note on ${leadName}`,
+          data: JSON.stringify({
+            leadId,
+            noteId: newNote.id,
+            mentionedBy: userId,
+          }),
+          isRead: false,
+        });
+      }
+    }
+
+    // Fetch author details for response
+    const author = await storage.getUser(userId);
+
+    res.status(201).json({
+      ...newNote,
+      author: {
+        id: userId,
+        firstName: author?.firstName || null,
+        lastName: author?.lastName || null,
+        email: author?.email || null,
+        profileImageUrl: author?.profileImageUrl || null,
+      }
+    });
+  } catch (error) {
+    console.error("Error creating lead note:", error);
+    res.status(500).json({ message: "Failed to create lead note" });
+  }
+});
+
+// Get team members for mention autocomplete
+router.get("/team-members", requireAdmin, async (req: any, res) => {
+  try {
+    const { search } = req.query;
+    
+    let conditions: any[] = [
+      or(
+        eq(users.userType, 'admin'),
+        eq(users.userType, 'platform_admin')
+      )
+    ];
+
+    if (search && typeof search === 'string' && search.length > 0) {
+      conditions.push(
+        or(
+          ilike(users.firstName, `%${search}%`),
+          ilike(users.lastName, `%${search}%`),
+          ilike(users.email, `%${search}%`)
+        )
+      );
+    }
+
+    const teamMembers = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .where(and(...conditions))
+      .limit(20);
+
+    res.json(teamMembers);
+  } catch (error) {
+    console.error("Error fetching team members:", error);
+    res.status(500).json({ message: "Failed to fetch team members" });
+  }
 });
 
 export default router;
