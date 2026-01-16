@@ -84,7 +84,7 @@ import {
   getUserPermissions,
   invalidatePermissionCache
 } from "./permission-service";
-import { roles, branches } from "@shared/schema";
+import { roles, branches, regions } from "@shared/schema";
 import {
   generateUniversityDescription,
   generateCourseDescription,
