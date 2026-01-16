@@ -1739,8 +1739,8 @@ export default function AdminDashboard() {
             <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4">
               {/* Simple single-column layout */}
               <div className="space-y-4">
-                {/* Dashboard Header - hidden when editors are shown */}
-                {!showInstitutionEditor && !showCourseEditor && (
+                {/* Dashboard Header - hidden when editors or leads tab is shown */}
+                {!showInstitutionEditor && !showCourseEditor && activeTab !== "crm-leads" && (
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold" data-testid="text-dashboard-title">
                     {user?.roleName 
