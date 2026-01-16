@@ -69,9 +69,10 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
     enabled: !!institutionId,
   });
 
-  const { data: availableContacts = [] } = useQuery<CrmContact[]>({
+  const { data: availableContactsData } = useQuery<{ contacts: CrmContact[]; total: number }>({
     queryKey: ["/api/crm/contacts?contactType=providers_rep"],
   });
+  const availableContacts = availableContactsData?.contacts || [];
 
   const createCrmContactMutation = useMutation({
     mutationFn: async (data: { firstName: string; lastName: string; email: string; phone?: string; mobile?: string; contactType: string }) => {
