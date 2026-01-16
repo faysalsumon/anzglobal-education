@@ -31,7 +31,26 @@ import {
   Plus,
   X,
   ChevronDown,
+  Pencil,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -208,7 +227,7 @@ function extractMentionsFromJSON(json: any): string[] {
     json.content.forEach(traverse);
   }
   
-  return [...new Set(mentions)];
+  return Array.from(new Set(mentions));
 }
 
 function NoteEditor({
@@ -216,16 +235,25 @@ function NoteEditor({
   isSubmitting,
   teamMembers,
   onCancel,
+  initialTitle = "",
+  initialContent = "",
+  initialVisibility = "public",
+  initialVisibleTo = [],
 }: {
   onSubmit: (title: string, content: string, mentionedUserIds: string[], visibility: string, visibleTo: string[]) => void;
   isSubmitting: boolean;
   teamMembers: TeamMember[];
   onCancel?: () => void;
+  initialTitle?: string;
+  initialContent?: string;
+  initialVisibility?: "public" | "private" | "selected";
+  initialVisibleTo?: string[];
 }) {
-  const [title, setTitle] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "private" | "selected">("public");
-  const [visibleTo, setVisibleTo] = useState<string[]>([]);
+  const [title, setTitle] = useState(initialTitle);
+  const [visibility, setVisibility] = useState<"public" | "private" | "selected">(initialVisibility);
+  const [visibleTo, setVisibleTo] = useState<string[]>(initialVisibleTo);
   const [showUserPicker, setShowUserPicker] = useState(false);
+  const isEditing = !!initialContent;
   
   const teamMembersRef = useRef<TeamMember[]>(teamMembers);
   
@@ -314,7 +342,7 @@ function NoteEditor({
         },
       }),
     ],
-    content: "",
+    content: initialContent || "",
     editorProps: {
       attributes: {
         class: "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[80px] p-3",
@@ -332,11 +360,13 @@ function NoteEditor({
     if (!content || content === "<p></p>") return;
     
     onSubmit(title, content, mentions, visibility, visibleTo);
-    editor.commands.clearContent();
-    setTitle("");
-    setVisibility("public");
-    setVisibleTo([]);
-  }, [editor, onSubmit, title, visibility, visibleTo]);
+    if (!isEditing) {
+      editor.commands.clearContent();
+      setTitle("");
+      setVisibility("public");
+      setVisibleTo([]);
+    }
+  }, [editor, onSubmit, title, visibility, visibleTo, isEditing]);
 
   const toggleUserVisibility = (userId: string) => {
     setVisibleTo(prev => 
@@ -486,7 +516,14 @@ function NoteEditor({
   );
 }
 
-function NoteItem({ note }: { note: LeadNote }) {
+interface NoteItemProps {
+  note: LeadNote;
+  currentUserId: string | null;
+  onEdit: (note: LeadNote) => void;
+  onDelete: (noteId: string) => void;
+}
+
+function NoteItem({ note, currentUserId, onEdit, onDelete }: NoteItemProps) {
   const authorName = note.author?.firstName && note.author?.lastName
     ? `${note.author.firstName} ${note.author.lastName}`
     : note.author?.email || 'Unknown';
@@ -497,6 +534,8 @@ function NoteItem({ note }: { note: LeadNote }) {
   const createdDate = note.createdAt 
     ? new Date(note.createdAt)
     : new Date();
+  
+  const isAuthor = currentUserId === note.createdById;
   
   const getVisibilityBadge = () => {
     switch (note.visibility) {
@@ -517,14 +556,42 @@ function NoteItem({ note }: { note: LeadNote }) {
       </Avatar>
       
       <div className="flex-1 min-w-0">
-        {note.title && (
-          <h4 className="font-medium text-sm mb-1">{note.title}</h4>
-        )}
-        
-        <div 
-          className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-          dangerouslySetInnerHTML={{ __html: note.content }}
-        />
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            {note.title && (
+              <h4 className="font-medium text-sm mb-1">{note.title}</h4>
+            )}
+            
+            <div 
+              className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+              dangerouslySetInnerHTML={{ __html: note.content }}
+            />
+          </div>
+          
+          {isAuthor && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" data-testid={`button-note-menu-${note.id}`}>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(note)} data-testid={`button-edit-note-${note.id}`}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onDelete(note.id)} 
+                  className="text-destructive focus:text-destructive"
+                  data-testid={`button-delete-note-${note.id}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         
         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
           <span className="font-medium text-primary">{authorName}</span>
@@ -545,6 +612,22 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
   const { toast } = useToast();
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [sortOrder, setSortOrder] = useState<"recent" | "oldest">("recent");
+  const [editingNote, setEditingNote] = useState<LeadNote | null>(null);
+  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setCurrentUserId(user.id);
+        }
+      }
+    };
+    getCurrentUser();
+  }, []);
 
   const { data: notes, isLoading: notesLoading } = useQuery<LeadNote[]>({
     queryKey: ["/api/crm/leads", leadId, "notes"],
@@ -600,6 +683,61 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
     },
   });
 
+  const updateNoteMutation = useMutation({
+    mutationFn: async (data: {
+      noteId: string;
+      title: string;
+      content: string;
+      mentions: string[];
+      visibility: string;
+      visibleTo: string[];
+    }) => {
+      return apiRequest("PUT", `/api/crm/leads/${leadId}/notes/${data.noteId}`, {
+        title: data.title,
+        content: data.content,
+        mentions: data.mentions,
+        visibility: data.visibility,
+        visibleTo: data.visibleTo,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", leadId, "notes"] });
+      setEditingNote(null);
+      toast({
+        title: "Note updated",
+        description: "Your note has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update note. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      return apiRequest("DELETE", `/api/crm/leads/${leadId}/notes/${noteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", leadId, "notes"] });
+      setDeleteNoteId(null);
+      toast({
+        title: "Note deleted",
+        description: "The note has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete note. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmitNote = (
     title: string,
     content: string,
@@ -608,6 +746,31 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
     visibleTo: string[]
   ) => {
     createNoteMutation.mutate({ title, content, mentions, visibility, visibleTo });
+  };
+
+  const handleUpdateNote = (
+    title: string,
+    content: string,
+    mentions: string[],
+    visibility: string,
+    visibleTo: string[]
+  ) => {
+    if (editingNote) {
+      updateNoteMutation.mutate({
+        noteId: editingNote.id,
+        title,
+        content,
+        mentions,
+        visibility,
+        visibleTo,
+      });
+    }
+  };
+
+  const handleDeleteNote = () => {
+    if (deleteNoteId) {
+      deleteNoteMutation.mutate(deleteNoteId);
+    }
   };
 
   const sortedNotes = notes?.slice().sort((a, b) => {
@@ -661,6 +824,19 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
             onCancel={() => setIsAddingNote(false)}
           />
         )}
+
+        {editingNote && teamMembers && (
+          <NoteEditor
+            onSubmit={handleUpdateNote}
+            isSubmitting={updateNoteMutation.isPending}
+            teamMembers={teamMembers}
+            onCancel={() => setEditingNote(null)}
+            initialTitle={editingNote.title || ""}
+            initialContent={editingNote.content}
+            initialVisibility={editingNote.visibility}
+            initialVisibleTo={editingNote.visibleTo || []}
+          />
+        )}
         
         {notesLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -669,7 +845,13 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
         ) : sortedNotes && sortedNotes.length > 0 ? (
           <div className="divide-y">
             {sortedNotes.map((note) => (
-              <NoteItem key={note.id} note={note} />
+              <NoteItem 
+                key={note.id} 
+                note={note} 
+                currentUserId={currentUserId}
+                onEdit={(n) => setEditingNote(n)}
+                onDelete={(id) => setDeleteNoteId(id)}
+              />
             ))}
           </div>
         ) : (
@@ -680,6 +862,31 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={!!deleteNoteId} onOpenChange={(open) => !open && setDeleteNoteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-note">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteNote}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-note"
+            >
+              {deleteNoteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

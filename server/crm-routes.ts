@@ -1041,6 +1041,126 @@ router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
   }
 });
 
+// Update a note
+router.put("/leads/:leadId/notes/:noteId", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    const { leadId, noteId } = req.params;
+    const { title, content, mentions, visibility, visibleTo } = req.body;
+
+    // Get the existing note
+    const [existingNote] = await db
+      .select()
+      .from(leadNotes)
+      .where(and(eq(leadNotes.id, noteId), eq(leadNotes.leadId, leadId)));
+
+    if (!existingNote) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    // Only the author can edit their own notes
+    if (existingNote.createdById !== userId) {
+      return res.status(403).json({ message: "You can only edit your own notes" });
+    }
+
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ message: "Note content is required" });
+    }
+
+    // Update the note
+    const [updatedNote] = await db
+      .update(leadNotes)
+      .set({
+        title: title || null,
+        content,
+        mentions: mentions || [],
+        visibility: visibility || 'public',
+        visibleTo: visibleTo || [],
+      })
+      .where(eq(leadNotes.id, noteId))
+      .returning();
+
+    // Create notifications for newly mentioned users
+    const oldMentions = existingNote.mentions || [];
+    const newMentions = (mentions || []).filter((m: string) => !oldMentions.includes(m));
+    
+    if (newMentions.length > 0) {
+      const lead = await db.select().from(crmLeads).where(eq(crmLeads.id, leadId)).limit(1);
+      const leadName = lead[0] ? `${lead[0].firstName} ${lead[0].lastName}` : 'a lead';
+      
+      const notifier = await storage.getUser(userId);
+      const notifierName = notifier ? `${notifier.firstName || ''} ${notifier.lastName || ''}`.trim() : 'Someone';
+      
+      for (const mentionedUserId of newMentions) {
+        await notifyLeadMention({
+          userId: mentionedUserId,
+          leadId,
+          leadName,
+          noteId: updatedNote.id,
+          mentionedByName: notifierName,
+          mentionedById: userId,
+        });
+      }
+    }
+
+    // Fetch author details for response
+    const author = await storage.getUser(userId);
+
+    res.json({
+      ...updatedNote,
+      author: {
+        id: userId,
+        firstName: author?.firstName || null,
+        lastName: author?.lastName || null,
+        email: author?.email || null,
+        profileImageUrl: author?.profileImageUrl || null,
+      }
+    });
+  } catch (error) {
+    console.error("Error updating lead note:", error);
+    res.status(500).json({ message: "Failed to update lead note" });
+  }
+});
+
+// Delete a note
+router.delete("/leads/:leadId/notes/:noteId", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    const { leadId, noteId } = req.params;
+
+    // Get the existing note
+    const [existingNote] = await db
+      .select()
+      .from(leadNotes)
+      .where(and(eq(leadNotes.id, noteId), eq(leadNotes.leadId, leadId)));
+
+    if (!existingNote) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    // Only the author can delete their own notes
+    if (existingNote.createdById !== userId) {
+      return res.status(403).json({ message: "You can only delete your own notes" });
+    }
+
+    // Delete the note
+    await db.delete(leadNotes).where(eq(leadNotes.id, noteId));
+
+    res.json({ message: "Note deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting lead note:", error);
+    res.status(500).json({ message: "Failed to delete lead note" });
+  }
+});
+
 // Get team members for mention autocomplete
 router.get("/team-members", requireAdmin, async (req: any, res) => {
   try {
