@@ -547,6 +547,7 @@ export default function AdminDashboard() {
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>([]);
   const [transferringCourse, setTransferringCourse] = useState<Course | null>(null);
   const [selectedTransferCourseUserId, setSelectedTransferCourseUserId] = useState<string>("");
+  const [assigningCourseId, setAssigningCourseId] = useState<string | null>(null);
   
   // Admin approval state
   const [approvingUser, setApprovingUser] = useState<User | null>(null);
@@ -949,7 +950,7 @@ export default function AdminDashboard() {
   // Fetch admin users for transfer dropdown and inline assignment (used for institution and course transfers)
   const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null }>>({
     queryKey: ["/api/super-admin/admin-users"],
-    enabled: !!transferringInstitution || !!transferringCourse || !!assigningInstitutionId || activeTab === 'institutions',
+    enabled: !!transferringInstitution || !!transferringCourse || !!assigningInstitutionId || !!assigningCourseId || activeTab === 'institutions' || activeTab === 'courses',
   });
 
   // Inline assignment mutation for institutions (quick assign from table)
@@ -994,6 +995,29 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Inline assignment mutation for courses (quick assign from table)
+  const assignCourseMutation = useMutation({
+    mutationFn: async ({ id, assignedToUserId }: { id: string; assignedToUserId: string | null }) => {
+      return await apiRequest("PATCH", `/api/super-admin/courses/${id}/transfer`, { assignedToUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
+      setAssigningCourseId(null);
+      toast({
+        title: "Assignment updated",
+        description: "Course has been reassigned",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update assignment",
         variant: "destructive",
       });
     },
@@ -2725,8 +2749,82 @@ export default function AdminDashboard() {
                           <TableCell className="py-2 text-sm hidden sm:table-cell">
                             {course.fees ? `$${Number(course.fees).toLocaleString()}` : "-"}
                           </TableCell>
-                          <TableCell className="py-2 text-sm text-muted-foreground hidden lg:table-cell">
-                            {(course as any).assignedToName || (course as any).createdByName || "-"}
+                          <TableCell className="py-2 text-sm hidden lg:table-cell">
+                            <Popover 
+                              open={assigningCourseId === course.id} 
+                              onOpenChange={(open) => setAssigningCourseId(open ? course.id : null)}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="ghost"
+                                  data-testid={`button-assign-course-${course.id}`}
+                                >
+                                  {(course as any).assignedToName ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">{(course as any).assignedToName}</span>
+                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                  ) : (course as any).createdByName ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">{(course as any).createdByName}</span>
+                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <UserPlus className="h-4 w-4" />
+                                      <span>Assign</span>
+                                      <ChevronsUpDown className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[250px] p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Search team members..." />
+                                  <CommandList>
+                                    <CommandEmpty>No team members found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {!adminUsers ? (
+                                        <div className="py-2 px-3 text-sm text-muted-foreground">Loading...</div>
+                                      ) : (
+                                        <>
+                                          <CommandItem
+                                            value="unassigned"
+                                            onSelect={() => assignCourseMutation.mutate({ id: course.id, assignedToUserId: null })}
+                                            className="cursor-pointer"
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <User className="h-4 w-4 text-muted-foreground" />
+                                              <span>Unassigned</span>
+                                            </div>
+                                            {!(course as any).assignedToUserId && <Check className="ml-auto h-4 w-4" />}
+                                          </CommandItem>
+                                          {adminUsers.map((adminUser) => (
+                                            <CommandItem
+                                              key={adminUser.id}
+                                              value={`${adminUser.name} ${adminUser.email}`}
+                                              onSelect={() => assignCourseMutation.mutate({ id: course.id, assignedToUserId: adminUser.id })}
+                                              className="cursor-pointer"
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <Avatar className="h-6 w-6">
+                                                  <AvatarFallback>{adminUser.name?.[0]?.toUpperCase()}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col">
+                                                  <span className="text-sm">{adminUser.name}</span>
+                                                  <span className="text-xs text-muted-foreground">{adminUser.email}</span>
+                                                </div>
+                                              </div>
+                                              {(course as any).assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4" />}
+                                            </CommandItem>
+                                          ))}
+                                        </>
+                                      )}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </TableCell>
                           <TableCell className="py-2">
                             {/* Approval Status Badge */}
