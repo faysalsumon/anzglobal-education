@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
@@ -115,16 +116,14 @@ const KANBAN_TYPES: ContactType[] = ['clients', 'employee', 'external', 'interna
 
 export function CrmContactsPanel() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [nationalityFilter, setNationalityFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [selectedContact, setSelectedContact] = useState<CrmContact | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<CrmContact>>({});
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -181,29 +180,12 @@ export function CrmContactsPanel() {
     },
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: Partial<CrmContact>) => {
-      return apiRequest("POST", "/api/crm/contacts", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
-      setIsCreateOpen(false);
-      setFormData({});
-      toast({ title: "Contact created", description: "New contact has been added successfully" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create contact", variant: "destructive" });
-    },
-  });
-
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CrmContact> }) => {
       return apiRequest("PATCH", `/api/crm/contacts/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
-      setIsEditOpen(false);
-      setFormData({});
       toast({ title: "Contact updated", description: "Contact has been updated successfully" });
     },
     onError: () => {
@@ -226,26 +208,14 @@ export function CrmContactsPanel() {
     },
   });
 
-  const handleCreateContact = () => {
-    createMutation.mutate(formData);
-  };
-
-  const handleUpdateContact = () => {
-    if (selectedContact) {
-      updateMutation.mutate({ id: selectedContact.id, data: formData });
-    }
-  };
-
   const handleDeleteContact = () => {
     if (selectedContact) {
       deleteMutation.mutate(selectedContact.id);
     }
   };
 
-  const openEditDialog = (contact: CrmContact) => {
-    setFormData({ ...contact });
-    setSelectedContact(contact);
-    setIsEditOpen(true);
+  const openEditPage = (contact: CrmContact) => {
+    navigate(`/admin/contacts/${contact.id}/edit`);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -293,12 +263,12 @@ export function CrmContactsPanel() {
   const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
   const uniqueNationalities = Array.from(new Set(contactsData?.contacts?.map(c => c.nationality).filter(Boolean) || []));
 
-  if (selectedContact && !isEditOpen && !isDeleteOpen) {
+  if (selectedContact && !isDeleteOpen) {
     return (
       <ContactDetailView
         contact={contactDetail || selectedContact}
         onBack={() => setSelectedContact(null)}
-        onEdit={() => openEditDialog(selectedContact)}
+        onEdit={() => openEditPage(selectedContact)}
         onDelete={() => setIsDeleteOpen(true)}
       />
     );
@@ -330,7 +300,7 @@ export function CrmContactsPanel() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-contact">
+          <Button onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
           </Button>
@@ -543,28 +513,6 @@ export function CrmContactsPanel() {
           ))}
         </div>
       )}
-
-      <ContactFormDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        title="Create New Contact"
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleCreateContact}
-        isLoading={createMutation.isPending}
-        admins={admins || []}
-      />
-
-      <ContactFormDialog
-        open={isEditOpen}
-        onOpenChange={setIsEditOpen}
-        title="Edit Contact"
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleUpdateContact}
-        isLoading={updateMutation.isPending}
-        admins={admins || []}
-      />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>

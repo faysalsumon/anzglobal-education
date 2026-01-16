@@ -64,6 +64,7 @@ import AdminPendingApproval from "@/pages/admin-pending-approval";
 import AcceptInvitation from "@/pages/accept-invitation";
 import ForcePasswordReset from "@/pages/force-password-reset";
 import AdminLeadForm from "@/pages/admin-lead-form";
+import AdminContactForm from "@/pages/admin-contact-form";
 
 interface RouterProps {
   user: any;
@@ -114,6 +115,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
       <Route path="/admin/leads/new" component={AdminLeadForm} />
       <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
+      <Route path="/admin/contacts/new" component={AdminContactForm} />
+      <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
       <Route path="/university/profile" component={UniversityProfile} />
       <Route path="/university/dashboard" component={Home} />
       <Route path="/university/institutions" component={UniversityInstitutions} />
