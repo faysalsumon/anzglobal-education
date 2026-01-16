@@ -205,13 +205,14 @@ export function CrmLeadsPanel() {
 
   // Fetch admins with optional branch filtering - when a branch is selected in the form, filter users
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; branchId: string | null }[]>({
-    queryKey: ["/api/admin/users", formData.branch],
+    queryKey: ["/api/admin/users", (formData as any).branchId],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append("userType", "admin");
-      // If a branch is selected in the form, filter admins by that branch
-      if (formData.branch) {
-        params.append("branchId", formData.branch);
+      // If a branch is selected in the form, filter admins by the branch ID
+      const branchId = (formData as any).branchId;
+      if (branchId) {
+        params.append("branchId", branchId);
       }
       const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch admins");
@@ -282,12 +283,16 @@ export function CrmLeadsPanel() {
   });
 
   const handleCreateLead = () => {
-    createMutation.mutate(formData);
+    // Strip branchId from formData - it's only used for frontend admin filtering
+    const { branchId, ...leadData } = formData as any;
+    createMutation.mutate(leadData);
   };
 
   const handleUpdateLead = () => {
     if (selectedLead) {
-      updateMutation.mutate({ id: selectedLead.id, data: formData });
+      // Strip branchId from formData - it's only used for frontend admin filtering
+      const { branchId, ...leadData } = formData as any;
+      updateMutation.mutate({ id: selectedLead.id, data: leadData });
     }
   };
 
@@ -460,7 +465,7 @@ export function CrmLeadsPanel() {
                       <SelectItem value="all">All Branches</SelectItem>
                       {branchesData?.map((branch) => (
                         <SelectItem key={branch.id} value={branch.name}>
-                          {branch.name}
+                          {branch.name}{branch.city ? ` (${branch.city})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -847,7 +852,15 @@ function LeadFormDialog({
                   value={formData.branch || ""}
                   onValueChange={(value) => {
                     // When branch changes, clear assigned user since they may not be in the new branch
-                    setFormData({ ...formData, branch: value, assignedTo: undefined });
+                    // Find the branch ID for filtering admins
+                    const selectedBranch = branchesData?.find(b => b.name === value);
+                    setFormData({ 
+                      ...formData, 
+                      branch: value, 
+                      assignedTo: undefined,
+                      // Store branchId separately for admin filtering
+                      branchId: selectedBranch?.id 
+                    });
                   }}
                 >
                   <SelectTrigger data-testid="select-branch">
@@ -855,7 +868,7 @@ function LeadFormDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {branchesData?.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
+                      <SelectItem key={branch.id} value={branch.name}>
                         {branch.name}{branch.city ? ` (${branch.city})` : ''}
                       </SelectItem>
                     ))}
