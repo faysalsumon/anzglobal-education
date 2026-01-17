@@ -19,6 +19,22 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+
+// Helper to get auth headers for fetch requests
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+  }
+  return headers;
+}
+
 import { 
   Search, 
   Plus, 
@@ -258,7 +274,11 @@ export function CrmContactsPanel() {
           params.append("assignedTo", assignedFilter);
         }
       }
-      const response = await fetch(`/api/crm/contacts?${params.toString()}`, { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/contacts?${params.toString()}`, { 
+        credentials: 'include',
+        headers 
+      });
       if (!response.ok) throw new Error("Failed to fetch contacts");
       return response.json();
     },
@@ -267,7 +287,11 @@ export function CrmContactsPanel() {
   const { data: contactDetail } = useQuery<CrmContact>({
     queryKey: ["/api/crm/contacts", selectedContact?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/crm/contacts/${selectedContact?.id}`, { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/contacts/${selectedContact?.id}`, { 
+        credentials: 'include',
+        headers 
+      });
       if (!response.ok) throw new Error("Failed to fetch contact details");
       return response.json();
     },
@@ -277,7 +301,11 @@ export function CrmContactsPanel() {
   const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/super-admin/users", "admin"],
     queryFn: async () => {
-      const response = await fetch("/api/super-admin/users?userType=admin", { credentials: 'include' });
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/super-admin/users?userType=admin", { 
+        credentials: 'include',
+        headers 
+      });
       if (!response.ok) throw new Error("Failed to fetch admins");
       const data = await response.json();
       return data.users || [];
