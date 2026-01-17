@@ -48,6 +48,10 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **CRM System (Phase 2)**: Unified Contact Management with consolidated crm_contacts table:
   - **Contact Types**: clients (students), employee (team members), external (referrals), partner, providers_rep
   - **Client Status**: Tracks student journey - lead, applicant, enrolled, completed, inactive
+  - **Automatic Status Transitions**: 
+    - lead → applicant: When first application is created
+    - applicant → enrolled: When an application is accepted
+    - Transitions are progressive only (never regress status)
   - **Entry Sources**: website, consultant, sub_agent, affiliate, import, referral, facebook_ads, other
   - **Lead Rating**: cold, warm, hot for prioritization
   - **Kanban View**: Dual grouping modes - by Client Status or by Contact Type
@@ -58,6 +62,9 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
     - `department`: Department at the institution (e.g., "Marketing", "Admissions")
     - Conditional UI: Role Details section only shows for providers_rep, employee, partner, and external contact types
     - API endpoints: `/api/crm/contacts/:contactId/institutions` for managing institution links from contact side
+  - **Applications Display**: Contact Details page shows linked applications for client-type contacts via linkedUserId → studentProfiles → applications chain
+    - API endpoint: `/api/crm/contacts/:contactId/applications`
+  - **Lead Module Deprecated**: Lead module hidden from navigation; Contact module serves as single source of truth for all stakeholder relationships
 - **Profile Management**: Student and Admin profile management with role-based security.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications.
