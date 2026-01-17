@@ -1273,13 +1273,14 @@ function StudentProfileContent() {
                     <div className="mb-4">
                       <AddressAutocomplete
                         onAddressSelect={(address: AddressComponents) => {
-                          if (address.unitNo) personalForm.setValue("unitNo", address.unitNo);
-                          if (address.street) personalForm.setValue("street", address.street);
-                          if (address.suburb) personalForm.setValue("suburb", address.suburb);
-                          if (address.city) personalForm.setValue("city", address.city);
-                          if (address.state) personalForm.setValue("state", address.state);
-                          if (address.postcode) personalForm.setValue("postcode", address.postcode);
-                          if (address.country) personalForm.setValue("country", address.country);
+                          const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
+                          if (address.unitNo) personalForm.setValue("unitNo", address.unitNo, opts);
+                          if (address.street) personalForm.setValue("street", address.street, opts);
+                          if (address.suburb) personalForm.setValue("suburb", address.suburb, opts);
+                          if (address.city) personalForm.setValue("city", address.city, opts);
+                          if (address.state) personalForm.setValue("state", address.state, opts);
+                          if (address.postcode) personalForm.setValue("postcode", address.postcode, opts);
+                          if (address.country) personalForm.setValue("country", address.country, opts);
                         }}
                         placeholder="Start typing your address to search..."
                         data-testid="input-address-search"
