@@ -330,7 +330,7 @@ function DraggableApplicationCard({
       } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : ''}`}
       data-testid={`application-card-${app.application.id}`}
     >
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
         {/* Header Row: Checkbox, Student Info, Progress */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -750,48 +750,48 @@ export function AdminApplicationsKanban() {
   return (
     <div className="space-y-6">
       {/* Header Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
+            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unassigned</CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-600" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Unassigned</CardTitle>
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-unassigned">{stats.unassigned}</div>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-unassigned">{stats.unassigned}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">In Progress</CardTitle>
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-in-progress">{stats.inProgress}</div>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-in-progress">{stats.inProgress}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Completed</CardTitle>
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="stat-completed">{stats.completed}</div>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-completed">{stats.completed}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Bulk Actions */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3 sm:p-6 pt-3 sm:pt-6">
           <div className="flex flex-col gap-4">
             {/* Enhanced Bulk Actions Toolbar */}
             {selectedApplications.size > 0 ? (
@@ -831,12 +831,12 @@ export function AdminApplicationsKanban() {
               </div>
             ) : (
               /* Quick Filter Chips - SLA Status */
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground mr-1">Quick filters:</span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <span className="text-xs sm:text-sm text-muted-foreground mr-1 flex-shrink-0">Filters:</span>
                 <Button
                   variant={slaFilter === 'all' ? 'secondary' : 'outline'}
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs flex-shrink-0"
                   onClick={() => setSlaFilter('all')}
                   data-testid="chip-sla-all"
                 >
@@ -845,7 +845,7 @@ export function AdminApplicationsKanban() {
                 <Button
                   variant={slaFilter === 'on-track' ? 'secondary' : 'outline'}
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs flex-shrink-0"
                   onClick={() => setSlaFilter('on-track')}
                   data-testid="chip-sla-on-track"
                 >
@@ -855,7 +855,7 @@ export function AdminApplicationsKanban() {
                 <Button
                   variant={slaFilter === 'at-risk' ? 'secondary' : 'outline'}
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs flex-shrink-0"
                   onClick={() => setSlaFilter('at-risk')}
                   data-testid="chip-sla-at-risk"
                 >
@@ -865,18 +865,18 @@ export function AdminApplicationsKanban() {
                 <Button
                   variant={slaFilter === 'overdue' ? 'secondary' : 'outline'}
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs flex-shrink-0"
                   onClick={() => setSlaFilter('overdue')}
                   data-testid="chip-sla-overdue"
                 >
                   <AlertTriangle className="h-3 w-3 mr-1 text-red-500" />
                   Overdue ({slaCounts['overdue']})
                 </Button>
-                <Separator orientation="vertical" className="h-5 mx-1" />
+                <Separator orientation="vertical" className="h-5 mx-1 hidden sm:block" />
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs"
+                  className="h-7 text-xs flex-shrink-0"
                   onClick={selectAllVisible}
                   data-testid="button-select-all"
                 >
@@ -1175,19 +1175,19 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-72 sm:w-80 flex-shrink-0">
+                        <div className="w-64 sm:w-72 md:w-80 flex-shrink-0">
                           <Card>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-medium">
+                            <CardHeader className="pb-3 px-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <CardTitle className="text-xs sm:text-sm font-medium truncate">
                                   {stage}
                                 </CardTitle>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs flex-shrink-0">
                                   {applicationsByStage[stage].length}
                                 </Badge>
                               </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="px-3">
                               <ScrollArea className="h-96">
                                 <div className="space-y-3 pr-4">
                                   {applicationsByStage[stage].length === 0 ? (
@@ -1237,19 +1237,19 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-72 sm:w-80 md:w-auto flex-shrink-0 md:flex-shrink">
+                        <div className="w-64 sm:w-72 md:w-auto flex-shrink-0 md:flex-shrink">
                           <Card>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-medium">
+                            <CardHeader className="pb-3 px-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <CardTitle className="text-xs sm:text-sm font-medium truncate">
                                   {stage}
                                 </CardTitle>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs flex-shrink-0">
                                   {applicationsByStage[stage].length}
                                 </Badge>
                               </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="px-3">
                               <ScrollArea className="h-64">
                                 <div className="space-y-2 pr-4">
                                   {applicationsByStage[stage].length === 0 ? (
