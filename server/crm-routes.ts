@@ -880,6 +880,7 @@ export async function syncUserProfileToCrmContact(userId: string): Promise<{ suc
       phone: studentProfile?.phone || user.phone || linkedContact.phone,
       photo: studentProfile?.profileImageUrl || user.profileImageUrl || linkedContact.photo,
       updatedAt: new Date(),
+      updatedByUserId: userId,
     };
 
     // Add student profile fields if available
