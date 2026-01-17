@@ -85,7 +85,7 @@ export function PhoneInput({
   };
 
   return (
-    <div className={cn("flex gap-1", className)}>
+    <div className={cn("flex gap-1.5 flex-wrap sm:flex-nowrap", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -93,17 +93,17 @@ export function PhoneInput({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-[100px] justify-between shrink-0"
+            className="min-w-[90px] w-auto justify-between shrink-0"
             data-testid={testId ? `${testId}-country` : undefined}
           >
             {selectedCountry ? (
-              <span className="flex items-center gap-1.5 truncate">
+              <span className="flex items-center gap-1.5">
                 <img
                   src={getFlagUrl(selectedCountry.code)}
                   alt={selectedCountry.name}
                   className="w-5 h-4 object-cover rounded-sm shrink-0"
                 />
-                <span className="text-sm">{selectedCountry.dialCode}</span>
+                <span className="text-sm whitespace-nowrap">{selectedCountry.dialCode}</span>
               </span>
             ) : (
               <span className="text-muted-foreground text-sm">Code</span>
@@ -153,7 +153,7 @@ export function PhoneInput({
         onChange={handlePhoneChange}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1"
+        className="flex-1 min-w-0"
         data-testid={testId}
       />
     </div>
