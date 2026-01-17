@@ -1783,9 +1783,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const { discipline, universityId, tags: tagSlugs } = req.query;
+      const { discipline, universityId, tags: tagSlugs, search, limit, publishStatus } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
+      
+      // Parse limit parameter
+      const resultLimit = limit && typeof limit === 'string' ? parseInt(limit, 10) : null;
       
       // Parse tag slugs from query (can be string or string[])
       let requestedTagSlugs: string[] = [];
@@ -1860,6 +1863,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (course.discipline !== discipline) return false;
         }
         
+        // Apply search filter (search by course title)
+        if (search && typeof search === 'string' && search.trim().length > 0) {
+          const searchLower = search.toLowerCase().trim();
+          const titleMatch = course.title?.toLowerCase().includes(searchLower);
+          const descMatch = course.description?.toLowerCase().includes(searchLower);
+          if (!titleMatch && !descMatch) return false;
+        }
+        
         return true;
       });
       
@@ -1901,7 +1912,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags: courseTagsMap[course.id] || [],
       }));
       
-      res.json(coursesWithTags);
+      // Apply limit if provided
+      const total = coursesWithTags.length;
+      const limitedCourses = resultLimit && resultLimit > 0 
+        ? coursesWithTags.slice(0, resultLimit) 
+        : coursesWithTags;
+      
+      // Return in format expected by frontend when search/limit params used
+      if (search || limit) {
+        res.json({ courses: limitedCourses, total });
+      } else {
+        res.json(limitedCourses);
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
       res.status(500).json({ message: "Failed to fetch courses" });
