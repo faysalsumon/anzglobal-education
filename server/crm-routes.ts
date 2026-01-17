@@ -847,6 +847,8 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
           eq(users.userType, 'institution_admin')
         )
       );
+    
+    console.log(`[CRM Sync] Found ${usersToSync.length} users to sync`);
 
     let created = 0;
     let skipped = 0;
