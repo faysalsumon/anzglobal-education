@@ -120,6 +120,24 @@ interface CrmContact {
   } | null;
 }
 
+interface InstitutionLink {
+  id: string;
+  institutionId: string;
+  contactId: string;
+  contactRole: string;
+  roleTitle: string | null;
+  department: string | null;
+  isPrimary: boolean;
+  notes: string | null;
+  createdAt: string | null;
+  institution: {
+    id: string;
+    name: string;
+    logo: string | null;
+    country: string | null;
+  } | null;
+}
+
 const contactTypeLabels: Record<string, string> = {
   none: "None",
   clients: "Clients (Students)",
@@ -1249,7 +1267,84 @@ interface ContactDetailViewProps {
   onDelete: () => void;
 }
 
+const CONTACT_ROLES = [
+  { value: "primary", label: "Primary Contact" },
+  { value: "academic", label: "Academic Contact" },
+  { value: "finance", label: "Finance Contact" },
+  { value: "marketing", label: "Marketing Contact" },
+  { value: "admissions", label: "Admissions Contact" },
+  { value: "international", label: "International Contact" },
+  { value: "other", label: "Other" },
+];
+
+const roleNeedsInstitution = (contactType: ContactType) => 
+  ['providers_rep', 'employee', 'partner', 'external'].includes(contactType);
+
 function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailViewProps) {
+  const { toast } = useToast();
+  const [isAddInstitutionOpen, setIsAddInstitutionOpen] = useState(false);
+  const [institutionSearch, setInstitutionSearch] = useState("");
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+  const [linkRole, setLinkRole] = useState("other");
+  const [linkRoleTitle, setLinkRoleTitle] = useState("");
+  const [linkDepartment, setLinkDepartment] = useState("");
+  const [linkIsPrimary, setLinkIsPrimary] = useState(false);
+
+  const { data: institutionLinks = [], isLoading: isLoadingLinks } = useQuery<InstitutionLink[]>({
+    queryKey: ["/api/crm/contacts", contact.id, "institutions"],
+    enabled: roleNeedsInstitution(contact.contactType),
+  });
+
+  const { data: institutionsData } = useQuery<{ universities: any[]; total: number }>({
+    queryKey: ["/api/institutions", { search: institutionSearch }],
+    enabled: isAddInstitutionOpen && institutionSearch.length > 1,
+  });
+  const institutions = institutionsData?.universities || [];
+
+  const addLinkMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", `/api/crm/contacts/${contact.id}/institutions`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Institution linked successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "institutions"] });
+      setIsAddInstitutionOpen(false);
+      setSelectedInstitutionId(null);
+      setLinkRole("other");
+      setLinkRoleTitle("");
+      setLinkDepartment("");
+      setLinkIsPrimary(false);
+      setInstitutionSearch("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to link institution", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      return apiRequest("DELETE", `/api/crm/contacts/${contact.id}/institutions/${linkId}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Institution link removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "institutions"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to remove link", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleAddInstitution = () => {
+    if (!selectedInstitutionId) return;
+    addLinkMutation.mutate({
+      institutionId: selectedInstitutionId,
+      contactRole: linkRole,
+      roleTitle: linkRoleTitle || null,
+      department: linkDepartment || null,
+      isPrimary: linkIsPrimary,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -1441,7 +1536,172 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             </CardContent>
           </Card>
         )}
+
+        {roleNeedsInstitution(contact.contactType) && (
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <CardTitle className="text-lg">Role Details</CardTitle>
+              <Button 
+                size="sm" 
+                onClick={() => setIsAddInstitutionOpen(true)}
+                data-testid="button-add-institution"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Institution
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingLinks ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : institutionLinks.length === 0 ? (
+                <p className="text-muted-foreground">No institutions linked. Click "Add Institution" to link this contact to an institution.</p>
+              ) : (
+                <div className="space-y-3">
+                  {institutionLinks.map((link) => (
+                    <div 
+                      key={link.id} 
+                      className="flex items-center justify-between p-3 border rounded-md"
+                      data-testid={`institution-link-${link.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={link.institution?.logo || undefined} />
+                          <AvatarFallback>
+                            <Building2 className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{link.institution?.name || "Unknown Institution"}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {link.roleTitle && (
+                              <Badge variant="secondary">{link.roleTitle}</Badge>
+                            )}
+                            {link.department && (
+                              <span className="text-sm text-muted-foreground">{link.department}</span>
+                            )}
+                            <Badge variant="outline">
+                              {CONTACT_ROLES.find(r => r.value === link.contactRole)?.label || link.contactRole}
+                            </Badge>
+                            {link.isPrimary && (
+                              <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                Primary
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLinkMutation.mutate(link.id)}
+                        data-testid={`button-remove-institution-${link.id}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <Dialog open={isAddInstitutionOpen} onOpenChange={setIsAddInstitutionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link Institution</DialogTitle>
+            <DialogDescription>
+              Add this contact as a representative of an institution.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Search Institution *</Label>
+              <Input
+                placeholder="Type to search institutions..."
+                value={institutionSearch}
+                onChange={(e) => setInstitutionSearch(e.target.value)}
+                data-testid="input-institution-search"
+              />
+              {institutions.length > 0 && (
+                <ScrollArea className="h-40 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    {institutions.map((inst: any) => (
+                      <div
+                        key={inst.id}
+                        className={`p-2 rounded cursor-pointer hover-elevate ${
+                          selectedInstitutionId === inst.id ? "bg-primary/10 border border-primary" : ""
+                        }`}
+                        onClick={() => setSelectedInstitutionId(inst.id)}
+                        data-testid={`institution-option-${inst.id}`}
+                      >
+                        <p className="font-medium">{inst.name}</p>
+                        {inst.country && <p className="text-sm text-muted-foreground">{inst.country}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Role Title</Label>
+              <Input
+                placeholder="e.g., Marketing Officer"
+                value={linkRoleTitle}
+                onChange={(e) => setLinkRoleTitle(e.target.value)}
+                data-testid="input-role-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Input
+                placeholder="e.g., Marketing"
+                value={linkDepartment}
+                onChange={(e) => setLinkDepartment(e.target.value)}
+                data-testid="input-department"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Contact Function</Label>
+              <Select value={linkRole} onValueChange={setLinkRole}>
+                <SelectTrigger data-testid="select-contact-function">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPrimary"
+                checked={linkIsPrimary}
+                onChange={(e) => setLinkIsPrimary(e.target.checked)}
+                data-testid="checkbox-is-primary"
+              />
+              <Label htmlFor="isPrimary">Primary contact for this institution</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddInstitutionOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddInstitution}
+              disabled={!selectedInstitutionId || addLinkMutation.isPending}
+              data-testid="button-confirm-add-institution"
+            >
+              {addLinkMutation.isPending ? "Adding..." : "Add Institution"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

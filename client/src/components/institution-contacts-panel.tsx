@@ -38,6 +38,8 @@ interface InstitutionContact {
   institutionId: string;
   contactId: string;
   contactRole: string;
+  roleTitle: string | null;
+  department: string | null;
   isPrimary: boolean;
   notes: string | null;
   contact: CrmContact | null;
@@ -55,6 +57,8 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [contactRole, setContactRole] = useState("other");
+  const [roleTitle, setRoleTitle] = useState("");
+  const [department, setDepartment] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -87,6 +91,8 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
       addContactMutation.mutate({
         contactId: newContact.id,
         contactRole,
+        roleTitle: roleTitle || null,
+        department: department || null,
         isPrimary,
         notes,
       });
@@ -101,7 +107,7 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
   });
 
   const addContactMutation = useMutation({
-    mutationFn: async (data: { contactId: string; contactRole: string; isPrimary: boolean; notes: string }) => {
+    mutationFn: async (data: { contactId: string; contactRole: string; roleTitle?: string | null; department?: string | null; isPrimary: boolean; notes: string }) => {
       return apiRequest("POST", `/api/admin/institution-crm/institutions/${institutionId}/contacts`, data);
     },
     onSuccess: () => {
@@ -139,6 +145,8 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
   const resetForm = () => {
     setSelectedContactId(null);
     setContactRole("other");
+    setRoleTitle("");
+    setDepartment("");
     setIsPrimary(false);
     setNotes("");
     setSearchQuery("");
@@ -166,6 +174,8 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
     addContactMutation.mutate({
       contactId: selectedContactId,
       contactRole,
+      roleTitle: roleTitle || null,
+      department: department || null,
       isPrimary,
       notes,
     });
@@ -321,8 +331,28 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
                 </TabsContent>
               </Tabs>
               <div className="space-y-4 pt-4 border-t mt-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Role Title</Label>
+                    <Input
+                      placeholder="e.g., Marketing Officer"
+                      value={roleTitle}
+                      onChange={(e) => setRoleTitle(e.target.value)}
+                      data-testid="input-role-title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Input
+                      placeholder="e.g., Marketing"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      data-testid="input-department"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label>Contact Role</Label>
+                  <Label>Contact Function</Label>
                   <Select value={contactRole} onValueChange={setContactRole}>
                     <SelectTrigger data-testid="select-contact-role">
                       <SelectValue />
@@ -410,7 +440,17 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {link.roleTitle && (
+                    <Badge variant="secondary" data-testid={`badge-role-title-${link.id}`}>
+                      {link.roleTitle}
+                    </Badge>
+                  )}
+                  {link.department && (
+                    <span className="text-sm text-muted-foreground" data-testid={`text-department-${link.id}`}>
+                      {link.department}
+                    </span>
+                  )}
                   <Badge variant={getRoleBadgeColor(link.contactRole) as any} data-testid={`badge-role-${link.id}`}>
                     {CONTACT_ROLES.find((r) => r.value === link.contactRole)?.label || link.contactRole}
                   </Badge>
