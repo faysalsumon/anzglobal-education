@@ -4718,7 +4718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { assignedConsultantId } = req.body;
       
       // Check if user is admin
-      const currentUser = await storage.getUserById(userId);
+      const currentUser = await storage.getUser(userId);
       console.log("[Assign Consultant] Current user:", currentUser?.id, currentUser?.userType);
       if (!currentUser || !['admin', 'platform_admin'].includes(currentUser.userType || '')) {
         return res.status(403).json({ message: "Only admins can assign consultants" });
@@ -4732,7 +4732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If assigning, verify the consultant exists and is an admin
       if (assignedConsultantId) {
-        const consultant = await storage.getUserById(assignedConsultantId);
+        const consultant = await storage.getUser(assignedConsultantId);
         console.log("[Assign Consultant] Consultant found:", !!consultant, consultant?.userType);
         if (!consultant || !['admin', 'platform_admin'].includes(consultant.userType || '')) {
           return res.status(400).json({ message: "Invalid consultant - must be an admin user" });
