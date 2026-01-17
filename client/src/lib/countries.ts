@@ -360,22 +360,26 @@ export const COUNTRIES_WITH_DIAL_CODES: CountryWithDialCode[] = COUNTRIES.map(c 
   dialCode: DIAL_CODES[c.code] || "",
 })).filter(c => c.dialCode).sort((a, b) => a.name.localeCompare(b.name));
 
+const DIAL_CODES_SORTED = Object.entries(DIAL_CODES)
+  .sort((a, b) => b[1].length - a[1].length);
+
 export function parsePhoneNumber(phone: string): { countryCode: string; dialCode: string; number: string } {
   if (!phone) return { countryCode: "", dialCode: "", number: "" };
   
-  const cleaned = phone.replace(/\s+/g, "");
+  const cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
   
   if (cleaned.startsWith("+")) {
-    for (const [code, dial] of Object.entries(DIAL_CODES)) {
+    for (const [code, dial] of DIAL_CODES_SORTED) {
       if (cleaned.startsWith(dial)) {
+        const numberPart = cleaned.slice(dial.length).replace(/\D/g, "");
         return {
           countryCode: code,
           dialCode: dial,
-          number: cleaned.slice(dial.length),
+          number: numberPart,
         };
       }
     }
   }
   
-  return { countryCode: "", dialCode: "", number: phone };
+  return { countryCode: "", dialCode: "", number: phone.replace(/\D/g, "") };
 }

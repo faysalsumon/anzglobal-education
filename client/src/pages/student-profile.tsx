@@ -23,6 +23,7 @@ import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudent
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -1110,7 +1111,12 @@ function StudentProfileContent() {
                         <FormItem>
                           <FormLabel>Phone Number *</FormLabel>
                           <FormControl>
-                            <Input {...field} value={field.value || ""} type="tel" placeholder="+1 234 567 8900" data-testid="input-phone" />
+                            <PhoneInput 
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              placeholder="Phone number" 
+                              data-testid="input-phone" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1124,7 +1130,12 @@ function StudentProfileContent() {
                         <FormItem>
                           <FormLabel>WhatsApp Number</FormLabel>
                           <FormControl>
-                            <Input {...field} value={field.value || ""} type="tel" placeholder="+1 234 567 8900" data-testid="input-whatsapp" />
+                            <PhoneInput 
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              placeholder="WhatsApp number" 
+                              data-testid="input-whatsapp" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

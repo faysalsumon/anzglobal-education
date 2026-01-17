@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRef } from "react";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -584,31 +585,28 @@ export default function AdminContactForm() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="mobile">Mobile</Label>
-                  <Input
-                    id="mobile"
+                  <PhoneInput
                     value={formData.mobile || ""}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    placeholder="Enter mobile number"
+                    onChange={(value) => setFormData({ ...formData, mobile: value })}
+                    placeholder="Mobile number"
                     data-testid="input-mobile"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input
-                    id="whatsapp"
+                  <PhoneInput
                     value={formData.whatsapp || ""}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    placeholder="If different from mobile"
+                    onChange={(value) => setFormData({ ...formData, whatsapp: value })}
+                    placeholder="WhatsApp number"
                     data-testid="input-whatsapp"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
+                  <PhoneInput
                     value={formData.phone || ""}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Enter phone number"
+                    onChange={(value) => setFormData({ ...formData, phone: value })}
+                    placeholder="Phone number"
                     data-testid="input-phone"
                   />
                 </div>

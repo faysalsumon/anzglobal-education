@@ -93,7 +93,7 @@ export function PhoneInput({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-[100px] justify-between px-2 shrink-0"
+            className="w-[100px] justify-between shrink-0"
             data-testid={testId ? `${testId}-country` : undefined}
           >
             {selectedCountry ? (
