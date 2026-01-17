@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getCsrfToken } from "@/hooks/useCsrf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -644,15 +645,20 @@ function UploadDocumentForm({ folderId: initialFolderId, folders, onSuccess }: U
   const [dragActive, setDragActive] = useState(false);
 
   const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) =>
-      fetch("/api/student/documents/upload", {
+    mutationFn: async (formData: FormData) => {
+      const csrfToken = await getCsrfToken();
+      return fetch("/api/student/documents/upload", {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: {
+          "X-CSRF-Token": csrfToken,
+        },
       }).then((res) => {
         if (!res.ok) throw new Error("Upload failed");
         return res.json();
-      }),
+      });
+    },
     onSuccess: () => {
       toast({ title: "Success", description: "Document uploaded successfully" });
       onSuccess();
