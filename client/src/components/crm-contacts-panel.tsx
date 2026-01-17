@@ -1078,23 +1078,33 @@ function ContactFormDialog({
             </div>
           </TabsContent>
           <TabsContent value="address" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Address Line 1</Label>
-              <Input
-                value={formData.addressLine1 || ""}
-                onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                data-testid="input-address1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Address Line 2</Label>
-              <Input
-                value={formData.addressLine2 || ""}
-                onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                data-testid="input-address2"
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Unit No.</Label>
+                <Input
+                  value={formData.unitNo || ""}
+                  onChange={(e) => setFormData({ ...formData, unitNo: e.target.value })}
+                  data-testid="input-unit-no"
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Street Address</Label>
+                <Input
+                  value={formData.street || ""}
+                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  data-testid="input-street"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Suburb</Label>
+                <Input
+                  value={formData.suburb || ""}
+                  onChange={(e) => setFormData({ ...formData, suburb: e.target.value })}
+                  data-testid="input-suburb"
+                />
+              </div>
               <div className="space-y-2">
                 <Label>City</Label>
                 <Input
@@ -1103,6 +1113,8 @@ function ContactFormDialog({
                   data-testid="input-city"
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>State</Label>
                 <Input
@@ -1111,14 +1123,12 @@ function ContactFormDialog({
                   data-testid="input-state"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Postal Code</Label>
+                <Label>Postcode</Label>
                 <Input
-                  value={formData.postalCode || ""}
-                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  data-testid="input-postal-code"
+                  value={formData.postcode || ""}
+                  onChange={(e) => setFormData({ ...formData, postcode: e.target.value })}
+                  data-testid="input-postcode"
                 />
               </div>
               <div className="space-y-2">
@@ -1132,29 +1142,39 @@ function ContactFormDialog({
             </div>
           </TabsContent>
           <TabsContent value="emergency" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Emergency Contact Name</Label>
-              <Input
-                value={formData.emergencyContactName || ""}
-                onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-                data-testid="input-emergency-name"
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Emergency Contact Phone</Label>
+                <Label>Emergency Contact Name</Label>
                 <Input
-                  value={formData.emergencyContactPhone || ""}
-                  onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
-                  data-testid="input-emergency-phone"
+                  value={formData.emergencyContactName || ""}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                  data-testid="input-emergency-name"
                 />
               </div>
               <div className="space-y-2">
+                <Label>Emergency Contact Mobile</Label>
+                <Input
+                  value={formData.emergencyContactMobile || ""}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactMobile: e.target.value })}
+                  data-testid="input-emergency-mobile"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Relationship</Label>
                 <Input
-                  value={formData.emergencyContactRelation || ""}
-                  onChange={(e) => setFormData({ ...formData, emergencyContactRelation: e.target.value })}
-                  data-testid="input-emergency-relation"
+                  value={formData.emergencyContactRelationship || ""}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
+                  data-testid="input-emergency-relationship"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Emergency Contact Address</Label>
+                <Input
+                  value={formData.emergencyContactAddress || ""}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactAddress: e.target.value })}
+                  data-testid="input-emergency-address"
                 />
               </div>
             </div>
@@ -1253,12 +1273,14 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             <CardTitle className="text-lg">Address</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {contact.addressLine1 || contact.city ? (
+            {contact.street || contact.city ? (
               <>
-                {contact.addressLine1 && <p>{contact.addressLine1}</p>}
-                {contact.addressLine2 && <p>{contact.addressLine2}</p>}
-                {(contact.city || contact.state || contact.postalCode) && (
-                  <p>{[contact.city, contact.state, contact.postalCode].filter(Boolean).join(", ")}</p>
+                {(contact.unitNo || contact.street) && (
+                  <p>{[contact.unitNo, contact.street].filter(Boolean).join(" ")}</p>
+                )}
+                {contact.suburb && <p>{contact.suburb}</p>}
+                {(contact.city || contact.state || contact.postcode) && (
+                  <p>{[contact.city, contact.state, contact.postcode].filter(Boolean).join(", ")}</p>
                 )}
                 {contact.country && <p>{contact.country}</p>}
               </>
@@ -1323,16 +1345,22 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                   <span className="text-muted-foreground">Name</span>
                   <span>{contact.emergencyContactName}</span>
                 </div>
-                {contact.emergencyContactPhone && (
+                {contact.emergencyContactMobile && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Phone</span>
-                    <span>{contact.emergencyContactPhone}</span>
+                    <span className="text-muted-foreground">Mobile</span>
+                    <span>{contact.emergencyContactMobile}</span>
                   </div>
                 )}
-                {contact.emergencyContactRelation && (
+                {contact.emergencyContactRelationship && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Relationship</span>
-                    <span>{contact.emergencyContactRelation}</span>
+                    <span>{contact.emergencyContactRelationship}</span>
+                  </div>
+                )}
+                {contact.emergencyContactAddress && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Address</span>
+                    <span>{contact.emergencyContactAddress}</span>
                   </div>
                 )}
               </>
