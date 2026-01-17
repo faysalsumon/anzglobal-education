@@ -38,7 +38,8 @@ import {
   Filter,
   ChevronDown,
   X,
-  GripVertical
+  GripVertical,
+  MessageCircle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -59,6 +60,7 @@ interface CrmContact {
   email: string;
   mobile: string | null;
   phone: string | null;
+  whatsapp: string | null;
   nationality: string | null;
   country: string | null;
   city: string | null;
@@ -1007,13 +1009,22 @@ function ContactFormDialog({
                 data-testid="input-email"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Mobile</Label>
                 <Input
                   value={formData.mobile || ""}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   data-testid="input-mobile"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>WhatsApp</Label>
+                <Input
+                  value={formData.whatsapp || ""}
+                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                  placeholder="If different"
+                  data-testid="input-whatsapp"
                 />
               </div>
               <div className="space-y-2">
@@ -1257,6 +1268,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <span>{contact.mobile} (Mobile)</span>
+              </div>
+            )}
+            {contact.whatsapp && (
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <span>{contact.whatsapp} (WhatsApp)</span>
               </div>
             )}
             {contact.phone && (

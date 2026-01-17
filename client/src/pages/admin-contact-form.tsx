@@ -300,7 +300,7 @@ export default function AdminContactForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="mobile">Mobile</Label>
                   <Input
@@ -309,6 +309,16 @@ export default function AdminContactForm() {
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                     placeholder="Enter mobile number"
                     data-testid="input-mobile"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">WhatsApp</Label>
+                  <Input
+                    id="whatsapp"
+                    value={formData.whatsapp || ""}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    placeholder="If different from mobile"
+                    data-testid="input-whatsapp"
                   />
                 </div>
                 <div className="space-y-2">
