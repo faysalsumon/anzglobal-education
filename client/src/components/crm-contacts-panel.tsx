@@ -55,7 +55,11 @@ import {
   ChevronDown,
   X,
   GripVertical,
-  MessageCircle
+  MessageCircle,
+  GraduationCap,
+  ExternalLink,
+  FileText,
+  Clock
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -166,6 +170,26 @@ interface InstitutionLink {
     name: string;
     logo: string | null;
     country: string | null;
+  } | null;
+}
+
+interface ContactApplication {
+  id: string;
+  courseId: string;
+  currentStage: string;
+  status: string;
+  submittedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  courseName: string | null;
+  courseLevel: string | null;
+  universityName: string | null;
+  universityLogo: string | null;
+  assignedConsultant: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string | null;
   } | null;
 }
 
@@ -1329,6 +1353,8 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
   const [linkDepartment, setLinkDepartment] = useState("");
   const [linkIsPrimary, setLinkIsPrimary] = useState(false);
 
+  const [, navigate] = useLocation();
+  
   const { data: institutionLinks = [], isLoading: isLoadingLinks } = useQuery<InstitutionLink[]>({
     queryKey: ["/api/crm/contacts", contact.id, "institutions"],
     enabled: roleNeedsInstitution(contact.contactType),
@@ -1339,6 +1365,15 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
     enabled: isAddInstitutionOpen && institutionSearch.length > 1,
   });
   const institutions = institutionsData?.universities || [];
+
+  // Fetch applications for this contact (only for 'clients' type)
+  const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
+    applications: ContactApplication[];
+    studentProfile: { id: string; maxApplicationSlots: number } | null;
+  }>({
+    queryKey: ["/api/crm/contacts", contact.id, "applications"],
+    enabled: contact.contactType === 'clients',
+  });
 
   const addLinkMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1669,6 +1704,103 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                       >
                         <X className="h-4 w-4" />
                       </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Applications Section - Only for clients (students) */}
+        {contact.contactType === 'clients' && (
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Applications</CardTitle>
+                {applicationsData?.applications && applicationsData.applications.length > 0 && (
+                  <Badge variant="secondary">{applicationsData.applications.length}</Badge>
+                )}
+              </div>
+              {applicationsData?.studentProfile && (
+                <span className="text-sm text-muted-foreground">
+                  {applicationsData.applications.length} / {applicationsData.studentProfile.maxApplicationSlots} slots used
+                </span>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingApplications ? (
+                <p className="text-muted-foreground">Loading applications...</p>
+              ) : isApplicationsError ? (
+                <p className="text-destructive">Failed to load applications. Please try again later.</p>
+              ) : !applicationsData?.studentProfile ? (
+                <p className="text-muted-foreground">No student profile linked to this contact.</p>
+              ) : applicationsData.applications.length === 0 ? (
+                <p className="text-muted-foreground">No applications yet. This student has not applied to any courses.</p>
+              ) : (
+                <div className="space-y-3">
+                  {applicationsData.applications.map((app) => (
+                    <div 
+                      key={app.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover-elevate cursor-pointer"
+                      onClick={() => navigate(`/admin/applications/${app.id}`)}
+                      data-testid={`application-${app.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={app.universityLogo || undefined} />
+                          <AvatarFallback>
+                            <GraduationCap className="h-6 w-6" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p className="font-medium">{app.courseName || 'Unknown Course'}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Building2 className="h-3 w-3" />
+                            <span>{app.universityName || 'Unknown Institution'}</span>
+                            {app.courseLevel && (
+                              <>
+                                <span>•</span>
+                                <span>{app.courseLevel}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={
+                                app.status === 'accepted' ? 'default' :
+                                app.status === 'rejected' ? 'destructive' :
+                                app.status === 'withdrawn' ? 'secondary' :
+                                'outline'
+                              }
+                            >
+                              {app.status}
+                            </Badge>
+                            <Badge variant="outline">
+                              {app.currentStage}
+                            </Badge>
+                            {app.createdAt && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(app.createdAt), "MMM d, yyyy")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {app.assignedConsultant && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={app.assignedConsultant.profileImageUrl || undefined} />
+                              <AvatarFallback>{app.assignedConsultant.firstName?.[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="hidden md:inline">{app.assignedConsultant.firstName}</span>
+                          </div>
+                        )}
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     </div>
                   ))}
                 </div>

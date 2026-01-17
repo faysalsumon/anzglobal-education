@@ -76,7 +76,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: UserPlus,
       label: "CRM Leads",
       value: "crm-leads",
-      show: true,
+      show: false, // Hidden - unified with Contacts
     },
     {
       icon: Contact,

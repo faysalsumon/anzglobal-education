@@ -4348,6 +4348,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const application = await storage.createApplication(data);
       
+      // Update contact status to 'applicant' ONLY when FIRST application is created
+      // (existingApplications.length === 0 means this is the first application)
+      if (existingApplications.length === 0) {
+        try {
+          const { updateContactStatusOnApplication } = await import("./crm-routes");
+          await updateContactStatusOnApplication(userId, 'applicant');
+        } catch (statusError) {
+          console.error("Error updating contact status:", statusError);
+          // Don't fail the application creation if status update fails
+        }
+      }
+      
       // Send notification to university
       try {
         const course = await storage.getCourseById(application.courseId);
@@ -4401,6 +4413,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.updateApplicationStatus(req.params.id, status);
+      
+      // Update contact status to 'enrolled' when application is accepted
+      if (status === 'accepted') {
+        try {
+          const studentProfile = await storage.getStudentProfileById(application.studentId);
+          if (studentProfile) {
+            const { updateContactStatusOnApplication } = await import("./crm-routes");
+            await updateContactStatusOnApplication(studentProfile.userId, 'enrolled');
+          }
+        } catch (statusError) {
+          console.error("Error updating contact status to enrolled:", statusError);
+        }
+      }
       
       // Send notification to student
       try {

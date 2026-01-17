@@ -18,6 +18,8 @@ import {
   insertLeadNoteSchema,
   branches,
   studentProfiles,
+  applications,
+  applicationStageHistory,
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable, ne } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
@@ -2047,5 +2049,158 @@ router.get("/team-members", requireAdmin, async (req: any, res) => {
     res.status(500).json({ message: "Failed to fetch team members" });
   }
 });
+
+// Get applications linked to a contact (via linkedUserId -> studentProfiles -> applications)
+router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get the contact
+    const contact = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Only allow fetching applications for client-type contacts
+    if (contact.contactType !== 'clients') {
+      return res.json({ applications: [], studentProfile: null, message: "Applications are only available for client contacts" });
+    }
+
+    // If no linked user, return empty array
+    if (!contact.linkedUserId) {
+      return res.json({ applications: [], studentProfile: null });
+    }
+
+    // Get the student profile for this user
+    const studentProfile = await db
+      .select()
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, contact.linkedUserId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!studentProfile) {
+      return res.json({ applications: [], studentProfile: null });
+    }
+
+    // Get all applications for this student with course details
+    const contactApplications = await db
+      .select({
+        id: applications.id,
+        courseId: applications.courseId,
+        currentStage: applications.currentStage,
+        status: applications.status,
+        submittedAt: applications.submittedAt,
+        createdAt: applications.createdAt,
+        updatedAt: applications.updatedAt,
+        assignedConsultantId: applications.assignedConsultantId,
+        courseName: courses.title,
+        courseLevel: courses.level,
+        universityName: universities.name,
+        universityLogo: universities.logo,
+      })
+      .from(applications)
+      .leftJoin(courses, eq(applications.courseId, courses.id))
+      .leftJoin(universities, eq(courses.universityId, universities.id))
+      .where(eq(applications.studentId, studentProfile.id))
+      .orderBy(desc(applications.createdAt));
+
+    // Get assigned consultant details
+    const applicationsWithConsultants = await Promise.all(
+      contactApplications.map(async (app) => {
+        let assignedConsultant = null;
+        if (app.assignedConsultantId) {
+          const consultant = await db
+            .select({
+              id: users.id,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              profileImageUrl: users.profileImageUrl,
+            })
+            .from(users)
+            .where(eq(users.id, app.assignedConsultantId))
+            .limit(1)
+            .then(rows => rows[0]);
+          assignedConsultant = consultant || null;
+        }
+        return { ...app, assignedConsultant };
+      })
+    );
+
+    res.json({ 
+      applications: applicationsWithConsultants, 
+      studentProfile: {
+        id: studentProfile.id,
+        maxApplicationSlots: studentProfile.maxApplicationSlots,
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching contact applications:", error);
+    res.status(500).json({ message: "Failed to fetch contact applications" });
+  }
+});
+
+// Update contact clientStatus when application is created or accepted
+// Enforces proper transition rules: lead → applicant → enrolled
+// Does not regress status (e.g., won't overwrite completed/inactive)
+export async function updateContactStatusOnApplication(userId: string, newStatus: 'applicant' | 'enrolled'): Promise<void> {
+  try {
+    // Find the contact linked to this user
+    const contact = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.linkedUserId, userId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!contact) {
+      console.log(`[CRM] No contact found for user ${userId}`);
+      return;
+    }
+
+    // Only update if contact is a client type
+    if (contact.contactType !== 'clients') {
+      return;
+    }
+
+    const currentStatus = contact.clientStatus;
+    
+    // Only progress forward in the journey, never regress status
+    // Valid progression: lead/null → applicant → enrolled → completed
+    // Inactive is terminal - don't modify
+    if (newStatus === 'applicant') {
+      // Only set to applicant if current status is lead or null
+      if (currentStatus && currentStatus !== 'lead') {
+        console.log(`[CRM] Skipping status update: contact ${contact.id} already at status ${currentStatus}`);
+        return;
+      }
+    } else if (newStatus === 'enrolled') {
+      // Only set to enrolled if current status is lead or applicant
+      if (currentStatus && currentStatus !== 'lead' && currentStatus !== 'applicant') {
+        console.log(`[CRM] Skipping status update: contact ${contact.id} already at status ${currentStatus}`);
+        return;
+      }
+    }
+
+    // Update the client status
+    await db
+      .update(crmContacts)
+      .set({ 
+        clientStatus: newStatus,
+        updatedAt: new Date()
+      })
+      .where(eq(crmContacts.id, contact.id));
+
+    console.log(`[CRM] Updated contact ${contact.id} clientStatus from ${currentStatus || 'null'} to ${newStatus}`);
+  } catch (error) {
+    console.error('[CRM] Error updating contact status:', error);
+  }
+}
 
 export default router;
