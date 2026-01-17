@@ -622,6 +622,8 @@ export const institutionContacts = pgTable("institution_contacts", {
   institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
   contactId: varchar("contact_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
   contactRole: institutionContactRoleEnum("contact_role").notNull().default("other"),
+  roleTitle: text("role_title"), // Job title e.g., "Marketing Officer"
+  department: text("department"), // Department e.g., "Marketing"
   isPrimary: boolean("is_primary").default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
