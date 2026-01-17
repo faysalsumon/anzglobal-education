@@ -79,6 +79,27 @@ const documentVerificationSchema = z.object({
 });
 
 /**
+ * Centralized helper to determine auto-status update based on stage transition
+ * Returns the new status if it should be updated, otherwise undefined
+ */
+function getAutoStatusFromStage(currentStatus: string, toStage: string): string | undefined {
+  // Terminal stages that determine final status
+  if (toStage === 'Application Won') {
+    return 'accepted';
+  }
+  if (toStage === 'Application Lost' || toStage === 'Refusal/Refunds') {
+    return 'rejected';
+  }
+  
+  // Moving beyond Assessment means application is being actively reviewed
+  if (currentStatus === 'pending' && toStage !== 'Assessment') {
+    return 'reviewing';
+  }
+  
+  return undefined;
+}
+
+/**
  * Helper to check if user has admin access
  * Accepts both 'admin' and 'platform_admin' userTypes for proper RBAC
  */
@@ -689,12 +710,16 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         durationInStage = hoursDiff;
       }
 
-      // Update application stage
+      // Determine if status should be auto-updated based on stage transition
+      const newStatus = getAutoStatusFromStage(application.status, toStage);
+
+      // Update application stage (and status if applicable)
       await db
         .update(applications)
         .set({
           currentStage: toStage,
           updatedAt: new Date(),
+          ...(newStatus && { status: newStatus }),
         })
         .where(eq(applications.id, validatedData.applicationId));
 
@@ -1536,11 +1561,15 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       const fromStage = application.currentStage;
 
-      // Update application stage
+      // Determine if status should be auto-updated based on stage transition
+      const newStatus = getAutoStatusFromStage(application.status, toStage);
+
+      // Update application stage (and status if applicable)
       await db.update(applications)
         .set({
           currentStage: toStage as any,
           updatedAt: new Date(),
+          ...(newStatus && { status: newStatus }),
         })
         .where(eq(applications.id, applicationId));
 

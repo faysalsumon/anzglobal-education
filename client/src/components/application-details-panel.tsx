@@ -729,8 +729,28 @@ export function ApplicationDetailsPanel({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Application Status:</span>
-              <Badge variant={application.status === 'in_progress' ? 'default' : 'secondary'} className="ml-2">
-                {application.status}
+              <Badge 
+                className={`ml-2 ${
+                  application.status === 'accepted' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                    : application.status === 'reviewing' 
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                    : application.status === 'rejected'
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    : application.status === 'withdrawn'
+                    ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                    : application.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                }`}
+                data-testid="badge-application-status"
+              >
+                {application.status === 'accepted' ? 'Accepted' 
+                  : application.status === 'reviewing' ? 'Under Review'
+                  : application.status === 'rejected' ? 'Rejected'
+                  : application.status === 'withdrawn' ? 'Withdrawn'
+                  : application.status === 'pending' ? 'Pending'
+                  : application.status.charAt(0).toUpperCase() + application.status.slice(1)}
               </Badge>
             </div>
             <div>
