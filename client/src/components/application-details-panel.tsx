@@ -40,11 +40,34 @@ import { StudentApplicationNotes } from "@/components/student-application-notes"
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationStage, STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
 
+interface ApplicationCourse {
+  id: string;
+  courseId: string;
+  isPrimary: boolean;
+  notes: string | null;
+  displayOrder: number;
+  createdAt: string;
+  course: {
+    id: string;
+    title: string;
+    level: string | null;
+    duration: string | null;
+    fees: string | null;
+    universityId: string;
+  };
+  university: {
+    id: string;
+    name: string;
+    logo: string | null;
+  };
+}
+
 interface ApplicationDetailsPanelProps {
   application: {
     id: string;
     studentId: string;
     courseId: string;
+    applicationNumber?: string | null;
     currentStage: ApplicationStage;
     status: string;
     assignedConsultantId: string | null;
@@ -170,11 +193,25 @@ export function ApplicationDetailsPanel({
   const [rejectReason, setRejectReason] = useState("");
   const [slotsDialogOpen, setSlotsDialogOpen] = useState(false);
   const [newMaxSlots, setNewMaxSlots] = useState<number>(3);
+  const [addCourseDialogOpen, setAddCourseDialogOpen] = useState(false);
+  const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
     enabled: isEditing,
   });
+  
+  // Fetch application courses (multi-course support)
+  const { data: coursesData, isLoading: coursesLoading } = useQuery<{ courses: ApplicationCourse[] }>({
+    queryKey: ["/api/applications", application.id, "courses"],
+  });
+  const applicationCourses = coursesData?.courses || [];
+  
+  // Fetch assignable users (admins) for assignment dropdown  
+  const { data: assignableUsersData } = useQuery<{ users: Consultant[] }>({
+    queryKey: ["/api/admin/assignable-users"],
+  });
+  const assignableUsers = assignableUsersData?.users || [];
 
   // Fetch student application slots
   const { data: slotsData } = useQuery<{ maxSlots: number; usedSlots: number; availableSlots: number }>({
@@ -304,6 +341,50 @@ export function ApplicationDetailsPanel({
       toast({ title: "Verification Failed", description: error.message, variant: "destructive" });
     },
   });
+  
+  // Mutation to add a course to the application
+  const addCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      return apiRequest("POST", `/api/applications/${application.id}/courses`, { courseId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications", application.id, "courses"] });
+      toast({ title: "Course Added", description: "Course has been added to the application" });
+      setAddCourseDialogOpen(false);
+      setSelectedCourseToAdd("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Add Course", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  // Mutation to remove a course from the application
+  const removeCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      return apiRequest("DELETE", `/api/applications/${application.id}/courses/${courseId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications", application.id, "courses"] });
+      toast({ title: "Course Removed", description: "Course has been removed from the application" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to Remove Course", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  // Mutation to assign a consultant to the application
+  const assignConsultantMutation = useMutation({
+    mutationFn: async (consultantId: string | null) => {
+      return apiRequest("PATCH", `/api/applications/${application.id}/assign`, { assignedConsultantId: consultantId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/applications"] });
+      toast({ title: "Consultant Assigned", description: "Consultant assignment updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Assignment Failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const documentsByStage = documents.reduce((acc, doc) => {
     if (!acc[doc.stage]) acc[doc.stage] = [];
@@ -354,6 +435,16 @@ export function ApplicationDetailsPanel({
         </TabsList>
 
         <TabsContent value="details" className="mt-4 space-y-6">
+          {/* Application Number Header */}
+          {application.applicationNumber && (
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant="outline" className="text-sm font-mono px-3 py-1" data-testid="badge-application-number">
+                {application.applicationNumber}
+              </Badge>
+              <span className="text-xs text-muted-foreground">Application Reference</span>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ApplicationStageSelector
@@ -416,16 +507,61 @@ export function ApplicationDetailsPanel({
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                  Course Details
+                <CardTitle className="text-sm font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                    Courses ({applicationCourses.length || 1})
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setAddCourseDialogOpen(true)}
+                    data-testid="button-add-course"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm font-medium">{course.title}</p>
-                  <p className="text-xs text-muted-foreground">{course.level}</p>
-                </div>
+              <CardContent className="space-y-3">
+                {coursesLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading courses...</p>
+                ) : applicationCourses.length > 0 ? (
+                  applicationCourses.map((appCourse, index) => (
+                    <div key={appCourse.id} className="flex items-start justify-between gap-2 p-2 rounded-md border" data-testid={`course-item-${index}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-sm font-medium truncate">{appCourse.course.title}</p>
+                          {appCourse.isPrimary && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0">Primary</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{appCourse.university.name}</p>
+                        {appCourse.course.level && (
+                          <p className="text-xs text-muted-foreground">{appCourse.course.level}</p>
+                        )}
+                      </div>
+                      {applicationCourses.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => removeCourseMutation.mutate(appCourse.courseId)}
+                          disabled={removeCourseMutation.isPending}
+                          data-testid={`button-remove-course-${index}`}
+                        >
+                          <XCircle className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-2 rounded-md border">
+                    <p className="text-sm font-medium">{course.title}</p>
+                    <p className="text-xs text-muted-foreground">{university.name}</p>
+                    {course.level && <p className="text-xs text-muted-foreground">{course.level}</p>}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -452,32 +588,29 @@ export function ApplicationDetailsPanel({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {isEditing ? (
-                  <Select
-                    value={editForm.assignedConsultantId || "_unassigned"}
-                    onValueChange={(v) => setEditForm({ ...editForm, assignedConsultantId: v === "_unassigned" ? "" : v })}
-                  >
-                    <SelectTrigger data-testid="select-edit-consultant">
-                      <SelectValue placeholder="Select consultant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_unassigned">Unassigned</SelectItem>
-                      {consultants.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.firstName} {c.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium">
-                      {consultant ? `${consultant.firstName} ${consultant.lastName}` : "Unassigned"}
-                    </p>
-                    {consultant?.email && (
-                      <p className="text-xs text-muted-foreground">{consultant.email}</p>
-                    )}
-                  </div>
+                {/* Always show consultant selector for quick assignment */}
+                <Select
+                  value={application.assignedConsultantId || "_unassigned"}
+                  onValueChange={(v) => {
+                    const newConsultantId = v === "_unassigned" ? null : v;
+                    assignConsultantMutation.mutate(newConsultantId);
+                  }}
+                  disabled={assignConsultantMutation.isPending}
+                >
+                  <SelectTrigger data-testid="select-assign-consultant">
+                    <SelectValue placeholder="Assign consultant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_unassigned">Unassigned</SelectItem>
+                    {assignableUsers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {consultant?.email && (
+                  <p className="text-xs text-muted-foreground">{consultant.email}</p>
                 )}
               </CardContent>
             </Card>
@@ -1031,6 +1164,44 @@ export function ApplicationDetailsPanel({
                 Approve
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Course Dialog */}
+      <Dialog open={addCourseDialogOpen} onOpenChange={setAddCourseDialogOpen}>
+        <DialogContent data-testid="dialog-add-course">
+          <DialogHeader>
+            <DialogTitle>Add Course to Application</DialogTitle>
+            <DialogDescription>
+              Search for a course to add to this application package.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="course-search">Course ID</Label>
+              <Input
+                id="course-search"
+                value={selectedCourseToAdd}
+                onChange={(e) => setSelectedCourseToAdd(e.target.value)}
+                placeholder="Enter course ID to add..."
+                data-testid="input-add-course-id"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter the UUID of the published course you want to add.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddCourseDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => addCourseMutation.mutate(selectedCourseToAdd)}
+              disabled={!selectedCourseToAdd || addCourseMutation.isPending}
+              data-testid="button-confirm-add-course"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {addCourseMutation.isPending ? "Adding..." : "Add Course"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

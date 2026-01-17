@@ -25,6 +25,7 @@ interface ApplicationWithDetails {
     id: string;
     studentId: string;
     courseId: string;
+    applicationNumber: string | null;
     currentStage: ApplicationStage;
     status: string;
     personalStatement: string | null;

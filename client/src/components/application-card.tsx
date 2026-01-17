@@ -89,6 +89,7 @@ interface ApplicationCardProps {
     id: string;
     studentId: string;
     courseId: string;
+    applicationNumber: string | null;
     currentStage: ApplicationStage;
     status: string;
     personalStatement: string | null;
@@ -353,6 +354,14 @@ export function ApplicationCard({ application, course, university, consultant }:
       <CardHeader>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
+            {/* Application Number */}
+            {application.applicationNumber && (
+              <div className="mb-1">
+                <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-app-number-${application.id}`}>
+                  {application.applicationNumber}
+                </Badge>
+              </div>
+            )}
             <CardTitle className="flex items-center gap-2 flex-wrap">
               <Building2 className="h-5 w-5 flex-shrink-0" />
               {course?.id ? (
