@@ -1768,17 +1768,15 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                     {applicationsData.applications.length} / {applicationsData.studentProfile.maxApplicationSlots} slots used
                   </span>
                 )}
-                {applicationsData?.studentProfile && (
-                  <Button
-                    size="sm"
-                    onClick={() => setIsCreateApplicationOpen(true)}
-                    disabled={applicationsData.applications.length >= (applicationsData.studentProfile.maxApplicationSlots || 3)}
-                    data-testid="button-create-application"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create Application
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={() => setIsCreateApplicationOpen(true)}
+                  disabled={!!(applicationsData?.studentProfile && applicationsData.applications.length >= (applicationsData.studentProfile.maxApplicationSlots || 3))}
+                  data-testid="button-create-application"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Application
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

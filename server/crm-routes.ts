@@ -2178,21 +2178,64 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       return res.status(400).json({ message: "Applications can only be created for client contacts" });
     }
 
-    // Check if contact has a linked user
-    if (!contact.linkedUserId) {
-      return res.status(400).json({ message: "Contact is not linked to a registered user account" });
+    // Check if contact has a linked user - if not, we need to create a minimal user and student profile
+    let userId = contact.linkedUserId;
+    
+    // Get or create the student profile for this user
+    let studentProfile;
+    
+    if (userId) {
+      // Try to find existing student profile
+      studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.userId, userId))
+        .limit(1)
+        .then(rows => rows[0]);
     }
-
-    // Get the student profile for this user
-    const studentProfile = await db
-      .select()
-      .from(studentProfiles)
-      .where(eq(studentProfiles.userId, contact.linkedUserId))
-      .limit(1)
-      .then(rows => rows[0]);
-
+    
+    // If no student profile exists, create one automatically
     if (!studentProfile) {
-      return res.status(400).json({ message: "Contact does not have a student profile. The student needs to complete their profile first." });
+      // If no linked user, we need to create one first
+      if (!userId) {
+        // Create a minimal user record for this contact
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            email: contact.email || `contact-${contact.id}@placeholder.local`,
+            name: `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Unknown Contact',
+            userType: 'student',
+          } as any)
+          .returning();
+        
+        userId = newUser.id;
+        
+        // Link the contact to the new user
+        await db
+          .update(crmContacts)
+          .set({ linkedUserId: userId })
+          .where(eq(crmContacts.id, contact.id));
+        
+        console.log(`[CRM] Created user ${userId} for contact ${contact.id}`);
+      }
+      
+      // Now create the student profile
+      const [newProfile] = await db
+        .insert(studentProfiles)
+        .values({
+          userId: userId!,
+          firstName: contact.firstName || null,
+          lastName: contact.lastName || null,
+          email: contact.email || null,
+          phone: contact.phone || null,
+          nationality: contact.nationality || null,
+          countryOfResidence: contact.country || null,
+          maxApplicationSlots: 3,
+        } as any)
+        .returning();
+      studentProfile = newProfile;
+      
+      console.log(`[CRM] Created student profile ${studentProfile.id} for contact ${contact.id}`);
     }
 
     // Check application slot limit
@@ -2284,8 +2327,8 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
     });
 
     // Update contact status to 'applicant' if this is the first application
-    if (existingApplications.length === 0) {
-      await updateContactStatusOnApplication(contact.linkedUserId, 'applicant');
+    if (existingApplications.length === 0 && userId) {
+      await updateContactStatusOnApplication(userId, 'applicant');
     }
 
     console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (course: ${courseId})`);
