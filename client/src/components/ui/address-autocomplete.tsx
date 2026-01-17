@@ -119,8 +119,13 @@ export function AddressAutocomplete({
   const [isReady, setIsReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const onAddressSelectRef = useRef(onAddressSelect);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    onAddressSelectRef.current = onAddressSelect;
+  }, [onAddressSelect]);
 
   useEffect(() => {
     if (!apiKey) {
@@ -155,7 +160,7 @@ export function AddressAutocomplete({
       const place = autocomplete.getPlace();
       if (place && place.address_components) {
         const parsed = parseAddressComponents(place);
-        onAddressSelect(parsed);
+        onAddressSelectRef.current(parsed);
         setInputValue(place.formatted_address || "");
       }
     });
@@ -167,7 +172,7 @@ export function AddressAutocomplete({
         window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [isReady, onAddressSelect]);
+  }, [isReady]);
 
   const handleClear = useCallback(() => {
     setInputValue("");
