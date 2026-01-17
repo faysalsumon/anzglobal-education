@@ -22,7 +22,7 @@ import {
   Search, User, FileText, CheckCircle, XCircle, Clock, 
   ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell,
   List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye, AlertTriangle,
-  CheckCheck, Users, Trash2
+  CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal
 } from "lucide-react";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
@@ -236,6 +236,24 @@ const STAGE_COLORS: Record<ApplicationStage, string> = {
   "Refusal/Refunds": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   "Application Lost": "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
 };
+
+// Zoho-style stage header colors (prominent background colors)
+const STAGE_HEADER_COLORS: Record<ApplicationStage, string> = {
+  "Assessment": "bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600",
+  "Collect Docs": "bg-blue-200 dark:bg-blue-800 border-blue-300 dark:border-blue-700",
+  "Documents Verification": "bg-purple-200 dark:bg-purple-800 border-purple-300 dark:border-purple-700",
+  "Offer-Letter": "bg-orange-200 dark:bg-orange-800 border-orange-300 dark:border-orange-700",
+  "GS-Clearance": "bg-emerald-200 dark:bg-emerald-800 border-emerald-300 dark:border-emerald-700",
+  "COE": "bg-cyan-200 dark:bg-cyan-800 border-cyan-300 dark:border-cyan-700",
+  "Health Cover": "bg-pink-200 dark:bg-pink-800 border-pink-300 dark:border-pink-700",
+  "Visa Lodgment": "bg-indigo-200 dark:bg-indigo-800 border-indigo-300 dark:border-indigo-700",
+  "Application Won": "bg-green-300 dark:bg-green-700 border-green-400 dark:border-green-600",
+  "Refusal/Refunds": "bg-red-300 dark:bg-red-700 border-red-400 dark:border-red-600",
+  "Application Lost": "bg-gray-300 dark:bg-gray-700 border-gray-400 dark:border-gray-600",
+};
+
+// All stages combined for single row display
+const ALL_STAGES: ApplicationStage[] = [...STAGES, ...TERMINAL_STAGES];
 
 // Droppable stage column
 function DroppableStageColumn({ 
@@ -454,6 +472,7 @@ export function AdminApplicationsKanban() {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
   const [batchStageDialogOpen, setBatchStageDialogOpen] = useState(false);
   const [batchTargetStage, setBatchTargetStage] = useState<ApplicationStage | undefined>();
 
@@ -748,91 +767,280 @@ export function AdminApplicationsKanban() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
-            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Unassigned</CardTitle>
-            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-unassigned">{stats.unassigned}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-in-progress">{stats.inProgress}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-xl sm:text-2xl font-bold" data-testid="stat-completed">{stats.completed}</div>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col h-full">
+      {/* Top Header Bar */}
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        {/* Left: Toggle and Stats */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setFilterSidebarOpen(!filterSidebarOpen)}
+            data-testid="button-toggle-filter-sidebar"
+            title={filterSidebarOpen ? "Hide filters" : "Show filters"}
+          >
+            {filterSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+          </Button>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="font-medium">{stats.total} Applications</span>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-amber-600">{stats.unassigned} Unassigned</span>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-blue-600">{stats.inProgress} In Progress</span>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-green-600">{stats.completed} Completed</span>
+          </div>
+        </div>
+        
+        {/* Right: View Toggle and Search */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 w-48 h-8"
+              data-testid="input-search-applications"
+            />
+          </div>
+          <div className="flex items-center gap-1 border rounded-lg p-0.5">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7"
+              onClick={() => setViewMode('list')}
+              data-testid="button-view-list"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7"
+              onClick={() => setViewMode('kanban')}
+              data-testid="button-view-kanban"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Filters and Bulk Actions */}
-      <Card>
-        <CardContent className="p-3 sm:p-6 pt-3 sm:pt-6">
-          <div className="flex flex-col gap-4">
-            {/* Enhanced Bulk Actions Toolbar */}
-            {selectedApplications.size > 0 ? (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-2">
-                  <CheckCheck className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{selectedApplications.size} selected</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => setAssignDialogOpen(true)}
-                    data-testid="button-bulk-assign"
+      {/* Bulk Actions Bar (when items selected) */}
+      {selectedApplications.size > 0 && (
+        <div className="flex items-center justify-between gap-3 p-2 mb-3 bg-primary/5 rounded-lg border border-primary/20">
+          <div className="flex items-center gap-2">
+            <CheckCheck className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">{selectedApplications.size} selected</span>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="h-7" onClick={() => setAssignDialogOpen(true)} data-testid="button-bulk-assign">
+              <UserPlus className="h-3 w-3 mr-1" />
+              Assign
+            </Button>
+            <Button size="sm" variant="outline" className="h-7" onClick={() => setBatchStageDialogOpen(true)} data-testid="button-bulk-stage">
+              <ChevronRight className="h-3 w-3 mr-1" />
+              Move Stage
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={clearSelection} data-testid="button-clear-selection">
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area with Left Sidebar */}
+      <div className="flex flex-1 gap-3 min-h-0">
+        {/* Left Filter Sidebar */}
+        {filterSidebarOpen && (
+          <div className="w-56 flex-shrink-0 border rounded-lg bg-card overflow-y-auto">
+            <div className="p-3 space-y-4">
+              {/* Saved Filters */}
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Saved Filters
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1">
+                  <Button 
+                    variant={!hasActiveFilters ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="w-full justify-start h-7 text-xs"
+                    onClick={clearAllFilters}
                   >
-                    <UserPlus className="h-4 w-4 mr-1.5" />
-                    Assign Consultant
+                    All Applications
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4">{applications.length}</Badge>
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setBatchStageDialogOpen(true)}
-                    data-testid="button-bulk-stage"
+                  <Button 
+                    variant={slaFilter === 'overdue' ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="w-full justify-start h-7 text-xs text-red-600"
+                    onClick={() => setSlaFilter('overdue')}
                   >
-                    <ChevronRight className="h-4 w-4 mr-1.5" />
-                    Move to Stage
+                    <AlertTriangle className="h-3 w-3 mr-1.5" />
+                    Overdue
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4">{slaCounts.overdue}</Badge>
                   </Button>
+                  <Button 
+                    variant={slaFilter === 'at-risk' ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="w-full justify-start h-7 text-xs text-amber-600"
+                    onClick={() => setSlaFilter('at-risk')}
+                  >
+                    <Clock className="h-3 w-3 mr-1.5" />
+                    At Risk
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4">{slaCounts['at-risk']}</Badge>
+                  </Button>
+                  <Button 
+                    variant={consultantFilter === 'unassigned' ? "secondary" : "ghost"} 
+                    size="sm" 
+                    className="w-full justify-start h-7 text-xs"
+                    onClick={() => setConsultantFilter('unassigned')}
+                  >
+                    <AlertCircle className="h-3 w-3 mr-1.5" />
+                    Unassigned
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4">{stats.unassigned}</Badge>
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {/* Filter by Stage */}
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filter by Stage
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={stageFilter} onValueChange={setStageFilter}>
+                    <SelectTrigger className="h-7 text-xs" data-testid="select-stage-filter">
+                      <SelectValue placeholder="All Stages" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stages</SelectItem>
+                      {ALL_STAGES.map((stage) => (
+                        <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {/* Filter by Consultant */}
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    Consultant
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={consultantFilter} onValueChange={setConsultantFilter}>
+                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-consultant">
+                      <SelectValue placeholder="All Consultants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Consultants</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {consultants.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {/* Filter by Country */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Country
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={countryFilter} onValueChange={setCountryFilter}>
+                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-country">
+                      <SelectValue placeholder="All Countries" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country!}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {/* Filter by Status */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Status
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-status">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <>
+                  <Separator />
                   <Button
-                    size="sm"
                     variant="ghost"
-                    onClick={clearSelection}
-                    data-testid="button-clear-selection"
+                    size="sm"
+                    className="w-full h-7 text-xs"
+                    onClick={clearAllFilters}
+                    data-testid="button-clear-filters"
                   >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear
+                    <X className="h-3 w-3 mr-1.5" />
+                    Clear All Filters
                   </Button>
-                </div>
-              </div>
-            ) : (
-              /* Quick Filter Chips - SLA Status */
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                <span className="text-xs sm:text-sm text-muted-foreground mr-1 flex-shrink-0">Filters:</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Main Content - Kanban or List */}
+        <div className="flex-1 min-w-0">
+          {/* Quick Filter Chips */}
+          {selectedApplications.size === 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2">
+              <span className="text-xs text-muted-foreground mr-1 flex-shrink-0">Quick:</span>
                 <Button
                   variant={slaFilter === 'all' ? 'secondary' : 'outline'}
                   size="sm"
@@ -886,136 +1094,7 @@ export function AdminApplicationsKanban() {
               </div>
             )}
 
-            {/* Filters Row 1 - Search, Stage Filter, View Toggle */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by student, course, or university..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search-applications"
-                />
-              </div>
-              <Select value={stageFilter} onValueChange={setStageFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-stage-filter">
-                  <SelectValue placeholder="All Stages" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stages</SelectItem>
-                  {STAGES.map((stage) => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                  {TERMINAL_STAGES.map((stage) => (
-                    <SelectItem key={stage} value={stage}>
-                      {stage}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* View Toggle */}
-              <div className="flex items-center gap-1 border rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  data-testid="button-view-list"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('kanban')}
-                  data-testid="button-view-kanban"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Collapsible Additional Filters */}
-            <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <div className="flex items-center gap-2">
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    data-testid="button-more-filters"
-                  >
-                    <Filter className="h-4 w-4 mr-2" />
-                    More Filters
-                    {hasActiveFilters && (
-                      <Badge variant="secondary" className="ml-2">{[consultantFilter, countryFilter, statusFilter].filter(f => f !== "all").length}</Badge>
-                    )}
-                    <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="text-muted-foreground hover:text-foreground"
-                    data-testid="button-clear-filters"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear All
-                  </Button>
-                )}
-              </div>
-              <CollapsibleContent className="mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Select value={consultantFilter} onValueChange={setConsultantFilter}>
-                    <SelectTrigger data-testid="select-filter-consultant">
-                      <SelectValue placeholder="All Consultants" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Consultants</SelectItem>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {consultants.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.firstName} {c.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={countryFilter} onValueChange={setCountryFilter}>
-                    <SelectTrigger data-testid="select-filter-country">
-                      <SelectValue placeholder="All Countries" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Countries</SelectItem>
-                      {countries.map((country) => (
-                        <SelectItem key={country} value={country!}>
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger data-testid="select-filter-status">
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Loading State */}
+          {/* Loading State */}
       {isLoading ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -1155,133 +1234,91 @@ export function AdminApplicationsKanban() {
           )}
         </div>
       ) : (
-        /* Kanban View */
+        /* Zoho-style Kanban View - All stages in single row */
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="h-[calc(100vh-280px)] overflow-auto">
-            <div className="space-y-6 min-w-max">
-              {/* Active Stages */}
-              <div className="flex flex-col">
-                <h3 className="text-lg font-semibold mb-3 sticky left-0">Active Stages</h3>
-                <div className="flex gap-3 pb-4">
-                  {STAGES.map((stage) => (
-                    <DroppableStageColumn key={stage} stage={stage}>
-                      <SortableContext
-                        id={stage}
-                        items={applicationsByStage[stage].map(app => app.application.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="w-48 sm:w-56 md:w-64 flex-shrink-0">
-                          <Card className="h-full">
-                            <CardHeader className="pb-2 px-3 py-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <CardTitle className="text-xs font-medium truncate">
-                                  {stage}
-                                </CardTitle>
-                                <Badge variant="secondary" className="text-xs flex-shrink-0">
-                                  {applicationsByStage[stage].length}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="px-3 py-2">
-                              <ScrollArea className="h-56 sm:h-64">
-                                <div className="space-y-2 pr-3">
-                                  {applicationsByStage[stage].length === 0 ? (
-                                    <p className="text-sm text-muted-foreground text-center py-8">
-                                      No applications
-                                    </p>
-                                  ) : (
-                                    applicationsByStage[stage].map((app) => (
-                                      <DraggableApplicationCard
-                                        key={app.application.id}
-                                        app={app}
-                                        isSelected={selectedApplications.has(app.application.id)}
-                                        onToggleSelection={() => toggleSelection(app.application.id)}
-                                        onViewDetails={() => {
-                                          setLocation(`/admin/applications/${app.application.id}`);
-                                        }}
-                                        onAdvanceStage={() => {
-                                          const next = getNextStage(stage);
-                                          if (next) handleStageTransition(app.application.id, next);
-                                        }}
-                                        nextStage={getNextStage(stage)}
-                                      />
-                                    ))
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </CardContent>
-                          </Card>
+          <div className="flex gap-2 overflow-x-auto pb-4" style={{ height: 'calc(100vh - 340px)' }}>
+            {ALL_STAGES.map((stage) => {
+              const stageCount = applicationsByStage[stage].length;
+              const totalCount = filteredApplications.length || 1;
+              const percentage = Math.round((stageCount / totalCount) * 100);
+              const isTerminal = TERMINAL_STAGES.includes(stage);
+              
+              return (
+                <DroppableStageColumn key={stage} stage={stage}>
+                  <SortableContext
+                    id={stage}
+                    items={applicationsByStage[stage].map(app => app.application.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="w-44 flex-shrink-0 flex flex-col h-full">
+                      {/* Colored Stage Header */}
+                      <div className={`rounded-t-md px-2 py-2 border-b ${STAGE_HEADER_COLORS[stage]}`}>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-xs font-semibold truncate text-foreground" title={stage}>
+                            {stage.length > 12 ? stage.substring(0, 12) + '...' : stage}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            {percentage}%
+                          </span>
                         </div>
-                      </SortableContext>
-                    </DroppableStageColumn>
-                  ))}
-                </div>
-              </div>
-
-              {/* Terminal Stages */}
-              <div className="flex flex-col">
-                <h3 className="text-lg font-semibold mb-3 sticky left-0">Final Outcomes</h3>
-                <div className="flex gap-3 pb-4">
-                  {TERMINAL_STAGES.map((stage) => (
-                    <DroppableStageColumn key={stage} stage={stage}>
-                      <SortableContext
-                        id={stage}
-                        items={applicationsByStage[stage].map(app => app.application.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="w-48 sm:w-56 md:w-64 flex-shrink-0">
-                          <Card className="h-full">
-                            <CardHeader className="pb-2 px-3 py-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <CardTitle className="text-xs font-medium truncate">
-                                  {stage}
-                                </CardTitle>
-                                <Badge variant="secondary" className="text-xs flex-shrink-0">
-                                  {applicationsByStage[stage].length}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="px-3 py-2">
-                              <ScrollArea className="h-40 sm:h-48">
-                                <div className="space-y-2 pr-3">
-                                  {applicationsByStage[stage].length === 0 ? (
-                                    <p className="text-sm text-muted-foreground text-center py-4">
-                                      No applications
-                                    </p>
-                                  ) : (
-                                    applicationsByStage[stage].map((app) => (
-                                      <DraggableApplicationCard
-                                        key={app.application.id}
-                                        app={app}
-                                        isSelected={selectedApplications.has(app.application.id)}
-                                        onToggleSelection={() => toggleSelection(app.application.id)}
-                                        onViewDetails={() => {
-                                          setLocation(`/admin/applications/${app.application.id}`);
-                                        }}
-                                        onAdvanceStage={() => {}}
-                                        nextStage={null}
-                                      />
-                                    ))
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </CardContent>
-                          </Card>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{stageCount}</span>
+                          {/* Progress bar */}
+                          <div className="flex-1 h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-foreground/60 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
                         </div>
-                      </SortableContext>
-                    </DroppableStageColumn>
-                  ))}
-                </div>
-              </div>
-            </div>
+                      </div>
+                      
+                      {/* Cards Container with individual scroll */}
+                      <div className="flex-1 bg-muted/30 rounded-b-md border border-t-0 overflow-hidden">
+                        <ScrollArea className="h-full">
+                          <div className="p-2 space-y-2">
+                            {stageCount === 0 ? (
+                              <p className="text-xs text-muted-foreground text-center py-6">
+                                No applications
+                              </p>
+                            ) : (
+                              applicationsByStage[stage].map((app) => (
+                                <DraggableApplicationCard
+                                  key={app.application.id}
+                                  app={app}
+                                  isSelected={selectedApplications.has(app.application.id)}
+                                  onToggleSelection={() => toggleSelection(app.application.id)}
+                                  onViewDetails={() => {
+                                    setLocation(`/admin/applications/${app.application.id}`);
+                                  }}
+                                  onAdvanceStage={() => {
+                                    if (!isTerminal) {
+                                      const next = getNextStage(stage);
+                                      if (next) handleStageTransition(app.application.id, next);
+                                    }
+                                  }}
+                                  nextStage={isTerminal ? null : getNextStage(stage)}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  </SortableContext>
+                </DroppableStageColumn>
+              );
+            })}
           </div>
         </DndContext>
       )}
+        </div>
+      </div>
 
       {/* Assign Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
