@@ -1162,12 +1162,12 @@ export function AdminApplicationsKanban() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="space-y-6">
-            {/* Active Stages */}
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold mb-3">Active Stages</h3>
-              <ScrollArea className="w-full" type="scroll">
-                <div className="flex gap-3 min-w-max pb-4">
+          <div className="h-[calc(100vh-280px)] overflow-auto">
+            <div className="space-y-6 min-w-max">
+              {/* Active Stages */}
+              <div className="flex flex-col">
+                <h3 className="text-lg font-semibold mb-3 sticky left-0">Active Stages</h3>
+                <div className="flex gap-3 pb-4">
                   {STAGES.map((stage) => (
                     <DroppableStageColumn key={stage} stage={stage}>
                       <SortableContext
@@ -1175,7 +1175,7 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-56 sm:w-64 md:w-72 flex-shrink-0">
+                        <div className="w-48 sm:w-56 md:w-64 flex-shrink-0">
                           <Card className="h-full">
                             <CardHeader className="pb-2 px-3 py-2">
                               <div className="flex items-center justify-between gap-2">
@@ -1188,7 +1188,7 @@ export function AdminApplicationsKanban() {
                               </div>
                             </CardHeader>
                             <CardContent className="px-3 py-2">
-                              <ScrollArea className="h-[calc(100vh-420px)] min-h-48 max-h-80">
+                              <ScrollArea className="h-56 sm:h-64">
                                 <div className="space-y-2 pr-3">
                                   {applicationsByStage[stage].length === 0 ? (
                                     <p className="text-sm text-muted-foreground text-center py-8">
@@ -1221,15 +1221,12 @@ export function AdminApplicationsKanban() {
                     </DroppableStageColumn>
                   ))}
                 </div>
-                <ScrollBar orientation="horizontal" className="h-3" />
-              </ScrollArea>
-            </div>
+              </div>
 
-            {/* Terminal Stages */}
-            <div className="flex flex-col">
-              <h3 className="text-lg font-semibold mb-3">Final Outcomes</h3>
-              <ScrollArea className="w-full" type="scroll">
-                <div className="flex gap-3 min-w-max md:grid md:grid-cols-3 md:min-w-0 pb-4 md:pb-0">
+              {/* Terminal Stages */}
+              <div className="flex flex-col">
+                <h3 className="text-lg font-semibold mb-3 sticky left-0">Final Outcomes</h3>
+                <div className="flex gap-3 pb-4">
                   {TERMINAL_STAGES.map((stage) => (
                     <DroppableStageColumn key={stage} stage={stage}>
                       <SortableContext
@@ -1237,7 +1234,7 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-56 sm:w-64 md:w-auto flex-shrink-0 md:flex-shrink">
+                        <div className="w-48 sm:w-56 md:w-64 flex-shrink-0">
                           <Card className="h-full">
                             <CardHeader className="pb-2 px-3 py-2">
                               <div className="flex items-center justify-between gap-2">
@@ -1250,7 +1247,7 @@ export function AdminApplicationsKanban() {
                               </div>
                             </CardHeader>
                             <CardContent className="px-3 py-2">
-                              <ScrollArea className="h-48 max-h-56">
+                              <ScrollArea className="h-40 sm:h-48">
                                 <div className="space-y-2 pr-3">
                                   {applicationsByStage[stage].length === 0 ? (
                                     <p className="text-sm text-muted-foreground text-center py-4">
@@ -1280,8 +1277,7 @@ export function AdminApplicationsKanban() {
                     </DroppableStageColumn>
                   ))}
                 </div>
-                <ScrollBar orientation="horizontal" className="h-3 md:hidden" />
-              </ScrollArea>
+              </div>
             </div>
           </div>
         </DndContext>
