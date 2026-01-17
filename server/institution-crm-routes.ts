@@ -98,6 +98,8 @@ router.get("/institutions/:institutionId/contacts", requireAdmin, async (req: an
         institutionId: institutionContacts.institutionId,
         contactId: institutionContacts.contactId,
         contactRole: institutionContacts.contactRole,
+        roleTitle: institutionContacts.roleTitle,
+        department: institutionContacts.department,
         isPrimary: institutionContacts.isPrimary,
         notes: institutionContacts.notes,
         createdAt: institutionContacts.createdAt,

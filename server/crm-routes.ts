@@ -10,6 +10,7 @@ import {
   users,
   courses,
   universities,
+  institutionContacts,
   insertCrmLeadSchema,
   updateCrmLeadSchema,
   insertCrmContactSchema,
@@ -818,6 +819,138 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error fetching contact:", error);
     res.status(500).json({ message: "Failed to fetch contact" });
+  }
+});
+
+// Get institution links for a contact
+router.get("/contacts/:contactId/institutions", requireAdmin, async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    
+    const links = await db
+      .select({
+        id: institutionContacts.id,
+        institutionId: institutionContacts.institutionId,
+        contactId: institutionContacts.contactId,
+        contactRole: institutionContacts.contactRole,
+        roleTitle: institutionContacts.roleTitle,
+        department: institutionContacts.department,
+        isPrimary: institutionContacts.isPrimary,
+        notes: institutionContacts.notes,
+        createdAt: institutionContacts.createdAt,
+        institution: {
+          id: universities.id,
+          name: universities.name,
+          logo: universities.logo,
+          country: universities.country,
+        },
+      })
+      .from(institutionContacts)
+      .leftJoin(universities, eq(institutionContacts.institutionId, universities.id))
+      .where(eq(institutionContacts.contactId, contactId))
+      .orderBy(desc(institutionContacts.isPrimary), desc(institutionContacts.createdAt));
+    
+    res.json(links);
+  } catch (error) {
+    console.error("Error fetching contact institution links:", error);
+    res.status(500).json({ message: "Failed to fetch institution links" });
+  }
+});
+
+// Add institution link for a contact
+router.post("/contacts/:contactId/institutions", requireAdmin, async (req: any, res) => {
+  try {
+    const { contactId } = req.params;
+    const userId = getUserId(req);
+    const { institutionId, contactRole, roleTitle, department, isPrimary, notes } = req.body;
+    
+    if (!institutionId) {
+      return res.status(400).json({ message: "Institution ID is required" });
+    }
+    
+    // Check if link already exists
+    const existing = await db
+      .select()
+      .from(institutionContacts)
+      .where(and(
+        eq(institutionContacts.contactId, contactId),
+        eq(institutionContacts.institutionId, institutionId)
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ message: "Contact is already linked to this institution" });
+    }
+    
+    const [newLink] = await db
+      .insert(institutionContacts)
+      .values({
+        contactId,
+        institutionId,
+        contactRole: contactRole || "other",
+        roleTitle,
+        department,
+        isPrimary: isPrimary || false,
+        notes,
+        createdByUserId: userId,
+      })
+      .returning();
+    
+    res.status(201).json(newLink);
+  } catch (error) {
+    console.error("Error adding institution link:", error);
+    res.status(500).json({ message: "Failed to add institution link" });
+  }
+});
+
+// Update institution link for a contact
+router.patch("/contacts/:contactId/institutions/:linkId", requireAdmin, async (req: any, res) => {
+  try {
+    const { linkId } = req.params;
+    const { contactRole, roleTitle, department, isPrimary, notes } = req.body;
+    
+    const [updated] = await db
+      .update(institutionContacts)
+      .set({
+        contactRole,
+        roleTitle,
+        department,
+        isPrimary,
+        notes,
+        updatedAt: new Date(),
+      })
+      .where(eq(institutionContacts.id, linkId))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Institution link not found" });
+    }
+    
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating institution link:", error);
+    res.status(500).json({ message: "Failed to update institution link" });
+  }
+});
+
+// Delete institution link for a contact
+router.delete("/contacts/:contactId/institutions/:linkId", requireAdmin, async (req: any, res) => {
+  try {
+    const { linkId } = req.params;
+    
+    const [deleted] = await db
+      .delete(institutionContacts)
+      .where(eq(institutionContacts.id, linkId))
+      .returning();
+    
+    if (!deleted) {
+      return res.status(404).json({ message: "Institution link not found" });
+    }
+    
+    res.json({ message: "Institution link removed successfully" });
+  } catch (error) {
+    console.error("Error deleting institution link:", error);
+    res.status(500).json({ message: "Failed to delete institution link" });
   }
 });
 
