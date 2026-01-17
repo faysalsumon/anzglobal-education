@@ -1162,12 +1162,12 @@ export function AdminApplicationsKanban() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Active Stages */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Active Stages</h3>
-              <ScrollArea className="w-full pb-4" type="scroll">
-                <div className="flex gap-4 min-w-max pb-4">
+            <div className="flex flex-col">
+              <h3 className="text-lg font-semibold mb-3">Active Stages</h3>
+              <ScrollArea className="w-full" type="scroll">
+                <div className="flex gap-3 min-w-max pb-4">
                   {STAGES.map((stage) => (
                     <DroppableStageColumn key={stage} stage={stage}>
                       <SortableContext
@@ -1175,11 +1175,11 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-64 sm:w-72 md:w-80 flex-shrink-0">
-                          <Card>
-                            <CardHeader className="pb-3 px-3">
+                        <div className="w-56 sm:w-64 md:w-72 flex-shrink-0">
+                          <Card className="h-full">
+                            <CardHeader className="pb-2 px-3 py-2">
                               <div className="flex items-center justify-between gap-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium truncate">
+                                <CardTitle className="text-xs font-medium truncate">
                                   {stage}
                                 </CardTitle>
                                 <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -1187,9 +1187,9 @@ export function AdminApplicationsKanban() {
                                 </Badge>
                               </div>
                             </CardHeader>
-                            <CardContent className="px-3">
-                              <ScrollArea className="h-96">
-                                <div className="space-y-3 pr-4">
+                            <CardContent className="px-3 py-2">
+                              <ScrollArea className="h-[calc(100vh-420px)] min-h-48 max-h-80">
+                                <div className="space-y-2 pr-3">
                                   {applicationsByStage[stage].length === 0 ? (
                                     <p className="text-sm text-muted-foreground text-center py-8">
                                       No applications
@@ -1226,10 +1226,10 @@ export function AdminApplicationsKanban() {
             </div>
 
             {/* Terminal Stages */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Final Outcomes</h3>
-              <ScrollArea className="w-full pb-4" type="scroll">
-                <div className="flex gap-4 min-w-max md:grid md:grid-cols-3 md:min-w-0 pb-4 md:pb-0">
+            <div className="flex flex-col">
+              <h3 className="text-lg font-semibold mb-3">Final Outcomes</h3>
+              <ScrollArea className="w-full" type="scroll">
+                <div className="flex gap-3 min-w-max md:grid md:grid-cols-3 md:min-w-0 pb-4 md:pb-0">
                   {TERMINAL_STAGES.map((stage) => (
                     <DroppableStageColumn key={stage} stage={stage}>
                       <SortableContext
@@ -1237,11 +1237,11 @@ export function AdminApplicationsKanban() {
                         items={applicationsByStage[stage].map(app => app.application.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-64 sm:w-72 md:w-auto flex-shrink-0 md:flex-shrink">
-                          <Card>
-                            <CardHeader className="pb-3 px-3">
+                        <div className="w-56 sm:w-64 md:w-auto flex-shrink-0 md:flex-shrink">
+                          <Card className="h-full">
+                            <CardHeader className="pb-2 px-3 py-2">
                               <div className="flex items-center justify-between gap-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium truncate">
+                                <CardTitle className="text-xs font-medium truncate">
                                   {stage}
                                 </CardTitle>
                                 <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -1249,9 +1249,9 @@ export function AdminApplicationsKanban() {
                                 </Badge>
                               </div>
                             </CardHeader>
-                            <CardContent className="px-3">
-                              <ScrollArea className="h-64">
-                                <div className="space-y-2 pr-4">
+                            <CardContent className="px-3 py-2">
+                              <ScrollArea className="h-48 max-h-56">
+                                <div className="space-y-2 pr-3">
                                   {applicationsByStage[stage].length === 0 ? (
                                     <p className="text-sm text-muted-foreground text-center py-4">
                                       No applications
