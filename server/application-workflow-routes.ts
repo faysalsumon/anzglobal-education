@@ -19,7 +19,7 @@ import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logActivity } from "./activity-logger";
 import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
-import { notifyApplicationAssigned } from "./notifications";
+import { notifyApplicationAssigned, notifyApplicationStageChange } from "./notifications";
 import { getUserAccessContext, checkCrudPermission } from "./access-policy-service";
 
 // Stage transition validation schema
@@ -723,6 +723,28 @@ export function registerApplicationWorkflowRoutes(app: Express) {
           notes: validatedData.notes,
         },
       });
+
+      // Send in-app notification to student
+      try {
+        const student = await db.query.studentProfiles.findFirst({
+          where: eq(studentProfiles.id, application.studentId),
+        });
+        const course = await db.query.courses.findFirst({
+          where: eq(courses.id, application.courseId),
+        });
+
+        if (student?.userId && course) {
+          await notifyApplicationStageChange({
+            studentUserId: student.userId,
+            courseName: course.title,
+            fromStage,
+            toStage,
+            applicationId: validatedData.applicationId,
+          });
+        }
+      } catch (notifyError) {
+        console.error("Error sending stage change notification:", notifyError);
+      }
 
       res.json({ message: "Stage transitioned successfully", fromStage, toStage });
     } catch (error: any) {
@@ -1547,7 +1569,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         },
       });
 
-      // Send email notification to student
+      // Send email and in-app notification to student
       try {
         const student = await db.query.studentProfiles.findFirst({
           where: eq(studentProfiles.id, application.studentId),
@@ -1568,9 +1590,20 @@ export function registerApplicationWorkflowRoutes(app: Express) {
             previousStage: fromStage,
           });
         }
+
+        // Send in-app notification
+        if (student?.userId) {
+          await notifyApplicationStageChange({
+            studentUserId: student.userId,
+            courseName: course.title,
+            fromStage,
+            toStage,
+            applicationId,
+          });
+        }
       } catch (emailError: any) {
-        console.error('Failed to send stage transition email:', emailError.message);
-        // Don't fail the request if email fails
+        console.error('Failed to send stage transition notifications:', emailError.message);
+        // Don't fail the request if notifications fail
       }
 
       res.json({ message: "Stage transitioned successfully", fromStage, toStage });

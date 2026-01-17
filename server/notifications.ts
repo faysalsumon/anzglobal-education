@@ -5,6 +5,7 @@ import { sendToUser } from "./websocket-clients";
 export type NotificationType = 
   | "application_submitted"
   | "application_status_changed"
+  | "application_stage_changed"
   | "application_assigned"
   | "new_course_published"
   | "team_member_added"
@@ -46,6 +47,7 @@ const NOTIFICATION_LINK_REGISTRY: Record<NotificationType, NotificationLinkGener
   // Application notifications
   application_submitted: (data) => `/university/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
   application_status_changed: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  application_stage_changed: (data) => `/student/applications`,
   application_assigned: (data) => `/admin/applications/${data.applicationId}`,
   
   // Course notifications
@@ -196,6 +198,44 @@ export async function notifyApplicationStatusChange(params: {
       courseName: params.courseName,
       institutionName: params.institutionName,
       status: params.status,
+    },
+  });
+}
+
+export async function notifyApplicationStageChange(params: {
+  studentUserId: string;
+  courseName: string;
+  fromStage: string;
+  toStage: string;
+  applicationId: string;
+}) {
+  const friendlyStageNames: Record<string, string> = {
+    "Assessment": "Initial Assessment",
+    "Collect Docs": "Document Collection",
+    "Documents Verification": "Document Verification",
+    "Offer-Letter": "Offer Letter",
+    "GS-Clearance": "GS Clearance",
+    "COE": "Confirmation of Enrollment",
+    "Health Cover": "Health Cover",
+    "Visa Lodgment": "Visa Lodgment",
+    "Application Won": "Application Approved",
+    "Refusal/Refunds": "Refusal/Refunds",
+    "Application Lost": "Application Closed",
+  };
+
+  const toStageName = friendlyStageNames[params.toStage] || params.toStage;
+
+  return createNotification({
+    userId: params.studentUserId,
+    type: "application_stage_changed",
+    title: "Application Progress Update",
+    message: `Your application for ${params.courseName} has moved to: ${toStageName}`,
+    link: `/student/applications`,
+    metadata: {
+      applicationId: params.applicationId,
+      courseName: params.courseName,
+      fromStage: params.fromStage,
+      toStage: params.toStage,
     },
   });
 }
