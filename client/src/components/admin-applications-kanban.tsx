@@ -7,6 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -296,7 +297,23 @@ function SLABadge({ status }: { status: 'on-track' | 'at-risk' | 'overdue' }) {
   );
 }
 
-// Draggable application card with enhanced design
+// Helper to get initials from name
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const first = firstName?.charAt(0)?.toUpperCase() || '';
+  const last = lastName?.charAt(0)?.toUpperCase() || '';
+  return first + last || '?';
+}
+
+// Helper to get institution initials from name
+function getInstitutionInitials(name: string): string {
+  const words = name.split(' ').filter(w => w.length > 0);
+  if (words.length >= 2) {
+    return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+// Draggable application card with compact design
 function DraggableApplicationCard({ 
   app, 
   isSelected,
@@ -339,6 +356,12 @@ function DraggableApplicationCard({
     app.application.currentStage
   );
 
+  const studentInitials = getInitials(app.student.firstName, app.student.lastName);
+  const institutionInitials = getInstitutionInitials(app.university.name);
+  const consultantInitials = app.consultant 
+    ? getInitials(app.consultant.firstName, app.consultant.lastName)
+    : null;
+
   return (
     <Card
       ref={setNodeRef}
@@ -347,103 +370,130 @@ function DraggableApplicationCard({
         isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
       } ${slaStatus === 'overdue' ? 'border-red-300 dark:border-red-800' : ''}`}
       data-testid={`application-card-${app.application.id}`}
+      onClick={onViewDetails}
     >
-      <CardContent className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
-        {/* Header Row: Checkbox, Student Info, Progress */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
-            <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing pt-0.5 flex-shrink-0">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onToggleSelection}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-shrink-0 mt-0.5"
-              data-testid={`checkbox-application-${app.application.id}`}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium truncate">
-                  {app.student.firstName} {app.student.lastName}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                {app.course.title}
-              </p>
-            </div>
+      <CardContent className="p-2 space-y-1">
+        {/* Row 1: Drag handle, Checkbox, Student Avatar & Name, Progress */}
+        <div className="flex items-center gap-1.5">
+          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          
-          {/* Progress Circle */}
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onToggleSelection}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0"
+            data-testid={`checkbox-application-${app.application.id}`}
+          />
+          <Avatar className="h-6 w-6 flex-shrink-0">
+            <AvatarImage src={(app.student as any).profilePicture} />
+            <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+              {studentInitials}
+            </AvatarFallback>
+          </Avatar>
+          <p className="text-xs font-medium truncate flex-1 min-w-0">
+            {app.student.firstName} {app.student.lastName}
+          </p>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex-shrink-0">
-                  <CircularProgress progress={progress} size={32} strokeWidth={3} />
+                  <CircularProgress progress={progress} size={24} strokeWidth={2} />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="left" className="text-xs">
                 <p className="font-medium">{progress}% Complete</p>
                 <p className="text-muted-foreground">
-                  {app.documentProgress.requiredUploaded}/{app.documentProgress.requiredDocs} docs uploaded
+                  {app.documentProgress.requiredUploaded}/{app.documentProgress.requiredDocs} docs
                 </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
 
-        {/* University and SLA Row */}
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-            <Building2 className="h-3 w-3 flex-shrink-0" />
-            {app.university.name}
+        {/* Row 2: Institution Logo + Course Title */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-5 w-5 flex-shrink-0">
+                  <AvatarImage src={(app.university as any).logo} />
+                  <AvatarFallback className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                    {institutionInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {app.university.name}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <p className="text-[11px] text-muted-foreground truncate flex-1 min-w-0">
+            {app.course.title}
           </p>
-          <SLABadge status={slaStatus} />
         </div>
 
-        {/* Consultant and Date Row */}
-        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          {app.consultant ? (
-            <span className="flex items-center gap-1 truncate">
-              <User className="h-3 w-3 flex-shrink-0" />
-              {app.consultant.firstName} {app.consultant.lastName}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-              <UserPlus className="h-3 w-3 flex-shrink-0" />
-              Unassigned
-            </span>
-          )}
-          <span className="flex items-center gap-1 flex-shrink-0">
-            <Calendar className="h-3 w-3" />
+        {/* Row 3: Consultant Avatar + SLA Badge + Date */}
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1 min-w-0">
+            {app.consultant ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-5 w-5 flex-shrink-0">
+                      <AvatarImage src={(app.consultant as any).profilePicture} />
+                      <AvatarFallback className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                        {consultantInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {app.consultant.firstName} {app.consultant.lastName}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="h-5 w-5 rounded-full border-2 border-dashed border-amber-400 flex items-center justify-center flex-shrink-0">
+                      <UserPlus className="h-2.5 w-2.5 text-amber-500" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Unassigned
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <SLABadge status={slaStatus} />
+          </div>
+          <span className="text-[10px] text-muted-foreground flex-shrink-0">
             {format(new Date(app.application.createdAt), 'MMM d')}
           </span>
         </div>
 
-        <Separator className="my-1" />
-
-        {/* Action Buttons */}
-        <div className="flex gap-1.5">
+        {/* Row 4: Action Buttons - compact */}
+        <div className="flex gap-1 pt-0.5">
           <Button
             size="sm"
             variant="ghost"
-            className="flex-1 h-7 text-xs"
-            onClick={onViewDetails}
+            className="flex-1 text-xs"
+            onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
             data-testid={`button-view-details-${app.application.id}`}
           >
-            <Eye className="h-3 w-3 mr-1" />
+            <Eye className="h-3 w-3 mr-0.5" />
             View
           </Button>
           {nextStage && (
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 h-7 text-xs"
-              onClick={onAdvanceStage}
+              className="flex-1 text-xs"
+              onClick={(e) => { e.stopPropagation(); onAdvanceStage(); }}
               data-testid={`button-next-stage-${app.application.id}`}
             >
-              <ChevronRight className="h-3 w-3 mr-1" />
+              <ChevronRight className="h-3 w-3 mr-0.5" />
               Next
             </Button>
           )}
