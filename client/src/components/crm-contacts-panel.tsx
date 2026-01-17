@@ -104,9 +104,24 @@ interface CrmContact {
   courseId: string | null;
   universityId: string | null;
   createdByUserId: string | null;
+  updatedByUserId: string | null;
   lastActivityTime: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  createdByUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    profileImageUrl: string | null;
+  } | null;
+  updatedByUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    profileImageUrl: string | null;
+  } | null;
   ownerUser?: {
     id: string;
     firstName: string;
@@ -1475,9 +1490,47 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             <CardTitle className="text-lg">Contact Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Created By</span>
+              {contact.createdByUser ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={contact.createdByUser.profileImageUrl || undefined} />
+                    <AvatarFallback>{contact.createdByUser.firstName?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <span>{contact.createdByUser.firstName} {contact.createdByUser.lastName}</span>
+                </div>
+              ) : (
+                <span className="text-muted-foreground italic">System Generated</span>
+              )}
+            </div>
+            {contact.createdAt && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Created On</span>
+                <span>{format(new Date(contact.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
+              </div>
+            )}
+            {contact.updatedAt && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Last Updated</span>
+                <div className="flex items-center gap-2">
+                  {contact.updatedByUser ? (
+                    <>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={contact.updatedByUser.profileImageUrl || undefined} />
+                        <AvatarFallback>{contact.updatedByUser.firstName?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <span>{contact.updatedByUser.firstName} {contact.updatedByUser.lastName}</span>
+                      <span className="text-muted-foreground">·</span>
+                    </>
+                  ) : null}
+                  <span className="text-muted-foreground">{format(new Date(contact.updatedAt), "MMM d, yyyy")}</span>
+                </div>
+              </div>
+            )}
             {contact.ownerUser && (
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Created By</span>
+                <span className="text-muted-foreground">Contact Owner</span>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
@@ -1497,12 +1550,6 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                   </Avatar>
                   <span>{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
                 </div>
-              </div>
-            )}
-            {contact.createdAt && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Created</span>
-                <span>{format(new Date(contact.createdAt), "MMM d, yyyy")}</span>
               </div>
             )}
             {contact.sourceLead && (

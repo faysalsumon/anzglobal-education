@@ -2074,8 +2074,9 @@ export const crmContacts = pgTable("crm_contacts", {
   // Notes
   notes: text("notes"),
   
-  // Created by tracking
+  // Created/Updated by tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
   
   // Activity tracking
   lastActivityTime: timestamp("last_activity_time"),

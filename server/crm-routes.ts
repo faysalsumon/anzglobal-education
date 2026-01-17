@@ -651,6 +651,7 @@ router.post("/leads/:id/convert", requireAdmin, async (req: any, res) => {
       contactOwner: lead.leadOwner || userId,
       sourceLeadId: lead.id,
       notes: lead.notes,
+      createdByUserId: userId,
     }).returning();
 
     // Update lead with conversion info
@@ -1060,7 +1061,6 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
             : user.emergencyFirstName,
           emergencyContactMobile: user.emergencyMobile,
           emergencyContactRelationship: user.emergencyRelationship,
-          createdByUserId: userId,
         };
         
         // Add all student profile fields
@@ -1231,7 +1231,7 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
     }
 
     // Get related data
-    const [ownerUser, assignedUser, sourceLead] = await Promise.all([
+    const [ownerUser, assignedUser, sourceLead, createdByUser, updatedByUser] = await Promise.all([
       contact.contactOwner
         ? db.select().from(users).where(eq(users.id, contact.contactOwner)).limit(1)
         : Promise.resolve([]),
@@ -1241,6 +1241,12 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
       contact.sourceLeadId
         ? db.select().from(crmLeads).where(eq(crmLeads.id, contact.sourceLeadId)).limit(1)
         : Promise.resolve([]),
+      contact.createdByUserId
+        ? db.select().from(users).where(eq(users.id, contact.createdByUserId)).limit(1)
+        : Promise.resolve([]),
+      contact.updatedByUserId
+        ? db.select().from(users).where(eq(users.id, contact.updatedByUserId)).limit(1)
+        : Promise.resolve([]),
     ]);
 
     res.json({
@@ -1248,6 +1254,8 @@ router.get("/contacts/:id", requireAdmin, async (req, res) => {
       ownerUser: ownerUser[0] || null,
       assignedUser: assignedUser[0] || null,
       sourceLead: sourceLead[0] || null,
+      createdByUser: createdByUser[0] || null,
+      updatedByUser: updatedByUser[0] || null,
     });
   } catch (error) {
     console.error("Error fetching contact:", error);
@@ -1432,6 +1440,7 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
       email: validated.email.toLowerCase().trim(),
       linkedUserId,
       contactOwner: validated.contactOwner || userId,
+      createdByUserId: userId,
     }).returning();
 
     // Log activity
@@ -1518,6 +1527,7 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
     const updateData: any = {
       ...validated,
       updatedAt: new Date(),
+      updatedByUserId: userId,
     };
     
     if (validated.email) {
