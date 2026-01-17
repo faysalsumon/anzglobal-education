@@ -288,6 +288,36 @@ export default function AdminContactForm() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="preferredName">Preferred Name</Label>
+                  <Input
+                    id="preferredName"
+                    value={formData.preferredName || ""}
+                    onChange={(e) => setFormData({ ...formData, preferredName: e.target.value })}
+                    placeholder="Name to call this contact"
+                    data-testid="input-preferred-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={formData.gender || ""}
+                    onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  >
+                    <SelectTrigger id="gender" data-testid="select-gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
                 <Input
