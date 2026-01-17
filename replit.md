@@ -53,6 +53,11 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **Kanban View**: Dual grouping modes - by Client Status or by Contact Type
   - **Drag-and-Drop**: Status/Type transitions via Kanban drag-and-drop
   - **Filtering**: Primary filters (Client Status, Contact Type) + More Filters (Entry Source, Country, Nationality, Assigned To)
+  - **Role Details**: Contacts can be linked to multiple institutions via institutionContacts junction table with:
+    - `roleTitle`: Job title at the institution (e.g., "Marketing Officer", "Admissions Manager")
+    - `department`: Department at the institution (e.g., "Marketing", "Admissions")
+    - Conditional UI: Role Details section only shows for providers_rep, employee, partner, and external contact types
+    - API endpoints: `/api/crm/contacts/:contactId/institutions` for managing institution links from contact side
 - **Profile Management**: Student and Admin profile management with role-based security.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications.
