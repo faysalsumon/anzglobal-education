@@ -31,6 +31,7 @@ import {
   universities,
   courses,
   applications,
+  applicationCourses,
   studentProfiles,
   favorites,
   courseComparisons,
@@ -190,6 +191,29 @@ function checkAIExtractionRateLimit(userId: string, isSuperAdmin: boolean = fals
     resetTime: userLimit.resetTime,
     limit,
   };
+}
+
+// Helper function to generate unique application number (e.g., APP-2024-00001)
+async function generateApplicationNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `APP-${year}-`;
+  
+  // Get the latest application number for this year
+  const latestApp = await db
+    .select({ applicationNumber: applications.applicationNumber })
+    .from(applications)
+    .where(sql`application_number LIKE ${prefix + '%'}`)
+    .orderBy(sql`application_number DESC`)
+    .limit(1)
+    .then(rows => rows[0]);
+  
+  let nextNumber = 1;
+  if (latestApp?.applicationNumber) {
+    const currentNumber = parseInt(latestApp.applicationNumber.split('-')[2], 10);
+    nextNumber = currentNumber + 1;
+  }
+  
+  return `${prefix}${String(nextNumber).padStart(5, '0')}`;
 }
 
 // Helper function to rebuild AI knowledge base asynchronously
@@ -4341,12 +4365,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Generate unique application number
+      const applicationNumber = await generateApplicationNumber();
+      
       const data = insertApplicationSchema.parse({
         ...req.body,
         studentId: profile.id,
+        applicationNumber,
       });
 
       const application = await storage.createApplication(data);
+      
+      // Also add the course to applicationCourses junction table
+      if (application.courseId) {
+        await db.insert(applicationCourses).values({
+          applicationId: application.id,
+          courseId: application.courseId,
+          isPrimary: true,
+          displayOrder: 0,
+          addedBy: userId,
+        });
+      }
       
       // Update contact status to 'applicant' ONLY when FIRST application is created
       // (existingApplications.length === 0 means this is the first application)
@@ -4449,6 +4488,246 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating application:", error);
       res.status(500).json({ message: "Failed to update application" });
+    }
+  });
+
+  // ============================================
+  // APPLICATION COURSES MANAGEMENT ENDPOINTS
+  // ============================================
+  
+  // Get all courses for an application
+  app.get("/api/applications/:id/courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const application = await storage.getApplicationById(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Get courses from junction table
+      const appCourses = await db
+        .select({
+          id: applicationCourses.id,
+          courseId: applicationCourses.courseId,
+          isPrimary: applicationCourses.isPrimary,
+          notes: applicationCourses.notes,
+          displayOrder: applicationCourses.displayOrder,
+          createdAt: applicationCourses.createdAt,
+          course: {
+            id: courses.id,
+            title: courses.title,
+            level: courses.level,
+            duration: courses.duration,
+            fees: courses.fees,
+            universityId: courses.universityId,
+          },
+          university: {
+            id: universities.id,
+            name: universities.name,
+            logo: universities.logo,
+          },
+        })
+        .from(applicationCourses)
+        .leftJoin(courses, eq(applicationCourses.courseId, courses.id))
+        .leftJoin(universities, eq(courses.universityId, universities.id))
+        .where(eq(applicationCourses.applicationId, req.params.id))
+        .orderBy(applicationCourses.displayOrder);
+      
+      res.json({ courses: appCourses });
+    } catch (error) {
+      console.error("Error fetching application courses:", error);
+      res.status(500).json({ message: "Failed to fetch application courses" });
+    }
+  });
+  
+  // Add a course to an application
+  app.post("/api/applications/:id/courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { courseId, notes } = req.body;
+      
+      if (!courseId) {
+        return res.status(400).json({ message: "Course ID is required" });
+      }
+      
+      const application = await storage.getApplicationById(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Verify the course exists and is published
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.publishStatus !== 'published') {
+        return res.status(400).json({ message: "Can only add published courses" });
+      }
+      
+      // Check if course already in application
+      const existing = await db
+        .select({ id: applicationCourses.id })
+        .from(applicationCourses)
+        .where(and(
+          eq(applicationCourses.applicationId, req.params.id),
+          eq(applicationCourses.courseId, courseId)
+        ))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Course already added to this application" });
+      }
+      
+      // Get current max display order
+      const maxOrder = await db
+        .select({ maxOrder: sql<number>`COALESCE(MAX(display_order), -1)` })
+        .from(applicationCourses)
+        .where(eq(applicationCourses.applicationId, req.params.id))
+        .then(rows => rows[0]?.maxOrder ?? -1);
+      
+      // Add the course
+      const [newCourse] = await db.insert(applicationCourses).values({
+        applicationId: req.params.id,
+        courseId,
+        notes,
+        displayOrder: maxOrder + 1,
+        addedBy: userId,
+        isPrimary: maxOrder === -1, // First course is primary
+      }).returning();
+      
+      res.json(newCourse);
+    } catch (error) {
+      console.error("Error adding course to application:", error);
+      res.status(500).json({ message: "Failed to add course to application" });
+    }
+  });
+  
+  // Remove a course from an application
+  app.delete("/api/applications/:id/courses/:courseId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id, courseId } = req.params;
+      
+      const application = await storage.getApplicationById(id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Get the course entry
+      const courseEntry = await db
+        .select()
+        .from(applicationCourses)
+        .where(and(
+          eq(applicationCourses.applicationId, id),
+          eq(applicationCourses.courseId, courseId)
+        ))
+        .limit(1)
+        .then(rows => rows[0]);
+      
+      if (!courseEntry) {
+        return res.status(404).json({ message: "Course not found in application" });
+      }
+      
+      // Don't allow removing if it's the only course
+      const courseCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(applicationCourses)
+        .where(eq(applicationCourses.applicationId, id))
+        .then(rows => rows[0]?.count ?? 0);
+      
+      if (courseCount <= 1) {
+        return res.status(400).json({ message: "Cannot remove the last course from an application" });
+      }
+      
+      // Remove the course
+      await db.delete(applicationCourses)
+        .where(eq(applicationCourses.id, courseEntry.id));
+      
+      // If removed course was primary, make the next one primary
+      if (courseEntry.isPrimary) {
+        await db
+          .update(applicationCourses)
+          .set({ isPrimary: true })
+          .where(eq(applicationCourses.applicationId, id))
+          .orderBy(applicationCourses.displayOrder);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing course from application:", error);
+      res.status(500).json({ message: "Failed to remove course from application" });
+    }
+  });
+  
+  // ============================================
+  // ADMIN USER ENDPOINTS FOR ASSIGNMENT
+  // ============================================
+  
+  // Get admin users for assignment dropdown (users with admin or platform_admin userType)
+  app.get("/api/admin/assignable-users", isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          userType: users.userType,
+        })
+        .from(users)
+        .where(
+          or(
+            eq(users.userType, 'admin'),
+            eq(users.userType, 'platform_admin')
+          )
+        )
+        .orderBy(users.firstName, users.lastName);
+      
+      res.json({ users: adminUsers });
+    } catch (error) {
+      console.error("Error fetching assignable users:", error);
+      res.status(500).json({ message: "Failed to fetch assignable users" });
+    }
+  });
+  
+  // Assign consultant to an application
+  app.patch("/api/applications/:id/assign", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { assignedConsultantId } = req.body;
+      
+      // Check if user is admin
+      const currentUser = await storage.getUserById(userId);
+      if (!currentUser || !['admin', 'platform_admin'].includes(currentUser.userType || '')) {
+        return res.status(403).json({ message: "Only admins can assign consultants" });
+      }
+      
+      const application = await storage.getApplicationById(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // If assigning, verify the consultant exists and is an admin
+      if (assignedConsultantId) {
+        const consultant = await storage.getUserById(assignedConsultantId);
+        if (!consultant || !['admin', 'platform_admin'].includes(consultant.userType || '')) {
+          return res.status(400).json({ message: "Invalid consultant - must be an admin user" });
+        }
+      }
+      
+      // Update the assignment
+      const [updated] = await db
+        .update(applications)
+        .set({
+          assignedConsultantId: assignedConsultantId || null,
+          assignedAt: assignedConsultantId ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(applications.id, req.params.id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error assigning consultant:", error);
+      res.status(500).json({ message: "Failed to assign consultant" });
     }
   });
 

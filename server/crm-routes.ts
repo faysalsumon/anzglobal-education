@@ -19,9 +19,10 @@ import {
   branches,
   studentProfiles,
   applications,
+  applicationCourses,
   applicationStageHistory,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable, ne } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable, ne, sql } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import { getUserAccessContext, checkCrudPermission, type UserAccessContext } from "./access-policy-service";
 import { notifyLeadMention, notifyLeadAssigned } from "./notifications";
@@ -2242,6 +2243,24 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       return res.status(400).json({ message: "Student has already applied to this course" });
     }
 
+    // Generate application number
+    const year = new Date().getFullYear();
+    const prefix = `APP-${year}-`;
+    const latestApp = await db
+      .select({ applicationNumber: applications.applicationNumber })
+      .from(applications)
+      .where(sql`application_number LIKE ${prefix + '%'}`)
+      .orderBy(sql`application_number DESC`)
+      .limit(1)
+      .then(rows => rows[0]);
+    
+    let nextNumber = 1;
+    if (latestApp?.applicationNumber) {
+      const currentNumber = parseInt(latestApp.applicationNumber.split('-')[2], 10);
+      nextNumber = currentNumber + 1;
+    }
+    const applicationNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+
     // Create the application
     const [newApplication] = await db
       .insert(applications)
@@ -2251,8 +2270,18 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
         status: 'pending',
         currentStage: 'Assessment',
         additionalInfo: notes || null,
+        applicationNumber,
       })
       .returning();
+    
+    // Also add course to applicationCourses junction table
+    await db.insert(applicationCourses).values({
+      applicationId: newApplication.id,
+      courseId: courseId,
+      isPrimary: true,
+      displayOrder: 0,
+      addedBy: req.user?.claims?.sub || null,
+    });
 
     // Update contact status to 'applicant' if this is the first application
     if (existingApplications.length === 0) {

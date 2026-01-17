@@ -1278,7 +1278,12 @@ export const studentProfiles = pgTable("student_profiles", {
 // Applications table
 export const applications = pgTable("applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  
+  // Human-readable application number (auto-generated, e.g., APP-2024-00001)
+  applicationNumber: varchar("application_number", { length: 20 }).unique(),
+  
+  // Primary course (kept for backwards compatibility, new courses added via applicationCourses)
+  courseId: varchar("course_id").references(() => courses.id, { onDelete: "set null" }),
   studentId: varchar("student_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
   
   // Application stage workflow
@@ -1309,6 +1314,28 @@ export const applications = pgTable("applications", {
   index("applications_stage_idx").on(table.currentStage),
   index("applications_consultant_idx").on(table.assignedConsultantId),
   index("applications_status_idx").on(table.status),
+  index("applications_number_idx").on(table.applicationNumber),
+]);
+
+// Application Courses junction table - allows multiple courses per application (for package courses)
+export const applicationCourses = pgTable("application_courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  
+  // Course-specific details within the application
+  isPrimary: boolean("is_primary").default(false), // First/main course in the package
+  notes: text("notes"), // Course-specific notes
+  
+  // Order for display (e.g., Certificate III first, then Diploma, then Bachelor)
+  displayOrder: integer("display_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  addedBy: varchar("added_by").references(() => users.id, { onDelete: "set null" }), // Who added this course
+}, (table) => [
+  index("app_courses_application_idx").on(table.applicationId),
+  index("app_courses_course_idx").on(table.courseId),
+  uniqueIndex("app_courses_unique").on(table.applicationId, table.courseId),
 ]);
 
 // Application stage history for tracking all stage transitions
@@ -2266,7 +2293,7 @@ export const studentEmploymentsRelations = relations(studentEmployments, ({ one 
   }),
 }));
 
-export const applicationsRelations = relations(applications, ({ one }) => ({
+export const applicationsRelations = relations(applications, ({ one, many }) => ({
   course: one(courses, {
     fields: [applications.courseId],
     references: [courses.id],
@@ -2274,6 +2301,27 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
   student: one(studentProfiles, {
     fields: [applications.studentId],
     references: [studentProfiles.id],
+  }),
+  assignedConsultant: one(users, {
+    fields: [applications.assignedConsultantId],
+    references: [users.id],
+  }),
+  applicationCourses: many(applicationCourses),
+}));
+
+// Application Courses relations - for package courses
+export const applicationCoursesRelations = relations(applicationCourses, ({ one }) => ({
+  application: one(applications, {
+    fields: [applicationCourses.applicationId],
+    references: [applications.id],
+  }),
+  course: one(courses, {
+    fields: [applicationCourses.courseId],
+    references: [courses.id],
+  }),
+  addedByUser: one(users, {
+    fields: [applicationCourses.addedBy],
+    references: [users.id],
   }),
 }));
 
