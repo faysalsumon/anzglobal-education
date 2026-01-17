@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -229,6 +230,7 @@ export function ApplicationDetailsPanel({
     university?: {
       id: string;
       name: string;
+      logo?: string | null;
     };
   }
   const { data: courseSearchData, isLoading: courseSearchLoading } = useQuery<{ courses: SearchCourse[]; total: number }>({
@@ -1233,24 +1235,29 @@ export function ApplicationDetailsPanel({
                     {searchableCourses.map((course) => (
                       <div
                         key={course.id}
-                        className={`p-3 cursor-pointer hover-elevate ${selectedCourseToAdd === course.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}
+                        className={`p-3 cursor-pointer hover-elevate flex items-start gap-3 ${selectedCourseToAdd === course.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}
                         onClick={() => setSelectedCourseToAdd(course.id)}
                         data-testid={`course-option-${course.id}`}
                       >
-                        <div className="font-medium text-sm">{course.title}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
-                          {course.university?.name && (
-                            <span className="flex items-center gap-1">
-                              <Building className="h-3 w-3" />
-                              {course.university.name}
-                            </span>
-                          )}
-                          {course.level && (
-                            <Badge variant="outline" className="text-xs py-0">{course.level}</Badge>
-                          )}
-                          {course.duration && (
-                            <span>{course.duration}</span>
-                          )}
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          <AvatarImage src={course.university?.logo || undefined} alt={course.university?.name || "Institution"} />
+                          <AvatarFallback className="text-xs">
+                            {course.university?.name?.slice(0, 2).toUpperCase() || "IN"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{course.title}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
+                            {course.university?.name && (
+                              <span className="truncate max-w-[150px]">{course.university.name}</span>
+                            )}
+                            {course.level && (
+                              <Badge variant="outline" className="text-xs py-0">{course.level}</Badge>
+                            )}
+                            {course.duration && (
+                              <span>{course.duration}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

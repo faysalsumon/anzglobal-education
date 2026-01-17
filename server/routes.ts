@@ -1906,11 +1906,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Attach tags to each course
-      const coursesWithTags = courses.map(course => ({
-        ...course,
-        tags: courseTagsMap[course.id] || [],
-      }));
+      // Attach tags and university to each course
+      const coursesWithTags = courses.map(course => {
+        const university = allUniversities.find(u => u.id === course.universityId);
+        return {
+          ...course,
+          tags: courseTagsMap[course.id] || [],
+          university: university ? {
+            id: university.id,
+            name: university.name,
+            logo: university.logo,
+          } : undefined,
+        };
+      });
       
       // Apply limit if provided
       const total = coursesWithTags.length;
