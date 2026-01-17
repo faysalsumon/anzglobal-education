@@ -29,7 +29,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-type ContactType = 'clients' | 'employee' | 'external' | 'others' | 'partner' | 'providers_rep';
+type ContactType = 'clients' | 'external' | 'others' | 'partner' | 'providers_rep';
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
 type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
@@ -95,7 +95,7 @@ interface Institution {
 }
 
 const roleNeedsInstitution = (contactType: string | null | undefined): boolean => {
-  return ['providers_rep', 'employee', 'partner', 'external'].includes(contactType || '');
+  return ['providers_rep', 'partner', 'external'].includes(contactType || '');
 };
 
 const clientStatusOptions = [
@@ -640,7 +640,6 @@ export default function AdminContactForm() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="clients">Clients</SelectItem>
-                      <SelectItem value="employee">Team Member</SelectItem>
                       <SelectItem value="external">External</SelectItem>
                       <SelectItem value="partner">Partner</SelectItem>
                       <SelectItem value="providers_rep">Providers Rep</SelectItem>

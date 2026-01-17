@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-type ContactType = 'none' | 'clients' | 'employee' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
+type ContactType = 'none' | 'clients' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
 type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
@@ -157,7 +157,6 @@ interface InstitutionLink {
 const contactTypeLabels: Record<string, string> = {
   none: "None",
   clients: "Clients (Students)",
-  employee: "Team Member",
   external: "External (Referrals)",
   internal: "Internal",
   others: "Others",
@@ -168,7 +167,6 @@ const contactTypeLabels: Record<string, string> = {
 const contactTypeColors: Record<string, string> = {
   none: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
   clients: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  employee: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   external: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
   internal: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
   others: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
@@ -226,7 +224,7 @@ const leadRatingColors: Record<string, string> = {
   hot: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
-const KANBAN_TYPES: ContactType[] = ['clients', 'employee', 'external', 'internal', 'partner', 'providers_rep', 'others'];
+const KANBAN_TYPES: ContactType[] = ['clients', 'external', 'internal', 'partner', 'providers_rep', 'others'];
 const KANBAN_CLIENT_STATUSES: ClientStatus[] = ['lead', 'applicant', 'enrolled', 'completed', 'inactive'];
 
 export function CrmContactsPanel() {
@@ -527,7 +525,6 @@ export function CrmContactsPanel() {
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="clients">Clients (Students)</SelectItem>
-            <SelectItem value="employee">Team Member</SelectItem>
             <SelectItem value="external">External (Referrals)</SelectItem>
             <SelectItem value="internal">Internal</SelectItem>
             <SelectItem value="partner">Partner</SelectItem>
@@ -1125,7 +1122,6 @@ function ContactFormDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="clients">Clients</SelectItem>
-                    <SelectItem value="employee">Team Member</SelectItem>
                     <SelectItem value="external">External</SelectItem>
                     <SelectItem value="partner">Partner</SelectItem>
                     <SelectItem value="providers_rep">Providers Rep</SelectItem>
@@ -1306,7 +1302,7 @@ const CONTACT_ROLES = [
 ];
 
 const roleNeedsInstitution = (contactType: ContactType) => 
-  ['providers_rep', 'employee', 'partner', 'external'].includes(contactType);
+  ['providers_rep', 'partner', 'external'].includes(contactType);
 
 function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailViewProps) {
   const { toast } = useToast();
