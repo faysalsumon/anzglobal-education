@@ -195,6 +195,7 @@ export function ApplicationDetailsPanel({
   const [newMaxSlots, setNewMaxSlots] = useState<number>(3);
   const [addCourseDialogOpen, setAddCourseDialogOpen] = useState(false);
   const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
@@ -217,6 +218,24 @@ export function ApplicationDetailsPanel({
   const { data: slotsData } = useQuery<{ maxSlots: number; usedSlots: number; availableSlots: number }>({
     queryKey: ["/api/admin/students", student.id, "application-slots"],
   });
+  
+  // Search for courses to add
+  interface SearchCourse {
+    id: string;
+    title: string;
+    level: string | null;
+    duration: string | null;
+    fees: string | null;
+    university?: {
+      id: string;
+      name: string;
+    };
+  }
+  const { data: courseSearchData, isLoading: courseSearchLoading } = useQuery<{ courses: SearchCourse[]; total: number }>({
+    queryKey: ["/api/courses", { search: courseSearchQuery, limit: 10 }],
+    enabled: addCourseDialogOpen && courseSearchQuery.length >= 2,
+  });
+  const searchableCourses = courseSearchData?.courses || [];
   
   const consultants = consultantsData?.consultants || [];
 
@@ -1169,28 +1188,86 @@ export function ApplicationDetailsPanel({
       </Dialog>
       
       {/* Add Course Dialog */}
-      <Dialog open={addCourseDialogOpen} onOpenChange={setAddCourseDialogOpen}>
-        <DialogContent data-testid="dialog-add-course">
+      <Dialog open={addCourseDialogOpen} onOpenChange={(open) => {
+        setAddCourseDialogOpen(open);
+        if (!open) {
+          setCourseSearchQuery("");
+          setSelectedCourseToAdd("");
+        }
+      }}>
+        <DialogContent data-testid="dialog-add-course" className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Course to Application</DialogTitle>
             <DialogDescription>
-              Search for a course to add to this application package.
+              Search for a published course to add to this application package.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="course-search">Course ID</Label>
+              <Label htmlFor="course-search">Search Courses</Label>
               <Input
                 id="course-search"
-                value={selectedCourseToAdd}
-                onChange={(e) => setSelectedCourseToAdd(e.target.value)}
-                placeholder="Enter course ID to add..."
-                data-testid="input-add-course-id"
+                value={courseSearchQuery}
+                onChange={(e) => setCourseSearchQuery(e.target.value)}
+                placeholder="Type at least 2 characters to search..."
+                data-testid="input-course-search"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Enter the UUID of the published course you want to add.
+                Search by course name to find published courses.
               </p>
             </div>
+            
+            {/* Search Results */}
+            {courseSearchQuery.length >= 2 && (
+              <div className="border rounded-md max-h-60 overflow-y-auto">
+                {courseSearchLoading ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Searching...
+                  </div>
+                ) : searchableCourses.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No courses found. Try a different search term.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {searchableCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className={`p-3 cursor-pointer hover-elevate ${selectedCourseToAdd === course.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''}`}
+                        onClick={() => setSelectedCourseToAdd(course.id)}
+                        data-testid={`course-option-${course.id}`}
+                      >
+                        <div className="font-medium text-sm">{course.title}</div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
+                          {course.university?.name && (
+                            <span className="flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {course.university.name}
+                            </span>
+                          )}
+                          {course.level && (
+                            <Badge variant="outline" className="text-xs py-0">{course.level}</Badge>
+                          )}
+                          {course.duration && (
+                            <span>{course.duration}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Selected Course Preview */}
+            {selectedCourseToAdd && (
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="text-xs text-muted-foreground mb-1">Selected Course:</div>
+                <div className="font-medium text-sm">
+                  {searchableCourses.find(c => c.id === selectedCourseToAdd)?.title || selectedCourseToAdd}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddCourseDialogOpen(false)}>Cancel</Button>
