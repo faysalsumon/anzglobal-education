@@ -2146,6 +2146,132 @@ router.get("/contacts/:id/applications", requireAdmin, async (req: any, res) => 
   }
 });
 
+// Create application on behalf of a contact (admin only)
+router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { courseId, notes } = req.body;
+
+    // Validate required fields
+    if (!courseId || typeof courseId !== 'string') {
+      return res.status(400).json({ message: "Course ID is required and must be a string" });
+    }
+    if (notes && typeof notes !== 'string') {
+      return res.status(400).json({ message: "Notes must be a string" });
+    }
+
+    // Get the contact
+    const contact = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Only allow creating applications for client-type contacts
+    if (contact.contactType !== 'clients') {
+      return res.status(400).json({ message: "Applications can only be created for client contacts" });
+    }
+
+    // Check if contact has a linked user
+    if (!contact.linkedUserId) {
+      return res.status(400).json({ message: "Contact is not linked to a registered user account" });
+    }
+
+    // Get the student profile for this user
+    const studentProfile = await db
+      .select()
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, contact.linkedUserId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!studentProfile) {
+      return res.status(400).json({ message: "Contact does not have a student profile. The student needs to complete their profile first." });
+    }
+
+    // Check application slot limit
+    const existingApplications = await db
+      .select({ id: applications.id })
+      .from(applications)
+      .where(eq(applications.studentId, studentProfile.id));
+
+    const maxSlots = studentProfile.maxApplicationSlots || 3;
+    
+    if (existingApplications.length >= maxSlots) {
+      return res.status(403).json({
+        message: `Student has reached their maximum of ${maxSlots} applications. You can increase their slots in their student profile.`,
+        currentCount: existingApplications.length,
+        maxSlots: maxSlots,
+      });
+    }
+
+    // Verify the course exists and is published
+    const course = await db
+      .select()
+      .from(courses)
+      .where(eq(courses.id, courseId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // Ensure the course is published (admins can only create applications for published courses)
+    if (course.publishStatus !== 'published') {
+      return res.status(400).json({ message: "Can only create applications for published courses" });
+    }
+
+    // Check if student already applied to this course
+    const existingApplication = await db
+      .select({ id: applications.id })
+      .from(applications)
+      .where(and(
+        eq(applications.studentId, studentProfile.id),
+        eq(applications.courseId, courseId)
+      ))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (existingApplication) {
+      return res.status(400).json({ message: "Student has already applied to this course" });
+    }
+
+    // Create the application
+    const [newApplication] = await db
+      .insert(applications)
+      .values({
+        studentId: studentProfile.id,
+        courseId: courseId,
+        status: 'pending',
+        currentStage: 'Assessment',
+        additionalInfo: notes || null,
+      })
+      .returning();
+
+    // Update contact status to 'applicant' if this is the first application
+    if (existingApplications.length === 0) {
+      await updateContactStatusOnApplication(contact.linkedUserId, 'applicant');
+    }
+
+    console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (course: ${courseId})`);
+
+    res.json({ 
+      success: true, 
+      application: newApplication,
+      message: "Application created successfully"
+    });
+  } catch (error) {
+    console.error("Error creating application for contact:", error);
+    res.status(500).json({ message: "Failed to create application" });
+  }
+});
+
 // Update contact clientStatus when application is created or accepted
 // Enforces proper transition rules: lead → applicant → enrolled
 // Does not regress status (e.g., won't overwrite completed/inactive)

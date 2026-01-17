@@ -1353,6 +1353,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
   const [linkDepartment, setLinkDepartment] = useState("");
   const [linkIsPrimary, setLinkIsPrimary] = useState(false);
 
+  // Create Application dialog state
+  const [isCreateApplicationOpen, setIsCreateApplicationOpen] = useState(false);
+  const [courseSearch, setCourseSearch] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [applicationNotes, setApplicationNotes] = useState("");
+
   const [, navigate] = useLocation();
   
   const { data: institutionLinks = [], isLoading: isLoadingLinks } = useQuery<InstitutionLink[]>({
@@ -1365,6 +1371,13 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
     enabled: isAddInstitutionOpen && institutionSearch.length > 1,
   });
   const institutions = institutionsData?.universities || [];
+
+  // Fetch courses for Create Application dialog
+  const { data: coursesData, isLoading: isLoadingCourses } = useQuery<{ courses: any[]; total: number }>({
+    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published' }],
+    enabled: isCreateApplicationOpen && courseSearch.length > 1,
+  });
+  const searchCourses = coursesData?.courses || [];
 
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
@@ -1407,6 +1420,32 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
       toast({ title: "Failed to remove link", description: error.message, variant: "destructive" });
     },
   });
+
+  const createApplicationMutation = useMutation({
+    mutationFn: async (data: { courseId: string; notes?: string }) => {
+      return apiRequest("POST", `/api/crm/contacts/${contact.id}/applications`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Application created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", contact.id, "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      setIsCreateApplicationOpen(false);
+      setSelectedCourseId(null);
+      setCourseSearch("");
+      setApplicationNotes("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create application", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreateApplication = () => {
+    if (!selectedCourseId) return;
+    createApplicationMutation.mutate({
+      courseId: selectedCourseId,
+      notes: applicationNotes || undefined,
+    });
+  };
 
   const handleAddInstitution = () => {
     if (!selectedInstitutionId) return;
@@ -1715,7 +1754,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
         {/* Applications Section - Only for clients (students) */}
         {contact.contactType === 'clients' && (
           <Card className="md:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Applications</CardTitle>
@@ -1723,11 +1762,24 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                   <Badge variant="secondary">{applicationsData.applications.length}</Badge>
                 )}
               </div>
-              {applicationsData?.studentProfile && (
-                <span className="text-sm text-muted-foreground">
-                  {applicationsData.applications.length} / {applicationsData.studentProfile.maxApplicationSlots} slots used
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {applicationsData?.studentProfile && (
+                  <span className="text-sm text-muted-foreground">
+                    {applicationsData.applications.length} / {applicationsData.studentProfile.maxApplicationSlots} slots used
+                  </span>
+                )}
+                {applicationsData?.studentProfile && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsCreateApplicationOpen(true)}
+                    disabled={applicationsData.applications.length >= (applicationsData.studentProfile.maxApplicationSlots || 3)}
+                    data-testid="button-create-application"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Application
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoadingApplications ? (
@@ -1901,6 +1953,90 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
               data-testid="button-confirm-add-institution"
             >
               {addLinkMutation.isPending ? "Adding..." : "Add Institution"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Application Dialog */}
+      <Dialog open={isCreateApplicationOpen} onOpenChange={setIsCreateApplicationOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Application</DialogTitle>
+            <DialogDescription>
+              Create a new application on behalf of {contact.firstName} {contact.lastName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Search Course *</Label>
+              <Input
+                placeholder="Type to search courses..."
+                value={courseSearch}
+                onChange={(e) => setCourseSearch(e.target.value)}
+                data-testid="input-course-search"
+              />
+              {isLoadingCourses && courseSearch.length > 1 && (
+                <p className="text-sm text-muted-foreground">Searching courses...</p>
+              )}
+              {!isLoadingCourses && searchCourses.length > 0 && (
+                <ScrollArea className="h-48 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    {searchCourses.map((course: any) => (
+                      <div
+                        key={course.id}
+                        className={`p-3 rounded cursor-pointer hover-elevate ${
+                          selectedCourseId === course.id ? "bg-primary/10 border border-primary" : ""
+                        }`}
+                        onClick={() => setSelectedCourseId(course.id)}
+                        data-testid={`course-option-${course.id}`}
+                      >
+                        <p className="font-medium">{course.title}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {course.universityName && <span>{course.universityName}</span>}
+                          {course.level && (
+                            <>
+                              <span>•</span>
+                              <Badge variant="outline" className="text-xs">{course.level}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              {!isLoadingCourses && courseSearch.length > 1 && searchCourses.length === 0 && (
+                <p className="text-sm text-muted-foreground">No courses found. Try a different search term.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                placeholder="Add any notes about this application..."
+                value={applicationNotes}
+                onChange={(e) => setApplicationNotes(e.target.value)}
+                className="resize-none"
+                rows={3}
+                data-testid="input-application-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsCreateApplicationOpen(false);
+              setSelectedCourseId(null);
+              setCourseSearch("");
+              setApplicationNotes("");
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateApplication}
+              disabled={!selectedCourseId || createApplicationMutation.isPending}
+              data-testid="button-confirm-create-application"
+            >
+              {createApplicationMutation.isPending ? "Creating..." : "Create Application"}
             </Button>
           </DialogFooter>
         </DialogContent>
