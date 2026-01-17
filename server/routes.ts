@@ -3174,6 +3174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 firstName: consultantUser.firstName,
                 lastName: consultantUser.lastName,
                 email: consultantUser.email,
+                profilePicture: consultantUser.userProfilePicture || null,
               };
             }
           }

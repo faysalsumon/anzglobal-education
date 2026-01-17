@@ -121,6 +121,7 @@ interface ApplicationCardProps {
     firstName: string | null;
     lastName: string | null;
     email: string | null;
+    profilePicture: string | null;
   } | null;
 }
 
@@ -601,6 +602,7 @@ export function ApplicationCard({ application, course, university, consultant }:
               {consultant ? (
                 <span className="inline-flex items-center gap-2">
                   <Avatar className="h-6 w-6">
+                    <AvatarImage src={consultant.profilePicture || undefined} />
                     <AvatarFallback className="bg-blue-500 text-white text-xs">
                       {consultant.firstName?.[0] || 'C'}{consultant.lastName?.[0] || ''}
                     </AvatarFallback>

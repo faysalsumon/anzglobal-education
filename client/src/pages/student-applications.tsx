@@ -55,6 +55,7 @@ interface ApplicationWithDetails {
     firstName: string | null;
     lastName: string | null;
     email: string | null;
+    profilePicture: string | null;
   } | null;
 }
 
