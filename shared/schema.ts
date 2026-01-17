@@ -231,6 +231,14 @@ export const entrySourceEnum = pgEnum('entry_source', [
   'other',          // Other sources
 ]);
 
+// CRM Gender enum
+export const genderEnum = pgEnum('gender', [
+  'male',
+  'female',
+  'other',
+  'prefer_not_to_say',
+]);
+
 // Admin approval status enum
 export const approvalStatusEnum = pgEnum('approval_status', [
   'pending',
@@ -1958,6 +1966,8 @@ export const crmContacts = pgTable("crm_contacts", {
   contactType: contactTypeEnum("contact_type").notNull().default("none"),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  preferredName: text("preferred_name"),
+  gender: genderEnum("gender"),
   email: text("email").notNull(),
   mobile: text("mobile").notNull(),
   phone: text("phone"),
