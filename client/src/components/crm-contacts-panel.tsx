@@ -1036,11 +1036,9 @@ function ContactFormDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="clients">Clients</SelectItem>
-                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="employee">Team Member</SelectItem>
                     <SelectItem value="external">External</SelectItem>
-                    <SelectItem value="internal">Internal</SelectItem>
                     <SelectItem value="partner">Partner</SelectItem>
                     <SelectItem value="providers_rep">Providers Rep</SelectItem>
                     <SelectItem value="others">Others</SelectItem>
