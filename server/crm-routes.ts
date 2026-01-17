@@ -895,6 +895,12 @@ export async function syncUserProfileToCrmContact(userId: string): Promise<{ suc
       updateData.suburb = studentProfile.suburb || linkedContact.suburb;
       updateData.unitNo = studentProfile.unitNo || linkedContact.unitNo;
       
+      // Emergency contact fields
+      updateData.emergencyContactName = studentProfile.emergencyContactName || linkedContact.emergencyContactName;
+      updateData.emergencyContactMobile = studentProfile.emergencyContactMobile || linkedContact.emergencyContactMobile;
+      updateData.emergencyContactRelationship = studentProfile.emergencyContactRelationship || linkedContact.emergencyContactRelationship;
+      updateData.emergencyContactAddress = studentProfile.emergencyContactAddress || linkedContact.emergencyContactAddress;
+      
       // Map education fields
       if (studentProfile.educationLevel) {
         updateData.programType = studentProfile.educationLevel;

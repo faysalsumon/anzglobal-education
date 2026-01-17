@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone } from "lucide-react";
 import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
@@ -67,6 +67,13 @@ const bioSchema = z.object({
   educationLevel: z.string().optional(),
   fieldOfStudy: z.string().optional(),
   previousEducation: z.string().optional(),
+});
+
+const emergencyContactSchema = z.object({
+  emergencyContactName: z.string().optional().nullable(),
+  emergencyContactMobile: z.string().optional().nullable(),
+  emergencyContactRelationship: z.string().optional().nullable(),
+  emergencyContactAddress: z.string().optional().nullable(),
 });
 
 const educationFormSchema = z.object({
@@ -334,6 +341,16 @@ function StudentProfileContent() {
     },
   });
 
+  const emergencyForm = useForm<z.infer<typeof emergencyContactSchema>>({
+    resolver: zodResolver(emergencyContactSchema),
+    defaultValues: {
+      emergencyContactName: "",
+      emergencyContactMobile: "",
+      emergencyContactRelationship: "",
+      emergencyContactAddress: "",
+    },
+  });
+
   const educationForm = useForm<z.infer<typeof educationFormSchema>>({
     resolver: zodResolver(educationFormSchema),
     defaultValues: {
@@ -406,6 +423,12 @@ function StudentProfileContent() {
         educationLevel: profile.educationLevel || "",
         fieldOfStudy: profile.fieldOfStudy || "",
         previousEducation: profile.previousEducation || "",
+      });
+      emergencyForm.reset({
+        emergencyContactName: profile.emergencyContactName || "",
+        emergencyContactMobile: profile.emergencyContactMobile || "",
+        emergencyContactRelationship: profile.emergencyContactRelationship || "",
+        emergencyContactAddress: profile.emergencyContactAddress || "",
       });
     }
   }, [profile]);
@@ -914,6 +937,10 @@ function StudentProfileContent() {
     createOrUpdateMutation.mutate(data);
   });
 
+  const handleEmergencySubmit = emergencyForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate(data);
+  });
+
   const isLoading = profileLoading || completionLoading;
 
   return (
@@ -986,7 +1013,7 @@ function StudentProfileContent() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5" data-testid="tabs-profile-sections">
+        <TabsList className="grid w-full grid-cols-6" data-testid="tabs-profile-sections">
           <TabsTrigger value="personal" data-testid="tab-personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
@@ -1002,6 +1029,10 @@ function StudentProfileContent() {
           <TabsTrigger value="employment" data-testid="tab-employment" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
             <span className="hidden sm:inline">Employment</span>
+          </TabsTrigger>
+          <TabsTrigger value="emergency" data-testid="tab-emergency" className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            <span className="hidden sm:inline">Emergency</span>
           </TabsTrigger>
           <TabsTrigger value="bio" data-testid="tab-bio" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
@@ -2378,6 +2409,130 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="emergency">
+          <Form {...emergencyForm}>
+            <form onSubmit={handleEmergencySubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-accent" />
+                    Emergency Contact
+                  </CardTitle>
+                  <CardDescription>
+                    Provide details of someone we can contact in case of an emergency
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={emergencyForm.control}
+                      name="emergencyContactName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Emergency Contact Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="e.g., John Smith"
+                              data-testid="input-emergency-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emergencyForm.control}
+                      name="emergencyContactMobile"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Emergency Contact Mobile</FormLabel>
+                          <FormControl>
+                            <PhoneInput
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder="e.g., +61 400 000 000"
+                              data-testid="input-emergency-mobile"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={emergencyForm.control}
+                      name="emergencyContactRelationship"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Relationship</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-emergency-relationship">
+                                <SelectValue placeholder="Select relationship" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="parent">Parent</SelectItem>
+                              <SelectItem value="spouse">Spouse</SelectItem>
+                              <SelectItem value="sibling">Sibling</SelectItem>
+                              <SelectItem value="relative">Other Relative</SelectItem>
+                              <SelectItem value="friend">Friend</SelectItem>
+                              <SelectItem value="guardian">Legal Guardian</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emergencyForm.control}
+                      name="emergencyContactAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Emergency Contact Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="e.g., 123 Main St, Sydney NSW 2000"
+                              data-testid="input-emergency-address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="submit"
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-emergency"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Emergency Contact"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </TabsContent>
 
         <TabsContent value="bio">

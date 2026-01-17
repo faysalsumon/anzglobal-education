@@ -1262,6 +1262,12 @@ export const studentProfiles = pgTable("student_profiles", {
   bankBsbCode: varchar("bank_bsb_code", { length: 10 }),
   bankAccountNumber: varchar("bank_account_number", { length: 20 }),
   
+  // Emergency Contact fields (syncs to CRM contacts)
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactMobile: varchar("emergency_contact_mobile", { length: 50 }),
+  emergencyContactRelationship: text("emergency_contact_relationship"),
+  emergencyContactAddress: text("emergency_contact_address"),
+  
   // Application slots (default 3, can be increased by consultant)
   maxApplicationSlots: integer("max_application_slots").default(3).notNull(),
   
