@@ -12,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -67,6 +69,32 @@ interface CrmContact {
   createdAt: string | null;
   updatedAt: string | null;
 }
+
+interface InstitutionLink {
+  id: number;
+  institutionId: number;
+  contactId: string;
+  contactRole: string;
+  roleTitle: string | null;
+  department: string | null;
+  isPrimary: boolean;
+  notes: string | null;
+  institution?: {
+    id: number;
+    name: string;
+    country?: string;
+  };
+}
+
+interface Institution {
+  id: number;
+  name: string;
+  country?: string;
+}
+
+const roleNeedsInstitution = (contactType: string | null | undefined): boolean => {
+  return ['providers_rep', 'employee', 'partner', 'external'].includes(contactType || '');
+};
 
 const clientStatusOptions = [
   { value: 'lead', label: 'Lead' },
@@ -143,6 +171,81 @@ export default function AdminContactForm() {
     },
     enabled: isEditing,
   });
+
+  // Role Details - Institution links
+  const [showAddInstitution, setShowAddInstitution] = useState(false);
+  const [newInstitutionId, setNewInstitutionId] = useState<number | null>(null);
+  const [newRoleTitle, setNewRoleTitle] = useState("");
+  const [newDepartment, setNewDepartment] = useState("");
+
+  const { data: institutionLinks = [] } = useQuery<InstitutionLink[]>({
+    queryKey: ["/api/crm/contacts", params.id, "institutions"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/contacts/${params.id}/institutions`, { credentials: 'include', headers });
+      if (!response.ok) throw new Error("Failed to fetch institution links");
+      return response.json();
+    },
+    enabled: isEditing && roleNeedsInstitution(formData.contactType),
+  });
+
+  const { data: allInstitutions = [] } = useQuery<Institution[]>({
+    queryKey: ["/api/admin/institutions"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/admin/institutions", { credentials: 'include', headers });
+      if (!response.ok) throw new Error("Failed to fetch institutions");
+      return response.json();
+    },
+    enabled: isEditing && roleNeedsInstitution(formData.contactType),
+  });
+
+  const addInstitutionLinkMutation = useMutation({
+    mutationFn: async (data: { institutionId: number; roleTitle: string | null; department: string | null }) => {
+      return apiRequest("POST", `/api/crm/contacts/${params.id}/institutions`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", params.id, "institutions"] });
+      toast({ title: "Success", description: "Institution link added" });
+      setShowAddInstitution(false);
+      setNewInstitutionId(null);
+      setNewRoleTitle("");
+      setNewDepartment("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to add institution link", variant: "destructive" });
+    },
+  });
+
+  const removeInstitutionLinkMutation = useMutation({
+    mutationFn: async (institutionId: number) => {
+      return apiRequest("DELETE", `/api/crm/contacts/${params.id}/institutions/${institutionId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts", params.id, "institutions"] });
+      toast({ title: "Success", description: "Institution link removed" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to remove institution link", variant: "destructive" });
+    },
+  });
+
+  const handleAddInstitutionLink = () => {
+    if (!newInstitutionId) {
+      toast({ title: "Error", description: "Please select an institution", variant: "destructive" });
+      return;
+    }
+    addInstitutionLinkMutation.mutate({
+      institutionId: newInstitutionId,
+      roleTitle: newRoleTitle || null,
+      department: newDepartment || null,
+    });
+  };
+
+  // Filter out already linked institutions
+  const availableInstitutions = allInstitutions.filter(
+    inst => !institutionLinks.some(link => link.institutionId === inst.id)
+  );
 
   useEffect(() => {
     if (existingContact) {
@@ -255,11 +358,14 @@ export default function AdminContactForm() {
       </div>
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className={`grid w-full mb-6 ${isEditing && roleNeedsInstitution(formData.contactType) ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="basic" data-testid="tab-basic">Basic Info</TabsTrigger>
           <TabsTrigger value="crm" data-testid="tab-crm">CRM Details</TabsTrigger>
           <TabsTrigger value="address" data-testid="tab-address">Address</TabsTrigger>
           <TabsTrigger value="emergency" data-testid="tab-emergency">Emergency</TabsTrigger>
+          {isEditing && roleNeedsInstitution(formData.contactType) && (
+            <TabsTrigger value="role-details" data-testid="tab-role-details">Role Details</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="basic">
@@ -686,6 +792,134 @@ export default function AdminContactForm() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isEditing && roleNeedsInstitution(formData.contactType) && (
+          <TabsContent value="role-details">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Institution Affiliations
+                  </CardTitle>
+                  <Dialog open={showAddInstitution} onOpenChange={setShowAddInstitution}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" data-testid="button-add-institution-link">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Institution
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Link to Institution</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Institution *</Label>
+                          <Select
+                            value={newInstitutionId?.toString() || ""}
+                            onValueChange={(value) => setNewInstitutionId(parseInt(value))}
+                          >
+                            <SelectTrigger data-testid="select-institution">
+                              <SelectValue placeholder="Select institution" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableInstitutions.map((inst) => (
+                                <SelectItem key={inst.id} value={inst.id.toString()}>
+                                  {inst.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Role Title</Label>
+                          <Input
+                            placeholder="e.g., Marketing Officer, Admissions Manager"
+                            value={newRoleTitle}
+                            onChange={(e) => setNewRoleTitle(e.target.value)}
+                            data-testid="input-new-role-title"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Department</Label>
+                          <Input
+                            placeholder="e.g., Marketing, Admissions"
+                            value={newDepartment}
+                            onChange={(e) => setNewDepartment(e.target.value)}
+                            data-testid="input-new-department"
+                          />
+                        </div>
+                        <Button
+                          className="w-full"
+                          onClick={handleAddInstitutionLink}
+                          disabled={addInstitutionLinkMutation.isPending}
+                          data-testid="button-confirm-add-institution"
+                        >
+                          {addInstitutionLinkMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          Add Institution Link
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {institutionLinks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No institution affiliations yet.</p>
+                    <p className="text-sm">Click "Add Institution" to link this contact to an institution.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {institutionLinks.map((link) => (
+                      <div
+                        key={link.id}
+                        className="flex items-center justify-between p-4 rounded-lg border bg-card gap-3"
+                        data-testid={`institution-link-${link.id}`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Building className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate" data-testid={`text-institution-name-${link.id}`}>
+                              {link.institution?.name || "Unknown Institution"}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap mt-1">
+                              {link.roleTitle && (
+                                <Badge variant="secondary" data-testid={`badge-role-title-${link.id}`}>
+                                  {link.roleTitle}
+                                </Badge>
+                              )}
+                              {link.department && (
+                                <span className="text-sm text-muted-foreground" data-testid={`text-department-${link.id}`}>
+                                  {link.department}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeInstitutionLinkMutation.mutate(link.institutionId)}
+                          disabled={removeInstitutionLinkMutation.isPending}
+                          data-testid={`button-remove-institution-${link.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <div className="flex justify-end gap-2 mt-6 sm:hidden">
