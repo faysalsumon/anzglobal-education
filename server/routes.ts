@@ -3158,17 +3158,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const applications = await storage.getApplicationsByStudentId(profile.id);
       
-      // Enrich applications with course and university details
+      // Enrich applications with course, university, and consultant details
       const enrichedApplications = await Promise.all(
         applications.map(async (app) => {
           const course = await storage.getCourseById(app.courseId);
           const university = course ? await storage.getUniversityById(course.universityId) : null;
           
+          // Fetch consultant if assigned
+          let consultant = null;
+          if (app.assignedConsultantId) {
+            const consultantUser = await storage.getUserById(app.assignedConsultantId);
+            if (consultantUser) {
+              consultant = {
+                id: consultantUser.id,
+                firstName: consultantUser.firstName,
+                lastName: consultantUser.lastName,
+                email: consultantUser.email,
+              };
+            }
+          }
+          
           return {
             application: app,
             course: course || null,
             university: university || null,
-            consultant: null,
+            consultant,
           };
         })
       );
