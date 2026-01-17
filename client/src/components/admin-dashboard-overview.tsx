@@ -9,6 +9,7 @@ import {
   BookOpen, 
   Building2,
   TrendingUp, 
+  Sparkles,
   ArrowRight, 
   Clock, 
   CheckCircle,
