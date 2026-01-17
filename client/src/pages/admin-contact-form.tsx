@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRef } from "react";
+import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -123,19 +124,6 @@ const leadRatingOptions = [
   { value: 'hot', label: 'Hot' },
 ];
 
-const COUNTRIES = [
-  "Afghanistan", "Albania", "Algeria", "Argentina", "Australia", "Austria", 
-  "Bangladesh", "Belgium", "Brazil", "Canada", "Chile", "China", "Colombia",
-  "Egypt", "Ethiopia", "France", "Germany", "Ghana", "Greece", "Hong Kong",
-  "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Japan",
-  "Jordan", "Kazakhstan", "Kenya", "Kuwait", "Lebanon", "Malaysia", "Mexico",
-  "Morocco", "Myanmar", "Nepal", "Netherlands", "New Zealand", "Nigeria",
-  "Norway", "Oman", "Pakistan", "Peru", "Philippines", "Poland", "Portugal",
-  "Qatar", "Romania", "Russia", "Saudi Arabia", "Singapore", "South Africa",
-  "South Korea", "Spain", "Sri Lanka", "Sweden", "Switzerland", "Taiwan",
-  "Thailand", "Turkey", "UAE", "Uganda", "Ukraine", "United Kingdom",
-  "United States", "Vietnam", "Zimbabwe"
-];
 
 export default function AdminContactForm() {
   const [, navigate] = useLocation();
@@ -650,19 +638,100 @@ export default function AdminContactForm() {
                 <div className="space-y-2">
                   <Label htmlFor="nationality">Nationality</Label>
                   <Select
-                    value={formData.nationality || ""}
+                    value={(() => {
+                      const matched = getCountryByNationality(formData.nationality || "");
+                      return matched ? matched.nationality : (formData.nationality || "");
+                    })()}
                     onValueChange={(value) => setFormData({ ...formData, nationality: value })}
                   >
                     <SelectTrigger id="nationality" data-testid="select-nationality">
-                      <SelectValue placeholder="Select nationality" />
+                      <SelectValue placeholder="Select nationality">
+                        {formData.nationality && (() => {
+                          const matched = getCountryByNationality(formData.nationality);
+                          if (matched) {
+                            return (
+                              <span className="flex items-center gap-2">
+                                <img 
+                                  src={getFlagUrl(matched.code)} 
+                                  alt={matched.name}
+                                  className="w-5 h-4 object-cover rounded-sm"
+                                />
+                                {matched.nationality}
+                              </span>
+                            );
+                          }
+                          return formData.nationality;
+                        })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map((country) => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      {formData.nationality && !getCountryByNationality(formData.nationality) && (
+                        <SelectItem value={formData.nationality}>{formData.nationality}</SelectItem>
+                      )}
+                      {NATIONALITIES_SORTED.map((country) => (
+                        <SelectItem key={country.code} value={country.nationality}>
+                          <span className="flex items-center gap-2">
+                            <img 
+                              src={getFlagUrl(country.code)} 
+                              alt={country.name}
+                              className="w-5 h-4 object-cover rounded-sm"
+                            />
+                            {country.nationality}
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country">Country of Residence</Label>
+                <Select
+                  value={(() => {
+                    const matched = getCountryByName(formData.country || "");
+                    return matched ? matched.name : (formData.country || "");
+                  })()}
+                  onValueChange={(value) => setFormData({ ...formData, country: value })}
+                >
+                  <SelectTrigger id="country" data-testid="select-country">
+                    <SelectValue placeholder="Select country">
+                      {formData.country && (() => {
+                        const matched = getCountryByName(formData.country);
+                        if (matched) {
+                          return (
+                            <span className="flex items-center gap-2">
+                              <img 
+                                src={getFlagUrl(matched.code)} 
+                                alt={matched.name}
+                                className="w-5 h-4 object-cover rounded-sm"
+                              />
+                              {matched.name}
+                            </span>
+                          );
+                        }
+                        return formData.country;
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.country && !getCountryByName(formData.country) && (
+                      <SelectItem value={formData.country}>{formData.country}</SelectItem>
+                    )}
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={country.code} value={country.name}>
+                        <span className="flex items-center gap-2">
+                          <img 
+                            src={getFlagUrl(country.code)} 
+                            alt={country.name}
+                            className="w-5 h-4 object-cover rounded-sm"
+                          />
+                          {country.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -857,17 +926,49 @@ export default function AdminContactForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
+                  <Label htmlFor="addressCountry">Country</Label>
                   <Select
-                    value={formData.country || ""}
+                    value={(() => {
+                      const matched = getCountryByName(formData.country || "");
+                      return matched ? matched.name : (formData.country || "");
+                    })()}
                     onValueChange={(value) => setFormData({ ...formData, country: value })}
                   >
-                    <SelectTrigger id="country" data-testid="select-country">
-                      <SelectValue placeholder="Select country" />
+                    <SelectTrigger id="addressCountry" data-testid="select-address-country">
+                      <SelectValue placeholder="Select country">
+                        {formData.country && (() => {
+                          const matched = getCountryByName(formData.country);
+                          if (matched) {
+                            return (
+                              <span className="flex items-center gap-2">
+                                <img 
+                                  src={getFlagUrl(matched.code)} 
+                                  alt={matched.name}
+                                  className="w-5 h-4 object-cover rounded-sm"
+                                />
+                                {matched.name}
+                              </span>
+                            );
+                          }
+                          return formData.country;
+                        })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map((country) => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      {formData.country && !getCountryByName(formData.country) && (
+                        <SelectItem value={formData.country}>{formData.country}</SelectItem>
+                      )}
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.name}>
+                          <span className="flex items-center gap-2">
+                            <img 
+                              src={getFlagUrl(c.code)} 
+                              alt={c.name}
+                              className="w-5 h-4 object-cover rounded-sm"
+                            />
+                            {c.name}
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
