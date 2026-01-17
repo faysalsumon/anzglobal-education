@@ -210,6 +210,27 @@ export const contactTypeEnum = pgEnum('contact_type', [
   'providers_rep',
 ]);
 
+// CRM Client Status enum - for tracking student/client journey (applies to 'clients' contact type)
+export const clientStatusEnum = pgEnum('client_status', [
+  'lead',           // Initial inquiry, not yet applied
+  'applicant',      // Has started/submitted an application
+  'enrolled',       // Confirmed and studying
+  'completed',      // Graduated/finished
+  'inactive',       // Dropped off or no longer engaged
+]);
+
+// CRM Entry Source enum - how the contact entered the system
+export const entrySourceEnum = pgEnum('entry_source', [
+  'website',        // Self-registered student
+  'consultant',     // Manual entry by team member
+  'sub_agent',      // Partner agent submission
+  'affiliate',      // External partner program
+  'import',         // Bulk CSV import
+  'referral',       // Referred by another contact
+  'facebook_ads',   // Facebook advertising
+  'other',          // Other sources
+]);
+
 // Admin approval status enum
 export const approvalStatusEnum = pgEnum('approval_status', [
   'pending',
@@ -1928,7 +1949,7 @@ export const leadHistory = pgTable("lead_history", {
   actionIdx: index("lead_history_action_idx").on(table.action),
 }));
 
-// CRM Contacts table - categorized organization contacts
+// CRM Contacts table - unified contact management for all contact types
 export const crmContacts = pgTable("crm_contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -1942,6 +1963,16 @@ export const crmContacts = pgTable("crm_contacts", {
   phone: text("phone"),
   nationality: text("nationality"),
   country: text("country"),
+  city: text("city"),
+  
+  // Client Status & Entry Source (primarily for 'clients' contact type)
+  clientStatus: clientStatusEnum("client_status").default("lead"),
+  entrySource: entrySourceEnum("entry_source").default("consultant"),
+  leadRating: leadRatingEnum("lead_rating").default("cold"),
+  
+  // Regional & Branch Assignment
+  regionId: varchar("region_id").references(() => regions.id),
+  branchId: varchar("branch_id").references(() => branches.id),
   
   // Address
   unitNo: text("unit_no"),
@@ -1967,27 +1998,118 @@ export const crmContacts = pgTable("crm_contacts", {
   visitorScore: integer("visitor_score"),
   referrer: text("referrer"),
   averageTimeSpent: integer("average_time_spent"),
+  mostRecentVisit: timestamp("most_recent_visit"),
+  firstPageVisited: text("first_page_visited"),
+  numberOfChats: integer("number_of_chats").default(0),
+  daysVisited: integer("days_visited").default(0),
+  
+  // Student/Client Specific Fields (for 'clients' contact type)
+  courseName: text("course_name"),
+  courseUrl: text("course_url"),
+  interestedIn: text("interested_in"),
+  courseId: varchar("course_id").references(() => courses.id),
+  universityId: varchar("university_id").references(() => universities.id),
+  bestTimeToContact: text("best_time_to_contact"),
+  ieltsScore: text("ielts_score"),
+  preferredInstitution: text("preferred_institution"),
+  languageStream: text("language_stream"),
+  programDiscipline: text("program_discipline"),
+  scheduledAppointment: timestamp("scheduled_appointment"),
+  whereToStudy: text("where_to_study"),
+  programType: text("program_type"),
+  subjectToStudy: text("subject_to_study"),
+  
+  // Facebook Ads Details (for tracking source)
+  fbAdAccount: text("fb_ad_account"),
+  fbLeadForm: text("fb_lead_form"),
+  fbAdAccountId: text("fb_ad_account_id"),
+  fbLeadFormId: text("fb_lead_form_id"),
+  fbAdCampaign: text("fb_ad_campaign"),
+  
+  // Partner/Provider Rep Specific Fields (for 'providers_rep' contact type)
+  companyName: text("company_name"),
+  jobTitle: text("job_title"),
+  department: text("department"),
   
   // Linked Accounts (for institutions/organizations)
   linkedAccountId: varchar("linked_account_id"),
   linkedAccountName: text("linked_account_name"),
   
-  // Source lead reference
+  // Source lead reference (for migrated leads)
   sourceLeadId: varchar("source_lead_id").references(() => crmLeads.id),
   
   // Notes
   notes: text("notes"),
+  
+  // Created by tracking
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  
+  // Activity tracking
+  lastActivityTime: timestamp("last_activity_time"),
   
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   contactTypeIdx: index("crm_contacts_type_idx").on(table.contactType),
+  clientStatusIdx: index("crm_contacts_client_status_idx").on(table.clientStatus),
+  entrySourceIdx: index("crm_contacts_entry_source_idx").on(table.entrySource),
   contactOwnerIdx: index("crm_contacts_owner_idx").on(table.contactOwner),
   assignedToIdx: index("crm_contacts_assigned_idx").on(table.assignedTo),
   emailIdx: index("crm_contacts_email_idx").on(table.email),
   createdAtIdx: index("crm_contacts_created_at_idx").on(table.createdAt),
   sourceLeadIdx: index("crm_contacts_source_lead_idx").on(table.sourceLeadId),
+  regionIdx: index("crm_contacts_region_idx").on(table.regionId),
+  branchIdx: index("crm_contacts_branch_idx").on(table.branchId),
+}));
+
+// Contact Status History for tracking client status changes with timeline
+export const contactStatusHistory = pgTable("contact_status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
+  fromStatus: clientStatusEnum("from_status"),
+  toStatus: clientStatusEnum("to_status").notNull(),
+  changedBy: varchar("changed_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contactIdIdx: index("contact_status_history_contact_idx").on(table.contactId),
+  createdAtIdx: index("contact_status_history_created_idx").on(table.createdAt),
+}));
+
+// Contact Notes table - individual notes with @mentions and visibility controls
+export const contactNotes = pgTable("contact_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
+  title: text("title"),
+  content: text("content").notNull(),
+  mentions: text("mentions").array().default(sql`'{}'::text[]`), // Array of user IDs mentioned
+  visibility: noteVisibilityEnum("visibility").notNull().default("public"),
+  visibleTo: text("visible_to").array().default(sql`'{}'::text[]`), // Array of user IDs who can see
+  createdById: varchar("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contactIdIdx: index("contact_notes_contact_idx").on(table.contactId),
+  createdByIdx: index("contact_notes_created_by_idx").on(table.createdById),
+  createdAtIdx: index("contact_notes_created_at_idx").on(table.createdAt),
+}));
+
+// Contact History/Activity Log - tracks all changes to contacts
+export const contactHistory = pgTable("contact_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => crmContacts.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 50 }).notNull(), // 'created', 'updated', 'status_changed', 'assigned', 'note_added', etc.
+  fieldName: varchar("field_name", { length: 100 }), // The field that was changed
+  oldValue: text("old_value"), // Previous value (JSON stringified if complex)
+  newValue: text("new_value"), // New value (JSON stringified if complex)
+  description: text("description"), // Human-readable description of the change
+  changedByUserId: varchar("changed_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  contactIdIdx: index("contact_history_contact_idx").on(table.contactId),
+  changedByIdx: index("contact_history_changed_by_idx").on(table.changedByUserId),
+  createdAtIdx: index("contact_history_created_at_idx").on(table.createdAt),
+  actionIdx: index("contact_history_action_idx").on(table.action),
 }));
 
 // CSV Import batches table for bulk import with approval workflow
@@ -3714,7 +3836,91 @@ export interface CrmContactWithRelations extends CrmContact {
     email: string | null;
     profileImageUrl: string | null;
   } | null;
+  assignedToUser?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+  course?: {
+    id: string;
+    title: string;
+  } | null;
+  university?: {
+    id: string;
+    name: string;
+  } | null;
+  region?: {
+    id: string;
+    name: string;
+  } | null;
+  branch?: {
+    id: string;
+    name: string;
+  } | null;
   sourceLead?: CrmLead | null;
+  statusHistory?: ContactStatusHistory[];
+}
+
+// Contact Status History
+export const insertContactStatusHistorySchema = createInsertSchema(contactStatusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ContactStatusHistory = typeof contactStatusHistory.$inferSelect;
+export type InsertContactStatusHistory = z.infer<typeof insertContactStatusHistorySchema>;
+
+// Contact Status History with author details for display
+export interface ContactStatusHistoryWithAuthor extends ContactStatusHistory {
+  changedByUser: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
+}
+
+// Contact Notes
+export const insertContactNoteSchema = createInsertSchema(contactNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ContactNote = typeof contactNotes.$inferSelect;
+export type InsertContactNote = z.infer<typeof insertContactNoteSchema>;
+
+// Contact Note with author details for display
+export interface ContactNoteWithAuthor extends ContactNote {
+  createdBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  };
+}
+
+// Contact History
+export const insertContactHistorySchema = createInsertSchema(contactHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ContactHistory = typeof contactHistory.$inferSelect;
+export type InsertContactHistory = z.infer<typeof insertContactHistorySchema>;
+
+// Contact History with author details for display
+export interface ContactHistoryWithAuthor extends ContactHistory {
+  changedBy: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    profileImageUrl: string | null;
+  } | null;
 }
 
 // ============================================

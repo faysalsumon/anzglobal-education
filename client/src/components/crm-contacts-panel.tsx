@@ -43,11 +43,17 @@ import {
 import { format } from "date-fns";
 
 type ContactType = 'none' | 'clients' | 'employee' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
+type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
+type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
+type LeadRating = 'cold' | 'warm' | 'hot';
 
 interface CrmContact {
   id: string;
   photo: string | null;
   contactType: ContactType;
+  clientStatus: ClientStatus | null;
+  entrySource: EntrySource | null;
+  leadRating: LeadRating | null;
   firstName: string;
   lastName: string;
   email: string;
@@ -55,18 +61,29 @@ interface CrmContact {
   phone: string | null;
   nationality: string | null;
   country: string | null;
-  addressLine1: string | null;
-  addressLine2: string | null;
   city: string | null;
+  regionId: string | null;
+  branchId: string | null;
+  unitNo: string | null;
+  street: string | null;
+  suburb: string | null;
   state: string | null;
-  postalCode: string | null;
+  postcode: string | null;
   emergencyContactName: string | null;
-  emergencyContactPhone: string | null;
-  emergencyContactRelation: string | null;
+  emergencyContactMobile: string | null;
+  emergencyContactRelationship: string | null;
+  emergencyContactAddress: string | null;
   notes: string | null;
   contactOwner: string | null;
   assignedTo: string | null;
   sourceLeadId: string | null;
+  courseName: string | null;
+  courseUrl: string | null;
+  interestedIn: string | null;
+  courseId: string | null;
+  universityId: string | null;
+  createdByUserId: string | null;
+  lastActivityTime: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   ownerUser?: {
@@ -83,6 +100,14 @@ interface CrmContact {
     email: string;
     profileImageUrl: string | null;
   } | null;
+  region?: {
+    id: string;
+    name: string;
+  } | null;
+  branch?: {
+    id: string;
+    name: string;
+  } | null;
   sourceLead?: {
     id: string;
     firstName: string;
@@ -92,9 +117,9 @@ interface CrmContact {
 
 const contactTypeLabels: Record<string, string> = {
   none: "None",
-  clients: "Clients",
-  employee: "Employee",
-  external: "External",
+  clients: "Clients (Students)",
+  employee: "Team Member",
+  external: "External (Referrals)",
   internal: "Internal",
   others: "Others",
   partner: "Partner",
@@ -112,19 +137,73 @@ const contactTypeColors: Record<string, string> = {
   providers_rep: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
 };
 
+const clientStatusLabels: Record<string, string> = {
+  lead: "Lead",
+  applicant: "Applicant",
+  enrolled: "Enrolled",
+  completed: "Completed",
+  inactive: "Inactive",
+};
+
+const clientStatusColors: Record<string, string> = {
+  lead: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  applicant: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  enrolled: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  completed: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  inactive: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+};
+
+const entrySourceLabels: Record<string, string> = {
+  website: "Website",
+  consultant: "Consultant",
+  sub_agent: "Sub-Agent",
+  affiliate: "Affiliate",
+  import: "Import",
+  referral: "Referral",
+  facebook_ads: "Facebook Ads",
+  other: "Other",
+};
+
+const entrySourceColors: Record<string, string> = {
+  website: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
+  consultant: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  sub_agent: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
+  affiliate: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400",
+  import: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+  referral: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  facebook_ads: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+};
+
+const leadRatingLabels: Record<string, string> = {
+  cold: "Cold",
+  warm: "Warm",
+  hot: "Hot",
+};
+
+const leadRatingColors: Record<string, string> = {
+  cold: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  warm: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  hot: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+};
+
 const KANBAN_TYPES: ContactType[] = ['clients', 'employee', 'external', 'internal', 'partner', 'providers_rep', 'others'];
+const KANBAN_CLIENT_STATUSES: ClientStatus[] = ['lead', 'applicant', 'enrolled', 'completed', 'inactive'];
 
 export function CrmContactsPanel() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [clientStatusFilter, setClientStatusFilter] = useState<string>("all");
+  const [entrySourceFilter, setEntrySourceFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [nationalityFilter, setNationalityFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
   const [selectedContact, setSelectedContact] = useState<CrmContact | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [kanbanMode, setKanbanMode] = useState<'type' | 'status'>('status');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
@@ -140,10 +219,12 @@ export function CrmContactsPanel() {
     contacts: CrmContact[];
     total: number;
   }>({
-    queryKey: ["/api/crm/contacts", typeFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
+    queryKey: ["/api/crm/contacts", typeFilter, clientStatusFilter, entrySourceFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
+      if (clientStatusFilter !== "all") params.append("clientStatus", clientStatusFilter);
+      if (entrySourceFilter !== "all") params.append("entrySource", entrySourceFilter);
       if (searchQuery) params.append("search", searchQuery);
       if (countryFilter !== "all") params.append("country", countryFilter);
       if (nationalityFilter !== "all") params.append("nationality", nationalityFilter);
@@ -225,23 +306,63 @@ export function CrmContactsPanel() {
     if (!over) return;
     
     const contactId = active.id as string;
+    const overId = over.id as string;
     
-    let newType: ContactType | undefined;
-    
-    if (KANBAN_TYPES.includes(over.id as ContactType)) {
-      newType = over.id as ContactType;
-    } else if (over.data.current?.sortable) {
-      newType = over.data.current.sortable.containerId as ContactType;
-    }
-    
-    if (!newType) return;
-    
-    const contact = contactsData?.contacts?.find(c => c.id === contactId);
-    if (contact && contact.contactType !== newType) {
-      updateMutation.mutate({ 
-        id: contactId, 
-        data: { contactType: newType } 
-      });
+    // Check if we're in status mode
+    if (kanbanMode === 'status') {
+      let newStatus: ClientStatus | undefined;
+      
+      // Check if dropped directly on a status column
+      if (overId.startsWith('status-')) {
+        newStatus = overId.replace('status-', '') as ClientStatus;
+      } else if (over.data.current?.sortable) {
+        // Dropped on another contact card - get the container ID
+        const containerId = over.data.current.sortable.containerId as string;
+        if (containerId.startsWith('status-')) {
+          newStatus = containerId.replace('status-', '') as ClientStatus;
+        }
+      } else {
+        // Fallback: find which status column the target contact belongs to
+        const targetContact = contactsData?.contacts?.find(c => c.id === overId);
+        if (targetContact?.clientStatus) {
+          newStatus = targetContact.clientStatus as ClientStatus;
+        }
+      }
+      
+      if (!newStatus || !KANBAN_CLIENT_STATUSES.includes(newStatus)) return;
+      
+      const contact = contactsData?.contacts?.find(c => c.id === contactId);
+      if (contact && contact.clientStatus !== newStatus) {
+        updateMutation.mutate({ 
+          id: contactId, 
+          data: { clientStatus: newStatus } 
+        });
+      }
+    } else {
+      // Type mode
+      let newType: ContactType | undefined;
+      
+      if (KANBAN_TYPES.includes(overId as ContactType)) {
+        newType = overId as ContactType;
+      } else if (over.data.current?.sortable) {
+        newType = over.data.current.sortable.containerId as ContactType;
+      } else {
+        // Fallback: find which type column the target contact belongs to
+        const targetContact = contactsData?.contacts?.find(c => c.id === overId);
+        if (targetContact?.contactType) {
+          newType = targetContact.contactType as ContactType;
+        }
+      }
+      
+      if (!newType) return;
+      
+      const contact = contactsData?.contacts?.find(c => c.id === contactId);
+      if (contact && contact.contactType !== newType) {
+        updateMutation.mutate({ 
+          id: contactId, 
+          data: { contactType: newType } 
+        });
+      }
     }
   };
 
@@ -251,14 +372,20 @@ export function CrmContactsPanel() {
 
   const clearAllFilters = () => {
     setTypeFilter("all");
+    setClientStatusFilter("all");
+    setEntrySourceFilter("all");
     setCountryFilter("all");
     setNationalityFilter("all");
     setAssignedFilter("all");
     setSearchQuery("");
   };
 
-  const activeFiltersCount = [typeFilter, countryFilter, nationalityFilter, assignedFilter]
+  const activeFiltersCount = [typeFilter, clientStatusFilter, entrySourceFilter, countryFilter, nationalityFilter, assignedFilter]
     .filter(f => f !== 'all').length;
+  
+  const getContactsByClientStatus = (status: ClientStatus) => {
+    return contactsData?.contacts?.filter(contact => contact.clientStatus === status) || [];
+  };
 
   const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
   const uniqueNationalities = Array.from(new Set(contactsData?.contacts?.map(c => c.nationality).filter(Boolean) || []));
@@ -281,7 +408,7 @@ export function CrmContactsPanel() {
           <h2 className="text-2xl font-bold" data-testid="text-crm-contacts-title">CRM Contacts</h2>
           <p className="text-muted-foreground">Manage your contact database</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center border rounded-lg p-1">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -300,6 +427,17 @@ export function CrmContactsPanel() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
+          {viewMode === 'kanban' && (
+            <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as 'type' | 'status')}>
+              <SelectTrigger className="w-[140px]" data-testid="select-kanban-mode">
+                <SelectValue placeholder="Group by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="status">By Status</SelectItem>
+                <SelectItem value="type">By Type</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
@@ -307,8 +445,8 @@ export function CrmContactsPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search contacts..."
@@ -318,15 +456,28 @@ export function CrmContactsPanel() {
             data-testid="input-search-contacts"
           />
         </div>
+        <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
+          <SelectTrigger className="w-[160px]" data-testid="select-client-status-filter">
+            <SelectValue placeholder="Client Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="lead">Lead</SelectItem>
+            <SelectItem value="applicant">Applicant</SelectItem>
+            <SelectItem value="enrolled">Enrolled</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
             <SelectValue placeholder="Contact Type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="clients">Clients</SelectItem>
-            <SelectItem value="employee">Employee</SelectItem>
-            <SelectItem value="external">External</SelectItem>
+            <SelectItem value="clients">Clients (Students)</SelectItem>
+            <SelectItem value="employee">Team Member</SelectItem>
+            <SelectItem value="external">External (Referrals)</SelectItem>
             <SelectItem value="internal">Internal</SelectItem>
             <SelectItem value="partner">Partner</SelectItem>
             <SelectItem value="providers_rep">Providers Rep</SelectItem>
@@ -356,7 +507,26 @@ export function CrmContactsPanel() {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
           <Card className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Entry Source</Label>
+                <Select value={entrySourceFilter} onValueChange={setEntrySourceFilter}>
+                  <SelectTrigger data-testid="select-entry-source-filter">
+                    <SelectValue placeholder="All Sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="consultant">Consultant</SelectItem>
+                    <SelectItem value="sub_agent">Sub-Agent</SelectItem>
+                    <SelectItem value="affiliate">Affiliate</SelectItem>
+                    <SelectItem value="import">Import</SelectItem>
+                    <SelectItem value="referral">Referral</SelectItem>
+                    <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Country</Label>
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
@@ -417,14 +587,25 @@ export function CrmContactsPanel() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {KANBAN_TYPES.map((type) => (
-              <KanbanColumn
-                key={type}
-                type={type}
-                contacts={getContactsByType(type)}
-                onSelectContact={setSelectedContact}
-              />
-            ))}
+            {kanbanMode === 'status' ? (
+              KANBAN_CLIENT_STATUSES.map((status) => (
+                <KanbanStatusColumn
+                  key={status}
+                  status={status}
+                  contacts={getContactsByClientStatus(status)}
+                  onSelectContact={setSelectedContact}
+                />
+              ))
+            ) : (
+              KANBAN_TYPES.map((type) => (
+                <KanbanColumn
+                  key={type}
+                  type={type}
+                  contacts={getContactsByType(type)}
+                  onSelectContact={setSelectedContact}
+                />
+              ))
+            )}
           </div>
           <DragOverlay>
             {activeDragId ? (
@@ -458,12 +639,22 @@ export function CrmContactsPanel() {
                   <span className="font-medium" data-testid={`text-contact-name-${contact.id}`}>
                     {contact.firstName} {contact.lastName}
                   </span>
+                  {contact.clientStatus && (
+                    <Badge variant="outline" className={clientStatusColors[contact.clientStatus]} data-testid={`badge-status-${contact.id}`}>
+                      {clientStatusLabels[contact.clientStatus]}
+                    </Badge>
+                  )}
                   <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
                     {contactTypeLabels[contact.contactType]}
                   </Badge>
-                  {contact.nationality && (
-                    <Badge variant="secondary" className="text-xs">
-                      {contact.nationality}
+                  {contact.leadRating && (
+                    <Badge variant="secondary" className={leadRatingColors[contact.leadRating]}>
+                      {leadRatingLabels[contact.leadRating]}
+                    </Badge>
+                  )}
+                  {contact.entrySource && (
+                    <Badge variant="secondary" className={`text-xs ${entrySourceColors[contact.entrySource]}`}>
+                      {entrySourceLabels[contact.entrySource]}
                     </Badge>
                   )}
                 </div>
@@ -584,6 +775,57 @@ function KanbanColumn({
   );
 }
 
+function KanbanStatusColumn({ 
+  status, 
+  contacts, 
+  onSelectContact 
+}: { 
+  status: ClientStatus; 
+  contacts: CrmContact[]; 
+  onSelectContact: (contact: CrmContact) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `status-${status}`,
+  });
+
+  const contactIds = contacts.map(contact => contact.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-shrink-0 w-72 bg-muted/30 rounded-lg p-3 ${isOver ? 'ring-2 ring-primary' : ''}`}
+      data-testid={`kanban-column-${status}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={clientStatusColors[status]}>
+            {clientStatusLabels[status]}
+          </Badge>
+          <span className="text-sm text-muted-foreground">({contacts.length})</span>
+        </div>
+      </div>
+      <ScrollArea className="h-[calc(100vh-360px)]">
+        <SortableContext id={`status-${status}`} items={contactIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 pr-2">
+            {contacts.map((contact) => (
+              <DraggableContactCard
+                key={contact.id}
+                contact={contact}
+                onSelect={() => onSelectContact(contact)}
+              />
+            ))}
+            {contacts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No contacts with this status
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </ScrollArea>
+    </div>
+  );
+}
+
 function DraggableContactCard({ 
   contact, 
   onSelect,
@@ -656,11 +898,18 @@ function DraggableContactCard({
               </div>
             )}
           </div>
-          {contact.nationality && (
-            <Badge variant="secondary" className="mt-2 text-xs">
-              {contact.nationality}
-            </Badge>
-          )}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {contact.clientStatus && (
+              <Badge variant="outline" className={`text-xs ${clientStatusColors[contact.clientStatus]}`}>
+                {clientStatusLabels[contact.clientStatus]}
+              </Badge>
+            )}
+            {contact.leadRating && (
+              <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
+                {leadRatingLabels[contact.leadRating]}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
     </Card>

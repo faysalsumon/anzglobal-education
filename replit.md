@@ -45,6 +45,14 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval, schema-aware GPT-4o-mini extraction, and full-website crawling with AI-powered course detection.
 - **Activity Logging**: CRM-style audit trail tracking admin actions with field-level change tracking.
 - **CRM System (Phase 1)**: Unified lead management with task assignment, internal notes, and follow-up reminders.
+- **CRM System (Phase 2)**: Unified Contact Management with consolidated crm_contacts table:
+  - **Contact Types**: clients (students), employee (team members), external (referrals), partner, providers_rep
+  - **Client Status**: Tracks student journey - lead, applicant, enrolled, completed, inactive
+  - **Entry Sources**: website, consultant, sub_agent, affiliate, import, referral, facebook_ads, other
+  - **Lead Rating**: cold, warm, hot for prioritization
+  - **Kanban View**: Dual grouping modes - by Client Status or by Contact Type
+  - **Drag-and-Drop**: Status/Type transitions via Kanban drag-and-drop
+  - **Filtering**: Primary filters (Client Status, Contact Type) + More Filters (Entry Source, Country, Nationality, Assigned To)
 - **Profile Management**: Student and Admin profile management with role-based security.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications.

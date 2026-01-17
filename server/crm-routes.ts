@@ -680,6 +680,8 @@ router.get("/contacts", requireAdmin, async (req, res) => {
   try {
     const { 
       type, 
+      clientStatus,
+      entrySource,
       ownerId,
       owner,
       assignedTo,
@@ -695,6 +697,12 @@ router.get("/contacts", requireAdmin, async (req, res) => {
 
     if (type) {
       conditions.push(eq(crmContacts.contactType, type as any));
+    }
+    if (clientStatus) {
+      conditions.push(eq(crmContacts.clientStatus, clientStatus as any));
+    }
+    if (entrySource) {
+      conditions.push(eq(crmContacts.entrySource, entrySource as any));
     }
     if (ownerId || owner) {
       conditions.push(eq(crmContacts.contactOwner, (ownerId || owner) as string));
