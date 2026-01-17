@@ -2453,6 +2453,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertStudentProfileSchema.partial().parse(sanitizedBody);
       const profile = await storage.updateStudentProfile(existing.id, data);
 
+      // Real-time sync: Update linked CRM contact with profile changes
+      const { syncUserProfileToCrmContact } = await import("./crm-routes");
+      syncUserProfileToCrmContact(userId).catch(err => {
+        console.error("[CRM Sync] Error syncing profile to CRM:", err);
+      });
+
       res.json(profile);
     } catch (error: any) {
       console.error("Error updating student profile:", error);
@@ -2492,6 +2498,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateStudentProfile(profile.id, {
         ...profile,
         profileImageUrl: photoPath,
+      });
+
+      // Real-time sync: Update linked CRM contact with new photo
+      const { syncUserProfileToCrmContact } = await import("./crm-routes");
+      syncUserProfileToCrmContact(userId).catch(err => {
+        console.error("[CRM Sync] Error syncing profile photo to CRM:", err);
       });
 
       res.json({ photoPath });

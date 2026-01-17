@@ -774,14 +774,17 @@ export default function AdminDashboard() {
       const total = stats.total || 0;
       const created = stats.created || 0;
       const linked = stats.linked || 0;
-      const skipped = stats.skipped || 0;
+      const updated = stats.updated || 0;
       
       let description = "";
-      if (created > 0 || linked > 0) {
-        description = `Created: ${created}, Linked: ${linked}`;
-        if (skipped > 0) description += `, Already synced: ${skipped}`;
-      } else if (skipped > 0 || total > 0) {
-        description = `All ${total} users are already synced to CRM contacts`;
+      if (created > 0 || linked > 0 || updated > 0) {
+        const parts: string[] = [];
+        if (created > 0) parts.push(`Created: ${created}`);
+        if (linked > 0) parts.push(`Linked: ${linked}`);
+        if (updated > 0) parts.push(`Updated: ${updated}`);
+        description = parts.join(", ");
+      } else if (total > 0) {
+        description = `All ${total} users processed`;
       } else {
         description = "No eligible users found to sync";
       }

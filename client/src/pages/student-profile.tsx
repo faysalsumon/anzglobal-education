@@ -26,18 +26,36 @@ import { StudentLayout } from "@/components/student-layout";
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
   lastName: true,
+  preferredName: true,
+  gender: true,
   phone: true,
+  whatsapp: true,
   dateOfBirth: true,
   nationality: true,
   country: true,
   profileImageUrl: true,
+  unitNo: true,
+  street: true,
+  suburb: true,
+  city: true,
+  state: true,
+  postcode: true,
 }).extend({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  preferredName: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
   phone: z.string().min(1, "Phone number is required"),
+  whatsapp: z.string().optional().nullable(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   nationality: z.string().min(1, "Nationality is required"),
   country: z.string().min(1, "Country is required"),
+  unitNo: z.string().optional().nullable(),
+  street: z.string().optional().nullable(),
+  suburb: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  postcode: z.string().optional().nullable(),
 });
 
 const bioSchema = z.object({
@@ -281,11 +299,20 @@ function StudentProfileContent() {
     defaultValues: {
       firstName: "",
       lastName: "",
+      preferredName: "",
+      gender: "",
       phone: "",
+      whatsapp: "",
       dateOfBirth: "",
       nationality: "",
       country: "",
       profileImageUrl: "",
+      unitNo: "",
+      street: "",
+      suburb: "",
+      city: "",
+      state: "",
+      postcode: "",
     },
   });
 
@@ -351,11 +378,20 @@ function StudentProfileContent() {
       personalForm.reset({
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
+        preferredName: profile.preferredName || "",
+        gender: profile.gender || "",
         phone: profile.phone || "",
+        whatsapp: profile.whatsapp || "",
         dateOfBirth: profile.dateOfBirth || "",
         nationality: profile.nationality || "",
         country: profile.country || "",
         profileImageUrl: profile.profileImageUrl || "",
+        unitNo: profile.unitNo || "",
+        street: profile.street || "",
+        suburb: profile.suburb || "",
+        city: profile.city || "",
+        state: profile.state || "",
+        postcode: profile.postcode || "",
       });
       bioForm.reset({
         bio: profile.bio || "",
@@ -1008,6 +1044,46 @@ function StudentProfileContent() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={personalForm.control}
+                      name="preferredName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder="Nick name or preferred name" data-testid="input-preferred-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={personalForm.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-gender">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={personalForm.control}
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
@@ -1020,6 +1096,22 @@ function StudentProfileContent() {
                       )}
                     />
 
+                    <FormField
+                      control={personalForm.control}
+                      name="whatsapp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>WhatsApp Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} type="tel" placeholder="+1 234 567 8900" data-testid="input-whatsapp" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={personalForm.control}
                       name="dateOfBirth"
@@ -1063,6 +1155,102 @@ function StudentProfileContent() {
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Address Details (Optional)
+                    </h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={personalForm.control}
+                        name="unitNo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unit/Apt No.</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., Unit 5" data-testid="input-unit-no" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={personalForm.control}
+                        name="street"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., 123 Main Street" data-testid="input-street" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 mt-4">
+                      <FormField
+                        control={personalForm.control}
+                        name="suburb"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Suburb</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., Sydney CBD" data-testid="input-suburb" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={personalForm.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., Sydney" data-testid="input-city" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 mt-4">
+                      <FormField
+                        control={personalForm.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State/Province</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., NSW" data-testid="input-state" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={personalForm.control}
+                        name="postcode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postcode</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., 2000" data-testid="input-postcode" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">

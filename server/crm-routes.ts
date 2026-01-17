@@ -17,6 +17,7 @@ import {
   updateCrmContactSchema,
   insertLeadNoteSchema,
   branches,
+  studentProfiles,
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable, ne } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
@@ -829,6 +830,97 @@ export async function createCrmContactForUser(user: {
   }
 }
 
+// Helper function to sync a user's profile data to their linked CRM contact
+// This is called when a student updates their profile for real-time sync
+export async function syncUserProfileToCrmContact(userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Find the CRM contact linked to this user
+    const linkedContact = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.linkedUserId, userId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!linkedContact) {
+      console.log(`[CRM Sync] No linked CRM contact found for user ${userId}`);
+      return { success: false, error: 'No linked CRM contact found' };
+    }
+
+    // Get user data
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    // Get student profile data if user is a student
+    let studentProfile = null;
+    if (user.userType === 'student') {
+      studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.userId, userId))
+        .limit(1)
+        .then(rows => rows[0]);
+    }
+
+    // Build update data from user and student profile
+    const updateData: any = {
+      firstName: studentProfile?.firstName || user.firstName || linkedContact.firstName,
+      lastName: studentProfile?.lastName || user.lastName || linkedContact.lastName,
+      email: user.email || linkedContact.email,
+      mobile: studentProfile?.phone || user.phone || linkedContact.mobile,
+      phone: studentProfile?.phone || user.phone || linkedContact.phone,
+      photo: studentProfile?.profileImageUrl || user.profileImageUrl || linkedContact.photo,
+      updatedAt: new Date(),
+    };
+
+    // Add student profile fields if available
+    if (studentProfile) {
+      updateData.preferredName = studentProfile.preferredName || linkedContact.preferredName;
+      updateData.gender = studentProfile.gender || linkedContact.gender;
+      updateData.whatsapp = studentProfile.whatsapp || linkedContact.whatsapp;
+      updateData.nationality = studentProfile.nationality || linkedContact.nationality;
+      updateData.country = studentProfile.country || linkedContact.country;
+      updateData.city = studentProfile.city || linkedContact.city;
+      updateData.state = studentProfile.state || linkedContact.state;
+      updateData.postcode = studentProfile.postcode || linkedContact.postcode;
+      updateData.street = studentProfile.street || linkedContact.street;
+      updateData.suburb = studentProfile.suburb || linkedContact.suburb;
+      updateData.unitNo = studentProfile.unitNo || linkedContact.unitNo;
+      
+      // Map education fields
+      if (studentProfile.educationLevel) {
+        updateData.programType = studentProfile.educationLevel;
+      }
+      if (studentProfile.fieldOfStudy) {
+        updateData.programDiscipline = studentProfile.fieldOfStudy;
+      }
+      if (studentProfile.careerGoals) {
+        updateData.interestedIn = studentProfile.careerGoals;
+      }
+    }
+
+    // Update the CRM contact
+    await db
+      .update(crmContacts)
+      .set(updateData)
+      .where(eq(crmContacts.id, linkedContact.id));
+
+    console.log(`[CRM Sync] Updated CRM contact ${linkedContact.id} with user ${userId} profile data`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('[CRM Sync] Error syncing profile to CRM:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Sync platform users to CRM contacts (students → clients, institution_admin → providers_rep)
 router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
   try {
@@ -871,6 +963,17 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
           continue;
         }
 
+        // Get student profile data if user is a student
+        let studentProfile = null;
+        if (user.userType === 'student') {
+          studentProfile = await db
+            .select()
+            .from(studentProfiles)
+            .where(eq(studentProfiles.userId, user.id))
+            .limit(1)
+            .then(rows => rows[0]);
+        }
+
         // Check if contact already exists with this email or linkedUserId
         const existingContact = await db
           .select()
@@ -885,50 +988,88 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
           .then(rows => rows[0]);
 
         if (existingContact) {
-          // If contact exists but not linked, link it and update basic fields
+          // Build update data with latest profile information
+          const updateData: any = { 
+            linkedUserId: user.id,
+            firstName: studentProfile?.firstName || firstName,
+            lastName: studentProfile?.lastName || user.lastName || existingContact.lastName,
+            photo: studentProfile?.profileImageUrl || user.profileImageUrl || existingContact.photo,
+            mobile: studentProfile?.phone || user.phone || existingContact.mobile,
+            updatedAt: new Date()
+          };
+          
+          // Add all student profile fields
+          if (studentProfile) {
+            updateData.preferredName = studentProfile.preferredName;
+            updateData.gender = studentProfile.gender;
+            updateData.whatsapp = studentProfile.whatsapp;
+            updateData.nationality = studentProfile.nationality;
+            updateData.country = studentProfile.country;
+            updateData.city = studentProfile.city;
+            updateData.state = studentProfile.state;
+            updateData.postcode = studentProfile.postcode;
+            updateData.street = studentProfile.street;
+            updateData.suburb = studentProfile.suburb;
+            updateData.unitNo = studentProfile.unitNo;
+            if (studentProfile.educationLevel) updateData.programType = studentProfile.educationLevel;
+            if (studentProfile.fieldOfStudy) updateData.programDiscipline = studentProfile.fieldOfStudy;
+            if (studentProfile.careerGoals) updateData.interestedIn = studentProfile.careerGoals;
+          }
+          
+          // Always update with latest data (whether newly linking or already linked)
+          await db
+            .update(crmContacts)
+            .set(updateData)
+            .where(eq(crmContacts.id, existingContact.id));
+          
           if (!existingContact.linkedUserId) {
-            await db
-              .update(crmContacts)
-              .set({ 
-                linkedUserId: user.id,
-                firstName: firstName,
-                lastName: user.lastName || existingContact.lastName,
-                photo: user.photo || user.profileImageUrl || existingContact.photo,
-                updatedAt: new Date()
-              })
-              .where(eq(crmContacts.id, existingContact.id));
             linked++;
           } else {
+            // Already linked but updated with latest data
             skipped++;
           }
           continue;
         }
 
-        // Create new contact from user
-        await db.insert(crmContacts).values({
-          firstName: firstName,
-          lastName: user.lastName || '',
+        // Create new contact from user with all profile fields
+        const contactData: any = {
+          firstName: studentProfile?.firstName || firstName,
+          lastName: studentProfile?.lastName || user.lastName || '',
           email: user.email,
-          mobile: user.phone || '',
-          phone: user.phone,
-          country: user.country,
-          city: user.city,
-          state: user.stateProvince,
-          postcode: user.postalCode,
-          street: user.addressLine1,
-          unitNo: user.addressLine2,
+          mobile: studentProfile?.phone || user.phone || '',
+          phone: studentProfile?.phone || user.phone,
+          country: studentProfile?.country || user.country,
+          city: studentProfile?.city || user.city,
+          state: studentProfile?.state || user.stateProvince,
+          postcode: studentProfile?.postcode || user.postalCode,
+          street: studentProfile?.street || user.addressLine1,
+          unitNo: studentProfile?.unitNo || user.addressLine2,
           contactType: contactType as any,
           clientStatus: contactType === 'clients' ? 'lead' : null,
           entrySource: 'website',
           linkedUserId: user.id,
-          photo: user.photo || user.profileImageUrl,
+          photo: studentProfile?.profileImageUrl || user.profileImageUrl,
           emergencyContactName: user.emergencyFirstName && user.emergencyLastName 
             ? `${user.emergencyFirstName} ${user.emergencyLastName}` 
             : user.emergencyFirstName,
           emergencyContactMobile: user.emergencyMobile,
           emergencyContactRelationship: user.emergencyRelationship,
           createdByUserId: userId,
-        });
+        };
+        
+        // Add all student profile fields
+        if (studentProfile) {
+          contactData.preferredName = studentProfile.preferredName;
+          contactData.gender = studentProfile.gender;
+          contactData.whatsapp = studentProfile.whatsapp;
+          contactData.nationality = studentProfile.nationality;
+          contactData.suburb = studentProfile.suburb;
+          if (studentProfile.educationLevel) contactData.programType = studentProfile.educationLevel;
+          if (studentProfile.fieldOfStudy) contactData.programDiscipline = studentProfile.fieldOfStudy;
+          if (studentProfile.careerGoals) contactData.interestedIn = studentProfile.careerGoals;
+        }
+        
+        await db.insert(crmContacts).values(contactData);
         created++;
       } catch (err: any) {
         errors.push(`Failed to sync user ${user.email}: ${err.message}`);
@@ -942,7 +1083,7 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
       entityId: "sync",
       entityName: "User Sync",
       action: "imported",
-      actionDescription: `Synced platform users to contacts: ${created} created, ${linked} linked, ${skipped} skipped`,
+      actionDescription: `Synced platform users to contacts: ${created} created, ${linked} linked, ${skipped} updated`,
     });
 
     res.json({
@@ -951,7 +1092,7 @@ router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
         total: usersToSync.length,
         created,
         linked,
-        skipped,
+        updated: skipped, // renamed for clarity - these contacts were updated with latest data
         errors: errors.length,
       },
       errors: errors.length > 0 ? errors : undefined,

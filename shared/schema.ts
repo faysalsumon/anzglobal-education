@@ -1230,15 +1230,26 @@ export const studentProfiles = pgTable("student_profiles", {
   
   firstName: text("first_name"),
   lastName: text("last_name"),
+  preferredName: text("preferred_name"),
+  gender: genderEnum("gender"),
   phone: varchar("phone", { length: 20 }),
+  whatsapp: varchar("whatsapp", { length: 20 }),
   dateOfBirth: date("date_of_birth"),
   nationality: text("nationality"),
   profileImageUrl: text("profile_image_url"),
   
+  // Address fields
+  unitNo: text("unit_no"),
+  street: text("street"),
+  suburb: text("suburb"),
+  city: text("city"),
+  state: text("state"),
+  postcode: varchar("postcode", { length: 20 }),
+  country: text("country"),
+  
   bio: text("bio"),
   educationLevel: text("education_level"),
   fieldOfStudy: text("field_of_study"),
-  country: text("country"),
   careerGoals: text("career_goals"),
   previousEducation: text("previous_education"),
   
