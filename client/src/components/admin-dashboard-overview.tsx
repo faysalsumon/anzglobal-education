@@ -9,13 +9,11 @@ import {
   BookOpen, 
   Building2,
   TrendingUp, 
-  Sparkles, 
   ArrowRight, 
   Clock, 
   CheckCircle,
   AlertCircle,
   Users,
-  Calendar,
   Target
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,13 +60,6 @@ export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess = false 
     queryKey: ["/api/admin/institutions/count"],
   });
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
-    return "Good Evening";
-  };
-
   const stats = {
     tasks: taskStats?.total || 0,
     pendingTasks: taskStats?.pending || 0,
@@ -81,35 +72,7 @@ export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess = false 
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6">
-      {/* Hero Welcome Section */}
-      <div className="relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 p-6 md:p-8 border border-primary/10">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
-        <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-muted-foreground font-medium" data-testid="text-greeting">{getGreeting()}</p>
-              </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-2" data-testid="text-welcome-heading">
-                {user?.firstName ? `Welcome back, ${user.firstName}!` : "Team Dashboard"}
-              </h1>
-              <p className="text-muted-foreground text-base md:text-lg max-w-2xl" data-testid="text-welcome-message">
-                Here's an overview of your tasks, leads, and key metrics. Stay on top of your work and help students achieve their dreams.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs md:text-sm bg-primary/10 px-3 md:px-4 py-2 rounded-full shrink-0">
-              <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-              <span className="font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6">
       {/* Stats Grid */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* My Tasks */}
