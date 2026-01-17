@@ -3167,7 +3167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Fetch consultant if assigned
           let consultant = null;
           if (app.assignedConsultantId) {
-            const consultantUser = await storage.getUserById(app.assignedConsultantId);
+            const consultantUser = await storage.getUser(app.assignedConsultantId);
             if (consultantUser) {
               consultant = {
                 id: consultantUser.id,
