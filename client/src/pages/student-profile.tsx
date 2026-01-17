@@ -24,6 +24,7 @@ import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -1268,6 +1269,23 @@ function StudentProfileContent() {
                       <MapPin className="h-4 w-4" />
                       Address Details (Optional)
                     </h4>
+                    
+                    <div className="mb-4">
+                      <AddressAutocomplete
+                        onAddressSelect={(address: AddressComponents) => {
+                          if (address.unitNo) personalForm.setValue("unitNo", address.unitNo);
+                          if (address.street) personalForm.setValue("street", address.street);
+                          if (address.suburb) personalForm.setValue("suburb", address.suburb);
+                          if (address.city) personalForm.setValue("city", address.city);
+                          if (address.state) personalForm.setValue("state", address.state);
+                          if (address.postcode) personalForm.setValue("postcode", address.postcode);
+                          if (address.country) personalForm.setValue("country", address.country);
+                        }}
+                        placeholder="Start typing your address to search..."
+                        data-testid="input-address-search"
+                      />
+                    </div>
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <FormField
                         control={personalForm.control}

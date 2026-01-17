@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRef } from "react";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -826,6 +827,28 @@ export default function AdminContactForm() {
               <CardTitle>Address Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Search Address</Label>
+                <AddressAutocomplete
+                  onAddressSelect={(address: AddressComponents) => {
+                    setFormData({
+                      ...formData,
+                      unitNo: address.unitNo || formData.unitNo,
+                      street: address.street || formData.street,
+                      suburb: address.suburb || formData.suburb,
+                      city: address.city || formData.city,
+                      state: address.state || formData.state,
+                      postcode: address.postcode || formData.postcode,
+                      country: address.country || formData.country,
+                    });
+                  }}
+                  placeholder="Start typing an address to search..."
+                  data-testid="input-address-search"
+                />
+              </div>
+
+              <Separator />
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="unitNo">Unit No.</Label>
