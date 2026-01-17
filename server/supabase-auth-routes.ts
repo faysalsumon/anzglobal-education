@@ -7,6 +7,7 @@ import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail } from './email-service';
 import crypto from 'crypto';
+import { createCrmContactForUser } from './crm-routes';
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       const existingUser = await storage.getUserByEmail(email);
       
       if (!existingUser) {
-        await storage.createUser({
+        const newUser = await storage.createUser({
           email,
           firstName: firstName || null,
           lastName: lastName || null,
@@ -69,6 +70,17 @@ router.post('/signup', async (req: Request, res: Response) => {
           approvalStatus: userType === 'platform_admin' ? 'pending' : null,
           role: userType === 'platform_admin' ? null : 'user',
         });
+        
+        // Auto-sync to CRM contacts for students and institution_admins
+        if (newUser && ['student', 'institution_admin'].includes(userType)) {
+          await createCrmContactForUser({
+            id: newUser.id,
+            email: newUser.email!,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            userType: newUser.userType,
+          });
+        }
       }
     }
 
@@ -121,6 +133,17 @@ router.post('/signin', async (req: Request, res: Response) => {
         emailVerified: true,
         isActive: true,
       });
+      
+      // Auto-sync to CRM contacts for students and institution_admins
+      if (platformUser && ['student', 'institution_admin'].includes(userType)) {
+        await createCrmContactForUser({
+          id: platformUser.id,
+          email: platformUser.email!,
+          firstName: platformUser.firstName,
+          lastName: platformUser.lastName,
+          userType: platformUser.userType,
+        });
+      }
     }
 
     if (platformUser) {
@@ -713,6 +736,18 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     });
 
     console.log(`[Supabase Auth] Synced user ${email} to local database`);
+    
+    // Auto-sync to CRM contacts for students and institution_admins
+    if (newUser && ['student', 'institution_admin'].includes(safeUserType)) {
+      await createCrmContactForUser({
+        id: newUser.id,
+        email: newUser.email!,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        userType: newUser.userType,
+        profileImageUrl: newUser.profileImageUrl,
+      });
+    }
 
     // Send welcome email to new user (students and institutions)
     const welcomeUserType = safeUserType === 'institution_admin' ? 'institution' : 'student';
@@ -1027,6 +1062,18 @@ router.post('/admin/create-user', async (req: any, res: Response) => {
       requiresPasswordReset: true,
       tempPasswordIssuedAt: new Date(),
     });
+    
+    // Auto-sync to CRM contacts for students and institution_admins
+    if (newUser && ['student', 'institution_admin'].includes(userType)) {
+      await createCrmContactForUser({
+        id: newUser.id,
+        email: newUser.email!,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        userType: newUser.userType,
+        phone: newUser.phone,
+      });
+    }
 
     // Send welcome email with credentials
     try {

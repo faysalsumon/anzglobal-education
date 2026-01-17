@@ -38,7 +38,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -757,6 +757,27 @@ export default function AdminDashboard() {
     onError: (error: any) => {
       toast({
         title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Sync users to CRM contacts mutation
+  const syncUsersToCrmMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/crm/contacts/sync-users");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      toast({
+        title: "Users synced to contacts",
+        description: `Created: ${data.stats?.created || 0}, Linked: ${data.stats?.linked || 0}, Skipped: ${data.stats?.skipped || 0}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error syncing users",
         description: error.message,
         variant: "destructive",
       });
@@ -1930,9 +1951,30 @@ export default function AdminDashboard() {
           {/* User Management */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <div>
-                <CardTitle className="text-base">User Management</CardTitle>
-                <CardDescription className="text-xs">View and manage all platform users. Use Team Invitations to add new team members.</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">User Management</CardTitle>
+                  <CardDescription className="text-xs">View and manage all platform users. Use Team Invitations to add new team members.</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => syncUsersToCrmMutation.mutate()}
+                  disabled={syncUsersToCrmMutation.isPending}
+                  data-testid="button-sync-users-to-crm"
+                >
+                  {syncUsersToCrmMutation.isPending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1.5" />
+                      Sync to CRM
+                    </>
+                  )}
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 px-4 py-3">

@@ -726,6 +726,240 @@ router.get("/contacts/linked-user", requireAdmin, async (req, res) => {
   }
 });
 
+// User type to Contact type mapping
+export function mapUserTypeToContactType(userType: string): string | null {
+  switch (userType) {
+    case 'student':
+      return 'clients';
+    case 'institution_admin':
+      return 'providers_rep';
+    default:
+      return null; // admin and platform_admin are not synced
+  }
+}
+
+// Auto-create CRM contact for new platform users (students and institution_admins)
+export async function createCrmContactForUser(user: {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  userType: string;
+  phone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  postalCode?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  photo?: string | null;
+  profileImageUrl?: string | null;
+}): Promise<{ success: boolean; contactId?: string; error?: string }> {
+  try {
+    const contactType = mapUserTypeToContactType(user.userType);
+    if (!contactType) {
+      console.log(`[CRM Sync] User ${user.id} type ${user.userType} not eligible for CRM contact`);
+      return { success: false, error: 'User type not eligible for CRM contact' };
+    }
+
+    if (!user.email) {
+      console.log(`[CRM Sync] User ${user.id} missing email, skipping CRM sync`);
+      return { success: false, error: 'Missing required email field' };
+    }
+    
+    // Use email prefix as fallback if firstName is missing
+    const firstName = user.firstName || user.email.split('@')[0];
+
+    // Check if contact already exists with this email or linkedUserId
+    const existingContact = await db
+      .select()
+      .from(crmContacts)
+      .where(
+        or(
+          eq(crmContacts.email, user.email),
+          eq(crmContacts.linkedUserId, user.id)
+        )
+      )
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (existingContact) {
+      // If contact exists but not linked, link it and update basic fields
+      if (!existingContact.linkedUserId) {
+        await db
+          .update(crmContacts)
+          .set({ 
+            linkedUserId: user.id,
+            firstName: firstName,
+            lastName: user.lastName || existingContact.lastName,
+            photo: user.photo || user.profileImageUrl || existingContact.photo,
+            updatedAt: new Date()
+          })
+          .where(eq(crmContacts.id, existingContact.id));
+        console.log(`[CRM Sync] Linked existing contact ${existingContact.id} to user ${user.id}`);
+        return { success: true, contactId: existingContact.id };
+      }
+      return { success: true, contactId: existingContact.id };
+    }
+
+    // Create new contact from user
+    const [newContact] = await db.insert(crmContacts).values({
+      firstName: firstName,
+      lastName: user.lastName || '',
+      email: user.email,
+      mobile: user.phone || '',
+      phone: user.phone,
+      country: user.country,
+      city: user.city,
+      state: user.stateProvince,
+      postcode: user.postalCode,
+      street: user.addressLine1,
+      unitNo: user.addressLine2,
+      contactType: contactType as any,
+      clientStatus: contactType === 'clients' ? 'lead' : null,
+      entrySource: 'website',
+      linkedUserId: user.id,
+      photo: user.photo || user.profileImageUrl,
+    }).returning();
+
+    return { success: true, contactId: newContact.id };
+  } catch (error: any) {
+    console.error('Error creating CRM contact for user:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Sync platform users to CRM contacts (students → clients, institution_admin → providers_rep)
+router.post("/contacts/sync-users", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    // Get all users that should be synced (students and institution_admins only)
+    const usersToSync = await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          eq(users.userType, 'student'),
+          eq(users.userType, 'institution_admin')
+        )
+      );
+
+    let created = 0;
+    let skipped = 0;
+    let linked = 0;
+    const errors: string[] = [];
+
+    for (const user of usersToSync) {
+      try {
+        if (!user.email) {
+          skipped++;
+          continue;
+        }
+        
+        // Use email prefix as fallback for firstName
+        const firstName = user.firstName || user.email.split('@')[0];
+
+        const contactType = mapUserTypeToContactType(user.userType);
+        if (!contactType) {
+          skipped++;
+          continue;
+        }
+
+        // Check if contact already exists with this email or linkedUserId
+        const existingContact = await db
+          .select()
+          .from(crmContacts)
+          .where(
+            or(
+              eq(crmContacts.email, user.email),
+              eq(crmContacts.linkedUserId, user.id)
+            )
+          )
+          .limit(1)
+          .then(rows => rows[0]);
+
+        if (existingContact) {
+          // If contact exists but not linked, link it and update basic fields
+          if (!existingContact.linkedUserId) {
+            await db
+              .update(crmContacts)
+              .set({ 
+                linkedUserId: user.id,
+                firstName: firstName,
+                lastName: user.lastName || existingContact.lastName,
+                photo: user.photo || user.profileImageUrl || existingContact.photo,
+                updatedAt: new Date()
+              })
+              .where(eq(crmContacts.id, existingContact.id));
+            linked++;
+          } else {
+            skipped++;
+          }
+          continue;
+        }
+
+        // Create new contact from user
+        await db.insert(crmContacts).values({
+          firstName: firstName,
+          lastName: user.lastName || '',
+          email: user.email,
+          mobile: user.phone || '',
+          phone: user.phone,
+          country: user.country,
+          city: user.city,
+          state: user.stateProvince,
+          postcode: user.postalCode,
+          street: user.addressLine1,
+          unitNo: user.addressLine2,
+          contactType: contactType as any,
+          clientStatus: contactType === 'clients' ? 'lead' : null,
+          entrySource: 'website',
+          linkedUserId: user.id,
+          photo: user.photo || user.profileImageUrl,
+          emergencyContactName: user.emergencyFirstName && user.emergencyLastName 
+            ? `${user.emergencyFirstName} ${user.emergencyLastName}` 
+            : user.emergencyFirstName,
+          emergencyContactMobile: user.emergencyMobile,
+          emergencyContactRelationship: user.emergencyRelationship,
+          createdByUserId: userId,
+        });
+        created++;
+      } catch (err: any) {
+        errors.push(`Failed to sync user ${user.email}: ${err.message}`);
+      }
+    }
+
+    // Log activity
+    await logActivity({
+      userId,
+      entityType: "crm_contact" as any,
+      entityId: "sync",
+      entityName: "User Sync",
+      action: "imported",
+      actionDescription: `Synced platform users to contacts: ${created} created, ${linked} linked, ${skipped} skipped`,
+    });
+
+    res.json({
+      message: "User sync completed",
+      stats: {
+        total: usersToSync.length,
+        created,
+        linked,
+        skipped,
+        errors: errors.length,
+      },
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error("Error syncing users to contacts:", error);
+    res.status(500).json({ message: "Failed to sync users to contacts" });
+  }
+});
+
 // Get all contacts with filtering and pagination
 router.get("/contacts", requireAdmin, async (req, res) => {
   try {
