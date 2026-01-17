@@ -599,7 +599,14 @@ export function ApplicationCard({ application, course, university, consultant }:
             <span className="text-muted-foreground">Consultant:</span>
             <span className="ml-2 font-medium">
               {consultant ? (
-                `${consultant.firstName} ${consultant.lastName}`
+                <span className="inline-flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-blue-500 text-white text-xs">
+                      {consultant.firstName?.[0] || 'C'}{consultant.lastName?.[0] || ''}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{consultant.firstName} {consultant.lastName}</span>
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-primary">
                   <span className="relative flex h-2 w-2">
