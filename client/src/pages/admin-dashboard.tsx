@@ -770,9 +770,25 @@ export default function AdminDashboard() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      const stats = data.stats || {};
+      const total = stats.total || 0;
+      const created = stats.created || 0;
+      const linked = stats.linked || 0;
+      const skipped = stats.skipped || 0;
+      
+      let description = "";
+      if (created > 0 || linked > 0) {
+        description = `Created: ${created}, Linked: ${linked}`;
+        if (skipped > 0) description += `, Already synced: ${skipped}`;
+      } else if (skipped > 0 || total > 0) {
+        description = `All ${total} users are already synced to CRM contacts`;
+      } else {
+        description = "No eligible users found to sync";
+      }
+      
       toast({
-        title: "Users synced to contacts",
-        description: `Created: ${data.stats?.created || 0}, Linked: ${data.stats?.linked || 0}, Skipped: ${data.stats?.skipped || 0}`,
+        title: "Sync completed",
+        description,
       });
     },
     onError: (error: any) => {
