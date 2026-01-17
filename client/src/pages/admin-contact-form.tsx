@@ -145,16 +145,6 @@ export default function AdminContactForm() {
     queryKey: ["/api/auth/me"],
   });
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
-    queryKey: ["/api/super-admin/users", "admin"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/super-admin/users?userType=admin", { credentials: 'include', headers });
-      if (!response.ok) throw new Error("Failed to fetch admins");
-      return response.json();
-    },
-  });
-
   const { data: existingContact, isLoading: contactLoading } = useQuery<CrmContact>({
     queryKey: ["/api/crm/contacts", params.id],
     queryFn: async () => {
@@ -248,14 +238,13 @@ export default function AdminContactForm() {
   }, [existingContact]);
 
   useEffect(() => {
-    if (!isEditing && currentUser && !formData.assignedTo) {
+    if (!isEditing && currentUser && !formData.contactOwner) {
       setFormData(prev => ({
         ...prev,
-        assignedTo: currentUser.id,
         contactOwner: currentUser.id,
       }));
     }
-  }, [currentUser, isEditing, formData.assignedTo]);
+  }, [currentUser, isEditing, formData.contactOwner]);
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<CrmContact>) => {
@@ -726,25 +715,6 @@ export default function AdminContactForm() {
                           />
                           {country.name}
                         </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assignedTo">Assign To</Label>
-                <Select
-                  value={formData.assignedTo || ""}
-                  onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
-                >
-                  <SelectTrigger id="assignedTo" data-testid="select-assigned-to">
-                    <SelectValue placeholder="Select team member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {admins?.map((admin) => (
-                      <SelectItem key={admin.id} value={admin.id}>
-                        {admin.firstName} {admin.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
