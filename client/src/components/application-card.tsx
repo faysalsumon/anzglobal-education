@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock, MessageSquare, Send, ChevronDown, User } from "lucide-react";
+import { Calendar, Building2, Upload, AlertTriangle, FolderOpen, CheckCircle, Clock, MessageSquare, Send, ChevronDown, User, Library } from "lucide-react";
+import { StudentDocumentPicker } from "./student-document-picker";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { Link } from "wouter";
 
 interface ApplicationNote {
@@ -193,6 +195,9 @@ export function ApplicationCard({ application, course, university, consultant }:
   });
   const [notesOpen, setNotesOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
+
+  useDocumentEvents({ applicationId: application.id });
 
   // Fetch pending document requests (always fetched to show alert)
   const { data: pendingDocuments } = useQuery<{ pendingRequests: any[] }>({
@@ -294,6 +299,34 @@ export function ApplicationCard({ application, course, university, consultant }:
       });
     },
   });
+
+  const attachFromLibraryMutation = useMutation({
+    mutationFn: async (data: { documentId: string; stage: ApplicationStage }) => {
+      return apiRequest("POST", `/api/student/applications/${application.id}/attach-document`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Document Attached",
+        description: "Your document has been attached to this application.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/student/applications/${application.id}/documents`] });
+      setLibraryPickerOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Attach Failed",
+        description: error.message || "Failed to attach document. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAttachFromLibrary = (document: { id: string; type: string; title: string }) => {
+    attachFromLibraryMutation.mutate({
+      documentId: document.id,
+      stage: application.currentStage,
+    });
+  };
 
   const getStageIcon = (stage: ApplicationStage) => {
     const currentIndex = STAGE_ORDER.indexOf(application.currentStage);
@@ -728,7 +761,24 @@ export function ApplicationCard({ application, course, university, consultant }:
               Upload Document
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLibraryPickerOpen(true)}
+            data-testid={`button-attach-from-library-${application.id}`}
+          >
+            <FolderOpen className="mr-2 h-4 w-4" />
+            Attach from Library
+          </Button>
         </div>
+
+        {/* Document Library Picker */}
+        <StudentDocumentPicker
+          open={libraryPickerOpen}
+          onOpenChange={setLibraryPickerOpen}
+          onSelect={handleAttachFromLibrary}
+          currentStage={application.currentStage}
+        />
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
           <Calendar className="h-4 w-4" />

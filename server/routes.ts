@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
-import { wsClients } from "./websocket-clients";
+import { wsClients, broadcastDocumentEvent } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
 import {
@@ -42,6 +42,7 @@ import {
   importBatches,
   insertImportBatchSchema,
   activityLogs,
+  applicationStageDocuments,
   // CRM imports
   insertTaskSchema,
   updateTaskSchema,
@@ -125,6 +126,10 @@ import {
   notifyApplicationStatusChange,
   notifyTeamMemberAdded,
   createNotification,
+  notifyDocumentVerified,
+  notifyDocumentRejected,
+  notifyDocumentRequested,
+  notifyDocumentUploadedToAdmin,
 } from "./notifications";
 import { sendContactInquiryEmails } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
@@ -4190,6 +4195,507 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching document requests:", error);
       res.status(500).json({ message: "Failed to fetch document requests" });
+    }
+  });
+
+  // Get pending document requests for a specific student application
+  app.get("/api/student/applications/:applicationId/pending-documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      // Verify the application belongs to this student
+      const application = await storage.getApplicationById(req.params.applicationId);
+      if (!application || application.studentId !== profile.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get pending document requests (documents without URL or not verified)
+      const allDocs = await db
+        .select()
+        .from(applicationStageDocuments)
+        .where(eq(applicationStageDocuments.applicationId, req.params.applicationId));
+
+      const pendingRequests = allDocs.filter(doc => !doc.documentUrl && doc.isRequired);
+
+      res.json({ pendingRequests });
+    } catch (error) {
+      console.error("Error fetching pending documents:", error);
+      res.status(500).json({ message: "Failed to fetch pending documents" });
+    }
+  });
+
+  // Attach personal library document to application
+  app.post("/api/student/applications/:applicationId/attach-document", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      // Verify the application belongs to this student
+      const application = await storage.getApplicationById(req.params.applicationId);
+      if (!application || application.studentId !== profile.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { documentId, documentType, stage } = req.body;
+
+      if (!documentId) {
+        return res.status(400).json({ message: "Document ID is required" });
+      }
+
+      // Get the personal document
+      const document = await storage.getDocumentById(documentId);
+      if (!document || document.studentProfileId !== profile.id) {
+        return res.status(404).json({ message: "Document not found in your library" });
+      }
+
+      // Create application stage document linked to personal document
+      const [stageDoc] = await db
+        .insert(applicationStageDocuments)
+        .values({
+          applicationId: req.params.applicationId,
+          stage: stage || application.currentStage,
+          documentId: document.id,
+          documentType: documentType || document.type,
+          documentName: document.title,
+          documentUrl: document.filePath,
+          isRequired: false,
+          isVerified: false,
+          uploadedBy: userId,
+          uploadedByRole: 'student',
+          uploadedAt: new Date(),
+        })
+        .returning();
+
+      // Send WebSocket notification to consultant if assigned
+      if (application.assignedConsultantId) {
+        const consultant = await storage.getUser(application.assignedConsultantId);
+        if (consultant) {
+          broadcastDocumentEvent(
+            [application.assignedConsultantId],
+            'document_uploaded',
+            {
+              applicationId: req.params.applicationId,
+              documentId: stageDoc.id,
+              documentName: document.title,
+              stage: stageDoc.stage,
+            }
+          );
+
+          // Also create notification
+          await notifyDocumentUploadedToAdmin({
+            adminUserId: application.assignedConsultantId,
+            studentName: `${profile.firstName} ${profile.lastName}`,
+            documentName: document.title,
+            applicationId: req.params.applicationId,
+          });
+        }
+      }
+
+      res.json({ success: true, stageDocument: stageDoc });
+    } catch (error) {
+      console.error("Error attaching document:", error);
+      res.status(500).json({ message: "Failed to attach document" });
+    }
+  });
+
+  // Admin: Get student's personal document library
+  app.get("/api/admin/students/:studentProfileId/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const documents = await storage.getDocumentsByStudentProfileId(req.params.studentProfileId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching student documents:", error);
+      res.status(500).json({ message: "Failed to fetch student documents" });
+    }
+  });
+
+  // Admin: Attach student library document to application
+  app.post("/api/admin/applications/:applicationId/attach-library-document", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { documentId, documentType, stage } = req.body;
+      const application = await storage.getApplicationById(req.params.applicationId);
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Get the personal document
+      const document = await storage.getDocumentById(documentId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Create application stage document linked to personal document
+      const [stageDoc] = await db
+        .insert(applicationStageDocuments)
+        .values({
+          applicationId: req.params.applicationId,
+          stage: stage || application.currentStage,
+          documentId: document.id,
+          documentType: documentType || document.type,
+          documentName: document.title,
+          documentUrl: document.filePath,
+          isRequired: false,
+          isVerified: false,
+          uploadedBy: userId,
+          uploadedByRole: user.userType || 'admin',
+          uploadedAt: new Date(),
+        })
+        .returning();
+
+      // Get student profile for notification
+      const studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.id, application.studentId))
+        .then(r => r[0]);
+
+      // Notify student via WebSocket
+      if (studentProfile?.userId) {
+        broadcastDocumentEvent(
+          [studentProfile.userId],
+          'document_uploaded',
+          {
+            applicationId: req.params.applicationId,
+            documentId: stageDoc.id,
+            documentName: document.title,
+            stage: stageDoc.stage,
+          }
+        );
+      }
+
+      res.json({ success: true, stageDocument: stageDoc });
+    } catch (error) {
+      console.error("Error attaching library document:", error);
+      res.status(500).json({ message: "Failed to attach library document" });
+    }
+  });
+
+  // Admin: Get application documents
+  app.get("/api/applications/:applicationId/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      // Allow admin, platform_admin, and also students for their own applications
+      const application = await storage.getApplicationById(req.params.applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Check access
+      const isAdmin = user && ['admin', 'platform_admin'].includes(user.userType || '');
+      const profile = await storage.getStudentProfileByUserId(userId);
+      const isOwner = profile && application.studentId === profile.id;
+
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const documents = await db
+        .select()
+        .from(applicationStageDocuments)
+        .where(eq(applicationStageDocuments.applicationId, req.params.applicationId))
+        .orderBy(applicationStageDocuments.createdAt);
+
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching application documents:", error);
+      res.status(500).json({ message: "Failed to fetch application documents" });
+    }
+  });
+
+  // Admin: Request document from student
+  app.post("/api/applications/:applicationId/request-document", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { documentType, documentName, stage, notes, isRequired } = req.body;
+      const application = await storage.getApplicationById(req.params.applicationId);
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Create document request (document without URL)
+      const [docRequest] = await db
+        .insert(applicationStageDocuments)
+        .values({
+          applicationId: req.params.applicationId,
+          stage: stage || application.currentStage,
+          documentType: documentType || 'general',
+          documentName: documentName || documentType,
+          documentUrl: null,
+          isRequired: isRequired ?? true,
+          isVerified: false,
+          verificationNotes: notes,
+        })
+        .returning();
+
+      // Get student profile for notification
+      const studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.id, application.studentId))
+        .then(r => r[0]);
+
+      // Notify student
+      if (studentProfile?.userId) {
+        broadcastDocumentEvent(
+          [studentProfile.userId],
+          'document_requested',
+          {
+            applicationId: req.params.applicationId,
+            documentId: docRequest.id,
+            documentName: documentName || documentType,
+            stage: docRequest.stage,
+          }
+        );
+
+        await notifyDocumentRequested({
+          studentUserId: studentProfile.userId,
+          documentType: documentName || documentType,
+          applicationId: req.params.applicationId,
+          requestedByName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin',
+          notes,
+        });
+      }
+
+      res.json({ success: true, documentRequest: docRequest });
+    } catch (error) {
+      console.error("Error requesting document:", error);
+      res.status(500).json({ message: "Failed to request document" });
+    }
+  });
+
+  // Admin: Attach document from student's personal library to application
+  app.post("/api/admin/applications/:applicationId/attach-document", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { documentId, stage } = req.body;
+      const application = await storage.getApplicationById(req.params.applicationId);
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Get the document from student's personal library
+      const document = await storage.getDocumentById(documentId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // SECURITY: Verify document belongs to the student associated with this application
+      if (document.studentProfileId !== application.studentId) {
+        return res.status(403).json({ message: "Document does not belong to this student" });
+      }
+
+      // Create application stage document linked to the personal library document
+      const [stageDoc] = await db
+        .insert(applicationStageDocuments)
+        .values({
+          applicationId: req.params.applicationId,
+          stage: stage || application.currentStage,
+          documentType: document.type,
+          documentName: document.title,
+          documentUrl: document.fileUrl,
+          documentId: document.id,
+          isRequired: false,
+          isVerified: document.status === 'verified',
+          uploadedBy: userId,
+          uploadedByRole: user.userType || 'admin',
+          uploadedAt: new Date(),
+        })
+        .returning();
+
+      // Notify student
+      const studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.id, application.studentId))
+        .then(r => r[0]);
+
+      if (studentProfile?.userId) {
+        broadcastDocumentEvent(
+          [studentProfile.userId],
+          'document_uploaded',
+          {
+            applicationId: req.params.applicationId,
+            documentId: stageDoc.id,
+            documentName: stageDoc.documentName,
+            stage: stageDoc.stage,
+          }
+        );
+      }
+
+      res.json({ success: true, document: stageDoc });
+    } catch (error) {
+      console.error("Error attaching document from library:", error);
+      res.status(500).json({ message: "Failed to attach document" });
+    }
+  });
+
+  // Admin: Verify document
+  app.post("/api/applications/:applicationId/documents/:documentId/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { notes } = req.body;
+      const application = await storage.getApplicationById(req.params.applicationId);
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Update document
+      const [updatedDoc] = await db
+        .update(applicationStageDocuments)
+        .set({
+          isVerified: true,
+          verifiedBy: userId,
+          verifiedAt: new Date(),
+          verificationNotes: notes,
+          rejectionReason: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(applicationStageDocuments.id, req.params.documentId))
+        .returning();
+
+      // Get student profile for notification
+      const studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.id, application.studentId))
+        .then(r => r[0]);
+
+      // Notify student
+      if (studentProfile?.userId) {
+        broadcastDocumentEvent(
+          [studentProfile.userId],
+          'document_verified',
+          {
+            applicationId: req.params.applicationId,
+            documentId: req.params.documentId,
+            documentName: updatedDoc.documentName,
+            stage: updatedDoc.stage,
+          }
+        );
+
+        await notifyDocumentVerified({
+          studentUserId: studentProfile.userId,
+          documentName: updatedDoc.documentName,
+          applicationId: req.params.applicationId,
+          verifiedByName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin',
+        });
+      }
+
+      res.json({ success: true, document: updatedDoc });
+    } catch (error) {
+      console.error("Error verifying document:", error);
+      res.status(500).json({ message: "Failed to verify document" });
+    }
+  });
+
+  // Admin: Reject document
+  app.post("/api/applications/:applicationId/documents/:documentId/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { reason } = req.body;
+      const application = await storage.getApplicationById(req.params.applicationId);
+
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Update document
+      const [updatedDoc] = await db
+        .update(applicationStageDocuments)
+        .set({
+          isVerified: false,
+          rejectionReason: reason || 'Document rejected',
+          updatedAt: new Date(),
+        })
+        .where(eq(applicationStageDocuments.id, req.params.documentId))
+        .returning();
+
+      // Get student profile for notification
+      const studentProfile = await db
+        .select()
+        .from(studentProfiles)
+        .where(eq(studentProfiles.id, application.studentId))
+        .then(r => r[0]);
+
+      // Notify student
+      if (studentProfile?.userId) {
+        broadcastDocumentEvent(
+          [studentProfile.userId],
+          'document_rejected',
+          {
+            applicationId: req.params.applicationId,
+            documentId: req.params.documentId,
+            documentName: updatedDoc.documentName,
+            stage: updatedDoc.stage,
+          }
+        );
+
+        await notifyDocumentRejected({
+          studentUserId: studentProfile.userId,
+          documentName: updatedDoc.documentName,
+          applicationId: req.params.applicationId,
+          rejectedByName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Admin',
+          rejectionReason: reason,
+        });
+      }
+
+      res.json({ success: true, document: updatedDoc });
+    } catch (error) {
+      console.error("Error rejecting document:", error);
+      res.status(500).json({ message: "Failed to reject document" });
     }
   });
 

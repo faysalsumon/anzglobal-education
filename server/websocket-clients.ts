@@ -18,3 +18,49 @@ export function sendToUser(userId: string, message: object): boolean {
 export function broadcastToUsers(userIds: string[], message: object): void {
   userIds.forEach(userId => sendToUser(userId, message));
 }
+
+// ==========================================
+// Document Event Helpers
+// ==========================================
+
+export type DocumentEventType = 
+  | "document_uploaded"
+  | "document_verified"
+  | "document_rejected"
+  | "document_requested"
+  | "document_deleted";
+
+export interface DocumentEvent {
+  type: "document_event";
+  event: DocumentEventType;
+  applicationId: string;
+  documentId?: string;
+  documentName?: string;
+  stage?: string;
+  timestamp: string;
+}
+
+/**
+ * Broadcast a document event to relevant users for real-time sync
+ */
+export function broadcastDocumentEvent(
+  userIds: string[],
+  event: DocumentEventType,
+  data: {
+    applicationId: string;
+    documentId?: string;
+    documentName?: string;
+    stage?: string;
+  }
+): void {
+  const message: DocumentEvent = {
+    type: "document_event",
+    event,
+    applicationId: data.applicationId,
+    documentId: data.documentId,
+    documentName: data.documentName,
+    stage: data.stage,
+    timestamp: new Date().toISOString(),
+  };
+  broadcastToUsers(userIds, message);
+}

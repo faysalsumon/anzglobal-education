@@ -10,6 +10,9 @@ export type NotificationType =
   | "team_member_added"
   | "profile_update"
   | "document_uploaded"
+  | "document_verified"
+  | "document_rejected"
+  | "document_requested"
   | "message_received"
   | "institution_approval_request"
   | "institution_approved"
@@ -63,6 +66,9 @@ const NOTIFICATION_LINK_REGISTRY: Record<NotificationType, NotificationLinkGener
   
   // Document notifications
   document_uploaded: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  document_verified: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  document_rejected: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
+  document_requested: (data) => `/student/applications${data.applicationId ? `?id=${data.applicationId}` : ''}`,
   
   // Message notifications
   message_received: (data) => data.chatId ? `/messages?chatId=${data.chatId}` : `/messages`,
@@ -451,6 +457,103 @@ export async function notifyTaskCompleted(params: {
       taskId: params.taskId,
       taskTitle: params.taskTitle,
       completedByName: params.completedByName,
+    },
+  });
+}
+
+// ==========================================
+// Document Notification Helpers
+// ==========================================
+
+/**
+ * Notify a student that their document was verified
+ */
+export async function notifyDocumentVerified(params: {
+  studentUserId: string;
+  documentName: string;
+  applicationId: string;
+  verifiedByName: string;
+}) {
+  return createNotification({
+    userId: params.studentUserId,
+    type: "document_verified",
+    title: "Document Verified",
+    message: `Your document "${params.documentName}" has been verified`,
+    metadata: {
+      applicationId: params.applicationId,
+      documentName: params.documentName,
+      verifiedByName: params.verifiedByName,
+    },
+  });
+}
+
+/**
+ * Notify a student that their document was rejected
+ */
+export async function notifyDocumentRejected(params: {
+  studentUserId: string;
+  documentName: string;
+  applicationId: string;
+  rejectedByName: string;
+  rejectionReason?: string;
+}) {
+  const reasonMessage = params.rejectionReason ? `: ${params.rejectionReason}` : '';
+  return createNotification({
+    userId: params.studentUserId,
+    type: "document_rejected",
+    title: "Document Rejected",
+    message: `Your document "${params.documentName}" was rejected${reasonMessage}`,
+    metadata: {
+      applicationId: params.applicationId,
+      documentName: params.documentName,
+      rejectedByName: params.rejectedByName,
+      rejectionReason: params.rejectionReason,
+    },
+  });
+}
+
+/**
+ * Notify a student that a document is requested for their application
+ */
+export async function notifyDocumentRequested(params: {
+  studentUserId: string;
+  documentType: string;
+  applicationId: string;
+  requestedByName: string;
+  notes?: string;
+}) {
+  return createNotification({
+    userId: params.studentUserId,
+    type: "document_requested",
+    title: "Document Requested",
+    message: `Please upload: ${params.documentType}${params.notes ? ` - ${params.notes}` : ''}`,
+    metadata: {
+      applicationId: params.applicationId,
+      documentType: params.documentType,
+      requestedByName: params.requestedByName,
+      notes: params.notes,
+    },
+  });
+}
+
+/**
+ * Notify admin/consultant that a student uploaded a document
+ */
+export async function notifyDocumentUploadedToAdmin(params: {
+  adminUserId: string;
+  studentName: string;
+  documentName: string;
+  applicationId: string;
+}) {
+  return createNotification({
+    userId: params.adminUserId,
+    type: "document_uploaded",
+    title: "Document Uploaded",
+    message: `${params.studentName} uploaded "${params.documentName}"`,
+    metadata: {
+      applicationId: params.applicationId,
+      documentName: params.documentName,
+      studentName: params.studentName,
     },
   });
 }

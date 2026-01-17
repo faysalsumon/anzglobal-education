@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { 
   User, GraduationCap, Building, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
@@ -122,6 +123,17 @@ interface StageDocument {
   createdAt: string;
 }
 
+interface PersonalDocument {
+  id: string;
+  type: string;
+  title: string;
+  fileName: string;
+  fileUrl: string | null;
+  fileSize: number | null;
+  status: string;
+  createdAt: string;
+}
+
 interface StageHistoryRecord {
   history: {
     id: string;
@@ -160,6 +172,9 @@ export function ApplicationDetailsPanel({
   onDeleted,
 }: ApplicationDetailsPanelProps) {
   const { toast } = useToast();
+  
+  useDocumentEvents({ applicationId: application.id });
+  
   const [activeTab, setActiveTab] = useState("details");
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -248,6 +263,12 @@ export function ApplicationDetailsPanel({
   const { data: historyData } = useQuery<{ history: StageHistoryRecord[] }>({
     queryKey: ["/api/admin/applications", application.id, "history"],
   });
+
+  // Fetch student's personal library documents
+  const { data: studentLibraryData } = useQuery<{ documents: PersonalDocument[] }>({
+    queryKey: ["/api/admin/students", application.studentId, "documents"],
+  });
+  const studentLibrary = studentLibraryData?.documents || [];
 
   const documents = documentsData?.documents || [];
   const history = historyData?.history || [];
@@ -339,6 +360,20 @@ export function ApplicationDetailsPanel({
     },
     onError: (error: any) => {
       toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Mutation to attach document from student library
+  const attachFromLibraryMutation = useMutation({
+    mutationFn: async (data: { documentId: string; stage: ApplicationStage }) => {
+      return apiRequest("POST", `/api/admin/applications/${application.id}/attach-document`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/applications", application.id, "documents"] });
+      toast({ title: "Document Attached", description: "Document from student's library has been attached" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Attach Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -724,7 +759,69 @@ export function ApplicationDetailsPanel({
             </div>
           </div>
 
-          <ScrollArea className="h-[400px]">
+          {/* Student Library Section */}
+          {studentLibrary.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-muted-foreground">Student's Personal Library</h4>
+                <Badge variant="secondary" className="text-xs">{studentLibrary.length} documents</Badge>
+              </div>
+              <div className="grid gap-2 p-3 rounded-md border bg-muted/30">
+                {studentLibrary.slice(0, 5).map((doc) => {
+                  const isVerified = doc.status === "verified";
+                  const isPending = doc.status === "pending";
+                  return (
+                    <div 
+                      key={doc.id} 
+                      className="flex items-center justify-between p-2 rounded-md bg-card border"
+                      data-testid={`student-lib-doc-${doc.id}`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.title}</p>
+                          <p className="text-xs text-muted-foreground">{doc.type}</p>
+                        </div>
+                        <Badge className={`text-xs ${isVerified ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : isPending ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
+                          {isVerified ? 'Verified' : isPending ? 'Pending' : 'Rejected'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {doc.fileUrl && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" data-testid={`button-view-lib-doc-${doc.id}`}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => attachFromLibraryMutation.mutate({
+                            documentId: doc.id,
+                            stage: application.currentStage
+                          })}
+                          disabled={attachFromLibraryMutation.isPending}
+                          data-testid={`button-attach-lib-doc-${doc.id}`}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Attach
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {studentLibrary.length > 5 && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    + {studentLibrary.length - 5} more documents in library
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <ScrollArea className="h-[300px]">
             {documents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-2 opacity-20" />
