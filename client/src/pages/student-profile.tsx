@@ -18,10 +18,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail } from "lucide-react";
 import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
+import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -276,6 +277,10 @@ function StudentProfileContent() {
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
+  });
+
+  const { data: userData } = useQuery<{ email?: string }>({
+    queryKey: ["/api/admin/profile"],
   });
 
   const { data: completion, isLoading: completionLoading } = useQuery<ProfileCompletionResult>({
@@ -1042,6 +1047,22 @@ function StudentProfileContent() {
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Email Address
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          value={userData?.email || ""} 
+                          disabled 
+                          className="bg-muted cursor-not-allowed" 
+                          data-testid="input-email" 
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">Email is linked to your account and cannot be changed here</p>
+                    </FormItem>
+
                     <FormField
                       control={personalForm.control}
                       name="preferredName"
@@ -1131,29 +1152,103 @@ function StudentProfileContent() {
                     <FormField
                       control={personalForm.control}
                       name="nationality"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nationality *</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="e.g., Australian" data-testid="input-nationality" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const selectedCountry = getCountryByNationality(field.value || "");
+                        return (
+                          <FormItem>
+                            <FormLabel>Nationality *</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={selectedCountry?.nationality || field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-nationality">
+                                  <SelectValue placeholder="Select nationality">
+                                    {selectedCountry ? (
+                                      <span className="flex items-center gap-2">
+                                        <img 
+                                          src={getFlagUrl(selectedCountry.code)} 
+                                          alt={selectedCountry.name} 
+                                          className="w-5 h-auto"
+                                        />
+                                        {selectedCountry.nationality}
+                                      </span>
+                                    ) : field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : null}
+                                  </SelectValue>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[300px]">
+                                {NATIONALITIES_SORTED.map((country) => (
+                                  <SelectItem key={`nat-${country.code}`} value={country.nationality}>
+                                    <span className="flex items-center gap-2">
+                                      <img 
+                                        src={getFlagUrl(country.code)} 
+                                        alt={country.name}
+                                        className="w-5 h-auto"
+                                      />
+                                      {country.nationality}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
 
                     <FormField
                       control={personalForm.control}
                       name="country"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country of Residence *</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="e.g., Australia" data-testid="input-country" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const selectedCountry = getCountryByName(field.value || "");
+                        return (
+                          <FormItem>
+                            <FormLabel>Country of Residence *</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={selectedCountry?.name || field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-country">
+                                  <SelectValue placeholder="Select country">
+                                    {selectedCountry ? (
+                                      <span className="flex items-center gap-2">
+                                        <img 
+                                          src={getFlagUrl(selectedCountry.code)} 
+                                          alt={selectedCountry.name} 
+                                          className="w-5 h-auto"
+                                        />
+                                        {selectedCountry.name}
+                                      </span>
+                                    ) : field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : null}
+                                  </SelectValue>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[300px]">
+                                {COUNTRIES.map((country) => (
+                                  <SelectItem key={`country-${country.code}`} value={country.name}>
+                                    <span className="flex items-center gap-2">
+                                      <img 
+                                        src={getFlagUrl(country.code)} 
+                                        alt={country.name}
+                                        className="w-5 h-auto"
+                                      />
+                                      {country.name}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
 
