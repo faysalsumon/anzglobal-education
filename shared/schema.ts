@@ -1961,6 +1961,7 @@ export const crmContacts = pgTable("crm_contacts", {
   email: text("email").notNull(),
   mobile: text("mobile").notNull(),
   phone: text("phone"),
+  whatsapp: text("whatsapp"),
   nationality: text("nationality"),
   country: text("country"),
   city: text("city"),
