@@ -39,9 +39,12 @@ interface CrmContact {
   leadRating: LeadRating | null;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
+  gender: string | null;
   email: string;
   mobile: string | null;
   phone: string | null;
+  whatsapp: string | null;
   nationality: string | null;
   country: string | null;
   unitNo: string | null;

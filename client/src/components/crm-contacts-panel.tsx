@@ -47,6 +47,7 @@ type ContactType = 'none' | 'clients' | 'employee' | 'external' | 'internal' | '
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
 type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
+type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
 interface CrmContact {
   id: string;
@@ -57,6 +58,8 @@ interface CrmContact {
   leadRating: LeadRating | null;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
+  gender: Gender | null;
   email: string;
   mobile: string | null;
   phone: string | null;
@@ -1000,6 +1003,34 @@ function ContactFormDialog({
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preferred Name</Label>
+                <Input
+                  value={formData.preferredName || ""}
+                  onChange={(e) => setFormData({ ...formData, preferredName: e.target.value })}
+                  placeholder="Name to call this contact"
+                  data-testid="input-preferred-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Gender</Label>
+                <Select
+                  value={formData.gender || ""}
+                  onValueChange={(value: any) => setFormData({ ...formData, gender: value })}
+                >
+                  <SelectTrigger data-testid="select-gender">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Email *</Label>
               <Input
@@ -1232,6 +1263,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
         <div className="flex-1">
           <h2 className="text-2xl font-bold" data-testid="text-contact-detail-name">
             {contact.firstName} {contact.lastName}
+            {contact.preferredName && (
+              <span className="text-lg font-normal text-muted-foreground ml-2">
+                (Call: {contact.preferredName})
+              </span>
+            )}
           </h2>
           <p className="text-muted-foreground">{contact.email}</p>
         </div>
@@ -1247,10 +1283,18 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
           {contactTypeLabels[contact.contactType]}
         </Badge>
+        {contact.gender && (
+          <Badge variant="secondary">
+            {contact.gender === 'male' ? 'Male' : 
+             contact.gender === 'female' ? 'Female' : 
+             contact.gender === 'other' ? 'Other' : 
+             'Prefer not to say'}
+          </Badge>
+        )}
         {contact.nationality && <Badge variant="secondary">{contact.nationality}</Badge>}
       </div>
 
