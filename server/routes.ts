@@ -4713,16 +4713,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assign consultant to an application
   app.patch("/api/applications/:id/assign", isAuthenticated, async (req: any, res) => {
     try {
+      console.log("[Assign Consultant] Request body:", req.body, "Application ID:", req.params.id);
       const userId = req.user.claims.sub;
       const { assignedConsultantId } = req.body;
       
       // Check if user is admin
       const currentUser = await storage.getUserById(userId);
+      console.log("[Assign Consultant] Current user:", currentUser?.id, currentUser?.userType);
       if (!currentUser || !['admin', 'platform_admin'].includes(currentUser.userType || '')) {
         return res.status(403).json({ message: "Only admins can assign consultants" });
       }
       
       const application = await storage.getApplicationById(req.params.id);
+      console.log("[Assign Consultant] Application found:", !!application);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
@@ -4730,12 +4733,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If assigning, verify the consultant exists and is an admin
       if (assignedConsultantId) {
         const consultant = await storage.getUserById(assignedConsultantId);
+        console.log("[Assign Consultant] Consultant found:", !!consultant, consultant?.userType);
         if (!consultant || !['admin', 'platform_admin'].includes(consultant.userType || '')) {
           return res.status(400).json({ message: "Invalid consultant - must be an admin user" });
         }
       }
       
       // Update the assignment
+      console.log("[Assign Consultant] Updating assignment to:", assignedConsultantId || null);
       const [updated] = await db
         .update(applications)
         .set({
@@ -4746,9 +4751,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(applications.id, req.params.id))
         .returning();
       
+      console.log("[Assign Consultant] Success:", updated?.id);
       res.json(updated);
-    } catch (error) {
-      console.error("Error assigning consultant:", error);
+    } catch (error: any) {
+      console.error("[Assign Consultant] Error:", error.message, error.stack);
       res.status(500).json({ message: "Failed to assign consultant" });
     }
   });
