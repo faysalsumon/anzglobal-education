@@ -70,6 +70,16 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Workflows**: Institution/Course approval workflow by platform admin; comprehensive 11-stage student application workflow with visual progress tracking, document management, and email notifications.
 - **Draft/Publish Workflow**: Collaborative content creation for institutions and courses with `publishStatus`, `publishedAt`, `publishedByUserId` fields. Content is only public when published and approved. Includes course transfer system.
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, circular progress indicators, color-coded SLA badges, quick filter chips, and bulk actions.
+- **Multi-Course Applications**: Applications now support multiple courses per application (package courses like Certificate III + Diploma + Bachelor together):
+  - **Application Numbers**: Human-readable IDs in format APP-YYYY-NNNNN (e.g., APP-2024-00001) auto-generated on creation
+  - **applicationCourses Junction Table**: Links applications to multiple courses with isPrimary flag and displayOrder
+  - **API Endpoints**:
+    - `GET /api/applications/:id/courses` - Get all courses for an application
+    - `POST /api/applications/:id/courses` - Add a course to an application
+    - `DELETE /api/applications/:id/courses/:courseId` - Remove a course (cannot remove last course)
+    - `GET /api/admin/assignable-users` - Get admin/platform_admin users for assignment dropdown
+    - `PATCH /api/applications/:id/assign` - Assign consultant to application
+  - **UI Updates**: Application Details panel shows application number badge, multi-course list with add/remove, and direct consultant assignment dropdown
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions with 13 categories, flexible assignment, and an Admin UI for management.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers.

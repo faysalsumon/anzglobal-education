@@ -202,8 +202,8 @@ async function generateApplicationNumber(): Promise<string> {
   const latestApp = await db
     .select({ applicationNumber: applications.applicationNumber })
     .from(applications)
-    .where(sql`application_number LIKE ${prefix + '%'}`)
-    .orderBy(sql`application_number DESC`)
+    .where(dsql`application_number LIKE ${prefix + '%'}`)
+    .orderBy(dsql`application_number DESC`)
     .limit(1)
     .then(rows => rows[0]);
   
@@ -4579,7 +4579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current max display order
       const maxOrder = await db
-        .select({ maxOrder: sql<number>`COALESCE(MAX(display_order), -1)` })
+        .select({ maxOrder: dsql<number>`COALESCE(MAX(display_order), -1)` })
         .from(applicationCourses)
         .where(eq(applicationCourses.applicationId, req.params.id))
         .then(rows => rows[0]?.maxOrder ?? -1);
@@ -4628,7 +4628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Don't allow removing if it's the only course
       const courseCount = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({ count: dsql<number>`count(*)` })
         .from(applicationCourses)
         .where(eq(applicationCourses.applicationId, id))
         .then(rows => rows[0]?.count ?? 0);
