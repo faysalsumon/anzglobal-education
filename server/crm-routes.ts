@@ -18,10 +18,30 @@ import {
   insertLeadNoteSchema,
   branches,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, inArray, aliasedTable, ne } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import { getUserAccessContext, checkCrudPermission, type UserAccessContext } from "./access-policy-service";
 import { notifyLeadMention, notifyLeadAssigned } from "./notifications";
+import multer from "multer";
+import sharp from "sharp";
+import path from "path";
+import fs from "fs/promises";
+
+// Configure multer for CRM photo uploads
+const crmUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for photos
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
+    }
+  },
+});
 
 const router = Router();
 
@@ -994,8 +1014,40 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
 
     const validated = insertCrmContactSchema.parse(req.body);
     
+    // Check for duplicate email in CRM contacts
+    if (validated.email) {
+      const [existingContact] = await db
+        .select({ id: crmContacts.id, firstName: crmContacts.firstName, lastName: crmContacts.lastName })
+        .from(crmContacts)
+        .where(eq(crmContacts.email, validated.email.toLowerCase().trim()))
+        .limit(1);
+      
+      if (existingContact) {
+        return res.status(409).json({ 
+          message: `A contact with this email already exists: ${existingContact.firstName} ${existingContact.lastName}`,
+          existingContactId: existingContact.id
+        });
+      }
+    }
+    
+    // Check if email matches a platform user for auto-linking
+    let linkedUserId = validated.linkedUserId;
+    if (!linkedUserId && validated.email) {
+      const [matchingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, validated.email.toLowerCase().trim()))
+        .limit(1);
+      
+      if (matchingUser) {
+        linkedUserId = matchingUser.id;
+      }
+    }
+    
     const [newContact] = await db.insert(crmContacts).values({
       ...validated,
+      email: validated.email.toLowerCase().trim(),
+      linkedUserId,
       contactOwner: validated.contactOwner || userId,
     }).returning();
 
@@ -1040,12 +1092,62 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
       return res.status(404).json({ message: "Contact not found" });
     }
 
+    // Check for duplicate email if email is being changed
+    if (validated.email && validated.email.toLowerCase().trim() !== existingContact.email?.toLowerCase()) {
+      const [duplicateContact] = await db
+        .select({ id: crmContacts.id, firstName: crmContacts.firstName, lastName: crmContacts.lastName })
+        .from(crmContacts)
+        .where(and(
+          eq(crmContacts.email, validated.email.toLowerCase().trim()),
+          ne(crmContacts.id, id)
+        ))
+        .limit(1);
+      
+      if (duplicateContact) {
+        return res.status(409).json({ 
+          message: `A contact with this email already exists: ${duplicateContact.firstName} ${duplicateContact.lastName}`,
+          existingContactId: duplicateContact.id
+        });
+      }
+    }
+    
+    // Auto-link to platform user if email matches and not already linked
+    // This runs when: email changes OR contact has no linkedUserId yet
+    let linkedUserId = validated.linkedUserId;
+    const emailToCheck = validated.email?.toLowerCase().trim() || existingContact.email;
+    const shouldAutoLink = !linkedUserId && !existingContact.linkedUserId && emailToCheck;
+    const emailChanged = validated.email && validated.email.toLowerCase().trim() !== existingContact.email?.toLowerCase();
+    
+    if (shouldAutoLink || emailChanged) {
+      if (emailToCheck) {
+        const [matchingUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, emailToCheck))
+          .limit(1);
+        
+        if (matchingUser) {
+          linkedUserId = matchingUser.id;
+        }
+      }
+    }
+
+    const updateData: any = {
+      ...validated,
+      updatedAt: new Date(),
+    };
+    
+    if (validated.email) {
+      updateData.email = validated.email.toLowerCase().trim();
+    }
+    
+    if (linkedUserId !== undefined) {
+      updateData.linkedUserId = linkedUserId;
+    }
+
     const [updatedContact] = await db
       .update(crmContacts)
-      .set({
-        ...validated,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(crmContacts.id, id))
       .returning();
 
@@ -1104,6 +1206,77 @@ router.delete("/contacts/:id", requireAdmin, async (req: any, res) => {
   } catch (error) {
     console.error("Error deleting contact:", error);
     res.status(500).json({ message: "Failed to delete contact" });
+  }
+});
+
+// Upload contact photo
+router.post("/contacts/:id/upload-photo", requireAdmin, crmUpload.single('photo'), async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "User ID not found" });
+    }
+
+    const [contact] = await db
+      .select()
+      .from(crmContacts)
+      .where(eq(crmContacts.id, id))
+      .limit(1);
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    let resizedBuffer: Buffer;
+    try {
+      // Validate that the buffer is actually a valid image
+      await sharp(req.file.buffer).metadata();
+      
+      // Resize to 200x200 with cover
+      resizedBuffer = await sharp(req.file.buffer)
+        .resize(200, 200, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+    } catch (sharpError: any) {
+      console.error("Sharp processing error:", sharpError);
+      return res.status(400).json({ 
+        message: "Invalid or corrupted image file. Please try a different image." 
+      });
+    }
+
+    // Save to public directory
+    const filename = `crm-contact-${id}-${Date.now()}.jpg`;
+    const localPath = path.join(process.cwd(), 'public', 'contacts');
+    await fs.mkdir(localPath, { recursive: true });
+    await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+    
+    const photoPath = `/contacts/${filename}`;
+
+    // Update contact with new photo
+    await db
+      .update(crmContacts)
+      .set({ photo: photoPath, updatedAt: new Date() })
+      .where(eq(crmContacts.id, id));
+
+    // Log activity
+    await logActivity({
+      userId,
+      entityType: "crm_contact" as any,
+      entityId: id,
+      entityName: `${contact.firstName} ${contact.lastName}`,
+      action: "updated",
+      actionDescription: `Updated photo for contact: ${contact.firstName} ${contact.lastName}`,
+    });
+
+    res.json({ photoPath });
+  } catch (error) {
+    console.error("Error uploading contact photo:", error);
+    res.status(500).json({ message: "Failed to upload photo" });
   }
 });
 

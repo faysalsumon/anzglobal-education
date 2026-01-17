@@ -346,27 +346,38 @@ export default function AdminContactForm() {
       return;
     }
 
+    // Photo upload requires contact ID - only available when editing
+    if (!isEditing || !params.id) {
+      toast({ title: "Info", description: "Save the contact first, then upload a photo", variant: "default" });
+      return;
+    }
+
     setIsUploadingPhoto(true);
     try {
       const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('folder', 'crm-contacts');
+      formDataUpload.append('photo', file);
 
       const headers = await getAuthHeaders();
-      const response = await fetch('/api/upload/image', {
+      // Remove Content-Type header - let browser set it with boundary for FormData
+      delete (headers as any)['Content-Type'];
+      
+      const response = await fetch(`/api/crm/contacts/${params.id}/upload-photo`, {
         method: 'POST',
         headers,
         credentials: 'include',
         body: formDataUpload,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Upload failed');
+      }
       
-      const { url } = await response.json();
-      setFormData(prev => ({ ...prev, photo: url }));
+      const { photoPath } = await response.json();
+      setFormData(prev => ({ ...prev, photo: photoPath }));
       toast({ title: "Success", description: "Photo uploaded successfully" });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to upload photo", variant: "destructive" });
     } finally {
       setIsUploadingPhoto(false);
     }

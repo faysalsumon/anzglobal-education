@@ -2051,6 +2051,9 @@ export const crmContacts = pgTable("crm_contacts", {
   // Source lead reference (for migrated leads)
   sourceLeadId: varchar("source_lead_id").references(() => crmLeads.id),
   
+  // Linked platform user (for contacts who have platform accounts)
+  linkedUserId: varchar("linked_user_id").references(() => users.id),
+  
   // Notes
   notes: text("notes"),
   
@@ -2074,6 +2077,7 @@ export const crmContacts = pgTable("crm_contacts", {
   sourceLeadIdx: index("crm_contacts_source_lead_idx").on(table.sourceLeadId),
   regionIdx: index("crm_contacts_region_idx").on(table.regionId),
   branchIdx: index("crm_contacts_branch_idx").on(table.branchId),
+  linkedUserIdx: index("crm_contacts_linked_user_idx").on(table.linkedUserId),
 }));
 
 // Contact Status History for tracking client status changes with timeline
