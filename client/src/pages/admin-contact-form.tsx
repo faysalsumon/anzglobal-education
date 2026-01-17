@@ -12,9 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Building, Plus, X, Briefcase, Camera, User, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRef } from "react";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
@@ -146,6 +148,9 @@ export default function AdminContactForm() {
     clientStatus: 'lead',
     entrySource: 'consultant',
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const { data: currentUser } = useQuery<{ id: string; firstName: string; lastName: string }>({
     queryKey: ["/api/auth/me"],
@@ -313,6 +318,76 @@ export default function AdminContactForm() {
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
+  // Query to find linked platform user by email
+  const { data: linkedUser } = useQuery<{ id: string; firstName: string; lastName: string; userType: string; photo?: string } | null>({
+    queryKey: ["/api/crm/contacts/linked-user", formData.email],
+    queryFn: async () => {
+      if (!formData.email) return null;
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/crm/contacts/linked-user?email=${encodeURIComponent(formData.email)}`, { credentials: 'include', headers });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.user || null;
+    },
+    enabled: !!formData.email,
+  });
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Error", description: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('folder', 'crm-contacts');
+
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const { url } = await response.json();
+      setFormData(prev => ({ ...prev, photo: url }));
+      toast({ title: "Success", description: "Photo uploaded successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const getInitials = () => {
+    const first = formData.firstName?.[0] || '';
+    const last = formData.lastName?.[0] || '';
+    return (first + last).toUpperCase() || '?';
+  };
+
+  const getUserTypeBadge = (userType: string) => {
+    switch (userType) {
+      case 'platform_admin': return 'Platform Admin';
+      case 'admin': return 'Admin';
+      case 'student': return 'Student';
+      case 'institution_admin': return 'Institution Admin';
+      default: return userType;
+    }
+  };
+
   if (isEditing && contactLoading) {
     return (
       <div className="container mx-auto py-6 flex items-center justify-center">
@@ -374,6 +449,74 @@ export default function AdminContactForm() {
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Profile Picture Section */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-muted/30 rounded-lg">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 border-2 border-border">
+                    <AvatarImage src={formData.photo || linkedUser?.photo || undefined} alt="Profile" />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {getInitials() || <User className="h-10 w-10" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    data-testid="input-photo-upload"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-md"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    data-testid="button-upload-photo"
+                  >
+                    {isUploadingPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <div className="flex-1 text-center sm:text-left space-y-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Profile Photo</p>
+                    <p className="text-xs text-muted-foreground">Click the camera icon to upload a photo (max 5MB)</p>
+                  </div>
+                  {linkedUser && (
+                    <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                      <Link2 className="h-4 w-4 text-primary" />
+                      <span className="text-sm">Linked to platform user:</span>
+                      <Badge variant="secondary" data-testid="badge-linked-user-type">
+                        {getUserTypeBadge(linkedUser.userType)}
+                      </Badge>
+                      <span className="text-sm font-medium" data-testid="text-linked-user-name">
+                        {linkedUser.firstName} {linkedUser.lastName}
+                      </span>
+                    </div>
+                  )}
+                  {formData.photo && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({ ...prev, photo: null }))}
+                      className="text-destructive hover:text-destructive"
+                      data-testid="button-remove-photo"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Remove Photo
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name *</Label>

@@ -676,6 +676,36 @@ router.post("/leads/:id/convert", requireAdmin, async (req: any, res) => {
 // CRM CONTACTS ROUTES
 // ============================================
 
+// Find linked platform user by email
+router.get("/contacts/linked-user", requireAdmin, async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.json({ user: null });
+    }
+
+    // Search for a user with matching email across different user tables
+    const user = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        userType: users.userType,
+        photo: users.photo,
+      })
+      .from(users)
+      .where(eq(users.email, email as string))
+      .limit(1)
+      .then(rows => rows[0] || null);
+
+    res.json({ user });
+  } catch (error) {
+    console.error("Error finding linked user:", error);
+    res.status(500).json({ message: "Failed to find linked user" });
+  }
+});
+
 // Get all contacts with filtering and pagination
 router.get("/contacts", requireAdmin, async (req, res) => {
   try {
