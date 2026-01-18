@@ -174,6 +174,48 @@ export function getNextStage(currentStage: ApplicationStage): ApplicationStage |
   return ACTIVE_STAGES[index + 1];
 }
 
+// Student-facing simplified stages (5 main milestones) - maps internal stages to simplified view
+export interface StudentStage {
+  id: string;
+  name: string;
+  internalStages: ApplicationStage[];
+}
+
+export const STUDENT_STAGES: StudentStage[] = [
+  { id: "assessment", name: "Initial Assessment", internalStages: ["Assessment", "Collect Docs", "Documents Verification"] },
+  { id: "applied", name: "Applied to Institution", internalStages: ["Offer-Letter"] },
+  { id: "offer", name: "Offer Letter", internalStages: ["GS-Clearance"] },
+  { id: "payment", name: "Payment", internalStages: ["COE"] },
+  { id: "coe", name: "COE Issued", internalStages: ["Health Cover", "Visa Lodgment", "Application Won"] },
+];
+
+// Helper to map internal stage to student stage index
+export function getStudentStageIndex(internalStage: ApplicationStage): number {
+  for (let i = 0; i < STUDENT_STAGES.length; i++) {
+    if (STUDENT_STAGES[i].internalStages.includes(internalStage)) {
+      return i;
+    }
+  }
+  return -1; // Terminal or unknown stage
+}
+
+// Get current student-facing stage from internal stage
+export function getStudentStage(internalStage: ApplicationStage): StudentStage | null {
+  const index = getStudentStageIndex(internalStage);
+  return index >= 0 ? STUDENT_STAGES[index] : null;
+}
+
+// Calculate progress percentage based on student-facing stages
+export function calculateStudentProgress(internalStage: ApplicationStage): number {
+  if (internalStage === "Application Won") return 100;
+  if (internalStage === "Refusal/Refunds" || internalStage === "Application Lost") return 0;
+  
+  const stageIndex = getStudentStageIndex(internalStage);
+  if (stageIndex < 0) return 0;
+  
+  return Math.round(((stageIndex + 1) / STUDENT_STAGES.length) * 100);
+}
+
 export function getPreviousStage(currentStage: ApplicationStage): ApplicationStage | null {
   const index = ACTIVE_STAGES.indexOf(currentStage);
   if (index <= 0) return null;

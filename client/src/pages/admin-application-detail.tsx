@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
+import { ApplicationProgressBar } from "@/components/application-progress-bar";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
@@ -211,6 +212,16 @@ function AdminApplicationDetailContent() {
           </Button>
         </div>
       </div>
+
+      {/* Application Progress Bar - Visual stage indicator matching student dashboard */}
+      <Card>
+        <CardContent className="pt-6">
+          <ApplicationProgressBar 
+            currentStage={application.currentStage} 
+            showInternalStage={true}
+          />
+        </CardContent>
+      </Card>
 
       {/* Student and Course Info Cards */}
       <div className="grid gap-4 lg:grid-cols-2">
