@@ -77,7 +77,7 @@ import {
   institutionTags,
   insertInstitutionTagSchema,
 } from "@shared/schema";
-import { eq, and, or, desc, not, inArray, sql as dsql } from "drizzle-orm";
+import { eq, and, or, desc, not, inArray, sql as dsql, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
@@ -4272,23 +4272,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Document not found in your library" });
       }
 
-      // Create application stage document linked to personal document
-      const [stageDoc] = await db
-        .insert(applicationStageDocuments)
-        .values({
-          applicationId: req.params.applicationId,
-          stage: stage || application.currentStage,
-          documentId: document.id,
-          documentType: documentType || document.type,
-          documentName: document.title,
-          documentUrl: document.filePath,
-          isRequired: false,
-          isVerified: false,
-          uploadedBy: userId,
-          uploadedByRole: 'student',
-          uploadedAt: new Date(),
-        })
-        .returning();
+      // Check if there's an existing required document entry with this type that needs fulfillment
+      const effectiveDocType = documentType || document.type;
+      const existingRequiredDoc = await db
+        .select()
+        .from(applicationStageDocuments)
+        .where(and(
+          eq(applicationStageDocuments.applicationId, req.params.applicationId),
+          eq(applicationStageDocuments.documentType, effectiveDocType),
+          eq(applicationStageDocuments.isRequired, true),
+          isNull(applicationStageDocuments.documentUrl)
+        ))
+        .limit(1);
+
+      let stageDoc;
+      if (existingRequiredDoc.length > 0) {
+        // UPDATE the existing required document entry with the uploaded file
+        const [updatedDoc] = await db
+          .update(applicationStageDocuments)
+          .set({
+            documentId: document.id,
+            documentName: document.title,
+            documentUrl: document.filePath,
+            uploadedBy: userId,
+            uploadedByRole: 'student',
+            uploadedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(applicationStageDocuments.id, existingRequiredDoc[0].id))
+          .returning();
+        stageDoc = updatedDoc;
+      } else {
+        // Create new application stage document linked to personal document
+        const [newDoc] = await db
+          .insert(applicationStageDocuments)
+          .values({
+            applicationId: req.params.applicationId,
+            stage: stage || application.currentStage,
+            documentId: document.id,
+            documentType: effectiveDocType,
+            documentName: document.title,
+            documentUrl: document.filePath,
+            isRequired: false,
+            isVerified: false,
+            uploadedBy: userId,
+            uploadedByRole: 'student',
+            uploadedAt: new Date(),
+          })
+          .returning();
+        stageDoc = newDoc;
+      }
 
       // Send WebSocket notification to consultant if assigned
       if (application.assignedConsultantId) {
@@ -4936,6 +4969,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           displayOrder: 0,
           addedBy: userId,
         });
+      }
+      
+      // Seed initial required documents into applicationStageDocuments
+      // This ensures admin sees accurate document progress (0 of N required)
+      const INITIAL_REQUIRED_DOCUMENTS = [
+        { type: "passport", name: "Passport Copy", stage: "Collect Docs" as const },
+        { type: "transcript", name: "Academic Transcripts", stage: "Collect Docs" as const },
+        { type: "language_test", name: "English Test Results", stage: "Collect Docs" as const },
+      ];
+      
+      try {
+        await db.insert(applicationStageDocuments).values(
+          INITIAL_REQUIRED_DOCUMENTS.map(doc => ({
+            applicationId: application.id,
+            stage: doc.stage,
+            documentType: doc.type,
+            documentName: doc.name,
+            documentUrl: null, // Not uploaded yet
+            isRequired: true,
+            isVerified: false,
+            uploadedBy: null,
+            uploadedByRole: null,
+          }))
+        );
+      } catch (docError) {
+        console.error("Error seeding required documents:", docError);
+        // Don't fail the application creation if document seeding fails
       }
       
       // Update contact status to 'applicant' ONLY when FIRST application is created
