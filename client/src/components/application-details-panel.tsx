@@ -179,8 +179,12 @@ export function ApplicationDetailsPanel({
   
   // Helper function to view documents with authentication
   const viewDocument = useCallback(async (url: string, fileName?: string) => {
+    // Open window immediately to avoid popup blocker
+    const newWindow = window.open('', '_blank');
+    
     try {
       if (!supabase) {
+        newWindow?.close();
         toast({ title: "Error", description: "Authentication not available", variant: "destructive" });
         return;
       }
@@ -188,8 +192,14 @@ export function ApplicationDetailsPanel({
       const token = session?.access_token;
       
       if (!token) {
+        newWindow?.close();
         toast({ title: "Error", description: "Please log in to view documents", variant: "destructive" });
         return;
+      }
+      
+      // Show loading message in new window
+      if (newWindow) {
+        newWindow.document.write('<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><p>Loading document...</p></body></html>');
       }
       
       const response = await fetch(url, {
@@ -204,12 +214,16 @@ export function ApplicationDetailsPanel({
       
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
+      
+      if (newWindow) {
+        newWindow.location.href = blobUrl;
+      }
       
       // Clean up blob URL after a delay
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (error) {
       console.error('Error viewing document:', error);
+      newWindow?.close();
       toast({ title: "Error", description: "Failed to open document", variant: "destructive" });
     }
   }, [toast]);
