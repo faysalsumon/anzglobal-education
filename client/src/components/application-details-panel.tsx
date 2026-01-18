@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import { ApplicationInternalNotes } from "@/components/application-internal-note
 import { StudentApplicationNotes } from "@/components/student-application-notes";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationStage, STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
+import { supabase } from "@/lib/supabase";
 
 interface ApplicationCourse {
   id: string;
@@ -175,6 +176,85 @@ export function ApplicationDetailsPanel({
   const { toast } = useToast();
   
   useDocumentEvents({ applicationId: application.id });
+  
+  // Helper function to view documents with authentication
+  const viewDocument = useCallback(async (url: string, fileName?: string) => {
+    try {
+      if (!supabase) {
+        toast({ title: "Error", description: "Authentication not available", variant: "destructive" });
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        toast({ title: "Error", description: "Please log in to view documents", variant: "destructive" });
+        return;
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      
+      // Clean up blob URL after a delay
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      toast({ title: "Error", description: "Failed to open document", variant: "destructive" });
+    }
+  }, [toast]);
+  
+  // Helper function to download documents with authentication
+  const downloadDocument = useCallback(async (url: string, fileName?: string) => {
+    try {
+      if (!supabase) {
+        toast({ title: "Error", description: "Authentication not available", variant: "destructive" });
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        toast({ title: "Error", description: "Please log in to download documents", variant: "destructive" });
+        return;
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName || 'document';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({ title: "Error", description: "Failed to download document", variant: "destructive" });
+    }
+  }, [toast]);
   
   const [activeTab, setActiveTab] = useState("details");
   const [isEditing, setIsEditing] = useState(false);
@@ -809,10 +889,14 @@ export function ApplicationDetailsPanel({
                       </div>
                       <div className="flex items-center gap-1">
                         {doc.filePath && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                            <a href={`/api/admin/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" data-testid={`button-view-lib-doc-${doc.id}`}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </a>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7"
+                            onClick={() => viewDocument(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title)}
+                            data-testid={`button-view-lib-doc-${doc.id}`}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         <Button 
@@ -889,15 +973,23 @@ export function ApplicationDetailsPanel({
                             <div className="flex items-center gap-1">
                               {doc.documentUrl && (
                                 <>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                                    <a href={`/api/admin/applications/${application.id}/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" data-testid={`button-view-doc-${doc.id}`}>
-                                      <Eye className="h-3.5 w-3.5" />
-                                    </a>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7"
+                                    onClick={() => viewDocument(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document')}
+                                    data-testid={`button-view-doc-${doc.id}`}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                                    <a href={`/api/admin/applications/${application.id}/documents/${doc.id}/download`} download={doc.documentName || 'document'} data-testid={`button-download-doc-${doc.id}`}>
-                                      <Download className="h-3.5 w-3.5" />
-                                    </a>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7"
+                                    onClick={() => downloadDocument(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document')}
+                                    data-testid={`button-download-doc-${doc.id}`}
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
                                   </Button>
                                   {!doc.isVerified && !doc.rejectionReason && (
                                     <Button 
