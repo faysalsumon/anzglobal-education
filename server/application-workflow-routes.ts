@@ -15,11 +15,11 @@ import {
   type ApplicationStageHistory,
   type ApplicationStageDocument,
 } from "@shared/schema";
-import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { logActivity } from "./activity-logger";
 import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
-import { notifyApplicationAssigned, notifyApplicationStageChange } from "./notifications";
+import { notifyApplicationAssigned, notifyApplicationStageChange, notifyDocumentRequested } from "./notifications";
 import { getUserAccessContext, checkCrudPermission } from "./access-policy-service";
 
 // Stage transition validation schema
@@ -1120,7 +1120,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
 
       const validatedData = requestSchema.parse(req.body);
 
-      // Verify application exists and get student info
+      // Verify application exists and get student/course/university info
       const application = await db.query.applications.findFirst({
         where: eq(applications.id, applicationId),
       });
@@ -1128,6 +1128,34 @@ export function registerApplicationWorkflowRoutes(app: Express) {
       if (!application) {
         return res.status(404).json({ error: "Application not found" });
       }
+
+      // Get student profile to find user ID for notification
+      const studentProfile = await db.query.studentProfiles.findFirst({
+        where: eq(studentProfiles.id, application.studentId),
+      });
+
+      if (!studentProfile) {
+        return res.status(404).json({ error: "Student profile not found" });
+      }
+
+      // Get student user for email
+      const studentUser = await db.query.users.findFirst({
+        where: eq(users.id, studentProfile.userId),
+      });
+
+      // Get course and university info
+      const courseInfo = await db.query.courses.findFirst({
+        where: eq(courses.id, application.courseId),
+      });
+
+      const universityInfo = courseInfo ? await db.query.universities.findFirst({
+        where: eq(universities.id, courseInfo.universityId),
+      }) : null;
+
+      // Get requesting admin name
+      const requestingAdmin = await db.query.users.findFirst({
+        where: eq(users.id, adminAccess.userId),
+      });
 
       // Create pending document request (no URL, not uploaded yet)
       const [documentRequest] = await db.insert(applicationStageDocuments).values({
@@ -1151,11 +1179,37 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         metadata: { documentType: validatedData.documentType, stage: validatedData.stage, isRequest: true },
       });
 
-      // Send notification to student (if email service is available)
+      // Send in-app notification to student
       try {
-        await sendDocumentRequestNotification(applicationId);
+        const adminName = requestingAdmin 
+          ? `${requestingAdmin.firstName || ''} ${requestingAdmin.lastName || ''}`.trim() || 'Consultant'
+          : 'Consultant';
+        
+        await notifyDocumentRequested({
+          studentUserId: studentProfile.userId,
+          documentType: validatedData.documentName,
+          applicationId,
+          requestedByName: adminName,
+        });
+      } catch (notifyError) {
+        console.warn("Failed to send in-app notification:", notifyError);
+      }
+
+      // Send email notification to student (if email service is available)
+      try {
+        if (studentUser?.email && courseInfo) {
+          await sendDocumentRequestNotification({
+            studentEmail: studentUser.email,
+            studentName: `${studentProfile.firstName || ''} ${studentProfile.lastName || ''}`.trim() || 'Student',
+            applicationId,
+            courseTitle: courseInfo.title,
+            universityName: universityInfo?.name || 'University',
+            currentStage: validatedData.stage,
+            documentTypes: [validatedData.documentName],
+          });
+        }
       } catch (emailError) {
-        console.warn("Failed to send document request notification:", emailError);
+        console.warn("Failed to send document request email:", emailError);
       }
 
       res.json({ documentRequest, message: "Document request created successfully" });

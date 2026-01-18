@@ -188,12 +188,6 @@ const getStudentStageIndex = (internalStage: ApplicationStage): number => {
 
 export function ApplicationCard({ application, course, university, consultant }: ApplicationCardProps) {
   const { toast } = useToast();
-  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [documentData, setDocumentData] = useState({
-    documentName: "",
-    documentUrl: "",
-    documentType: undefined as string | undefined,
-  });
   const [notesOpen, setNotesOpen] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
@@ -279,28 +273,6 @@ export function ApplicationCard({ application, course, university, consultant }:
     ? STUDENT_STAGES[nextStudentStageIndex] 
     : null;
 
-  const uploadDocumentMutation = useMutation({
-    mutationFn: async (data: { applicationId: string; stage: ApplicationStage; documentName: string; documentUrl: string; documentType: string }) => {
-      return apiRequest("POST", "/api/student/applications/documents", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Document Uploaded",
-        description: "Your document has been uploaded successfully and is pending verification.",
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/student/applications/${application.id}/documents`] });
-      setDocumentDialogOpen(false);
-      setDocumentData({ documentName: "", documentUrl: "", documentType: undefined });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload document. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const attachFromLibraryMutation = useMutation({
     mutationFn: async (data: { documentId: string; stage: ApplicationStage }) => {
       return apiRequest("POST", `/api/student/applications/${application.id}/attach-document`, data);
@@ -340,47 +312,6 @@ export function ApplicationCard({ application, course, university, consultant }:
     } else {
       return <div className="h-5 w-5 rounded-full border-2 border-gray-300" />;
     }
-  };
-
-  const handleDocumentUpload = () => {
-    // Validate form data
-    if (!documentData.documentName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please provide a document name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!documentData.documentUrl.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please provide a document URL.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate URL format
-    try {
-      new URL(documentData.documentUrl);
-    } catch {
-      toast({
-        title: "Validation Error",
-        description: "Please provide a valid URL.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    uploadDocumentMutation.mutate({
-      applicationId: application.id,
-      stage: application.currentStage,
-      documentName: documentData.documentName.trim(),
-      documentUrl: documentData.documentUrl.trim(),
-      documentType: documentData.documentType || "general",
-    });
   };
 
   return (
@@ -452,7 +383,7 @@ export function ApplicationCard({ application, course, university, consultant }:
                   size="sm"
                   variant="default"
                   className="mt-2"
-                  onClick={() => setDocumentDialogOpen(true)}
+                  onClick={() => setLibraryPickerOpen(true)}
                   data-testid={`button-upload-requested-doc-${application.id}`}
                 >
                   <Upload className="mr-2 h-4 w-4" />
