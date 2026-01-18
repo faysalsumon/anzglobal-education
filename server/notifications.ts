@@ -590,6 +590,7 @@ export async function notifyDocumentUploadedToAdmin(params: {
     type: "document_uploaded",
     title: "Document Uploaded",
     message: `${params.studentName} uploaded "${params.documentName}"`,
+    link: `/admin/applications/${params.applicationId}`,
     metadata: {
       applicationId: params.applicationId,
       documentName: params.documentName,

@@ -4032,7 +4032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file provided" });
       }
 
-      const { folderId, type, description } = req.body;
+      const { folderId, type, description, title } = req.body;
 
       // Verify folder ownership if provided
       if (folderId) {
@@ -4075,7 +4075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const document = await storage.createDocument({
         type: type || 'other',
-        title: req.file.originalname,
+        title: title || req.file.originalname,
         filePath,
         fileName: req.file.originalname,
         senderId: userId,

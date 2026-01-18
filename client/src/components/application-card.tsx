@@ -717,6 +717,7 @@ export function ApplicationCard({ application, course, university, consultant }:
           open={libraryPickerOpen}
           onOpenChange={setLibraryPickerOpen}
           onSelect={handleAttachFromLibrary}
+          applicationId={application.id}
           currentStage={application.currentStage}
         />
 
