@@ -73,17 +73,20 @@ interface AdminApplication {
     id: string;
     name: string;
     country: string | null;
+    logo: string | null;
   };
   student: {
     id: string;
     firstName: string | null;
     lastName: string | null;
     email: string | null;
+    profileImageUrl: string | null;
   };
   consultant: {
     id: string;
     firstName: string | null;
     lastName: string | null;
+    profileImageUrl: string | null;
   } | null;
   documentProgress: DocumentProgress;
 }
@@ -386,7 +389,7 @@ function DraggableApplicationCard({
             data-testid={`checkbox-application-${app.application.id}`}
           />
           <Avatar className="h-6 w-6 flex-shrink-0">
-            <AvatarImage src={(app.student as any).profilePicture} />
+            <AvatarImage src={app.student.profileImageUrl || undefined} />
             <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
               {studentInitials}
             </AvatarFallback>
@@ -417,7 +420,7 @@ function DraggableApplicationCard({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Avatar className="h-5 w-5 flex-shrink-0">
-                  <AvatarImage src={(app.university as any).logo} />
+                  <AvatarImage src={app.university.logo || undefined} />
                   <AvatarFallback className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
                     {institutionInitials}
                   </AvatarFallback>
@@ -441,7 +444,7 @@ function DraggableApplicationCard({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-5 w-5 flex-shrink-0">
-                      <AvatarImage src={(app.consultant as any).profilePicture} />
+                      <AvatarImage src={app.consultant.profileImageUrl || undefined} />
                       <AvatarFallback className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                         {consultantInitials}
                       </AvatarFallback>
