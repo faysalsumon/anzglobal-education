@@ -4373,6 +4373,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Download/view student library document
+  app.get("/api/admin/documents/:documentId/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !['admin', 'platform_admin'].includes(user.userType || '')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const document = await storage.getDocumentById(req.params.documentId);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      if (!document.filePath) {
+        return res.status(404).json({ message: "Document file not found" });
+      }
+
+      const filePath = document.filePath;
+      const fs = await import('fs/promises');
+      const pathModule = await import('path');
+      
+      // Check if it's an object storage path (starts with .private/) or a local file path
+      if (filePath.startsWith('.private/') || filePath.startsWith('private/')) {
+        // Object storage path - use storage client
+        const { Client } = await import("@replit/object-storage");
+        const storageClient = new Client();
+        
+        const { ok, value: fileBuffer } = await storageClient.downloadAsBytes(filePath);
+        
+        if (!ok || !fileBuffer) {
+          return res.status(404).json({ message: "File not found in storage" });
+        }
+        
+        // Determine content type from file extension
+        const ext = pathModule.extname(document.fileName || filePath).toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          '.pdf': 'application/pdf',
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif',
+          '.doc': 'application/msword',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.xls': 'application/vnd.ms-excel',
+          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+        const contentType = mimeTypes[ext] || document.mimeType || 'application/octet-stream';
+        
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `inline; filename="${document.fileName || document.title || 'document'}"`);
+        res.send(Buffer.from(fileBuffer));
+      } else {
+        // Local file path
+        try {
+          const fileBuffer = await fs.readFile(filePath);
+          
+          const ext = pathModule.extname(document.fileName || filePath).toLowerCase();
+          const mimeTypes: Record<string, string> = {
+            '.pdf': 'application/pdf',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.doc': 'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.xls': 'application/vnd.ms-excel',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          };
+          const contentType = mimeTypes[ext] || document.mimeType || 'application/octet-stream';
+          
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `inline; filename="${document.fileName || document.title || 'document'}"`);
+          res.send(fileBuffer);
+        } catch (err) {
+          console.error("Error reading local file:", err);
+          return res.status(404).json({ message: "File not found" });
+        }
+      }
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      res.status(500).json({ message: "Failed to download document" });
+    }
+  });
+
   // Admin: Attach student library document to application
   app.post("/api/admin/applications/:applicationId/attach-library-document", isAuthenticated, async (req: any, res) => {
     try {

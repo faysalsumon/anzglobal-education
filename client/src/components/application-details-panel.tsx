@@ -129,6 +129,7 @@ interface PersonalDocument {
   title: string;
   fileName: string;
   fileUrl: string | null;
+  filePath: string | null;
   fileSize: number | null;
   status: string;
   createdAt: string;
@@ -807,9 +808,9 @@ export function ApplicationDetailsPanel({
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
-                        {doc.fileUrl && (
+                        {doc.filePath && (
                           <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" data-testid={`button-view-lib-doc-${doc.id}`}>
+                            <a href={`/api/admin/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" data-testid={`button-view-lib-doc-${doc.id}`}>
                               <Eye className="h-3.5 w-3.5" />
                             </a>
                           </Button>
@@ -889,12 +890,12 @@ export function ApplicationDetailsPanel({
                               {doc.documentUrl && (
                                 <>
                                   <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                                    <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer" data-testid={`button-view-doc-${doc.id}`}>
+                                    <a href={`/api/admin/applications/${application.id}/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" data-testid={`button-view-doc-${doc.id}`}>
                                       <Eye className="h-3.5 w-3.5" />
                                     </a>
                                   </Button>
                                   <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                                    <a href={doc.documentUrl} download data-testid={`button-download-doc-${doc.id}`}>
+                                    <a href={`/api/admin/applications/${application.id}/documents/${doc.id}/download`} download={doc.documentName || 'document'} data-testid={`button-download-doc-${doc.id}`}>
                                       <Download className="h-3.5 w-3.5" />
                                     </a>
                                   </Button>
