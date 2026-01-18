@@ -42,6 +42,7 @@ import { StudentApplicationNotes } from "@/components/student-application-notes"
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationStage, STAGE_CONFIG, ALL_STAGES } from "@/lib/stage-config";
 import { supabase } from "@/lib/supabase";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
 
 interface ApplicationCourse {
   id: string;
@@ -177,56 +178,17 @@ export function ApplicationDetailsPanel({
   
   useDocumentEvents({ applicationId: application.id });
   
-  // Helper function to view documents with authentication
-  const viewDocument = useCallback(async (url: string, fileName?: string) => {
-    // Open window immediately to avoid popup blocker
-    const newWindow = window.open('', '_blank');
-    
-    try {
-      if (!supabase) {
-        newWindow?.close();
-        toast({ title: "Error", description: "Authentication not available", variant: "destructive" });
-        return;
-      }
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      
-      if (!token) {
-        newWindow?.close();
-        toast({ title: "Error", description: "Please log in to view documents", variant: "destructive" });
-        return;
-      }
-      
-      // Show loading message in new window
-      if (newWindow) {
-        newWindow.document.write('<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><p>Loading document...</p></body></html>');
-      }
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch document');
-      }
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      if (newWindow) {
-        newWindow.location.href = blobUrl;
-      }
-      
-      // Clean up blob URL after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    } catch (error) {
-      console.error('Error viewing document:', error);
-      newWindow?.close();
-      toast({ title: "Error", description: "Failed to open document", variant: "destructive" });
-    }
-  }, [toast]);
+  // State for document preview modal
+  const [previewDocument, setPreviewDocument] = useState<{
+    url: string;
+    name: string;
+    mimeType?: string;
+  } | null>(null);
+  
+  // Helper function to open document preview modal
+  const openDocumentPreview = useCallback((url: string, fileName: string, mimeType?: string) => {
+    setPreviewDocument({ url, name: fileName, mimeType });
+  }, []);
   
   // Helper function to download documents with authentication
   const downloadDocument = useCallback(async (url: string, fileName?: string) => {
@@ -907,7 +869,7 @@ export function ApplicationDetailsPanel({
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7"
-                            onClick={() => viewDocument(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title)}
+                            onClick={() => openDocumentPreview(`/api/admin/documents/${doc.id}/download`, doc.fileName || doc.title)}
                             data-testid={`button-view-lib-doc-${doc.id}`}
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -991,7 +953,7 @@ export function ApplicationDetailsPanel({
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-7 w-7"
-                                    onClick={() => viewDocument(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document')}
+                                    onClick={() => openDocumentPreview(`/api/admin/applications/${application.id}/documents/${doc.id}/download`, doc.documentName || 'document')}
                                     data-testid={`button-view-doc-${doc.id}`}
                                   >
                                     <Eye className="h-3.5 w-3.5" />
@@ -1513,6 +1475,15 @@ export function ApplicationDetailsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        open={!!previewDocument}
+        onOpenChange={(open) => !open && setPreviewDocument(null)}
+        documentUrl={previewDocument?.url || ""}
+        documentName={previewDocument?.name || "Document"}
+        mimeType={previewDocument?.mimeType}
+      />
     </div>
   );
 }
