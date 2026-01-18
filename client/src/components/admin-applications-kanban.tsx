@@ -1308,12 +1308,12 @@ export function AdminApplicationsKanban() {
                     items={applicationsByStage[stage].map(app => app.application.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="w-44 flex-shrink-0 flex flex-col h-full">
+                    <div className="w-56 flex-shrink-0 flex flex-col h-full">
                       {/* Colored Stage Header */}
                       <div className={`rounded-t-md px-2 py-2 border-b ${STAGE_HEADER_COLORS[stage]}`}>
-                        <div className="flex items-center justify-between gap-1 mb-1">
+                        <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="text-xs font-semibold truncate text-foreground" title={stage}>
-                            {stage.length > 12 ? stage.substring(0, 12) + '...' : stage}
+                            {stage}
                           </span>
                           <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                             {percentage}%
