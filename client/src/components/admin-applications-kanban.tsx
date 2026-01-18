@@ -414,12 +414,12 @@ function DraggableApplicationCard({
           </TooltipProvider>
         </div>
 
-        {/* Row 2: Institution Logo + Course Title */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        {/* Row 2: Institution Logo + Course Title (2-line with tooltip) */}
+        <div className="flex items-start gap-1.5 min-w-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Avatar className="h-5 w-5 flex-shrink-0">
+                <Avatar className="h-5 w-5 flex-shrink-0 mt-0.5">
                   <AvatarImage src={app.university.logo || undefined} />
                   <AvatarFallback className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
                     {institutionInitials}
@@ -431,9 +431,18 @@ function DraggableApplicationCard({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <p className="text-[11px] text-muted-foreground truncate flex-1 min-w-0">
-            {app.course.title}
-          </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[11px] text-muted-foreground flex-1 min-w-0 line-clamp-2 leading-tight cursor-default">
+                  {app.course.title}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs max-w-[280px]">
+                {app.course.title}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Row 3: Consultant Avatar + SLA Badge + Date */}
