@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Home, Heart, SlidersHorizontal, X } from "lucide-react";
+import { Search, MapPin, Home, Heart, SlidersHorizontal, X, Map as MapIcon, List } from "lucide-react";
+import { InstitutionMapSearch } from "@/components/institution-map-search";
+import type { InstitutionCampus } from "@/components/institution-map-search";
 import { PublicLayout } from "@/components/public-layout";
 import {
   Breadcrumb,
@@ -94,9 +96,11 @@ type FilterMetadata = {
 };
 
 export default function PublicInstitutions() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   const { user, isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
 
@@ -149,6 +153,34 @@ export default function PublicInstitutions() {
     queryKey: ["/api/student/favorites"],
     enabled: isAuthenticated && isStudent,
   });
+
+  // Fetch campus locations for map view
+  const boundsQueryString = mapBounds
+    ? `?north=${mapBounds.north}&south=${mapBounds.south}&east=${mapBounds.east}&west=${mapBounds.west}`
+    : "";
+  const { data: campusData } = useQuery<{
+    campuses: InstitutionCampus[];
+    totalInstitutions: number;
+    campusesWithCoordinates: number;
+  }>({
+    queryKey: ["/api/institutions/campus-locations", boundsQueryString],
+    queryFn: async () => {
+      const response = await fetch(`/api/institutions/campus-locations${boundsQueryString}`);
+      if (!response.ok) throw new Error("Failed to fetch campus locations");
+      return response.json();
+    },
+    enabled: viewMode === "map",
+  });
+
+  // Handle map bounds change for dynamic campus filtering
+  const handleMapBoundsChange = useCallback((bounds: { north: number; south: number; east: number; west: number }) => {
+    setMapBounds(bounds);
+  }, []);
+
+  // Handle institution click from map
+  const handleInstitutionClick = useCallback((institutionId: string) => {
+    setLocation(`/institutions/${institutionId}`);
+  }, [setLocation]);
 
   const addFavoriteMutation = useMutation({
     mutationFn: async (data: { itemType: string; itemId: string }) => {
@@ -582,24 +614,68 @@ export default function PublicInstitutions() {
               </div>
             )}
 
-            {/* Results Count */}
-            <div className="mb-4 text-sm text-muted-foreground">
-              {!isLoading && (
-                <span data-testid="text-results-count">
-                  {institutions.length} institution{institutions.length !== 1 ? 's' : ''} found
-                </span>
-              )}
+            {/* Results Count & View Toggle */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="text-sm text-muted-foreground">
+                {!isLoading && viewMode === "list" && (
+                  <span data-testid="text-results-count">
+                    {institutions.length} institution{institutions.length !== 1 ? 's' : ''} found
+                  </span>
+                )}
+                {viewMode === "map" && campusData && (
+                  <span data-testid="text-map-results-count">
+                    {campusData.campusesWithCoordinates} campus{campusData.campusesWithCoordinates !== 1 ? 'es' : ''} on map
+                  </span>
+                )}
+              </div>
+              
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="h-8 px-3"
+                  data-testid="button-view-list"
+                >
+                  <List className="h-4 w-4 mr-1" />
+                  List
+                </Button>
+                <Button
+                  variant={viewMode === "map" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("map")}
+                  className="h-8 px-3"
+                  data-testid="button-view-map"
+                >
+                  <MapIcon className="h-4 w-4 mr-1" />
+                  Map
+                </Button>
+              </div>
             </div>
 
-            {isLoading ? (
+            {/* Map View */}
+            {viewMode === "map" && (
+              <div className="h-[600px] rounded-lg overflow-hidden border" data-testid="container-map-view">
+                <InstitutionMapSearch
+                  campuses={campusData?.campuses || []}
+                  onInstitutionClick={handleInstitutionClick}
+                  onBoundsChange={handleMapBoundsChange}
+                  hideInternalToggle={true}
+                />
+              </div>
+            )}
+
+            {/* List View */}
+            {viewMode === "list" && isLoading ? (
               <div className="text-center py-12 text-muted-foreground">
                 Loading institutions...
               </div>
-            ) : institutions.length === 0 ? (
+            ) : viewMode === "list" && institutions.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No institutions found matching your criteria.
               </div>
-            ) : (
+            ) : viewMode === "list" && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {institutions.map((institution) => (
                   <Card

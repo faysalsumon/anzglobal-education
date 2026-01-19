@@ -82,7 +82,11 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **UI Updates**: Application Details panel shows application number badge, multi-course list with add/remove, and direct consultant assignment dropdown
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions with 13 categories, flexible assignment, and an Admin UI for management.
-- **Maps & Location**: Google Maps integration for campus locations with custom markers.
+- **Maps & Location**: Google Maps integration for campus locations with custom markers, map-based campus search on public institutions page.
+  - **Geocoding Service**: Auto-converts campus addresses to lat/lng coordinates via Google Geocoding API on institution save
+  - **Campus Locations API**: `/api/institutions/campus-locations` endpoint with optional bounds filtering for dynamic map updates
+  - **Public Institutions Map View**: realestate.com.au-style interface with List/Map toggle, location autocomplete, and "update map as it moves" functionality
+  - **InstitutionMapSearch Component**: Embeddable map component with `hideInternalToggle` prop for page-level integration
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content including Testimonials, FAQs, Team Members, Site Settings, and Content Snippets.
 
 ### Security Implementations

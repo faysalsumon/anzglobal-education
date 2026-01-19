@@ -1655,6 +1655,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all campus locations for map view (must be before :id route)
+  app.get("/api/institutions/campus-locations", async (req, res) => {
+    try {
+      const allInstitutions = await storage.getAllUniversities();
+      
+      // Only include published, approved, and active institutions
+      const publishedInstitutions = allInstitutions.filter(i => 
+        i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive
+      );
+
+      // Extract campuses with institution data
+      const campuses: Array<{
+        institutionId: string;
+        institutionName: string;
+        institutionLogo: string | null;
+        providerType: string | null;
+        name?: string;
+        address?: string;
+        street?: string;
+        city?: string;
+        state?: string;
+        postcode?: string;
+        country?: string;
+        latitude?: string;
+        longitude?: string;
+      }> = [];
+
+      // Optional bounds filtering (for "update map as it moves")
+      const { north, south, east, west } = req.query;
+      const hasBounds = north && south && east && west;
+      const bounds = hasBounds ? {
+        north: parseFloat(north as string),
+        south: parseFloat(south as string),
+        east: parseFloat(east as string),
+        west: parseFloat(west as string),
+      } : null;
+
+      for (const institution of publishedInstitutions) {
+        if (institution.campusAddresses && Array.isArray(institution.campusAddresses)) {
+          for (const campus of institution.campusAddresses) {
+            // Skip campuses without coordinates if we have no bounds filter
+            // Include all campuses if no bounds (for initial load)
+            if (campus.latitude && campus.longitude) {
+              const lat = parseFloat(campus.latitude);
+              const lng = parseFloat(campus.longitude);
+
+              // Apply bounds filter if provided
+              if (bounds) {
+                if (lat < bounds.south || lat > bounds.north) continue;
+                if (lng < bounds.west || lng > bounds.east) continue;
+              }
+
+              campuses.push({
+                institutionId: institution.id,
+                institutionName: institution.name,
+                institutionLogo: institution.logo || null,
+                providerType: institution.providerType || null,
+                name: campus.name,
+                address: campus.address,
+                street: campus.street,
+                city: campus.city,
+                state: campus.state,
+                postcode: campus.postcode,
+                country: campus.country,
+                latitude: campus.latitude,
+                longitude: campus.longitude,
+              });
+            }
+          }
+        }
+      }
+
+      res.json({
+        campuses,
+        totalInstitutions: publishedInstitutions.length,
+        campusesWithCoordinates: campuses.length,
+      });
+    } catch (error) {
+      console.error("Error fetching campus locations:", error);
+      res.status(500).json({ message: "Failed to fetch campus locations" });
+    }
+  });
+
   // Get single institution by ID - only show if published, approved and active
   app.get("/api/institutions/:id", async (req, res) => {
     try {
