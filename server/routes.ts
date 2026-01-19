@@ -7280,6 +7280,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Geocode all institution campuses (backfill)
+  app.post("/api/super-admin/institutions/geocode-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'ceo']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const allInstitutions = await storage.getAllUniversities();
+      let totalGeocoded = 0;
+      let totalCampuses = 0;
+      const results: Array<{ institutionId: string; name: string; geocoded: number; total: number }> = [];
+
+      for (const institution of allInstitutions) {
+        if (!institution.campusAddresses || !Array.isArray(institution.campusAddresses)) {
+          continue;
+        }
+
+        let geocodedCount = 0;
+        const updatedCampuses = [...institution.campusAddresses];
+        
+        for (let i = 0; i < updatedCampuses.length; i++) {
+          const campus = updatedCampuses[i];
+          totalCampuses++;
+
+          // Skip if already has coordinates
+          if (campus.latitude && campus.longitude) {
+            geocodedCount++;
+            totalGeocoded++;
+            continue;
+          }
+
+          // Build address string for geocoding
+          const addressParts = [
+            campus.address || campus.street,
+            campus.city,
+            campus.state,
+            campus.postcode,
+            campus.country || 'Australia'
+          ].filter(Boolean);
+
+          if (addressParts.length === 0) continue;
+
+          const fullAddress = addressParts.join(', ');
+          const geocodeResult = await geocodingService.geocodeAddress(fullAddress);
+
+          if (geocodeResult) {
+            updatedCampuses[i] = {
+              ...campus,
+              latitude: geocodeResult.latitude,
+              longitude: geocodeResult.longitude,
+            };
+            geocodedCount++;
+            totalGeocoded++;
+          }
+
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        // Update institution if any campuses were geocoded
+        if (geocodedCount > 0) {
+          await storage.updateUniversity(institution.id, { 
+            campusAddresses: updatedCampuses 
+          });
+        }
+
+        results.push({
+          institutionId: institution.id,
+          name: institution.name,
+          geocoded: geocodedCount,
+          total: updatedCampuses.length,
+        });
+      }
+
+      res.json({
+        message: `Geocoded ${totalGeocoded} campuses across ${allInstitutions.length} institutions`,
+        totalInstitutions: allInstitutions.length,
+        totalCampuses,
+        totalGeocoded,
+        results,
+      });
+    } catch (error) {
+      console.error("Error geocoding institutions:", error);
+      res.status(500).json({ message: "Failed to geocode institutions" });
+    }
+  });
+
   // Bulk delete courses
   app.post("/api/super-admin/courses/bulk-delete", isAuthenticated, async (req: any, res) => {
     try {
