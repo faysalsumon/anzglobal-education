@@ -134,6 +134,25 @@ export function InstitutionMapSearch({
       infoWindowRef.current = new google.maps.InfoWindow();
     }
 
+    // Track positions to offset overlapping markers
+    const positionCounts: Record<string, number> = {};
+    const getOffsetPosition = (lat: number, lng: number): { lat: number; lng: number } => {
+      // Round to 2 decimal places to group nearby markers
+      const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+      const count = positionCounts[key] || 0;
+      positionCounts[key] = count + 1;
+      
+      if (count === 0) return { lat, lng };
+      
+      // Spiral offset pattern to spread overlapping markers
+      const angle = (count * 45) * (Math.PI / 180);
+      const offset = 0.015 * Math.ceil(count / 8); // Increase radius every 8 markers
+      return {
+        lat: lat + Math.sin(angle) * offset,
+        lng: lng + Math.cos(angle) * offset,
+      };
+    };
+
     for (const campus of campusList) {
       if (!campus.latitude || !campus.longitude) continue;
 
@@ -142,8 +161,10 @@ export function InstitutionMapSearch({
       
       if (isNaN(lat) || isNaN(lng)) continue;
 
-      const position = new google.maps.LatLng(lat, lng);
-      bounds.extend(position);
+      // Apply offset to prevent overlapping markers
+      const adjustedPos = getOffsetPosition(lat, lng);
+      const position = new google.maps.LatLng(adjustedPos.lat, adjustedPos.lng);
+      bounds.extend(new google.maps.LatLng(lat, lng)); // Use original position for bounds
 
       const markerContent = createMarkerElement(campus, false);
       
