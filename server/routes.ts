@@ -135,6 +135,7 @@ import { sendContactInquiryEmails } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
+import { geocodingService } from "./geocoding-service";
 
 // Environment-aware rate limiting for AI extraction endpoint
 // DEV: 30/hr, PREVIEW: 15/hr, PROD: 5/hr
@@ -922,6 +923,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Remove approval-related fields that only admins can modify
       const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
+
+      // Auto-geocode campus addresses if provided
+      if (safeData.campusAddresses && Array.isArray(safeData.campusAddresses) && safeData.campusAddresses.length > 0) {
+        try {
+          safeData.campusAddresses = await geocodingService.geocodeCampuses(safeData.campusAddresses);
+        } catch (geocodeError) {
+          console.warn("Error geocoding campus addresses:", geocodeError);
+        }
+      }
       
       if (ownerUniversity) {
         // User owns a university - they can update it (but not approval fields)
@@ -1004,6 +1014,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove approval-related fields that only admins can modify
       const { approvalStatus, rejectionReason, submittedForApprovalAt, approvedAt, approvedBy, ...safeData } = req.body;
       
+      // Auto-geocode campus addresses if provided
+      if (safeData.campusAddresses && Array.isArray(safeData.campusAddresses) && safeData.campusAddresses.length > 0) {
+        try {
+          safeData.campusAddresses = await geocodingService.geocodeCampuses(safeData.campusAddresses);
+        } catch (geocodeError) {
+          console.warn("Error geocoding campus addresses:", geocodeError);
+        }
+      }
+
       // Create institution with pending status
       const data = insertUniversitySchema.parse({ 
         ...safeData, 
@@ -7738,6 +7757,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Helper to convert empty strings to null for numeric fields
       const toNullableNumber = (val: any) => (val === '' || val === null || val === undefined) ? null : val;
 
+      // Auto-geocode campus addresses if provided
+      let geocodedCampusAddresses = campusAddresses || null;
+      if (campusAddresses && Array.isArray(campusAddresses) && campusAddresses.length > 0) {
+        try {
+          geocodedCampusAddresses = await geocodingService.geocodeCampuses(campusAddresses);
+        } catch (geocodeError) {
+          console.warn("Error geocoding campus addresses:", geocodeError);
+          // Continue with original addresses if geocoding fails
+        }
+      }
+
       const newInstitution = await storage.createUniversity({
         name,
         description: description || null,
@@ -7755,7 +7785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logo: logo || null,
         topCourses: topCourses || null,
         institutionGallery: institutionGallery || null,
-        campusAddresses: campusAddresses || null,
+        campusAddresses: geocodedCampusAddresses,
         smallDescription: smallDescription || null,
         fullDescription: fullDescription || null,
         tuitionFeesMin: tuitionFeesMin || null,
@@ -7821,6 +7851,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add audit trail - track who updated the institution
       updateData.updatedByUserId = userId;
       updateData.updatedAt = new Date();
+
+      // Auto-geocode campus addresses if provided in update
+      if (updateData.campusAddresses && Array.isArray(updateData.campusAddresses) && updateData.campusAddresses.length > 0) {
+        try {
+          updateData.campusAddresses = await geocodingService.geocodeCampuses(updateData.campusAddresses);
+        } catch (geocodeError) {
+          console.warn("Error geocoding campus addresses:", geocodeError);
+          // Continue with original addresses if geocoding fails
+        }
+      }
 
       const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
       
