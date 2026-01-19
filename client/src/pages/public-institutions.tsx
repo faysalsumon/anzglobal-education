@@ -257,6 +257,7 @@ export default function PublicInstitutions() {
                 onToggle={(value) => toggleMultiSelect('countries', value)}
                 placeholder="Search countries..."
                 testId="filter-countries"
+                showCountryFlags
               />
             </AccordionContent>
           </AccordionItem>

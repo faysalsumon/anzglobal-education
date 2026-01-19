@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getCountryByName, getFlagUrl } from "@/lib/countries";
 
 interface FilterCommandMultiSelectProps {
   label: string;
@@ -24,6 +25,7 @@ interface FilterCommandMultiSelectProps {
   onToggle: (value: string) => void;
   placeholder?: string;
   testId?: string;
+  showCountryFlags?: boolean;
 }
 
 export function FilterCommandMultiSelect({
@@ -33,8 +35,23 @@ export function FilterCommandMultiSelect({
   onToggle,
   placeholder = "Search...",
   testId,
+  showCountryFlags = false,
 }: FilterCommandMultiSelectProps) {
   const [open, setOpen] = useState(false);
+
+  const getCountryFlag = (countryName: string) => {
+    if (!showCountryFlags) return null;
+    const country = getCountryByName(countryName);
+    if (!country) return null;
+    return (
+      <img
+        src={getFlagUrl(country.code)}
+        alt={`${country.name} flag`}
+        className="w-5 h-auto rounded-sm"
+        loading="lazy"
+      />
+    );
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -62,6 +79,7 @@ export function FilterCommandMultiSelect({
             <CommandGroup>
               {options.map((option) => {
                 const isSelected = selected.includes(option);
+                const flag = getCountryFlag(option);
                 return (
                   <CommandItem
                     key={option}
@@ -79,6 +97,7 @@ export function FilterCommandMultiSelect({
                     >
                       <Check className="h-4 w-4" />
                     </div>
+                    {flag && <span className="mr-2">{flag}</span>}
                     <span className="flex-1">{option}</span>
                   </CommandItem>
                 );
