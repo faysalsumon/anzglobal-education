@@ -20,6 +20,7 @@ import { GalleryImageManager } from "@/components/gallery-image-manager";
 import { InstitutionContactsPanel } from "@/components/institution-contacts-panel";
 import { InstitutionBusinessTermsPanel } from "@/components/institution-business-terms-panel";
 import { InstitutionDocumentsPanel } from "@/components/institution-documents-panel";
+import { CountrySelect } from "@/components/ui/country-select";
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -402,7 +403,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                           <FormItem>
                             <FormLabel>Country *</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Australia" data-testid="input-institution-country" />
+                              <CountrySelect
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Select a country"
+                                data-testid="input-institution-country"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
