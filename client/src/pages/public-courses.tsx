@@ -40,7 +40,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, RotateCcw } from "lucide-react";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, ChevronRight, RotateCcw, ArrowUpDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { CourseWithDetails, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -152,6 +152,7 @@ export default function PublicCourses() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "price-low" | "price-high" | "duration">("name-asc");
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     subject: true,
     discipline: true,
@@ -642,11 +643,34 @@ export default function PublicCourses() {
     setCurrentPage(1);
   }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees]);
 
-  // Paginate filtered courses
-  const totalFilteredCourses = filteredCourses.length;
+  // Sort filtered courses
+  const sortedCourses = useMemo(() => {
+    const sorted = [...filteredCourses];
+    switch (sortBy) {
+      case "name-asc":
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "name-desc":
+        sorted.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "price-low":
+        sorted.sort((a, b) => (Number(a.fees) || 0) - (Number(b.fees) || 0));
+        break;
+      case "price-high":
+        sorted.sort((a, b) => (Number(b.fees) || 0) - (Number(a.fees) || 0));
+        break;
+      case "duration":
+        sorted.sort((a, b) => (Number(a.duration) || 0) - (Number(b.duration) || 0));
+        break;
+    }
+    return sorted;
+  }, [filteredCourses, sortBy]);
+
+  // Paginate sorted courses
+  const totalFilteredCourses = sortedCourses.length;
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedCourses = filteredCourses.slice(startIndex, endIndex);
+  const paginatedCourses = sortedCourses.slice(startIndex, endIndex);
 
   // SEO data
   const siteUrl = window.location.origin;
@@ -699,9 +723,24 @@ export default function PublicCourses() {
             </BreadcrumbList>
           </Breadcrumb>
 
-          <div>
+          {/* Page Header */}
+          <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Browse All Courses</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
+          </div>
+
+          {/* Tabs for Programmes/Universities */}
+          <div className="flex justify-center">
+            <div className="inline-flex border rounded-lg p-1 bg-muted/30">
+              <Button variant="default" size="sm" className="px-6" data-testid="tab-programmes">
+                Programmes
+              </Button>
+              <Link href="/institutions">
+                <Button variant="ghost" size="sm" className="px-6" data-testid="tab-universities">
+                  Universities
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Two-Column Layout with Filter Sidebar */}
@@ -754,7 +793,7 @@ export default function PublicCourses() {
                           {subject && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {subject}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubject("")} data-testid="button-clear-subject-mobile">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setSubject("")} data-testid="button-clear-subject-mobile">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -762,7 +801,7 @@ export default function PublicCourses() {
                           {discipline && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {discipline}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline-mobile">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline-mobile">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -770,7 +809,7 @@ export default function PublicCourses() {
                           {level && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {level}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setLevel("")} data-testid="button-clear-level-mobile">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setLevel("")} data-testid="button-clear-level-mobile">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -778,7 +817,7 @@ export default function PublicCourses() {
                           {country && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {country}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCountry("")} data-testid="button-clear-country-mobile">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCountry("")} data-testid="button-clear-country-mobile">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -786,7 +825,7 @@ export default function PublicCourses() {
                           {campusCity && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {campusCity}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCampusCity("")} data-testid="button-clear-city-mobile">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCampusCity("")} data-testid="button-clear-city-mobile">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -968,7 +1007,7 @@ export default function PublicCourses() {
                           {searchTerm && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               "{searchTerm.length > 15 ? searchTerm.slice(0, 15) + '...' : searchTerm}"
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSearchTerm("")} data-testid="button-clear-search">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setSearchTerm("")} data-testid="button-clear-search">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -976,7 +1015,7 @@ export default function PublicCourses() {
                           {subject && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {subject}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubject("")} data-testid="button-clear-subject">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setSubject("")} data-testid="button-clear-subject">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -984,7 +1023,7 @@ export default function PublicCourses() {
                           {discipline && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {discipline}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -992,7 +1031,7 @@ export default function PublicCourses() {
                           {subDiscipline && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {subDiscipline}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubDiscipline("")} data-testid="button-clear-subdiscipline">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setSubDiscipline("")} data-testid="button-clear-subdiscipline">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -1000,7 +1039,7 @@ export default function PublicCourses() {
                           {level && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {level}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setLevel("")} data-testid="button-clear-level">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setLevel("")} data-testid="button-clear-level">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -1008,7 +1047,7 @@ export default function PublicCourses() {
                           {country && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {country}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCountry("")} data-testid="button-clear-country">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCountry("")} data-testid="button-clear-country">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -1016,7 +1055,7 @@ export default function PublicCourses() {
                           {campusCity && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {campusCity}
-                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCampusCity("")} data-testid="button-clear-city">
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCampusCity("")} data-testid="button-clear-city">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -1162,11 +1201,24 @@ export default function PublicCourses() {
 
             {/* Main Content Area */}
             <div className="flex-1 min-w-0 space-y-4">
-              {/* Results Header */}
-              <div className="flex items-center justify-between">
+              {/* Results Header with Sort */}
+              <div className="flex items-center justify-between gap-4">
                 <p className="text-sm text-muted-foreground" data-testid="results-count">
-                  {totalFilteredCourses} course{totalFilteredCourses !== 1 ? "s" : ""} found
+                  <strong>{totalFilteredCourses}</strong> course{totalFilteredCourses !== 1 ? "s" : ""} found
                 </p>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <SelectTrigger className="w-44" data-testid="select-sort">
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                    <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                    <SelectItem value="price-low">Price (Low-High)</SelectItem>
+                    <SelectItem value="price-high">Price (High-Low)</SelectItem>
+                    <SelectItem value="duration">Duration</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {isLoading ? (
