@@ -1280,190 +1280,164 @@ export default function PublicCourses() {
                       data-testid={`course-card-${course.id}`}
                     >
                       <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          {/* Left: Institution Logo and Course Info */}
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            {/* Institution Logo */}
-                            <InstitutionLogo
-                              src={course.university?.logo}
-                              alt={course.university?.name || "Institution"}
-                              size="sm"
-                              testId={`img-logo-${course.id}`}
-                            />
-                            
-                            <div className="flex-1 min-w-0">
-                              {/* Badges Row */}
-                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
-                                <Badge variant="outline" className="text-xs">{course.subject}</Badge>
-                                {course.tags && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => (
-                                  <Badge 
-                                    key={tag.id}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    style={tag.color ? { 
-                                      backgroundColor: hexToRgba(tag.color, 0.15), 
-                                      color: tag.color, 
-                                      borderColor: hexToRgba(tag.color, 0.3) 
-                                    } : undefined}
-                                    data-testid={`badge-tag-${course.id}-${tag.slug}`}
-                                  >
-                                    {tag.name}
-                                  </Badge>
-                                ))}
-                                {course.tags && course.tags.length > 2 && (
-                                  <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
-                                    +{course.tags.length - 2}
-                                  </Badge>
-                                )}
-                                {isHighlighted && (
-                                  <Badge className="bg-accent text-accent-foreground text-xs">
-                                    <Sparkles className="h-3 w-3 mr-1" />
-                                    Your Search Result
-                                  </Badge>
-                                )}
-                              </div>
-                              
-                              {/* Course Title */}
-                              <Link href={`/courses/${course.id}`}>
-                                <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer line-clamp-2 mb-1" data-testid={`text-title-${course.id}`}>
-                                  {course.title}
-                                </h3>
-                              </Link>
-                              
-                              {/* Institution Name */}
-                              {course.universityId && course.university?.name ? (
-                                <Link 
-                                  href={`/institutions/${course.universityId}`}
-                                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
-                                  data-testid={`link-institution-${course.id}`}
-                                >
-                                  <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="truncate">{course.university.name}</span>
-                                </Link>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">Institution</span>
-                              )}
-                              
-                              {/* Brief Description */}
-                              {course.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1" data-testid={`text-description-${course.id}`}>
-                                  {course.description}
-                                </p>
-                              )}
-                              
-                              {/* Campus Availability Badges */}
-                              {(() => {
-                                const locations = course.campusLocations?.filter((loc: string) => loc) || [];
-                                if (locations.length === 0) return null;
-                                
-                                return (
-                                  <div className="mt-2">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-xs text-muted-foreground">Available at:</span>
-                                      {locations.slice(0, 3).map((location: string, idx: number) => (
-                                        <Badge
-                                          key={idx}
-                                          variant="outline"
-                                          className="text-xs cursor-pointer"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            setCampusCity(location);
-                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                                          }}
-                                          data-testid={`badge-campus-${course.id}-${idx}`}
-                                        >
-                                          <MapPin className="h-2.5 w-2.5 mr-1" />
-                                          {location}
-                                        </Badge>
-                                      ))}
-                                      {locations.length > 3 && (
-                                        <Badge variant="secondary" className="text-xs" data-testid={`badge-more-campuses-${course.id}`}>
-                                          +{locations.length - 3} more
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })()}
-                              
-                              {/* View Course Link */}
-                              <Link href={`/courses/${course.id}`}>
-                                <span className="text-sm text-primary hover:underline cursor-pointer mt-2 inline-block" data-testid={`link-view-${course.id}`}>
-                                  View Course Details
-                                </span>
-                              </Link>
+                        {/* Top Row: Favorite and Compare in top right */}
+                        <div className="flex justify-between items-start mb-3">
+                          {/* Badges Row */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge className="bg-primary/10 text-primary text-xs">{course.level}</Badge>
+                            <Badge variant="outline" className="text-xs">{course.subject}</Badge>
+                            {course.tags && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => (
+                              <Badge 
+                                key={tag.id}
+                                variant="secondary"
+                                className="text-xs"
+                                style={tag.color ? { 
+                                  backgroundColor: hexToRgba(tag.color, 0.15), 
+                                  color: tag.color, 
+                                  borderColor: hexToRgba(tag.color, 0.3) 
+                                } : undefined}
+                                data-testid={`badge-tag-${course.id}-${tag.slug}`}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {course.tags && course.tags.length > 2 && (
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
+                                +{course.tags.length - 2}
+                              </Badge>
+                            )}
+                            {isHighlighted && (
+                              <Badge className="bg-accent text-accent-foreground text-xs">
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                Your Search Result
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Top Right: Favorite + Compare */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Button
+                              variant={isFavorited(course.id) ? "default" : "ghost"}
+                              size="icon"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleFavoriteToggle(course.id);
+                              }}
+                              aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
+                              data-testid={`button-favorite-course-${course.id}`}
+                            >
+                              <Heart className={`h-4 w-4 ${isFavorited(course.id) ? "fill-current" : ""}`} />
+                            </Button>
+                            <div 
+                              className="flex items-center gap-1.5 hover-elevate rounded-md px-2 py-1.5 cursor-pointer text-sm"
+                              onClick={() => handleComparisonToggle(course.id)}
+                              data-testid={`checkbox-compare-${course.id}`}
+                            >
+                              <Checkbox 
+                                checked={isInComparison(course.id)}
+                                className="pointer-events-none"
+                              />
+                              <label className="cursor-pointer flex items-center gap-1 text-muted-foreground">
+                                <GitCompare className="h-3 w-3" />
+                                Compare
+                              </label>
                             </div>
                           </div>
+                        </div>
 
-                          {/* Right: Stats Grid and Actions */}
-                          <div className="flex-shrink-0 sm:w-56">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
-                              {course.duration && (
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <div className="text-xs text-muted-foreground">Duration</div>
-                                    <div className="font-medium text-xs" data-testid={`text-duration-${course.id}`}>{course.duration}</div>
-                                  </div>
-                                </div>
-                              )}
-                              {course.fees && (
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <div className="text-xs text-muted-foreground">Fees</div>
-                                    <div className="font-medium text-xs text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</div>
-                                  </div>
-                                </div>
-                              )}
-                              {course.location && (
-                                <div className="flex items-center gap-2 col-span-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <div>
-                                    <div className="text-xs text-muted-foreground">Location</div>
-                                    <div className="font-medium text-xs" data-testid={`text-location-${course.id}`}>{course.location}</div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                        {/* Main Content: Logo + Course Info */}
+                        <div className="flex items-start gap-3">
+                          {/* Institution Logo */}
+                          <InstitutionLogo
+                            src={course.university?.logo}
+                            alt={course.university?.name || "Institution"}
+                            size="sm"
+                            testId={`img-logo-${course.id}`}
+                          />
+                          
+                          <div className="flex-1 min-w-0">
+                            {/* Course Title */}
+                            <Link href={`/courses/${course.id}`}>
+                              <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer line-clamp-2 mb-1" data-testid={`text-title-${course.id}`}>
+                                {course.title}
+                              </h3>
+                            </Link>
                             
-                            {/* Action Buttons */}
-                            <div className="flex flex-col gap-2">
-                              <div className="flex gap-2">
-                                {isAuthenticated && isStudent ? (
-                                  <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                                    <Link href={`/student/courses/${course.id}`}>
-                                      <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
-                                      Apply
-                                    </Link>
-                                  </Button>
-                                ) : (
-                                  <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                                    <a href="/auth">
-                                      <LogIn className="mr-1.5 h-3.5 w-3.5" />
-                                      Apply
-                                    </a>
-                                  </Button>
-                                )}
-                                <Button
-                                  variant={isFavorited(course.id) ? "default" : "ghost"}
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handleFavoriteToggle(course.id);
-                                  }}
-                                  aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
-                                  data-testid={`button-favorite-course-${course.id}`}
-                                >
-                                  <Heart className={`h-4 w-4 ${isFavorited(course.id) ? "fill-current" : ""}`} />
+                            {/* Institution Name */}
+                            {course.universityId && course.university?.name ? (
+                              <Link 
+                                href={`/institutions/${course.universityId}`}
+                                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
+                                data-testid={`link-institution-${course.id}`}
+                              >
+                                <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span className="truncate">{course.university.name}</span>
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Institution</span>
+                            )}
+                            
+                            {/* Brief Description */}
+                            {course.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mt-2" data-testid={`text-description-${course.id}`}>
+                                {course.description}
+                              </p>
+                            )}
+                            
+                            {/* Campus Availability Badges */}
+                            {(() => {
+                              const locations = course.campusLocations?.filter((loc: string) => loc) || [];
+                              if (locations.length === 0) return null;
+                              
+                              return (
+                                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                  <span className="text-xs text-muted-foreground">Available at:</span>
+                                  {locations.slice(0, 3).map((location: string, idx: number) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="text-xs cursor-pointer"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setCampusCity(location);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }}
+                                      data-testid={`badge-campus-${course.id}-${idx}`}
+                                    >
+                                      <MapPin className="h-2.5 w-2.5 mr-1" />
+                                      {location}
+                                    </Badge>
+                                  ))}
+                                  {locations.length > 3 && (
+                                    <Badge variant="secondary" className="text-xs" data-testid={`badge-more-campuses-${course.id}`}>
+                                      +{locations.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            
+                            {/* Action Buttons - Left aligned below content */}
+                            <div className="flex items-center gap-2 mt-3">
+                              {isAuthenticated && isStudent ? (
+                                <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                  <Link href={`/student/courses/${course.id}`}>
+                                    <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
+                                    Apply
+                                  </Link>
                                 </Button>
-                              </div>
+                              ) : (
+                                <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                  <a href="/auth">
+                                    <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                                    Apply
+                                  </a>
+                                </Button>
+                              )}
                               
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-full"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setSelectedCourseForLead(course);
@@ -1474,21 +1448,36 @@ export default function PublicCourses() {
                                 Request Info
                               </Button>
                               
-                              <div 
-                                className="flex items-center gap-2 w-full hover-elevate rounded-md px-2 py-1 cursor-pointer text-sm"
-                                onClick={() => handleComparisonToggle(course.id)}
-                                data-testid={`checkbox-compare-${course.id}`}
-                              >
-                                <Checkbox 
-                                  checked={isInComparison(course.id)}
-                                  className="pointer-events-none"
-                                />
-                                <label className="cursor-pointer flex items-center gap-1">
-                                  <GitCompare className="h-3 w-3" />
-                                  Compare
-                                </label>
-                              </div>
+                              <Link href={`/courses/${course.id}`}>
+                                <span className="text-sm text-primary hover:underline cursor-pointer whitespace-nowrap" data-testid={`link-view-${course.id}`}>
+                                  View Details
+                                </span>
+                              </Link>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Section: Stats Row */}
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                            {course.duration && (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground" data-testid={`text-duration-${course.id}`}>{course.duration}</span>
+                              </div>
+                            )}
+                            {course.fees && (
+                              <div className="flex items-center gap-1.5">
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
+                              </div>
+                            )}
+                            {course.location && (
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>{course.location}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
