@@ -10,6 +10,7 @@ import {
   studentEducations,
   studentLanguageScores,
   studentEmployments,
+  courseEnglishRequirements,
   referrals,
   type User,
   type UpsertUser,
@@ -34,6 +35,8 @@ import {
   type InsertStudentLanguageScore,
   type StudentEmployment,
   type InsertStudentEmployment,
+  type CourseEnglishRequirement,
+  type InsertCourseEnglishRequirement,
   type Referral,
   type InsertReferral,
   studentLeads,
@@ -197,6 +200,13 @@ export interface IStorage {
   createLanguageScore(score: InsertStudentLanguageScore): Promise<StudentLanguageScore>;
   updateLanguageScore(id: string, data: Partial<InsertStudentLanguageScore>): Promise<StudentLanguageScore>;
   deleteLanguageScore(id: string): Promise<void>;
+  
+  // Course English requirements operations
+  getEnglishRequirementsByCourseId(courseId: string): Promise<CourseEnglishRequirement[]>;
+  getEnglishRequirementById(id: string): Promise<CourseEnglishRequirement | undefined>;
+  createEnglishRequirement(requirement: InsertCourseEnglishRequirement): Promise<CourseEnglishRequirement>;
+  updateEnglishRequirement(id: string, data: Partial<InsertCourseEnglishRequirement>): Promise<CourseEnglishRequirement>;
+  deleteEnglishRequirement(id: string): Promise<void>;
   
   // Student employment operations (optional)
   getEmploymentsByStudentProfileId(studentProfileId: string): Promise<StudentEmployment[]>;
@@ -1039,6 +1049,43 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLanguageScore(id: string): Promise<void> {
     await db.delete(studentLanguageScores).where(eq(studentLanguageScores.id, id));
+  }
+  
+  // Course English requirements operations
+  async getEnglishRequirementsByCourseId(courseId: string): Promise<CourseEnglishRequirement[]> {
+    return await db
+      .select()
+      .from(courseEnglishRequirements)
+      .where(eq(courseEnglishRequirements.courseId, courseId));
+  }
+
+  async getEnglishRequirementById(id: string): Promise<CourseEnglishRequirement | undefined> {
+    const [requirement] = await db
+      .select()
+      .from(courseEnglishRequirements)
+      .where(eq(courseEnglishRequirements.id, id));
+    return requirement;
+  }
+
+  async createEnglishRequirement(requirementData: InsertCourseEnglishRequirement): Promise<CourseEnglishRequirement> {
+    const [requirement] = await db
+      .insert(courseEnglishRequirements)
+      .values(requirementData)
+      .returning();
+    return requirement;
+  }
+
+  async updateEnglishRequirement(id: string, data: Partial<InsertCourseEnglishRequirement>): Promise<CourseEnglishRequirement> {
+    const [requirement] = await db
+      .update(courseEnglishRequirements)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courseEnglishRequirements.id, id))
+      .returning();
+    return requirement;
+  }
+
+  async deleteEnglishRequirement(id: string): Promise<void> {
+    await db.delete(courseEnglishRequirements).where(eq(courseEnglishRequirements.id, id));
   }
   
   // Student employment operations (optional)

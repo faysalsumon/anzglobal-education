@@ -17,6 +17,7 @@ import {
   insertStudentEducationSchema,
   insertStudentLanguageScoreSchema,
   insertStudentEmploymentSchema,
+  insertCourseEnglishRequirementSchema,
   insertFavoriteSchema,
   insertCourseComparisonSchema,
   insertNotificationSchema,
@@ -3292,6 +3293,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting language score:", error);
       res.status(400).json({ message: error.message || "Failed to delete language score" });
+    }
+  });
+
+  // Course English Requirements routes (admin only)
+  app.get("/api/courses/:courseId/english-requirements", async (req, res) => {
+    try {
+      const requirements = await storage.getEnglishRequirementsByCourseId(req.params.courseId);
+      res.json(requirements);
+    } catch (error) {
+      console.error("Error fetching English requirements:", error);
+      res.status(500).json({ message: "Failed to fetch English requirements" });
+    }
+  });
+
+  app.post("/api/courses/:courseId/english-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      // Verify user has admin or institution_admin access
+      const userType = req.user?.claims?.user_metadata?.userType;
+      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const data = insertCourseEnglishRequirementSchema.parse({
+        ...req.body,
+        courseId: req.params.courseId,
+      });
+
+      const requirement = await storage.createEnglishRequirement(data);
+      res.json(requirement);
+    } catch (error: any) {
+      console.error("Error creating English requirement:", error);
+      res.status(400).json({ message: error.message || "Failed to create English requirement" });
+    }
+  });
+
+  app.put("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      // Verify user has admin or institution_admin access
+      const userType = req.user?.claims?.user_metadata?.userType;
+      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const requirement = await storage.getEnglishRequirementById(req.params.id);
+      if (!requirement || requirement.courseId !== req.params.courseId) {
+        return res.status(404).json({ message: "English requirement not found" });
+      }
+
+      const { courseId, ...sanitizedBody } = req.body;
+      const data = insertCourseEnglishRequirementSchema.partial().parse(sanitizedBody);
+      const updated = await storage.updateEnglishRequirement(req.params.id, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating English requirement:", error);
+      res.status(400).json({ message: error.message || "Failed to update English requirement" });
+    }
+  });
+
+  app.delete("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      // Verify user has admin or institution_admin access
+      const userType = req.user?.claims?.user_metadata?.userType;
+      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const requirement = await storage.getEnglishRequirementById(req.params.id);
+      if (!requirement || requirement.courseId !== req.params.courseId) {
+        return res.status(404).json({ message: "English requirement not found" });
+      }
+
+      await storage.deleteEnglishRequirement(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting English requirement:", error);
+      res.status(400).json({ message: error.message || "Failed to delete English requirement" });
     }
   });
 
