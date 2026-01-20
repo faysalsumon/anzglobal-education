@@ -73,6 +73,7 @@ type FilterSnapshot = {
   subDiscipline: string;
   level: string;
   country: string;
+  campusState: string;
   universityFilter: string;
   campusCity: string;
   minFees: number | null;
@@ -87,6 +88,7 @@ const createStateSnapshot = (
   subDiscipline: string,
   level: string,
   country: string,
+  campusState: string,
   universityFilter: string,
   campusCity: string,
   minFees: number | null,
@@ -98,6 +100,7 @@ const createStateSnapshot = (
   subDiscipline,
   level,
   country,
+  campusState,
   universityFilter,
   campusCity,
   minFees,
@@ -112,6 +115,7 @@ const createParamsSnapshot = (params: URLSearchParams): FilterSnapshot => ({
   subDiscipline: params.get('subDiscipline') || "",
   level: params.get('level') || "",
   country: params.get('country') || "",
+  campusState: params.get('state') || "",
   universityFilter: params.get('university') || "",
   campusCity: params.get('city') || "",
   minFees: params.get('minFees') ? parseInt(params.get('minFees')!) : null,
@@ -127,6 +131,7 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
     a.subDiscipline === b.subDiscipline &&
     a.level === b.level &&
     a.country === b.country &&
+    a.campusState === b.campusState &&
     a.universityFilter === b.universityFilter &&
     a.campusCity === b.campusCity &&
     a.minFees === b.minFees &&
@@ -143,6 +148,7 @@ export default function PublicCourses() {
   const [subDiscipline, setSubDiscipline] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
+  const [campusState, setCampusState] = useState<string>("");
   const [universityFilter, setUniversityFilter] = useState<string>("");
   const [campusCity, setCampusCity] = useState<string>("");
   const [minFees, setMinFees] = useState<number | null>(null);
@@ -395,7 +401,8 @@ export default function PublicCourses() {
     const levels = new Set<string>();
     const countries = new Set<string>();
     const universities = new Map<string, string>();
-    const cities = new Set<string>();
+    const statesByCountry: Record<string, Set<string>> = {};
+    const citiesByState: Record<string, Set<string>> = {};
 
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
@@ -405,13 +412,43 @@ export default function PublicCourses() {
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
-      // Extract cities from campusLocations
-      if (course.campusLocations) {
-        course.campusLocations.forEach((location: string) => {
-          if (location) cities.add(location);
-        });
+      // Extract states and cities from institution campusAddresses if available
+      const institution = course.university;
+      if (institution && (institution as any).campusAddresses) {
+        const campusAddresses = (institution as any).campusAddresses as Array<{ country?: string; state?: string; city?: string }>;
+        if (Array.isArray(campusAddresses)) {
+          campusAddresses.forEach((campus) => {
+            const campusCountry = campus.country || course.country;
+            if (campusCountry && campus.state) {
+              if (!statesByCountry[campusCountry]) {
+                statesByCountry[campusCountry] = new Set();
+              }
+              statesByCountry[campusCountry].add(campus.state);
+              
+              // Track cities by state key (country:state)
+              const stateKey = `${campusCountry}:${campus.state}`;
+              if (campus.city) {
+                if (!citiesByState[stateKey]) {
+                  citiesByState[stateKey] = new Set();
+                }
+                citiesByState[stateKey].add(campus.city);
+              }
+            }
+          });
+        }
       }
     });
+
+    // Get states for selected country (cascading)
+    const statesForCountry = country && statesByCountry[country] 
+      ? Array.from(statesByCountry[country]).sort()
+      : [];
+
+    // Get cities for selected state (cascading)
+    const stateKey = country && campusState ? `${country}:${campusState}` : '';
+    const citiesForState = stateKey && citiesByState[stateKey]
+      ? Array.from(citiesByState[stateKey]).sort()
+      : [];
 
     return {
       subjects: Array.from(subjects).sort(),
@@ -419,9 +456,10 @@ export default function PublicCourses() {
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
-      cities: Array.from(cities).sort(),
+      states: statesForCountry,
+      cities: citiesForState,
     };
-  }, [courses]);
+  }, [courses, country, campusState]);
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -432,9 +470,10 @@ export default function PublicCourses() {
     if (subDiscipline) count++;
     if (level) count++;
     if (country) count++;
+    if (campusState) count++;
     if (campusCity) count++;
     return count;
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusCity]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, campusCity]);
 
   // Toggle collapsible section
   const toggleSection = (section: string, open?: boolean) => {
@@ -449,6 +488,7 @@ export default function PublicCourses() {
     setSubDiscipline("");
     setLevel("");
     setCountry("");
+    setCampusState("");
     setCampusCity("");
     setHighlightedCourseId(null);
     setCurrentPage(1);
@@ -470,7 +510,7 @@ export default function PublicCourses() {
     
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees
     );
     
     // If they don't match, hydrate state from URL
@@ -482,6 +522,7 @@ export default function PublicCourses() {
       if (urlSnapshot.subDiscipline !== subDiscipline) setSubDiscipline(urlSnapshot.subDiscipline);
       if (urlSnapshot.level !== level) setLevel(urlSnapshot.level);
       if (urlSnapshot.country !== country) setCountry(urlSnapshot.country);
+      if (urlSnapshot.campusState !== campusState) setCampusState(urlSnapshot.campusState);
       if (urlSnapshot.universityFilter !== universityFilter) setUniversityFilter(urlSnapshot.universityFilter);
       if (urlSnapshot.campusCity !== campusCity) setCampusCity(urlSnapshot.campusCity);
       if (urlSnapshot.minFees !== minFees) setMinFees(urlSnapshot.minFees);
@@ -515,6 +556,21 @@ export default function PublicCourses() {
       setSubDiscipline('');
     }
   }, [discipline, subDiscipline]);
+
+  // Clear state and city when country changes (cascading filters)
+  useEffect(() => {
+    if (!country && (campusState || campusCity)) {
+      setCampusState('');
+      setCampusCity('');
+    }
+  }, [country, campusState, campusCity]);
+
+  // Clear city when state changes (cascading filters)
+  useEffect(() => {
+    if (!campusState && campusCity) {
+      setCampusCity('');
+    }
+  }, [campusState, campusCity]);
 
   // Clear campus city when any other filter changes and makes the selected city invalid
   useEffect(() => {
@@ -551,20 +607,29 @@ export default function PublicCourses() {
         if (maxFees !== null && courseFees > maxFees) return false;
       }
       
-      // Check if this course has a campus in the selected city
-      return course.campusLocations?.some((location: string) => location === campusCity);
+      // Check if this course has a campus in the selected city using campusAddresses
+      const institution = course.university;
+      const campusAddresses = institution && (institution as any).campusAddresses 
+        ? (institution as any).campusAddresses as Array<{ country?: string; state?: string; city?: string }>
+        : null;
+      
+      if (!campusAddresses || !Array.isArray(campusAddresses)) return false;
+      return campusAddresses.some((campus) => {
+        const campusCountry = campus.country || course.country;
+        return campusCountry === country && campus.state === campusState && campus.city === campusCity;
+      });
     });
     
     if (!hasCoursesWithCity) {
       setCampusCity('');
     }
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, minFees, maxFees, campusCity, courses, subDisciplines]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, minFees, maxFees, campusCity, courses, subDisciplines]);
 
   // Sync state to URL (only after hydration complete or for user-initiated changes)
   useEffect(() => {
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees
     );
     
     // If we're pending hydration
@@ -587,12 +652,13 @@ export default function PublicCourses() {
       subDiscipline: subDiscipline || undefined,
       level: level || undefined,
       country: country || undefined,
+      state: campusState || undefined,
       university: universityFilter || undefined,
       city: campusCity || undefined,
       minFees: minFees !== null ? minFees.toString() : undefined,
       maxFees: maxFees !== null ? maxFees.toString() : undefined,
     });
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees, setParams]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, setParams]);
 
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -615,18 +681,30 @@ export default function PublicCourses() {
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
     
-    // Campus city filtering with normalization
-    if (campusCity) {
-      const normalizedSearchCity = normalizeCity(campusCity);
-      const hasCampusInCity = course.campusLocations?.some((location: string) => {
-        if (!location) return false;
-        const normalizedLocation = normalizeCity(location);
-        // Flexible matching after normalization
-        return normalizedLocation === normalizedSearchCity ||
-               normalizedLocation.includes(normalizedSearchCity) ||
-               normalizedSearchCity.includes(normalizedLocation);
+    // State and city filtering using institution campusAddresses
+    const institution = course.university;
+    const campusAddresses = institution && (institution as any).campusAddresses 
+      ? (institution as any).campusAddresses as Array<{ country?: string; state?: string; city?: string }>
+      : null;
+    
+    // State filtering - must match selected state in selected country
+    if (campusState) {
+      if (!campusAddresses || !Array.isArray(campusAddresses)) return false;
+      const hasMatchingState = campusAddresses.some((campus) => {
+        const campusCountry = campus.country || course.country;
+        return campusCountry === country && campus.state === campusState;
       });
-      if (!hasCampusInCity) return false;
+      if (!hasMatchingState) return false;
+    }
+    
+    // City filtering - must match selected city in selected state and country
+    if (campusCity) {
+      if (!campusAddresses || !Array.isArray(campusAddresses)) return false;
+      const hasMatchingCity = campusAddresses.some((campus) => {
+        const campusCountry = campus.country || course.country;
+        return campusCountry === country && campus.state === campusState && campus.city === campusCity;
+      });
+      if (!hasMatchingCity) return false;
     }
     
     // Budget filtering
@@ -642,7 +720,7 @@ export default function PublicCourses() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees]);
 
   // Sort filtered courses
   const sortedCourses = useMemo(() => {
@@ -823,6 +901,14 @@ export default function PublicCourses() {
                               </button>
                             </Badge>
                           )}
+                          {campusState && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {campusState}
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCampusState("")} data-testid="button-clear-state-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
                           {campusCity && (
                             <Badge variant="secondary" className="gap-1 pr-1">
                               {campusCity}
@@ -836,6 +922,61 @@ export default function PublicCourses() {
                     )}
 
                     <div className="border-t pt-4 space-y-3">
+                      {/* Location - Moved to top */}
+                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Globe className="h-4 w-4 text-primary" />
+                            Location
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.location ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 space-y-2">
+                          <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
+                            <SelectTrigger data-testid="select-country-mobile">
+                              <SelectValue placeholder="All Countries" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Countries</SelectItem>
+                              {availableFilters.countries.map((ctry) => (
+                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {country && availableFilters.states.length > 0 && (
+                            <Select value={campusState || "all"} onValueChange={(val) => { setCampusState(val === "all" ? "" : val); if (val === "all") setCampusCity(""); }}>
+                              <SelectTrigger data-testid="select-state-mobile">
+                                <SelectValue placeholder="All States" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All States</SelectItem>
+                                {availableFilters.states.map((st) => (
+                                  <SelectItem key={st} value={st}>{st}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {campusState && availableFilters.cities.length > 0 && (
+                            <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-city-mobile">
+                                <SelectValue placeholder="All Cities" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Cities</SelectItem>
+                                {availableFilters.cities.map((city) => (
+                                  <SelectItem key={city} value={city}>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-3 w-3" />
+                                      {city}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
                       {/* Subject */}
                       <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
                         <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
@@ -921,45 +1062,6 @@ export default function PublicCourses() {
                         </CollapsibleContent>
                       </Collapsible>
 
-                      {/* Location */}
-                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
-                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-                          <div className="flex items-center gap-2 font-medium text-sm">
-                            <Globe className="h-4 w-4 text-primary" />
-                            Location
-                          </div>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.location ? 'rotate-180' : ''}`} />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 space-y-2">
-                          <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-country-mobile">
-                              <SelectValue placeholder="All Countries" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => (
-                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-city-mobile">
-                              <SelectValue placeholder="All Cities" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Cities</SelectItem>
-                              {availableFilters.cities.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-3 w-3" />
-                                    {city}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </CollapsibleContent>
-                      </Collapsible>
                     </div>
 
                     <Button className="w-full mt-4" onClick={() => setMobileFiltersOpen(false)} data-testid="button-apply-filters-mobile">
@@ -1053,6 +1155,14 @@ export default function PublicCourses() {
                               </button>
                             </Badge>
                           )}
+                          {campusState && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {campusState}
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCampusState("")} data-testid="button-clear-state">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
                           {campusCity && (
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {campusCity}
@@ -1066,6 +1176,62 @@ export default function PublicCourses() {
                     )}
 
                     <div className="border-t pt-4 space-y-1">
+                      {/* Location - Moved to top */}
+                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Globe className="h-4 w-4 text-primary" />
+                            Location
+                            {(country || campusState || campusCity) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.location ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
+                          <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
+                            <SelectTrigger data-testid="select-country" className="h-9">
+                              <SelectValue placeholder="All Countries" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Countries</SelectItem>
+                              {availableFilters.countries.map((ctry) => (
+                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {country && availableFilters.states.length > 0 && (
+                            <Select value={campusState || "all"} onValueChange={(val) => { setCampusState(val === "all" ? "" : val); if (val === "all") setCampusCity(""); }}>
+                              <SelectTrigger data-testid="select-state" className="h-9">
+                                <SelectValue placeholder="All States" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All States</SelectItem>
+                                {availableFilters.states.map((st) => (
+                                  <SelectItem key={st} value={st}>{st}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {campusState && availableFilters.cities.length > 0 && (
+                            <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-city" className="h-9">
+                                <SelectValue placeholder="All Cities" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Cities</SelectItem>
+                                {availableFilters.cities.map((city) => (
+                                  <SelectItem key={city} value={city}>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-3 w-3" />
+                                      {city}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
                       {/* Subject */}
                       <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
                         <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
@@ -1154,46 +1320,6 @@ export default function PublicCourses() {
                         </CollapsibleContent>
                       </Collapsible>
 
-                      {/* Location */}
-                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
-                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
-                          <div className="flex items-center gap-2 font-medium text-sm">
-                            <Globe className="h-4 w-4 text-primary" />
-                            Location
-                            {(country || campusCity) && <span className="w-2 h-2 rounded-full bg-primary" />}
-                          </div>
-                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.location ? 'rotate-180' : ''}`} />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
-                          <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-country" className="h-9">
-                              <SelectValue placeholder="All Countries" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => (
-                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-city" className="h-9">
-                              <SelectValue placeholder="All Cities" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Cities</SelectItem>
-                              {availableFilters.cities.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-3 w-3" />
-                                    {city}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </CollapsibleContent>
-                      </Collapsible>
                     </div>
                   </CardContent>
                 </Card>
