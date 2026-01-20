@@ -1591,24 +1591,8 @@ export default function PublicCourses() {
                               );
                             })()}
                             
-                            {/* Action Buttons - Left aligned below content */}
+                            {/* Action Buttons - Request Info and View Details side by side */}
                             <div className="flex flex-wrap items-center gap-2 mt-3">
-                              {isAuthenticated && isStudent ? (
-                                <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
-                                  <Link href={`/student/courses/${course.id}`}>
-                                    <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
-                                    Apply
-                                  </Link>
-                                </Button>
-                              ) : (
-                                <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
-                                  <a href="/auth">
-                                    <LogIn className="mr-1.5 h-3.5 w-3.5" />
-                                    Apply
-                                  </a>
-                                </Button>
-                              )}
-                              
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1636,20 +1620,37 @@ export default function PublicCourses() {
                           </div>
                         </div>
 
-                        {/* Bottom Section: Stats Row */}
+                        {/* Bottom Section: Stats Row with Apply Button */}
                         <div className="mt-4 pt-3 border-t border-border/50">
-                          <div className="flex flex-wrap items-center gap-4 text-sm">
-                            {course.duration && (
-                              <div className="flex items-center gap-1.5">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground" data-testid={`text-duration-${course.id}`}>{course.duration}</span>
-                              </div>
-                            )}
-                            {course.fees && (
-                              <div className="flex items-center gap-1.5">
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
-                              </div>
+                          <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
+                            <div className="flex flex-wrap items-center gap-4">
+                              {course.duration && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground" data-testid={`text-duration-${course.id}`}>{course.duration}</span>
+                                </div>
+                              )}
+                              {course.fees && (
+                                <div className="flex items-center gap-1.5">
+                                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
+                                </div>
+                              )}
+                            </div>
+                            {isAuthenticated && isStudent ? (
+                              <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                <Link href={`/student/courses/${course.id}`}>
+                                  <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
+                                  Apply
+                                </Link>
+                              </Button>
+                            ) : (
+                              <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                <a href="/auth">
+                                  <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                                  Apply
+                                </a>
+                              </Button>
                             )}
                           </div>
                         </div>
