@@ -81,6 +81,8 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
     - `PATCH /api/applications/:id/assign` - Assign consultant to application
   - **UI Updates**: Application Details panel shows application number badge, multi-course list with add/remove, and direct consultant assignment dropdown
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
+  - **Public Courses Page**: Modern two-column layout with sticky left filter sidebar (w-72) featuring collapsible sections with icons, active filter chips with individual clear buttons, and mobile-responsive Sheet drawer for filters. Uses client-side pagination (20/30/50 items per page).
+  - **Public Institutions Page**: Server-side pagination with realestate.com.au-style map interface, List/Map toggle, and location autocomplete.
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions with 13 categories, flexible assignment, and an Admin UI for management.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers, map-based campus search on public institutions page.
   - **Geocoding Service**: Auto-converts campus addresses to lat/lng coordinates via Google Geocoding API on institution save
