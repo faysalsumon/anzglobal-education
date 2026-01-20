@@ -9,7 +9,7 @@ import {
   Search, MapPin, Home, Heart, Map as MapIcon, List, 
   Building2, GraduationCap, Award, BookOpen, Sparkles,
   ChevronDown, ChevronRight, RotateCcw, Filter, X, ArrowUpDown,
-  Globe, Percent
+  Globe
 } from "lucide-react";
 import { InstitutionMapSearch } from "@/components/institution-map-search";
 import type { InstitutionCampus } from "@/components/institution-map-search";
@@ -58,6 +58,18 @@ import { InstitutionLogo } from "@/components/institution-logo";
 import { ListPagination } from "@/components/list-pagination";
 import type { Favorite } from "@shared/schema";
 
+type CampusAddress = {
+  name?: string;
+  address?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  latitude?: string;
+  longitude?: string;
+};
+
 type University = {
   id: string;
   name: string;
@@ -86,6 +98,7 @@ type University = {
   tags: string[] | null;
   topDisciplines: string[] | null;
   coursesCount?: number;
+  campusAddresses?: CampusAddress[] | null;
 };
 
 type FilterMetadata = {
@@ -799,11 +812,11 @@ export default function PublicInstitutions() {
                         </div>
                       </div>
 
-                      {/* Bottom Section: Stats Row + View Details Button */}
+                      {/* Bottom Section: Stats Row + Campus Cities + View Details Button */}
                       <div className="mt-4 pt-3 border-t border-border/50">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          {/* Stats Row - Left */}
-                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                        <div className="flex flex-col gap-3">
+                          {/* Stats Row */}
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
                             {institution.providerType && (
                               <div className="flex items-center gap-1.5">
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -818,23 +831,70 @@ export default function PublicInstitutions() {
                             )}
                             {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
                               <div className="flex items-center gap-1.5">
-                                <Percent className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium text-primary">Up to {institution.scholarshipPercentageMax}%</span>
+                                <Award className="h-4 w-4 text-primary" />
+                                <span className="font-medium text-primary">Scholarship up to {institution.scholarshipPercentageMax}%</span>
                               </div>
                             )}
                           </div>
                           
-                          {/* View Details Button - Right */}
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            data-testid={`button-view-${institution.id}`}
-                          >
-                            <Link href={`/institutions/${institution.id}`}>
-                              View Details
-                            </Link>
-                          </Button>
+                          {/* Campus Cities Row + View Details Button */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            {/* Campus Cities */}
+                            {(() => {
+                              const uniqueCities = institution.campusAddresses 
+                                ? Array.from(new Set(
+                                    institution.campusAddresses
+                                      .map((c: CampusAddress) => c.city)
+                                      .filter(Boolean)
+                                  )) as string[]
+                                : [];
+                              
+                              if (uniqueCities.length === 0) return null;
+                              
+                              return (
+                                <div 
+                                  className="flex flex-wrap items-center gap-1.5"
+                                  data-testid={`campus-cities-${institution.id}`}
+                                >
+                                  <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  <div className="flex flex-wrap gap-1">
+                                    {uniqueCities.slice(0, 4).map((city, idx) => (
+                                      <Badge 
+                                        key={idx} 
+                                        variant="outline" 
+                                        className="text-xs py-0 px-1.5"
+                                        data-testid={`badge-city-${institution.id}-${idx}`}
+                                      >
+                                        {city}
+                                      </Badge>
+                                    ))}
+                                    {uniqueCities.length > 4 && (
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs py-0 px-1.5"
+                                        data-testid={`badge-city-more-${institution.id}`}
+                                      >
+                                        +{uniqueCities.length - 4} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            
+                            {/* View Details Button - Primary Blue */}
+                            <Button
+                              asChild
+                              variant="default"
+                              size="sm"
+                              className="w-full sm:w-auto"
+                              data-testid={`button-view-${institution.id}`}
+                            >
+                              <Link href={`/institutions/${institution.id}`}>
+                                View Details
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
