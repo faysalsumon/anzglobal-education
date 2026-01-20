@@ -66,9 +66,6 @@ const courseSchema = z.object({
   courseCode: z.string().optional(),
   scholarshipPercentageMin: optionalIntPercentage,
   scholarshipPercentageMax: optionalIntPercentage,
-  thumbnailUrl: optionalUrl,
-  curriculumUrl: optionalUrl,
-  images: z.string().optional(),
   pathways: z.string().optional(),
   studyAreas: z.string().optional(),
   careerOutcomes: z.string().optional(),
@@ -114,9 +111,6 @@ interface Course {
   courseCode?: string | null;
   scholarshipPercentageMin?: number | null;
   scholarshipPercentageMax?: number | null;
-  thumbnailUrl?: string | null;
-  curriculumUrl?: string | null;
-  images?: string[] | null;
   pathways?: string[] | null;
   studyAreas?: string[] | null;
   careerOutcomes?: string[] | null;
@@ -167,21 +161,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
   const { data: groupedTags } = useQuery<Record<string, TagType[]>>({
     queryKey: ["/api/admin/tags/grouped"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/tags/grouped", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch tags");
-      return res.json();
-    },
   });
 
   const { data: courseTags } = useQuery<TagType[]>({
     queryKey: ["/api/courses", course?.id, "tags"],
-    queryFn: async () => {
-      if (!course?.id) return [];
-      const res = await fetch(`/api/courses/${course.id}/tags`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch course tags");
-      return res.json();
-    },
     enabled: !!course?.id,
   });
 
@@ -218,9 +201,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       courseCode: course?.courseCode || "",
       scholarshipPercentageMin: course?.scholarshipPercentageMin || ("" as any),
       scholarshipPercentageMax: course?.scholarshipPercentageMax || ("" as any),
-      thumbnailUrl: course?.thumbnailUrl || "",
-      curriculumUrl: course?.curriculumUrl || "",
-      images: Array.isArray(course?.images) ? course.images.join(", ") : "",
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
       careerOutcomes: Array.isArray(course?.careerOutcomes) ? course.careerOutcomes.join(", ") : "",
@@ -304,7 +284,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       ...data,
       campusLocations: selectedCampusIds,
       intakes: data.intakes ? data.intakes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-      images: data.images ? data.images.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       studyAreas: data.studyAreas ? data.studyAreas.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       careerOutcomes: data.careerOutcomes ? data.careerOutcomes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
@@ -1040,55 +1019,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           <FormControl>
                             <Input {...field} type="number" placeholder="50" min="0" max="100" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-course-scholarshipMax" />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Media</CardTitle>
-                    <CardDescription>Course thumbnail and images</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="thumbnailUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Thumbnail URL</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="url" placeholder="https://..." data-testid="input-course-thumbnailUrl" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="curriculumUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Curriculum URL</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="url" placeholder="https://..." data-testid="input-course-curriculumUrl" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="images"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Images (Comma-separated URLs)</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="https://image1.jpg, https://image2.jpg" rows={2} data-testid="input-course-images" />
-                          </FormControl>
-                          <FormDescription>Enter multiple image URLs</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
