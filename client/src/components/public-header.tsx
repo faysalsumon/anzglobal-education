@@ -17,7 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings } from "lucide-react";
+import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings, Home } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -81,6 +81,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const profileImageUrl = getProfileImageUrl();
 
   const navItems = [
+    { title: "Home", href: "/", icon: Home },
     { title: "Courses", href: "/courses", icon: BookOpen },
     { title: "Institutions", href: "/institutions", icon: GraduationCap },
     { title: "Blog", href: "/blog", icon: Users },
