@@ -21,6 +21,9 @@ import {
   type CourseWithUniversity,
   type SubDiscipline,
   type InsertSubDiscipline,
+  type CourseSpecialization,
+  type InsertCourseSpecialization,
+  courseSpecializations,
   type StudentProfile,
   type InsertStudentProfile,
   type Application,
@@ -154,6 +157,12 @@ export interface IStorage {
   getSubDisciplineById(id: string): Promise<SubDiscipline | undefined>;
   createSubDiscipline(subDiscipline: InsertSubDiscipline): Promise<SubDiscipline>;
   incrementSubDisciplineUsage(id: string): Promise<void>;
+  
+  // Course specialization operations (Tier 3)
+  getSpecializations(subDisciplineId?: string): Promise<CourseSpecialization[]>;
+  getSpecializationById(id: string): Promise<CourseSpecialization | undefined>;
+  createOrGetSpecialization(name: string, subDisciplineId: string): Promise<CourseSpecialization>;
+  incrementSpecializationUsage(id: string): Promise<void>;
   
   // Student profile operations
   getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
@@ -682,6 +691,69 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(subDisciplines.id, id));
+  }
+
+  // Course specialization operations (Tier 3)
+  async getSpecializations(subDisciplineId?: string): Promise<CourseSpecialization[]> {
+    if (subDisciplineId) {
+      return await db
+        .select()
+        .from(courseSpecializations)
+        .where(eq(courseSpecializations.subDisciplineId, subDisciplineId))
+        .orderBy(desc(courseSpecializations.usageCount));
+    }
+    return await db
+      .select()
+      .from(courseSpecializations)
+      .orderBy(desc(courseSpecializations.usageCount));
+  }
+
+  async getSpecializationById(id: string): Promise<CourseSpecialization | undefined> {
+    const [spec] = await db
+      .select()
+      .from(courseSpecializations)
+      .where(eq(courseSpecializations.id, id));
+    return spec;
+  }
+
+  async createOrGetSpecialization(name: string, subDisciplineId: string): Promise<CourseSpecialization> {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    
+    // Check if specialization already exists
+    const [existing] = await db
+      .select()
+      .from(courseSpecializations)
+      .where(
+        and(
+          eq(courseSpecializations.subDisciplineId, subDisciplineId),
+          eq(courseSpecializations.slug, slug)
+        )
+      );
+    
+    if (existing) {
+      return existing;
+    }
+    
+    // Create new specialization
+    const [newSpec] = await db
+      .insert(courseSpecializations)
+      .values({
+        subDisciplineId,
+        name,
+        slug,
+      })
+      .returning();
+    return newSpec;
+  }
+
+  async incrementSpecializationUsage(id: string): Promise<void> {
+    await db
+      .update(courseSpecializations)
+      .set({ 
+        usageCount: sql`${courseSpecializations.usageCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(courseSpecializations.id, id));
   }
 
   // Student profile operations

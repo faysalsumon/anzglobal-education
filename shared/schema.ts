@@ -768,6 +768,24 @@ export const subDisciplines = pgTable("sub_disciplines", {
   usageIdx: index("sub_disciplines_usage_idx").on(table.usageCount),
 }));
 
+// Course specializations table (Tier 3 - free text with autocomplete suggestions)
+export const courseSpecializations = pgTable("course_specializations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subDisciplineId: varchar("sub_discipline_id").notNull().references(() => subDisciplines.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // Display name (e.g., "Civil Engineering", "Machine Learning")
+  slug: text("slug").notNull(), // URL-friendly version for deduplication
+  usageCount: integer("usage_count").notNull().default(0), // Track how many courses use this specialization
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Composite unique constraint to prevent duplicate specializations within same sub-discipline
+  subDisciplineSlugUnique: unique("course_specializations_sub_discipline_slug_unique").on(table.subDisciplineId, table.slug),
+  // Index for looking up specializations by sub-discipline
+  subDisciplineIdx: index("course_specializations_sub_discipline_idx").on(table.subDisciplineId),
+  // Index for sorting by usage
+  usageIdx: index("course_specializations_usage_idx").on(table.usageCount),
+}));
+
 
 // Courses table
 export const courses = pgTable("courses", {
@@ -778,6 +796,7 @@ export const courses = pgTable("courses", {
   subject: text("subject").notNull(),
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
   subDisciplineId: varchar("sub_discipline_id").references(() => subDisciplines.id, { onDelete: "set null" }), // Optional sub-category within main discipline
+  specialization: text("specialization"), // Tier 3: Free text specialization with autocomplete (e.g., "Civil Engineering")
   level: courseLevelEnum("level").notNull(), // Course qualification level (enforced by database enum)
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
@@ -853,8 +872,10 @@ export const courses = pgTable("courses", {
   durationWeeksIdx: index("courses_duration_weeks_idx").on(table.durationWeeks),
   disciplineIdx: index("courses_discipline_idx").on(table.discipline),
   subDisciplineIdx: index("courses_sub_discipline_idx").on(table.subDisciplineId),
+  specializationIdx: index("courses_specialization_idx").on(table.specialization),
   // Composite indexes for common query patterns
   disciplineSubDisciplineIdx: index("courses_discipline_sub_discipline_idx").on(table.discipline, table.subDisciplineId),
+  disciplineSubSpecIdx: index("courses_discipline_sub_spec_idx").on(table.discipline, table.subDisciplineId, table.specialization),
   universityActiveIdx: index("courses_university_active_idx").on(table.universityId, table.isActive),
   subjectLevelIdx: index("courses_subject_level_idx").on(table.subject, table.level),
   activeApprovedIdx: index("courses_active_approved_idx").on(table.isActive, table.approvalStatus),
@@ -2784,6 +2805,21 @@ export const insertSubDisciplineSchema = createInsertSchema(subDisciplines).omit
 
 export type InsertSubDiscipline = z.infer<typeof insertSubDisciplineSchema>;
 export type SubDiscipline = typeof subDisciplines.$inferSelect;
+
+// Course specialization schemas (Tier 3)
+export const insertCourseSpecializationSchema = createInsertSchema(courseSpecializations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+}).extend({
+  subDisciplineId: z.string().min(1, "Sub-discipline is required"),
+  name: z.string().min(1, "Specialization name is required"),
+  slug: z.string().min(1, "Slug is required"),
+});
+
+export type InsertCourseSpecialization = z.infer<typeof insertCourseSpecializationSchema>;
+export type CourseSpecialization = typeof courseSpecializations.$inferSelect;
 
 // Tag schemas for unified tagging system (courses and institutions)
 export const insertTagSchema = createInsertSchema(tags).omit({

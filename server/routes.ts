@@ -1998,6 +1998,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Course specialization routes (Tier 3)
+  app.get("/api/sub-disciplines/:subDisciplineId/specializations", async (req, res) => {
+    try {
+      const { subDisciplineId } = req.params;
+      const specializations = await storage.getSpecializations(subDisciplineId);
+      res.json(specializations);
+    } catch (error) {
+      console.error("Error fetching specializations:", error);
+      res.status(500).json({ message: "Failed to fetch specializations" });
+    }
+  });
+
+  app.get("/api/specializations", async (req, res) => {
+    try {
+      const { subDisciplineId } = req.query;
+      const specializations = await storage.getSpecializations(
+        typeof subDisciplineId === 'string' ? subDisciplineId : undefined
+      );
+      res.json(specializations);
+    } catch (error) {
+      console.error("Error fetching all specializations:", error);
+      res.status(500).json({ message: "Failed to fetch specializations" });
+    }
+  });
+
+  // Get distinct disciplines from the enum for Tier 1
+  app.get("/api/disciplines", async (_req, res) => {
+    try {
+      // Return the discipline values from the enum for Tier 1 selection
+      const disciplines = [
+        'Accounting, Business & Finance',
+        'Agriculture & Forestry',
+        'Applied Sciences & Professions',
+        'Arts, Design & Architecture',
+        'Computer Science & IT',
+        'Education & Training',
+        'Engineering & Technology',
+        'Environmental Studies & Earth Sciences',
+        'Hospitality, Leisure & Sports',
+        'Humanities',
+        'Journalism & Media',
+        'Law',
+        'Medicine & Health',
+        'Short Courses',
+        'Trade',
+      ];
+      res.json(disciplines);
+    } catch (error) {
+      console.error("Error fetching disciplines:", error);
+      res.status(500).json({ message: "Failed to fetch disciplines" });
+    }
+  });
+
 
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
