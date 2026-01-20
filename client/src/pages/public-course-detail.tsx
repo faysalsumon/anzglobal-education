@@ -10,7 +10,7 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane
+  Target, MonitorPlay, Plane, Star
 } from "lucide-react";
 import type { Course, University, Application } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -18,6 +18,27 @@ import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog
 import { useAuth } from "@/hooks/useAuth";
 
 type CourseWithUniversity = Course & { university?: University };
+
+// English language test types configuration
+const TEST_TYPE_CONFIG: Record<string, { label: string }> = {
+  ielts: { label: "IELTS" },
+  toefl: { label: "TOEFL iBT" },
+  pte: { label: "PTE Academic" },
+  duolingo: { label: "Duolingo" },
+};
+
+interface EnglishRequirement {
+  id: string;
+  courseId: string;
+  testType: string;
+  minOverallScore: string;
+  minListeningScore: string | null;
+  minReadingScore: string | null;
+  minWritingScore: string | null;
+  minSpeakingScore: string | null;
+  notes: string | null;
+  isPreferred: boolean;
+}
 
 export default function PublicCourseDetail() {
   const [, params] = useRoute("/courses/:id");
@@ -27,6 +48,12 @@ export default function PublicCourseDetail() {
 
   const { data: course, isLoading } = useQuery<CourseWithUniversity>({
     queryKey: [`/api/courses/${courseId}`],
+    enabled: !!courseId,
+  });
+
+  // Fetch structured English requirements
+  const { data: englishRequirements = [] } = useQuery<EnglishRequirement[]>({
+    queryKey: ["/api/courses", courseId, "english-requirements"],
     enabled: !!courseId,
   });
 
@@ -402,7 +429,7 @@ export default function PublicCourseDetail() {
             )}
 
             {/* English Language Requirements */}
-            {(course.englishRequirementsStructured || course.englishRequirements) && (
+            {(englishRequirements.length > 0 || course.englishRequirements) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -411,87 +438,117 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
-                  {course.englishRequirementsStructured && (
+                  {/* Display structured English requirements from database */}
+                  {englishRequirements.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr className="border-b bg-muted/50">
-                            <th className="p-3 text-left font-semibold">Skill</th>
-                            {course.englishRequirementsStructured.IELTS && (
-                              <th className="p-3 text-center font-semibold">IELTS</th>
-                            )}
-                            {course.englishRequirementsStructured.TOEFL && (
-                              <th className="p-3 text-center font-semibold">TOEFL</th>
-                            )}
-                            {course.englishRequirementsStructured.PTE && (
-                              <th className="p-3 text-center font-semibold">PTE</th>
-                            )}
-                            {course.englishRequirementsStructured.Duolingo && (
-                              <th className="p-3 text-center font-semibold">Duolingo</th>
-                            )}
+                            <th className="p-3 text-left font-semibold">Test Type</th>
+                            <th className="p-3 text-center font-semibold">Overall</th>
+                            <th className="p-3 text-center font-semibold">Listening</th>
+                            <th className="p-3 text-center font-semibold">Reading</th>
+                            <th className="p-3 text-center font-semibold">Writing</th>
+                            <th className="p-3 text-center font-semibold">Speaking</th>
+                            <th className="p-3 text-left font-semibold">Notes</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b">
-                            <td className="p-3 font-medium">Overall</td>
-                            {course.englishRequirementsStructured.IELTS && (
-                              <td className="p-3 text-center" data-testid="text-ielts-overall">
+                          {englishRequirements.map((req) => (
+                            <tr key={req.id} className="border-b" data-testid={`row-english-req-${req.id}`}>
+                              <td className="p-3 font-medium">
+                                <div className="flex items-center gap-2">
+                                  {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
+                                  {req.isPreferred && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      <Star className="h-3 w-3 mr-1" />
+                                      Preferred
+                                    </Badge>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-center font-semibold text-primary" data-testid={`text-${req.testType}-overall`}>
+                                {req.minOverallScore}
+                              </td>
+                              <td className="p-3 text-center" data-testid={`text-${req.testType}-listening`}>
+                                {req.minListeningScore || "—"}
+                              </td>
+                              <td className="p-3 text-center" data-testid={`text-${req.testType}-reading`}>
+                                {req.minReadingScore || "—"}
+                              </td>
+                              <td className="p-3 text-center" data-testid={`text-${req.testType}-writing`}>
+                                {req.minWritingScore || "—"}
+                              </td>
+                              <td className="p-3 text-center" data-testid={`text-${req.testType}-speaking`}>
+                                {req.minSpeakingScore || "—"}
+                              </td>
+                              <td className="p-3 text-sm text-muted-foreground">
+                                {req.notes || "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : course.englishRequirementsStructured && (
+                    /* Legacy JSONB fallback for backward compatibility */
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-3 text-left font-semibold">Test Type</th>
+                            <th className="p-3 text-center font-semibold">Overall</th>
+                            <th className="p-3 text-center font-semibold">Min Each Band</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {course.englishRequirementsStructured.IELTS && (
+                            <tr className="border-b">
+                              <td className="p-3 font-medium">IELTS</td>
+                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-ielts-overall">
                                 {course.englishRequirementsStructured.IELTS.overall || "—"}
                               </td>
-                            )}
-                            {course.englishRequirementsStructured.TOEFL && (
-                              <td className="p-3 text-center" data-testid="text-toefl-overall">
+                              <td className="p-3 text-center" data-testid="text-ielts-min-band">
+                                {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
+                              </td>
+                            </tr>
+                          )}
+                          {course.englishRequirementsStructured.TOEFL && (
+                            <tr className="border-b">
+                              <td className="p-3 font-medium">TOEFL</td>
+                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-toefl-overall">
                                 {course.englishRequirementsStructured.TOEFL.overall || "—"}
                               </td>
-                            )}
-                            {course.englishRequirementsStructured.PTE && (
-                              <td className="p-3 text-center" data-testid="text-pte-overall">
+                              <td className="p-3 text-center">—</td>
+                            </tr>
+                          )}
+                          {course.englishRequirementsStructured.PTE && (
+                            <tr className="border-b">
+                              <td className="p-3 font-medium">PTE</td>
+                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-pte-overall">
                                 {course.englishRequirementsStructured.PTE.overall || "—"}
                               </td>
-                            )}
-                            {course.englishRequirementsStructured.Duolingo && (
-                              <td className="p-3 text-center" data-testid="text-duolingo-overall">
+                              <td className="p-3 text-center">—</td>
+                            </tr>
+                          )}
+                          {course.englishRequirementsStructured.Duolingo && (
+                            <tr className="border-b">
+                              <td className="p-3 font-medium">Duolingo</td>
+                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-duolingo-overall">
                                 {course.englishRequirementsStructured.Duolingo.overall || "—"}
                               </td>
-                            )}
-                          </tr>
-                          {(course.englishRequirementsStructured.IELTS?.min_each_band || 
-                            course.englishRequirementsStructured.PTE?.listening ||
-                            course.englishRequirementsStructured.PTE?.reading ||
-                            course.englishRequirementsStructured.PTE?.writing ||
-                            course.englishRequirementsStructured.PTE?.speaking) && (
-                            <>
-                              {course.englishRequirementsStructured.IELTS?.min_each_band && (
-                                <tr className="border-b bg-muted/20">
-                                  <td className="p-3 font-medium">Min Each Band</td>
-                                  <td className="p-3 text-center" data-testid="text-ielts-min-band">
-                                    {course.englishRequirementsStructured.IELTS.min_each_band}
-                                  </td>
-                                  {course.englishRequirementsStructured.TOEFL && <td className="p-3 text-center">—</td>}
-                                  {course.englishRequirementsStructured.PTE && <td className="p-3 text-center">—</td>}
-                                  {course.englishRequirementsStructured.Duolingo && <td className="p-3 text-center">—</td>}
-                                </tr>
-                              )}
-                              {course.englishRequirementsStructured.PTE?.listening && (
-                                <tr className="border-b">
-                                  <td className="p-3 font-medium">Listening</td>
-                                  {course.englishRequirementsStructured.IELTS && <td className="p-3 text-center">—</td>}
-                                  {course.englishRequirementsStructured.TOEFL && <td className="p-3 text-center">—</td>}
-                                  <td className="p-3 text-center" data-testid="text-pte-listening">
-                                    {course.englishRequirementsStructured.PTE.listening}
-                                  </td>
-                                  {course.englishRequirementsStructured.Duolingo && <td className="p-3 text-center">—</td>}
-                                </tr>
-                              )}
-                            </>
+                              <td className="p-3 text-center">—</td>
+                            </tr>
                           )}
                         </tbody>
                       </table>
                     </div>
                   )}
+                  
+                  {/* Display additional notes from the text field */}
                   {course.englishRequirements && (
                     <div className="space-y-2">
-                      {course.englishRequirementsStructured && (
+                      {(englishRequirements.length > 0 || course.englishRequirementsStructured) && (
                         <p className="text-sm font-semibold text-muted-foreground">Additional Information:</p>
                       )}
                       <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">

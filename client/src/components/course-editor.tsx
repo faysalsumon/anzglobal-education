@@ -9,12 +9,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+// English language test types configuration
+const TEST_TYPE_CONFIG: Record<string, { label: string; maxOverall: number; maxBand: number }> = {
+  ielts: { label: "IELTS", maxOverall: 9, maxBand: 9 },
+  toefl: { label: "TOEFL iBT", maxOverall: 120, maxBand: 30 },
+  pte: { label: "PTE Academic", maxOverall: 90, maxBand: 90 },
+  duolingo: { label: "Duolingo", maxOverall: 160, maxBand: 160 },
+};
+
+interface EnglishRequirement {
+  id: string;
+  courseId: string;
+  testType: string;
+  minOverallScore: string;
+  minListeningScore: string | null;
+  minReadingScore: string | null;
+  minWritingScore: string | null;
+  minSpeakingScore: string | null;
+  notes: string | null;
+  isPreferred: boolean;
+}
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -153,6 +176,20 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>(course?.universityId || "");
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>(course?.campusLocations || []);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  
+  // English requirements state
+  const [englishReqDialogOpen, setEnglishReqDialogOpen] = useState(false);
+  const [editingEnglishReq, setEditingEnglishReq] = useState<EnglishRequirement | null>(null);
+  const [englishReqForm, setEnglishReqForm] = useState({
+    testType: "",
+    minOverallScore: "",
+    minListeningScore: "",
+    minReadingScore: "",
+    minWritingScore: "",
+    minSpeakingScore: "",
+    notes: "",
+    isPreferred: false,
+  });
 
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/super-admin/institutions", selectedInstitutionId],
@@ -167,6 +204,115 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     queryKey: ["/api/courses", course?.id, "tags"],
     enabled: !!course?.id,
   });
+
+  // English requirements query
+  const { data: englishRequirements = [], isLoading: englishReqLoading } = useQuery<EnglishRequirement[]>({
+    queryKey: ["/api/courses", course?.id, "english-requirements"],
+    enabled: !!course?.id,
+  });
+
+  // English requirements mutations
+  const createEnglishReqMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", `/api/courses/${course?.id}/english-requirements`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id, "english-requirements"] });
+      setEnglishReqDialogOpen(false);
+      resetEnglishReqForm();
+      toast({ title: "English requirement added successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to add requirement", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateEnglishReqMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest("PUT", `/api/courses/${course?.id}/english-requirements/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id, "english-requirements"] });
+      setEnglishReqDialogOpen(false);
+      setEditingEnglishReq(null);
+      resetEnglishReqForm();
+      toast({ title: "English requirement updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update requirement", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteEnglishReqMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/courses/${course?.id}/english-requirements/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id, "english-requirements"] });
+      toast({ title: "English requirement deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to delete requirement", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetEnglishReqForm = () => {
+    setEnglishReqForm({
+      testType: "",
+      minOverallScore: "",
+      minListeningScore: "",
+      minReadingScore: "",
+      minWritingScore: "",
+      minSpeakingScore: "",
+      notes: "",
+      isPreferred: false,
+    });
+  };
+
+  const handleAddEnglishReq = () => {
+    setEditingEnglishReq(null);
+    resetEnglishReqForm();
+    setEnglishReqDialogOpen(true);
+  };
+
+  const handleEditEnglishReq = (req: EnglishRequirement) => {
+    setEditingEnglishReq(req);
+    setEnglishReqForm({
+      testType: req.testType,
+      minOverallScore: req.minOverallScore,
+      minListeningScore: req.minListeningScore || "",
+      minReadingScore: req.minReadingScore || "",
+      minWritingScore: req.minWritingScore || "",
+      minSpeakingScore: req.minSpeakingScore || "",
+      notes: req.notes || "",
+      isPreferred: req.isPreferred,
+    });
+    setEnglishReqDialogOpen(true);
+  };
+
+  const handleSaveEnglishReq = () => {
+    if (!englishReqForm.testType || !englishReqForm.minOverallScore) {
+      toast({ title: "Please select test type and enter minimum overall score", variant: "destructive" });
+      return;
+    }
+
+    const data = {
+      testType: englishReqForm.testType,
+      minOverallScore: englishReqForm.minOverallScore,
+      minListeningScore: englishReqForm.minListeningScore || null,
+      minReadingScore: englishReqForm.minReadingScore || null,
+      minWritingScore: englishReqForm.minWritingScore || null,
+      minSpeakingScore: englishReqForm.minSpeakingScore || null,
+      notes: englishReqForm.notes || null,
+      isPreferred: englishReqForm.isPreferred,
+    };
+
+    if (editingEnglishReq) {
+      updateEnglishReqMutation.mutate({ id: editingEnglishReq.id, data });
+    } else {
+      createEnglishReqMutation.mutate(data);
+    }
+  };
 
   useEffect(() => {
     if (courseTags) {
@@ -834,15 +980,125 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </FormItem>
                       )}
                     />
+                    {/* Structured English Requirements Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <FormLabel>English Language Requirements</FormLabel>
+                        {course?.id && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleAddEnglishReq}
+                            data-testid="button-add-english-requirement"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Test
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {!course?.id && (
+                        <p className="text-sm text-muted-foreground">
+                          Save the course first to add structured English requirements.
+                        </p>
+                      )}
+                      
+                      {course?.id && englishRequirements.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          No English requirements added yet. Click "Add Test" to add accepted test types.
+                        </p>
+                      )}
+                      
+                      {course?.id && englishRequirements.length > 0 && (
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Test Type</TableHead>
+                                <TableHead>Min Overall</TableHead>
+                                <TableHead>Band Scores (L/R/W/S)</TableHead>
+                                <TableHead>Notes</TableHead>
+                                <TableHead className="w-[100px]">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {englishRequirements.map((req) => (
+                                <TableRow key={req.id} data-testid={`row-english-req-${req.id}`}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
+                                      {req.isPreferred && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          <Star className="h-3 w-3 mr-1" />
+                                          Preferred
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-medium">{req.minOverallScore}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">
+                                    {[req.minListeningScore, req.minReadingScore, req.minWritingScore, req.minSpeakingScore]
+                                      .filter(Boolean)
+                                      .length > 0 ? (
+                                      <>
+                                        {req.minListeningScore && `L:${req.minListeningScore}`}
+                                        {req.minReadingScore && ` R:${req.minReadingScore}`}
+                                        {req.minWritingScore && ` W:${req.minWritingScore}`}
+                                        {req.minSpeakingScore && ` S:${req.minSpeakingScore}`}
+                                      </>
+                                    ) : (
+                                      <span className="text-muted-foreground">-</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-sm">{req.notes || "-"}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleEditEnglishReq(req)}
+                                        data-testid={`button-edit-english-req-${req.id}`}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="destructive"
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to delete this requirement?")) {
+                                            deleteEnglishReqMutation.mutate(req.id);
+                                          }
+                                        }}
+                                        data-testid={`button-delete-english-req-${req.id}`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Keep the text field for additional notes */}
                     <FormField
                       control={form.control}
                       name="englishRequirements"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>English Language Requirements</FormLabel>
+                          <FormLabel>Additional Notes</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="IELTS 6.5 overall, no band less than 6.0..." rows={3} data-testid="input-course-englishRequirements" />
+                            <Textarea {...field} placeholder="Any additional notes about English requirements..." rows={2} data-testid="input-course-englishRequirements" />
                           </FormControl>
+                          <FormDescription>
+                            Add any additional notes that don't fit in the structured requirements above.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1052,6 +1308,146 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
           </form>
         </Form>
       </div>
+
+      {/* English Requirement Add/Edit Dialog */}
+      <Dialog open={englishReqDialogOpen} onOpenChange={setEnglishReqDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingEnglishReq ? "Edit English Requirement" : "Add English Requirement"}</DialogTitle>
+            <DialogDescription>
+              Enter the minimum test scores required for admission.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Test Type</label>
+              <Select
+                value={englishReqForm.testType}
+                onValueChange={(value) => setEnglishReqForm(prev => ({ ...prev, testType: value }))}
+              >
+                <SelectTrigger data-testid="select-english-test-type">
+                  <SelectValue placeholder="Select test type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEST_TYPE_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Minimum Overall Score
+                {englishReqForm.testType && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    (max: {TEST_TYPE_CONFIG[englishReqForm.testType]?.maxOverall})
+                  </span>
+                )}
+              </label>
+              <Input
+                type="number"
+                step="0.5"
+                value={englishReqForm.minOverallScore}
+                onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minOverallScore: e.target.value }))}
+                placeholder="e.g., 6.5 for IELTS"
+                data-testid="input-english-min-overall"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Listening</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={englishReqForm.minListeningScore}
+                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minListeningScore: e.target.value }))}
+                  placeholder="Optional"
+                  data-testid="input-english-min-listening"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Reading</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={englishReqForm.minReadingScore}
+                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minReadingScore: e.target.value }))}
+                  placeholder="Optional"
+                  data-testid="input-english-min-reading"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Writing</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={englishReqForm.minWritingScore}
+                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minWritingScore: e.target.value }))}
+                  placeholder="Optional"
+                  data-testid="input-english-min-writing"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Speaking</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={englishReqForm.minSpeakingScore}
+                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minSpeakingScore: e.target.value }))}
+                  placeholder="Optional"
+                  data-testid="input-english-min-speaking"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Additional Notes</label>
+              <Input
+                value={englishReqForm.notes}
+                onChange={(e) => setEnglishReqForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="e.g., No band less than 6.0"
+                data-testid="input-english-notes"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="isPreferred"
+                checked={englishReqForm.isPreferred}
+                onCheckedChange={(checked) => setEnglishReqForm(prev => ({ ...prev, isPreferred: Boolean(checked) }))}
+                data-testid="checkbox-english-preferred"
+              />
+              <label htmlFor="isPreferred" className="text-sm font-medium cursor-pointer">
+                Mark as preferred test type
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEnglishReqDialogOpen(false);
+                setEditingEnglishReq(null);
+                resetEnglishReqForm();
+              }}
+              data-testid="button-cancel-english-req"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveEnglishReq}
+              disabled={createEnglishReqMutation.isPending || updateEnglishReqMutation.isPending}
+              data-testid="button-save-english-req"
+            >
+              {createEnglishReqMutation.isPending || updateEnglishReqMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
