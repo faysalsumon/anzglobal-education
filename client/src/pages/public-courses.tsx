@@ -28,7 +28,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, RotateCcw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { CourseWithDetails, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -139,6 +151,26 @@ export default function PublicCourses() {
   const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithDetails | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    subject: true,
+    discipline: true,
+    level: true,
+    location: true,
+  });
+  
+  // Reset collapsible sections to open when mobile sheet closes
+  const handleMobileFiltersChange = (open: boolean) => {
+    setMobileFiltersOpen(open);
+    if (!open) {
+      setOpenSections({
+        subject: true,
+        discipline: true,
+        level: true,
+        location: true,
+      });
+    }
+  };
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   // Track pending URL hydration and previous URL snapshot
@@ -388,6 +420,37 @@ export default function PublicCourses() {
       cities: Array.from(cities).sort(),
     };
   }, [courses]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (subject) count++;
+    if (discipline) count++;
+    if (subDiscipline) count++;
+    if (level) count++;
+    if (country) count++;
+    if (campusCity) count++;
+    return count;
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusCity]);
+
+  // Toggle collapsible section
+  const toggleSection = (section: string, open?: boolean) => {
+    setOpenSections(prev => ({ ...prev, [section]: open !== undefined ? open : !prev[section] }));
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setSubject("");
+    setDiscipline("");
+    setSubDiscipline("");
+    setLevel("");
+    setCountry("");
+    setCampusCity("");
+    setHighlightedCourseId(null);
+    setCurrentPage(1);
+  };
 
   // Parse URL params into state ONLY when URL actually changes
   useEffect(() => {
@@ -641,178 +704,502 @@ export default function PublicCourses() {
             <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
           </div>
 
-          {/* Search and Filters */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
-                Find Your Perfect Course
-              </CardTitle>
-              <CardDescription className="text-sm">Filter courses by your preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search courses..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-courses"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
-                  <SelectTrigger data-testid="select-subject">
-                    <SelectValue placeholder="All Subjects" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subjects</SelectItem>
-                    {availableFilters.subjects.map((subj) => (
-                      <SelectItem key={subj} value={subj}>
-                        {subj}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Two-Column Layout with Filter Sidebar */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Mobile Filter Button */}
+            <div className="lg:hidden">
+              <Sheet open={mobileFiltersOpen} onOpenChange={handleMobileFiltersChange}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full" data-testid="button-mobile-filters">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">{activeFilterCount}</Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80 overflow-y-auto">
+                  <SheetHeader className="pb-4">
+                    <SheetTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-accent" />
+                      Find Your Course
+                    </SheetTitle>
+                  </SheetHeader>
+                  
+                  {/* Mobile Filter Content - Same as Desktop */}
+                  <div className="space-y-4">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search courses..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                        data-testid="input-search-courses-mobile"
+                      />
+                    </div>
 
-                <Select value={discipline || "all"} onValueChange={(val) => {
-                  const newDiscipline = val === "all" ? "" : val;
-                  setDiscipline(newDiscipline);
-                  if (!newDiscipline) {
-                    setSubDiscipline(""); // Clear sub-discipline when discipline is cleared
-                  }
-                }}>
-                  <SelectTrigger data-testid="select-discipline">
-                    <SelectValue placeholder="All Disciplines" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Disciplines</SelectItem>
-                    {availableFilters.disciplines.map((disc) => (
-                      <SelectItem key={disc} value={disc}>
-                        {disc}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select 
-                  value={subDiscipline || "all"} 
-                  onValueChange={(val) => setSubDiscipline(val === "all" ? "" : val)}
-                  disabled={!discipline}
-                >
-                  <SelectTrigger data-testid="select-sub-discipline">
-                    <SelectValue placeholder={discipline ? "All Sub-disciplines" : "Select discipline first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sub-disciplines</SelectItem>
-                    {subDisciplines.map((sd) => (
-                      <SelectItem key={sd.id} value={sd.name}>
-                        {sd.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={level || "all"} onValueChange={(val) => setLevel(val === "all" ? "" : val)}>
-                  <SelectTrigger data-testid="select-level">
-                    <SelectValue placeholder="All Levels" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    {availableFilters.levels.map((lvl) => (
-                      <SelectItem key={lvl} value={lvl}>
-                        {lvl}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
-                  <SelectTrigger data-testid="select-country">
-                    <SelectValue placeholder="All Countries" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Countries</SelectItem>
-                    {availableFilters.countries.map((ctry) => (
-                      <SelectItem key={ctry} value={ctry}>
-                        {ctry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
-                  <SelectTrigger data-testid="select-city">
-                    <SelectValue placeholder="All Cities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Cities</SelectItem>
-                    {availableFilters.cities.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3 w-3" />
-                          {city}
+                    {/* Active Filters */}
+                    {activeFilterCount > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Active Filters</span>
+                          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-7 text-xs" data-testid="button-clear-all-mobile">
+                            <RotateCcw className="mr-1 h-3 w-3" />
+                            Clear all
+                          </Button>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(searchTerm || subject || discipline || subDiscipline || level || country || campusCity) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSubject("");
-                    setDiscipline("");
-                    setSubDiscipline("");
-                    setLevel("");
-                    setCountry("");
-                    setCampusCity("");
-                    setHighlightedCourseId(null);
-                  }}
-                  data-testid="button-clear-filters"
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+                        <div className="flex flex-wrap gap-1.5">
+                          {subject && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {subject}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubject("")} data-testid="button-clear-subject-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {discipline && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {discipline}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {level && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {level}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setLevel("")} data-testid="button-clear-level-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {country && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {country}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCountry("")} data-testid="button-clear-country-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {campusCity && (
+                            <Badge variant="secondary" className="gap-1 pr-1">
+                              {campusCity}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCampusCity("")} data-testid="button-clear-city-mobile">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-          {/* Results */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground" data-testid="results-count">
-              {totalFilteredCourses} course{totalFilteredCourses !== 1 ? "s" : ""} found
-            </p>
-          </div>
+                    <div className="border-t pt-4 space-y-3">
+                      {/* Subject */}
+                      <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <BookOpen className="h-4 w-4 text-primary" />
+                            Subject
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.subject ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-subject-mobile">
+                              <SelectValue placeholder="All Subjects" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Subjects</SelectItem>
+                              {availableFilters.subjects.map((subj) => (
+                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
 
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse h-full">
-                  <CardHeader>
-                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                      {/* Discipline */}
+                      <Collapsible open={openSections.discipline} onOpenChange={(open) => toggleSection('discipline', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Layers className="h-4 w-4 text-primary" />
+                            Discipline
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.discipline ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 space-y-2">
+                          <Select value={discipline || "all"} onValueChange={(val) => { setDiscipline(val === "all" ? "" : val); if (val === "all") setSubDiscipline(""); }}>
+                            <SelectTrigger data-testid="select-discipline-mobile">
+                              <SelectValue placeholder="All Disciplines" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Disciplines</SelectItem>
+                              {availableFilters.disciplines.map((disc) => (
+                                <SelectItem key={disc} value={disc}>{disc}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {discipline && (
+                            <Select value={subDiscipline || "all"} onValueChange={(val) => setSubDiscipline(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-sub-discipline-mobile">
+                                <SelectValue placeholder="All Sub-disciplines" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Sub-disciplines</SelectItem>
+                                {subDisciplines.map((sd) => (
+                                  <SelectItem key={sd.id} value={sd.name}>{sd.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Level */}
+                      <Collapsible open={openSections.level} onOpenChange={(open) => toggleSection('level', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <GraduationCap className="h-4 w-4 text-primary" />
+                            Course Level
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.level ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <Select value={level || "all"} onValueChange={(val) => setLevel(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-level-mobile">
+                              <SelectValue placeholder="All Levels" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Levels</SelectItem>
+                              {availableFilters.levels.map((lvl) => (
+                                <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Location */}
+                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Globe className="h-4 w-4 text-primary" />
+                            Location
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.location ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 space-y-2">
+                          <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-country-mobile">
+                              <SelectValue placeholder="All Countries" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Countries</SelectItem>
+                              {availableFilters.countries.map((ctry) => (
+                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-city-mobile">
+                              <SelectValue placeholder="All Cities" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Cities</SelectItem>
+                              {availableFilters.cities.map((city) => (
+                                <SelectItem key={city} value={city}>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-3 w-3" />
+                                    {city}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
+
+                    <Button className="w-full mt-4" onClick={() => setMobileFiltersOpen(false)} data-testid="button-apply-filters-mobile">
+                      Show {totalFilteredCourses} Results
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Desktop Filter Sidebar */}
+            <aside className="hidden lg:block w-72 flex-shrink-0">
+              <div className="sticky top-4 space-y-4">
+                <Card className="overflow-hidden">
+                  <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-accent/5">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="h-5 w-5 text-accent" />
+                      Find Your Course
+                    </CardTitle>
+                    <CardDescription>Filter by your preferences</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-20 bg-muted rounded"></div>
+                  <CardContent className="p-4 space-y-4">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search courses..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                        data-testid="input-search-courses"
+                      />
+                    </div>
+
+                    {/* Active Filters */}
+                    {activeFilterCount > 0 && (
+                      <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Filters</span>
+                          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 text-xs px-2" data-testid="button-clear-all">
+                            <RotateCcw className="mr-1 h-3 w-3" />
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {searchTerm && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              "{searchTerm.length > 15 ? searchTerm.slice(0, 15) + '...' : searchTerm}"
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSearchTerm("")} data-testid="button-clear-search">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {subject && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {subject}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubject("")} data-testid="button-clear-subject">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {discipline && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {discipline}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => { setDiscipline(""); setSubDiscipline(""); }} data-testid="button-clear-discipline">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {subDiscipline && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {subDiscipline}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setSubDiscipline("")} data-testid="button-clear-subdiscipline">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {level && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {level}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setLevel("")} data-testid="button-clear-level">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {country && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {country}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCountry("")} data-testid="button-clear-country">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {campusCity && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {campusCity}
+                              <button className="ml-0.5 hover:text-destructive" onClick={() => setCampusCity("")} data-testid="button-clear-city">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t pt-4 space-y-1">
+                      {/* Subject */}
+                      <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <BookOpen className="h-4 w-4 text-primary" />
+                            Subject
+                            {subject && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.subject ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1">
+                          <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-subject" className="h-9">
+                              <SelectValue placeholder="All Subjects" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Subjects</SelectItem>
+                              {availableFilters.subjects.map((subj) => (
+                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Discipline */}
+                      <Collapsible open={openSections.discipline} onOpenChange={(open) => toggleSection('discipline', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Layers className="h-4 w-4 text-primary" />
+                            Discipline
+                            {(discipline || subDiscipline) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.discipline ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
+                          <Select value={discipline || "all"} onValueChange={(val) => { setDiscipline(val === "all" ? "" : val); if (val === "all") setSubDiscipline(""); }}>
+                            <SelectTrigger data-testid="select-discipline" className="h-9">
+                              <SelectValue placeholder="All Disciplines" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Disciplines</SelectItem>
+                              {availableFilters.disciplines.map((disc) => (
+                                <SelectItem key={disc} value={disc}>{disc}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {discipline && (
+                            <Select value={subDiscipline || "all"} onValueChange={(val) => setSubDiscipline(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-sub-discipline" className="h-9">
+                                <SelectValue placeholder="All Sub-disciplines" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Sub-disciplines</SelectItem>
+                                {subDisciplines.map((sd) => (
+                                  <SelectItem key={sd.id} value={sd.name}>{sd.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Level */}
+                      <Collapsible open={openSections.level} onOpenChange={(open) => toggleSection('level', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <GraduationCap className="h-4 w-4 text-primary" />
+                            Course Level
+                            {level && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.level ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1">
+                          <Select value={level || "all"} onValueChange={(val) => setLevel(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-level" className="h-9">
+                              <SelectValue placeholder="All Levels" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Levels</SelectItem>
+                              {availableFilters.levels.map((lvl) => (
+                                <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Location */}
+                      <Collapsible open={openSections.location} onOpenChange={(open) => toggleSection('location', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <Globe className="h-4 w-4 text-primary" />
+                            Location
+                            {(country || campusCity) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.location ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
+                          <Select value={country || "all"} onValueChange={(val) => setCountry(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-country" className="h-9">
+                              <SelectValue placeholder="All Countries" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Countries</SelectItem>
+                              {availableFilters.countries.map((ctry) => (
+                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={campusCity || "all"} onValueChange={(val) => setCampusCity(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-city" className="h-9">
+                              <SelectValue placeholder="All Cities" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Cities</SelectItem>
+                              {availableFilters.cities.map((city) => (
+                                <SelectItem key={city} value={city}>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-3 w-3" />
+                                    {city}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          ) : totalFilteredCourses === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                <p className="text-lg font-medium mb-2">No courses found</p>
-                <p className="text-sm text-muted-foreground">Try adjusting your filters or search term</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0 space-y-4">
+              {/* Results Header */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground" data-testid="results-count">
+                  {totalFilteredCourses} course{totalFilteredCourses !== 1 ? "s" : ""} found
+                </p>
+              </div>
+
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="animate-pulse h-full">
+                      <CardHeader>
+                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-1/2"></div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-20 bg-muted rounded"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : totalFilteredCourses === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
+                    <p className="text-lg font-medium mb-2">No courses found</p>
+                    <p className="text-sm text-muted-foreground mb-4">Try adjusting your filters or search term</p>
+                    {activeFilterCount > 0 && (
+                      <Button variant="outline" onClick={clearAllFilters} data-testid="button-clear-filters-empty">
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Clear All Filters
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {paginatedCourses.map((course) => {
                 const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
                 return (
@@ -1050,6 +1437,8 @@ export default function PublicCourses() {
             )}
             </div>
           )}
+            </div>
+          </div>
         </div>
       </div>
 
