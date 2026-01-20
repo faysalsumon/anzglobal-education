@@ -925,6 +925,31 @@ export const courseTags = pgTable("course_tags", {
 }));
 
 // ============================================
+// COURSE ENGLISH REQUIREMENTS
+// Structured English language test requirements for courses
+// Enables matching student scores against course requirements
+// ============================================
+
+// Course English Requirements table - minimum language test scores required for a course
+export const courseEnglishRequirements = pgTable("course_english_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  testType: varchar("test_type", { length: 20 }).notNull(), // 'ielts', 'toefl', 'pte', 'duolingo'
+  minOverallScore: decimal("min_overall_score", { precision: 4, scale: 1 }).notNull(),
+  minListeningScore: decimal("min_listening_score", { precision: 4, scale: 1 }),
+  minReadingScore: decimal("min_reading_score", { precision: 4, scale: 1 }),
+  minWritingScore: decimal("min_writing_score", { precision: 4, scale: 1 }),
+  minSpeakingScore: decimal("min_speaking_score", { precision: 4, scale: 1 }),
+  notes: text("notes"), // Additional notes like "no band less than 6.0"
+  isPreferred: boolean("is_preferred").default(false), // Mark if this is the preferred test type
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseIdx: index("course_english_req_course_idx").on(table.courseId),
+  testTypeIdx: index("course_english_req_test_type_idx").on(table.testType),
+}));
+
+// ============================================
 // INSTITUTION TAGS JUNCTION
 // Uses unified tags table with appliesTo='institutions' or 'both'
 // ============================================
@@ -2231,6 +2256,15 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   }),
   applications: many(applications),
   courseComparisons: many(courseComparisons),
+  englishRequirements: many(courseEnglishRequirements),
+}));
+
+// Course English Requirements relations
+export const courseEnglishRequirementsRelations = relations(courseEnglishRequirements, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseEnglishRequirements.courseId],
+    references: [courses.id],
+  }),
 }));
 
 // Institution tags relations (now uses unified tags table)
@@ -2870,6 +2904,12 @@ export const insertStudentLanguageScoreSchema = createInsertSchema(studentLangua
   updatedAt: true,
 });
 
+export const insertCourseEnglishRequirementSchema = createInsertSchema(courseEnglishRequirements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertStudentEmploymentSchema = createInsertSchema(studentEmployments).omit({
   id: true,
   createdAt: true,
@@ -3010,6 +3050,9 @@ export type InsertStudentEducation = z.infer<typeof insertStudentEducationSchema
 
 export type StudentLanguageScore = typeof studentLanguageScores.$inferSelect;
 export type InsertStudentLanguageScore = z.infer<typeof insertStudentLanguageScoreSchema>;
+
+export type CourseEnglishRequirement = typeof courseEnglishRequirements.$inferSelect;
+export type InsertCourseEnglishRequirement = z.infer<typeof insertCourseEnglishRequirementSchema>;
 
 export type StudentEmployment = typeof studentEmployments.$inferSelect;
 export type InsertStudentEmployment = z.infer<typeof insertStudentEmploymentSchema>;
