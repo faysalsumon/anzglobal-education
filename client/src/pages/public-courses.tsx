@@ -65,6 +65,38 @@ const normalizeCity = (city: string): string => {
     .trim();
 };
 
+// Helper type for campus address
+type CampusAddress = { country?: string; state?: string; city?: string };
+
+// Helper function to extract unique cities from a course's institution campusAddresses
+// with fallback to campusLocations and course.location
+const extractCourseCities = (
+  course: { university?: { campusAddresses?: CampusAddress[] } | null; campusLocations?: string[]; location?: string | null }
+): string[] => {
+  const cities: string[] = [];
+  
+  // First try to get cities from institution campusAddresses
+  const campusAddresses = course.university?.campusAddresses;
+  if (campusAddresses && Array.isArray(campusAddresses)) {
+    campusAddresses.forEach((campus) => {
+      if (campus.city && !cities.includes(campus.city)) {
+        cities.push(campus.city);
+      }
+    });
+  }
+  
+  // Fallback to campusLocations if no campusAddresses cities
+  if (cities.length === 0 && course.campusLocations) {
+    course.campusLocations.forEach((loc: string) => {
+      if (loc && !cities.includes(loc)) {
+        cities.push(loc);
+      }
+    });
+  }
+  
+  return cities;
+};
+
 // Filter snapshot type for state/URL comparison
 type FilterSnapshot = {
   searchTerm: string;
@@ -1510,33 +1542,49 @@ export default function PublicCourses() {
                               </p>
                             )}
                             
-                            {/* Campus Availability Badges */}
+                            {/* Campus Availability Badges - use campusAddresses for cities with fallback */}
                             {(() => {
-                              const locations = course.campusLocations?.filter((loc: string) => loc) || [];
-                              if (locations.length === 0) return null;
+                              // Use shared helper to extract cities
+                              const cities = extractCourseCities(course as any);
+                              
+                              if (cities.length === 0) return null;
+                              
+                              // Get campusAddresses for potential filter setting
+                              const campusAddresses = (course.university as any)?.campusAddresses as CampusAddress[] | undefined;
                               
                               return (
                                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                                   <span className="text-xs text-muted-foreground">Available at:</span>
-                                  {locations.slice(0, 3).map((location: string, idx: number) => (
+                                  {cities.slice(0, 3).map((city: string, idx: number) => (
                                     <Badge
                                       key={idx}
                                       variant="outline"
                                       className="text-xs cursor-pointer"
                                       onClick={(e) => {
                                         e.preventDefault();
-                                        setCampusCity(location);
+                                        // Only set full cascading filters if we have unambiguous campusAddresses data
+                                        // and the course country matches the campus country
+                                        const campusWithCity = campusAddresses?.find(c => c.city === city);
+                                        if (campusWithCity?.country && campusWithCity?.state) {
+                                          // Set full cascading filters
+                                          setCountry(campusWithCity.country);
+                                          setCampusState(campusWithCity.state);
+                                          setCampusCity(city);
+                                        } else {
+                                          // Just set the city for simple filtering
+                                          setCampusCity(city);
+                                        }
                                         window.scrollTo({ top: 0, behavior: 'smooth' });
                                       }}
                                       data-testid={`badge-campus-${course.id}-${idx}`}
                                     >
                                       <MapPin className="h-2.5 w-2.5 mr-1" />
-                                      {location}
+                                      {city}
                                     </Badge>
                                   ))}
-                                  {locations.length > 3 && (
+                                  {cities.length > 3 && (
                                     <Badge variant="secondary" className="text-xs" data-testid={`badge-more-campuses-${course.id}`}>
-                                      +{locations.length - 3} more
+                                      +{cities.length - 3} more
                                     </Badge>
                                   )}
                                 </div>
@@ -1603,12 +1651,32 @@ export default function PublicCourses() {
                                 <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
                               </div>
                             )}
-                            {course.location && (
-                              <div className="flex items-center gap-1.5">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>{course.location}</span>
-                              </div>
-                            )}
+                            {/* Display all campus cities from institution campusAddresses */}
+                            {(() => {
+                              // Use shared helper to extract cities
+                              const cities = extractCourseCities(course as any);
+                              
+                              // Fall back to course.location if no cities from helper
+                              if (cities.length === 0 && course.location) {
+                                return (
+                                  <div className="flex items-center gap-1.5">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>{course.location}</span>
+                                  </div>
+                                );
+                              }
+                              
+                              if (cities.length === 0) return null;
+                              
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>
+                                    {cities.join(', ')}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </CardContent>
