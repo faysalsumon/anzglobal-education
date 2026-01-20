@@ -51,6 +51,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { ListPagination } from "@/components/list-pagination";
+import { InstitutionLogo } from "@/components/institution-logo";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -1222,15 +1223,22 @@ export default function PublicCourses() {
               </div>
 
               {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
-                    <Card key={i} className="animate-pulse h-full">
-                      <CardHeader>
-                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-muted rounded w-1/2"></div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-20 bg-muted rounded"></div>
+                    <Card key={i} className="animate-pulse">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="w-16 h-16 bg-muted rounded flex-shrink-0"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-5 bg-muted rounded w-3/4"></div>
+                            <div className="h-4 bg-muted rounded w-1/2"></div>
+                            <div className="h-3 bg-muted rounded w-1/3"></div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 w-48">
+                            <div className="h-10 bg-muted rounded"></div>
+                            <div className="h-10 bg-muted rounded"></div>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -1250,224 +1258,243 @@ export default function PublicCourses() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-              {paginatedCourses.map((course) => {
-                const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
-                return (
-                  <Card 
-                    key={course.id} 
-                    ref={isHighlighted ? highlightedRef : null}
-                    className={`hover-elevate flex flex-col h-full transition-all duration-300 ${
-                      isHighlighted ? 'ring-2 ring-primary shadow-lg scale-105' : ''
-                    }`}
-                    data-testid={`course-card-${course.id}`}
-                  >
-                    <CardHeader className="pb-3 sm:pb-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex flex-wrap items-start gap-2 flex-1 min-w-0">
-                          <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
-                          <Badge variant="outline" className="text-xs">{course.subject}</Badge>
-                          {/* Course Tags */}
-                          {course.tags && course.tags.length > 0 && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => {
-                            // Convert hex color to rgba for background (with alpha for transparency)
-                            const hexToRgba = (hex: string, alpha: number) => {
-                              const r = parseInt(hex.slice(1, 3), 16);
-                              const g = parseInt(hex.slice(3, 5), 16);
-                              const b = parseInt(hex.slice(5, 7), 16);
-                              return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                            };
-                            return (
-                              <Badge 
-                                key={tag.id}
-                                variant="secondary"
-                                className="text-xs"
-                                style={tag.color ? { 
-                                  backgroundColor: hexToRgba(tag.color, 0.15), 
-                                  color: tag.color, 
-                                  borderColor: hexToRgba(tag.color, 0.3) 
-                                } : undefined}
-                                data-testid={`badge-tag-${course.id}-${tag.slug}`}
-                              >
-                                {tag.name}
-                              </Badge>
-                            );
-                          })}
-                          {course.tags && course.tags.length > 2 && (
-                            <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
-                              +{course.tags.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          className={`!h-11 !w-11 !min-h-11 !min-w-11 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10 !p-0 rounded-full transition-all flex-shrink-0 ${
-                            isFavorited(course.id)
-                              ? "bg-primary hover:bg-primary/90 shadow-md"
-                              : "bg-background/80 hover:bg-background shadow-sm"
-                          }`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleFavoriteToggle(course.id);
-                          }}
-                          aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
-                          data-testid={`button-favorite-course-${course.id}`}
-                        >
-                          <Heart
-                            className={`h-5 w-5 transition-all ${
-                              isFavorited(course.id)
-                                ? "fill-white text-white"
-                                : "text-muted-foreground"
-                            }`}
-                          />
-                        </Button>
-                      </div>
-                      {isHighlighted && (
-                        <Badge className="mb-2 bg-accent text-accent-foreground text-xs w-fit">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Your Search Result
-                        </Badge>
-                      )}
-                      <CardTitle className="text-lg sm:text-xl line-clamp-2">{course.title}</CardTitle>
-                      {course.universityId && course.university?.name ? (
-                        <Link 
-                          href={`/institutions/${course.universityId}`}
-                          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit group"
-                          data-testid={`link-institution-${course.id}`}
-                        >
-                          <Building2 className="h-3.5 w-3.5 flex-shrink-0 group-hover:text-primary" />
-                          <span className="truncate">{course.university.name}</span>
-                        </Link>
-                      ) : (
-                        <CardDescription className="line-clamp-1 text-sm">
-                          Institution
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="flex-1 pb-3 sm:pb-4">
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4">
-                        {course.description || "No description available"}
-                      </p>
-                      
-                      {/* Campus Availability Badges */}
-                      {(() => {
-                        const locations = course.campusLocations?.filter((loc: string) => loc) || [];
-                        if (locations.length === 0) return null;
-                        
-                        return (
-                          <div className="mb-3 sm:mb-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-2">Available at:</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {locations.slice(0, 3).map((location: string, idx: number) => (
-                                <Button
-                                  key={idx}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 text-xs px-2 gap-1"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    // Store raw city value (normalization happens in filtering logic)
-                                    setCampusCity(location);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                  }}
-                                  aria-label={`Filter courses available in ${location}`}
-                                  data-testid={`badge-campus-${course.id}-${idx}`}
+                <div className="space-y-4">
+                {/* Course Cards - Single Column Horizontal Design */}
+                {paginatedCourses.map((course) => {
+                  const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
+                  // Helper for tag colors
+                  const hexToRgba = (hex: string, alpha: number) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                  };
+                  
+                  return (
+                    <Card 
+                      key={course.id} 
+                      ref={isHighlighted ? highlightedRef : null}
+                      className={`hover-elevate transition-all duration-300 ${
+                        isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
+                      }`}
+                      data-testid={`course-card-${course.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          {/* Left: Institution Logo and Course Info */}
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {/* Institution Logo */}
+                            <InstitutionLogo
+                              src={course.university?.logo}
+                              alt={course.university?.name || "Institution"}
+                              size="sm"
+                              testId={`img-logo-${course.id}`}
+                            />
+                            
+                            <div className="flex-1 min-w-0">
+                              {/* Badges Row */}
+                              <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-xs">{course.level}</Badge>
+                                <Badge variant="outline" className="text-xs">{course.subject}</Badge>
+                                {course.tags && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => (
+                                  <Badge 
+                                    key={tag.id}
+                                    variant="secondary"
+                                    className="text-xs"
+                                    style={tag.color ? { 
+                                      backgroundColor: hexToRgba(tag.color, 0.15), 
+                                      color: tag.color, 
+                                      borderColor: hexToRgba(tag.color, 0.3) 
+                                    } : undefined}
+                                    data-testid={`badge-tag-${course.id}-${tag.slug}`}
+                                  >
+                                    {tag.name}
+                                  </Badge>
+                                ))}
+                                {course.tags && course.tags.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
+                                    +{course.tags.length - 2}
+                                  </Badge>
+                                )}
+                                {isHighlighted && (
+                                  <Badge className="bg-accent text-accent-foreground text-xs">
+                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    Your Search Result
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              {/* Course Title */}
+                              <Link href={`/courses/${course.id}`}>
+                                <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer line-clamp-2 mb-1" data-testid={`text-title-${course.id}`}>
+                                  {course.title}
+                                </h3>
+                              </Link>
+                              
+                              {/* Institution Name */}
+                              {course.universityId && course.university?.name ? (
+                                <Link 
+                                  href={`/institutions/${course.universityId}`}
+                                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
+                                  data-testid={`link-institution-${course.id}`}
                                 >
-                                  <MapPin className="h-3 w-3" />
-                                  {location}
-                                </Button>
-                              ))}
-                              {locations.length > 3 && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs px-2 py-0.5"
-                                  data-testid={`badge-more-campuses-${course.id}`}
-                                >
-                                  +{locations.length - 3} more
-                                </Badge>
+                                  <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="truncate">{course.university.name}</span>
+                                </Link>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Institution</span>
                               )}
+                              
+                              {/* Brief Description */}
+                              {course.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1" data-testid={`text-description-${course.id}`}>
+                                  {course.description}
+                                </p>
+                              )}
+                              
+                              {/* Campus Availability Badges */}
+                              {(() => {
+                                const locations = course.campusLocations?.filter((loc: string) => loc) || [];
+                                if (locations.length === 0) return null;
+                                
+                                return (
+                                  <div className="mt-2">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-xs text-muted-foreground">Available at:</span>
+                                      {locations.slice(0, 3).map((location: string, idx: number) => (
+                                        <Badge
+                                          key={idx}
+                                          variant="outline"
+                                          className="text-xs cursor-pointer"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            setCampusCity(location);
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                          }}
+                                          data-testid={`badge-campus-${course.id}-${idx}`}
+                                        >
+                                          <MapPin className="h-2.5 w-2.5 mr-1" />
+                                          {location}
+                                        </Badge>
+                                      ))}
+                                      {locations.length > 3 && (
+                                        <Badge variant="secondary" className="text-xs" data-testid={`badge-more-campuses-${course.id}`}>
+                                          +{locations.length - 3} more
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              
+                              {/* View Course Link */}
+                              <Link href={`/courses/${course.id}`}>
+                                <span className="text-sm text-primary hover:underline cursor-pointer mt-2 inline-block" data-testid={`link-view-${course.id}`}>
+                                  View Course Details
+                                </span>
+                              </Link>
                             </div>
                           </div>
-                        );
-                      })()}
-                      
-                      <div className="space-y-2 text-sm">
-                        {course.location && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{course.location}</span>
+
+                          {/* Right: Stats Grid and Actions */}
+                          <div className="flex-shrink-0 sm:w-56">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
+                              {course.duration && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <div className="text-xs text-muted-foreground">Duration</div>
+                                    <div className="font-medium text-xs" data-testid={`text-duration-${course.id}`}>{course.duration}</div>
+                                  </div>
+                                </div>
+                              )}
+                              {course.fees && (
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <div className="text-xs text-muted-foreground">Fees</div>
+                                    <div className="font-medium text-xs text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</div>
+                                  </div>
+                                </div>
+                              )}
+                              {course.location && (
+                                <div className="flex items-center gap-2 col-span-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <div>
+                                    <div className="text-xs text-muted-foreground">Location</div>
+                                    <div className="font-medium text-xs" data-testid={`text-location-${course.id}`}>{course.location}</div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2">
+                              <div className="flex gap-2">
+                                {isAuthenticated && isStudent ? (
+                                  <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                    <Link href={`/student/courses/${course.id}`}>
+                                      <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
+                                      Apply
+                                    </Link>
+                                  </Button>
+                                ) : (
+                                  <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
+                                    <a href="/auth">
+                                      <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                                      Apply
+                                    </a>
+                                  </Button>
+                                )}
+                                <Button
+                                  variant={isFavorited(course.id) ? "default" : "ghost"}
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleFavoriteToggle(course.id);
+                                  }}
+                                  aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
+                                  data-testid={`button-favorite-course-${course.id}`}
+                                >
+                                  <Heart className={`h-4 w-4 ${isFavorited(course.id) ? "fill-current" : ""}`} />
+                                </Button>
+                              </div>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setSelectedCourseForLead(course);
+                                }}
+                                data-testid={`button-request-info-${course.id}`}
+                              >
+                                <Mail className="mr-1.5 h-3.5 w-3.5" />
+                                Request Info
+                              </Button>
+                              
+                              <div 
+                                className="flex items-center gap-2 w-full hover-elevate rounded-md px-2 py-1 cursor-pointer text-sm"
+                                onClick={() => handleComparisonToggle(course.id)}
+                                data-testid={`checkbox-compare-${course.id}`}
+                              >
+                                <Checkbox 
+                                  checked={isInComparison(course.id)}
+                                  className="pointer-events-none"
+                                />
+                                <label className="cursor-pointer flex items-center gap-1">
+                                  <GitCompare className="h-3 w-3" />
+                                  Compare
+                                </label>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        {course.duration && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{course.duration}</span>
-                          </div>
-                        )}
-                        {course.fees && (
-                          <div className="flex items-center gap-2 font-semibold text-primary">
-                            <DollarSign className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{course.currency} {Number(course.fees).toLocaleString()}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="pt-0 flex-col gap-3">
-                      <div className="flex gap-2 w-full">
-                        <Button asChild variant="outline" className="flex-1" size="sm" data-testid={`button-view-course-${course.id}`}>
-                          <Link href={`/courses/${course.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            <span className="truncate">View Course</span>
-                          </Link>
-                        </Button>
-                        {isAuthenticated && isStudent ? (
-                          <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                            <Link href={`/student/courses/${course.id}`}>
-                              <GraduationCap className="mr-2 h-4 w-4" />
-                              <span className="truncate">Apply</span>
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button asChild className="flex-1" size="sm" data-testid={`button-apply-course-${course.id}`}>
-                            <a href="/auth">
-                              <LogIn className="mr-2 h-4 w-4" />
-                              <span className="truncate">Login to Apply</span>
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setSelectedCourseForLead(course);
-                        }}
-                        data-testid={`button-request-info-${course.id}`}
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Request More Information
-                      </Button>
-                      <div 
-                        className="flex items-center gap-2 w-full pt-2 border-t hover-elevate rounded-md px-2 py-1.5 cursor-pointer"
-                        onClick={() => handleComparisonToggle(course.id)}
-                        data-testid={`checkbox-compare-${course.id}`}
-                      >
-                        <Checkbox 
-                          checked={isInComparison(course.id)}
-                          className="pointer-events-none"
-                        />
-                        <label className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
-                          <GitCompare className="h-3.5 w-3.5" />
-                          Compare this course
-                        </label>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
 
             {/* Pagination */}
             {totalFilteredCourses > 0 && (
