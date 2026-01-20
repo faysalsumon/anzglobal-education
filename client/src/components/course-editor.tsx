@@ -71,6 +71,8 @@ const courseSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
   level: z.string().optional(),
   discipline: z.string().optional(),
+  subDisciplineId: z.string().optional(),
+  specialization: z.string().optional(),
   duration: z.string().optional(),
   durationMonths: optionalPositiveInt,
   durationWeeks: optionalPositiveInt,
@@ -118,6 +120,8 @@ interface Course {
   level: string | null;
   subject: string;
   discipline?: string | null;
+  subDisciplineId?: string | null;
+  specialization?: string | null;
   durationMonths?: number | null;
   durationWeeks?: number | null;
   applicationFees?: number | null;
@@ -329,6 +333,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       subject: course?.subject || "",
       level: course?.level || "",
       discipline: course?.discipline || "",
+      subDisciplineId: course?.subDisciplineId || "",
+      specialization: course?.specialization || "",
       duration: course?.duration || "",
       durationMonths: course?.durationMonths || ("" as any),
       durationWeeks: course?.durationWeeks || ("" as any),
@@ -362,6 +368,37 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     });
     return () => subscription.unsubscribe();
   }, [form]);
+
+  // Watch discipline selection to fetch sub-disciplines
+  const selectedDiscipline = form.watch("discipline");
+  const selectedSubDisciplineId = form.watch("subDisciplineId");
+
+  // Fetch sub-disciplines based on selected discipline (Tier 2)
+  const { data: subDisciplines = [] } = useQuery<{ id: string; name: string; discipline: string; slug: string }[]>({
+    queryKey: ["/api/sub-disciplines", { discipline: selectedDiscipline }],
+    enabled: !!selectedDiscipline,
+  });
+
+  // Fetch specializations based on selected sub-discipline (Tier 3)
+  const { data: specializations = [] } = useQuery<{ id: string; name: string; subDisciplineId: string; slug: string }[]>({
+    queryKey: ["/api/sub-disciplines", selectedSubDisciplineId, "specializations"],
+    enabled: !!selectedSubDisciplineId,
+  });
+
+  // Reset sub-discipline and specialization when discipline changes
+  useEffect(() => {
+    if (!selectedDiscipline) {
+      form.setValue("subDisciplineId", "");
+      form.setValue("specialization", "");
+    }
+  }, [selectedDiscipline, form]);
+
+  // Reset specialization when sub-discipline changes
+  useEffect(() => {
+    if (!selectedSubDisciplineId) {
+      form.setValue("specialization", "");
+    }
+  }, [selectedSubDisciplineId, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -687,6 +724,65 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                 <SelectItem value="Trade">Trade</SelectItem>
                               </SelectContent>
                             </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="subDisciplineId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sub-Discipline</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={field.value}
+                              disabled={!selectedDiscipline}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-course-sub-discipline">
+                                  <SelectValue placeholder={selectedDiscipline ? "Select sub-discipline" : "Select discipline first"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
+                                {subDisciplines.map((sd) => (
+                                  <SelectItem key={sd.id} value={sd.id}>
+                                    {sd.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="specialization"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Specialization</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field}
+                                value={field.value || ""}
+                                placeholder={selectedSubDisciplineId ? "Enter specialization (free text)" : "Select sub-discipline first"}
+                                disabled={!selectedSubDisciplineId}
+                                list="specialization-suggestions"
+                                data-testid="input-course-specialization"
+                              />
+                            </FormControl>
+                            {specializations.length > 0 && (
+                              <datalist id="specialization-suggestions">
+                                {specializations.map((spec) => (
+                                  <option key={spec.id} value={spec.name} />
+                                ))}
+                              </datalist>
+                            )}
+                            <FormDescription>Free text with autocomplete from existing entries</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
