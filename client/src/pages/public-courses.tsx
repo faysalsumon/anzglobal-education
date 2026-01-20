@@ -1418,7 +1418,7 @@ export default function PublicCourses() {
                             })()}
                             
                             {/* Action Buttons - Left aligned below content */}
-                            <div className="flex items-center gap-2 mt-3">
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
                               {isAuthenticated && isStudent ? (
                                 <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
                                   <Link href={`/student/courses/${course.id}`}>
@@ -1450,7 +1450,7 @@ export default function PublicCourses() {
                               
                               <Button
                                 asChild
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 data-testid={`button-view-${course.id}`}
                               >
