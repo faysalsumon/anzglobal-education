@@ -103,6 +103,8 @@ type University = {
 
 type FilterMetadata = {
   countries: string[];
+  statesByCountry: Record<string, string[]>;
+  citiesByState: Record<string, string[]>;
   providerTypes: string[];
   deliveryModes: string[];
   intakePeriods: string[];
@@ -129,6 +131,8 @@ export default function PublicInstitutions() {
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     country: true,
+    state: true,
+    city: true,
     discipline: true,
     providerType: true,
     ranking: true,
@@ -158,6 +162,8 @@ export default function PublicInstitutions() {
     if (!open) {
       setOpenSections({
         country: true,
+        state: true,
+        city: true,
         discipline: true,
         providerType: true,
         ranking: true,
@@ -355,6 +361,8 @@ export default function PublicInstitutions() {
   // Count active filters
   const activeFilterCount = 
     filters.countries.length + 
+    filters.states.length +
+    filters.cities.length +
     filters.disciplines.length + 
     filters.providerTypes.length +
     (filters.scholarshipMin !== undefined || filters.scholarshipMax !== undefined ? 1 : 0) +
@@ -452,6 +460,88 @@ export default function PublicInstitutions() {
           </CollapsibleContent>
         </Collapsible>
       )}
+
+      {/* State Filter - appears when country is selected */}
+      {filterMetadata && filters.countries.length > 0 && (() => {
+        const availableStates = filters.countries.flatMap(
+          country => filterMetadata.statesByCountry?.[country] || []
+        );
+        const uniqueStates = Array.from(new Set(availableStates)).sort();
+        
+        if (uniqueStates.length === 0) return null;
+        
+        return (
+          <Collapsible open={openSections.state} onOpenChange={(open) => toggleSection('state', open)}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+              <div className="flex items-center gap-2 font-medium text-sm">
+                <MapPin className="h-4 w-4 text-primary" />
+                State
+                {filters.states.length > 0 && (
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+              {openSections.state ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-1">
+              {uniqueStates.slice(0, 15).map((state) => (
+                <label key={state} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                  <Checkbox
+                    checked={filters.states.includes(state)}
+                    onCheckedChange={() => toggleMultiSelect('states', state)}
+                    data-testid={`checkbox-state-${state.toLowerCase().replace(/\s+/g, '-')}`}
+                  />
+                  <span className="text-sm">{state}</span>
+                </label>
+              ))}
+              {uniqueStates.length > 15 && (
+                <p className="text-xs text-muted-foreground px-2 pt-1">+{uniqueStates.length - 15} more</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })()}
+
+      {/* City Filter - appears when state is selected */}
+      {filterMetadata && filters.states.length > 0 && (() => {
+        const availableCities = filters.countries.flatMap(country => 
+          filters.states.flatMap(state => 
+            filterMetadata.citiesByState?.[`${country}:${state}`] || []
+          )
+        );
+        const uniqueCities = Array.from(new Set(availableCities)).sort();
+        
+        if (uniqueCities.length === 0) return null;
+        
+        return (
+          <Collapsible open={openSections.city} onOpenChange={(open) => toggleSection('city', open)}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+              <div className="flex items-center gap-2 font-medium text-sm">
+                <Building2 className="h-4 w-4 text-primary" />
+                City
+                {filters.cities.length > 0 && (
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+              {openSections.city ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-1">
+              {uniqueCities.slice(0, 15).map((city) => (
+                <label key={city} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                  <Checkbox
+                    checked={filters.cities.includes(city)}
+                    onCheckedChange={() => toggleMultiSelect('cities', city)}
+                    data-testid={`checkbox-city-${city.toLowerCase().replace(/\s+/g, '-')}`}
+                  />
+                  <span className="text-sm">{city}</span>
+                </label>
+              ))}
+              {uniqueCities.length > 15 && (
+                <p className="text-xs text-muted-foreground px-2 pt-1">+{uniqueCities.length - 15} more</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })()}
 
       {/* Discipline Filter */}
       {filterMetadata && filterMetadata.disciplines.length > 0 && (

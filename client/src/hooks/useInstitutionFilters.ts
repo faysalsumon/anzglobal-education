@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 export interface InstitutionFilters {
   search: string;
   countries: string[];
+  states: string[];
+  cities: string[];
   providerTypes: string[];
   deliveryModes: string[];
   intakePeriods: string[];
@@ -32,6 +34,8 @@ const parseFiltersFromURL = (): InstitutionFilters => {
   return {
     search: params.get("search") || "",
     countries: params.getAll("countries").sort(),
+    states: params.getAll("states").sort(),
+    cities: params.getAll("cities").sort(),
     providerTypes: params.getAll("providerTypes").sort(),
     deliveryModes: params.getAll("deliveryModes").sort(),
     intakePeriods: params.getAll("intakePeriods").sort(),
@@ -56,6 +60,8 @@ const serializeFiltersToURL = (filters: InstitutionFilters): string => {
   
   // Sort arrays before appending to ensure consistent query string ordering
   [...filters.countries].sort().forEach(c => params.append("countries", c));
+  [...filters.states].sort().forEach(s => params.append("states", s));
+  [...filters.cities].sort().forEach(c => params.append("cities", c));
   [...filters.providerTypes].sort().forEach(t => params.append("providerTypes", t));
   [...filters.deliveryModes].sort().forEach(m => params.append("deliveryModes", m));
   [...filters.intakePeriods].sort().forEach(i => params.append("intakePeriods", i));
@@ -141,6 +147,8 @@ export function useInstitutionFilters() {
     const emptyFilters: InstitutionFilters = {
       search: "",
       countries: [],
+      states: [],
+      cities: [],
       providerTypes: [],
       deliveryModes: [],
       intakePeriods: [],
@@ -158,9 +166,27 @@ export function useInstitutionFilters() {
     filters.countries.forEach(country => {
       chips.push({
         key: `country-${country}`,
-        label: `Country: ${country}`,
+        label: country,
         value: country,
         onRemove: () => toggleMultiSelect('countries', country)
+      });
+    });
+
+    filters.states.forEach(state => {
+      chips.push({
+        key: `state-${state}`,
+        label: state,
+        value: state,
+        onRemove: () => toggleMultiSelect('states', state)
+      });
+    });
+
+    filters.cities.forEach(city => {
+      chips.push({
+        key: `city-${city}`,
+        label: city,
+        value: city,
+        onRemove: () => toggleMultiSelect('cities', city)
       });
     });
 

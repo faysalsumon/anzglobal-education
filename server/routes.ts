@@ -1466,6 +1466,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTags = Array.from(new Set(approvedInstitutions.flatMap(i => i.tags || []).filter(Boolean)));
       const allDisciplines = Array.from(new Set(approvedInstitutions.flatMap(i => i.topDisciplines || []).filter(Boolean)));
 
+      // Extract states and cities from campusAddresses grouped by country
+      type CampusAddr = { country?: string; state?: string; city?: string };
+      const statesByCountry: Record<string, string[]> = {};
+      const citiesByState: Record<string, string[]> = {};
+      
+      for (const institution of approvedInstitutions) {
+        const campusAddresses = institution.campusAddresses as CampusAddr[] | null;
+        if (campusAddresses && Array.isArray(campusAddresses)) {
+          for (const campus of campusAddresses) {
+            const country = campus.country || institution.country;
+            const state = campus.state;
+            const city = campus.city;
+            
+            if (country && state) {
+              if (!statesByCountry[country]) statesByCountry[country] = [];
+              if (!statesByCountry[country].includes(state)) {
+                statesByCountry[country].push(state);
+              }
+              
+              if (city) {
+                const stateKey = `${country}:${state}`;
+                if (!citiesByState[stateKey]) citiesByState[stateKey] = [];
+                if (!citiesByState[stateKey].includes(city)) {
+                  citiesByState[stateKey].push(city);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Sort the states and cities
+      for (const country of Object.keys(statesByCountry)) {
+        statesByCountry[country].sort();
+      }
+      for (const stateKey of Object.keys(citiesByState)) {
+        citiesByState[stateKey].sort();
+      }
+
       // Calculate ranges
       const scholarshipRanges = approvedInstitutions
         .map(i => ({ min: i.scholarshipPercentageMin, max: i.scholarshipPercentageMax }))
@@ -1476,6 +1515,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         countries: countries.sort(),
+        statesByCountry,
+        citiesByState,
         providerTypes: providerTypes.sort(),
         deliveryModes: deliveryModes.sort(),
         intakePeriods: intakePeriods.sort(),
@@ -1530,6 +1571,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         search,
         countries,
+        states,
+        cities,
         providerTypes,
         deliveryModes,
         intakePeriods,
@@ -1561,6 +1604,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (countries) {
         const countryList = Array.isArray(countries) ? countries : [countries];
         institutions = institutions.filter(i => i.country && countryList.includes(i.country));
+      }
+
+      // State filter (multi-select) - filters by campus state, scoped to selected countries
+      if (states) {
+        const stateList = Array.isArray(states) ? states : [states];
+        const countryList = countries ? (Array.isArray(countries) ? countries : [countries]) : null;
+        type CampusAddr = { state?: string; country?: string };
+        institutions = institutions.filter(i => {
+          const campusAddresses = i.campusAddresses as CampusAddr[] | null;
+          if (!campusAddresses || !Array.isArray(campusAddresses)) return false;
+          return campusAddresses.some(c => {
+            if (!c.state || !stateList.includes(c.state)) return false;
+            // If countries are selected, ensure the campus is in one of those countries
+            if (countryList) {
+              const campusCountry = c.country || i.country;
+              return campusCountry && countryList.includes(campusCountry);
+            }
+            return true;
+          });
+        });
+      }
+
+      // City filter (multi-select) - filters by campus city, scoped to selected states and countries
+      if (cities) {
+        const cityList = Array.isArray(cities) ? cities : [cities];
+        const stateList = states ? (Array.isArray(states) ? states : [states]) : null;
+        const countryList = countries ? (Array.isArray(countries) ? countries : [countries]) : null;
+        type CampusAddr = { city?: string; state?: string; country?: string };
+        institutions = institutions.filter(i => {
+          const campusAddresses = i.campusAddresses as CampusAddr[] | null;
+          if (!campusAddresses || !Array.isArray(campusAddresses)) return false;
+          return campusAddresses.some(c => {
+            if (!c.city || !cityList.includes(c.city)) return false;
+            // If states are selected, require campus to have a state that matches
+            if (stateList && (!c.state || !stateList.includes(c.state))) return false;
+            // If countries are selected, ensure the campus is in one of those countries
+            if (countryList) {
+              const campusCountry = c.country || i.country;
+              if (!campusCountry || !countryList.includes(campusCountry)) return false;
+            }
+            return true;
+          });
+        });
       }
 
       // Provider type filter (multi-select)
