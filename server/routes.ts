@@ -2055,7 +2055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const { discipline, universityId, tags: tagSlugs, search, limit, publishStatus, page, pageSize } = req.query;
+      const { discipline, subDisciplineId, specialization, universityId, tags: tagSlugs, search, limit, publishStatus, page, pageSize } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
@@ -2133,6 +2133,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Apply discipline filter if provided
         if (discipline && typeof discipline === 'string') {
           if (course.discipline !== discipline) return false;
+        }
+        
+        // Apply subDisciplineId filter if provided
+        if (subDisciplineId && typeof subDisciplineId === 'string') {
+          if (course.subDisciplineId !== subDisciplineId) return false;
+        }
+        
+        // Apply specialization filter if provided
+        if (specialization && typeof specialization === 'string') {
+          if (!course.specialization || !course.specialization.toLowerCase().includes(specialization.toLowerCase())) return false;
         }
         
         // Apply search filter (search by course title)
