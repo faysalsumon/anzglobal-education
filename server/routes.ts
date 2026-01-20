@@ -1543,6 +1543,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accreditationStatus,
         rankingBand,
         internationalSupport,
+        page,
+        pageSize,
       } = req.query;
 
       // Search filter (name, description, disciplines)
@@ -1648,7 +1650,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         institutions = institutions.filter(i => i.internationalStudentSupport === true);
       }
 
-      res.json(institutions);
+      // Get total count before pagination
+      const totalCount = institutions.length;
+
+      // Apply pagination if page and pageSize are provided
+      const pageNum = page && typeof page === 'string' ? parseInt(page, 10) : null;
+      const pageSizeNum = pageSize && typeof pageSize === 'string' ? parseInt(pageSize, 10) : null;
+
+      if (pageNum && pageSizeNum && pageNum > 0 && pageSizeNum > 0) {
+        const startIndex = (pageNum - 1) * pageSizeNum;
+        const endIndex = startIndex + pageSizeNum;
+        institutions = institutions.slice(startIndex, endIndex);
+        
+        // Return paginated response with total count
+        res.json({
+          items: institutions,
+          totalCount,
+          page: pageNum,
+          pageSize: pageSizeNum,
+          totalPages: Math.ceil(totalCount / pageSizeNum),
+        });
+      } else {
+        // Return unpaginated response for backward compatibility
+        res.json(institutions);
+      }
     } catch (error) {
       console.error("Error fetching institutions:", error);
       res.status(500).json({ message: "Failed to fetch institutions" });
@@ -1890,7 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
-      const { discipline, universityId, tags: tagSlugs, search, limit, publishStatus } = req.query;
+      const { discipline, universityId, tags: tagSlugs, search, limit, publishStatus, page, pageSize } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
       
@@ -2027,17 +2052,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Apply limit if provided
+      // Get total count before any slicing
       const total = coursesWithTags.length;
-      const limitedCourses = resultLimit && resultLimit > 0 
-        ? coursesWithTags.slice(0, resultLimit) 
-        : coursesWithTags;
       
-      // Return in format expected by frontend when search/limit params used
-      if (search || limit) {
-        res.json({ courses: limitedCourses, total });
+      // Apply pagination if page and pageSize are provided
+      const pageNum = page && typeof page === 'string' ? parseInt(page, 10) : null;
+      const pageSizeNum = pageSize && typeof pageSize === 'string' ? parseInt(pageSize, 10) : null;
+      
+      if (pageNum && pageSizeNum && pageNum > 0 && pageSizeNum > 0) {
+        const startIndex = (pageNum - 1) * pageSizeNum;
+        const endIndex = startIndex + pageSizeNum;
+        const paginatedCourses = coursesWithTags.slice(startIndex, endIndex);
+        
+        // Return paginated response with total count
+        res.json({
+          items: paginatedCourses,
+          totalCount: total,
+          page: pageNum,
+          pageSize: pageSizeNum,
+          totalPages: Math.ceil(total / pageSizeNum),
+        });
       } else {
-        res.json(limitedCourses);
+        // Apply limit if provided (backward compatibility)
+        const limitedCourses = resultLimit && resultLimit > 0 
+          ? coursesWithTags.slice(0, resultLimit) 
+          : coursesWithTags;
+        
+        // Return in format expected by frontend when search/limit params used
+        if (search || limit) {
+          res.json({ courses: limitedCourses, total });
+        } else {
+          res.json(limitedCourses);
+        }
       }
     } catch (error) {
       console.error("Error fetching courses:", error);

@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useInstitutionFilters } from "@/hooks/useInstitutionFilters";
 import { InstitutionFilterBar } from "@/components/institution-filter-bar";
 import { InstitutionLogo } from "@/components/institution-logo";
+import { ListPagination } from "@/components/list-pagination";
 import type { Favorite } from "@shared/schema";
 
 type University = {
@@ -82,6 +83,8 @@ export default function PublicInstitutions() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { user, isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
 
@@ -94,6 +97,11 @@ export default function PublicInstitutions() {
     hasActiveFilters,
     queryParamsString,
   } = useInstitutionFilters();
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [queryParamsString]);
 
   // Initialize search input from filters (preserves URL param)
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -116,16 +124,31 @@ export default function PublicInstitutions() {
     queryKey: ["/api/institutions/filter-metadata"],
   });
 
-  // Fetch institutions with filters - use stable queryParamsString from hook
-  const { data: institutions = [], isLoading } = useQuery<University[]>({
-    queryKey: ["/api/institutions", queryParamsString],
+  // Build pagination params
+  const paginationParams = `page=${currentPage}&pageSize=${pageSize}`;
+  const fullQueryString = queryParamsString 
+    ? `${queryParamsString}&${paginationParams}` 
+    : paginationParams;
+
+  // Fetch institutions with filters and pagination
+  const { data: institutionsData, isLoading } = useQuery<{
+    items: University[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>({
+    queryKey: ["/api/institutions", fullQueryString],
     queryFn: async () => {
-      const url = queryParamsString ? `/api/institutions?${queryParamsString}` : "/api/institutions";
+      const url = `/api/institutions?${fullQueryString}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch institutions");
       return response.json();
     },
   });
+
+  const institutions = institutionsData?.items ?? [];
+  const totalCount = institutionsData?.totalCount ?? 0;
 
   const { data: favorites = [] } = useQuery<Favorite[]>({
     queryKey: ["/api/student/favorites"],
@@ -373,7 +396,8 @@ export default function PublicInstitutions() {
           <div className="text-center py-12 text-muted-foreground">
             No institutions found matching your criteria.
           </div>
-        ) : viewMode === "list" && (
+        ) : viewMode === "list" ? (
+          <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {institutions.map((institution) => (
               <Card
@@ -527,7 +551,27 @@ export default function PublicInstitutions() {
               </Card>
             ))}
           </div>
-        )}
+
+          {/* Pagination */}
+          {totalCount > 0 && (
+            <ListPagination
+              currentPage={currentPage}
+              totalItems={totalCount}
+              pageSize={pageSize}
+              pageSizeOptions={[20, 30, 50]}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              itemLabel="institutions"
+            />
+          )}
+          </div>
+        ) : null}
       </div>
 
       {/* Login Modal */}

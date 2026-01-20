@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
+import { ListPagination } from "@/components/list-pagination";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -136,6 +137,8 @@ export default function PublicCourses() {
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithDetails | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const highlightedRef = useRef<HTMLDivElement>(null);
   
   // Track pending URL hydration and previous URL snapshot
@@ -571,6 +574,17 @@ export default function PublicCourses() {
     return true;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, universityFilter, campusCity, minFees, maxFees]);
+
+  // Paginate filtered courses
+  const totalFilteredCourses = filteredCourses.length;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedCourses = filteredCourses.slice(startIndex, endIndex);
+
   // SEO data
   const siteUrl = window.location.origin;
   const pageUrl = `${siteUrl}/courses`;
@@ -770,7 +784,7 @@ export default function PublicCourses() {
           {/* Results */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground" data-testid="results-count">
-              {filteredCourses.length} course{filteredCourses.length !== 1 ? "s" : ""} found
+              {totalFilteredCourses} course{totalFilteredCourses !== 1 ? "s" : ""} found
             </p>
           </div>
 
@@ -788,7 +802,7 @@ export default function PublicCourses() {
                 </Card>
               ))}
             </div>
-          ) : filteredCourses.length === 0 ? (
+          ) : totalFilteredCourses === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
@@ -797,8 +811,9 @@ export default function PublicCourses() {
               </CardContent>
             </Card>
           ) : (
+            <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredCourses.map((course) => {
+              {paginatedCourses.map((course) => {
                 const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
                 return (
                   <Card 
@@ -1013,6 +1028,26 @@ export default function PublicCourses() {
                   </Card>
                 );
               })}
+            </div>
+
+            {/* Pagination */}
+            {totalFilteredCourses > 0 && (
+              <ListPagination
+                currentPage={currentPage}
+                totalItems={totalFilteredCourses}
+                pageSize={pageSize}
+                pageSizeOptions={[20, 30, 50]}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+                itemLabel="courses"
+              />
+            )}
             </div>
           )}
         </div>
