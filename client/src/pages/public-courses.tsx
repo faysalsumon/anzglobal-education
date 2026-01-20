@@ -1432,9 +1432,10 @@ export default function PublicCourses() {
                     <Card 
                       key={course.id} 
                       ref={isHighlighted ? highlightedRef : null}
-                      className={`hover-elevate transition-all duration-300 ${
+                      className={`hover-elevate transition-all duration-300 cursor-pointer ${
                         isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
                       }`}
+                      onClick={() => navigate(`/courses/${course.id}`)}
                       data-testid={`course-card-${course.id}`}
                     >
                       <CardContent className="p-4">
@@ -1479,6 +1480,7 @@ export default function PublicCourses() {
                               size="icon"
                               onClick={(e) => {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 handleFavoriteToggle(course.id);
                               }}
                               aria-label={isFavorited(course.id) ? "Remove from favorites" : "Add to favorites"}
@@ -1488,7 +1490,7 @@ export default function PublicCourses() {
                             </Button>
                             <div 
                               className="flex items-center gap-1.5 hover-elevate rounded-md px-2 py-1.5 cursor-pointer text-sm"
-                              onClick={() => handleComparisonToggle(course.id)}
+                              onClick={(e) => { e.stopPropagation(); handleComparisonToggle(course.id); }}
                               data-testid={`checkbox-compare-${course.id}`}
                             >
                               <Checkbox 
@@ -1562,6 +1564,7 @@ export default function PublicCourses() {
                                       className="text-xs cursor-pointer"
                                       onClick={(e) => {
                                         e.preventDefault();
+                                        e.stopPropagation();
                                         // Only set full cascading filters if we have unambiguous campusAddresses data
                                         // and the course country matches the campus country
                                         const campusWithCity = campusAddresses?.find(c => c.city === city);
@@ -1591,39 +1594,8 @@ export default function PublicCourses() {
                               );
                             })()}
                             
-                            {/* Action Buttons - Request Info and View Details side by side */}
-                            <div className="flex flex-wrap items-center gap-2 mt-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setSelectedCourseForLead(course);
-                                }}
-                                data-testid={`button-request-info-${course.id}`}
-                              >
-                                <Mail className="mr-1.5 h-3.5 w-3.5" />
-                                Request Info
-                              </Button>
-                              
-                              <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                data-testid={`button-view-${course.id}`}
-                              >
-                                <Link href={`/courses/${course.id}`}>
-                                  View Details
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bottom Section: Stats Row with Apply Button */}
-                        <div className="mt-4 pt-3 border-t border-border/50">
-                          <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
-                            <div className="flex flex-wrap items-center gap-4">
+                            {/* Duration and Fees Row */}
+                            <div className="flex flex-wrap items-center gap-4 text-sm mt-3">
                               {course.duration && (
                                 <div className="flex items-center gap-1.5">
                                   <Clock className="h-4 w-4 text-muted-foreground" />
@@ -1637,15 +1609,34 @@ export default function PublicCourses() {
                                 </div>
                               )}
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Section: Action Buttons */}
+                        <div className="mt-4 pt-3 border-t border-border/50">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-[#FF5000] hover:bg-[#FF5000]/90 text-white"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedCourseForLead(course);
+                              }}
+                              data-testid={`button-request-info-${course.id}`}
+                            >
+                              <Mail className="mr-1.5 h-3.5 w-3.5" />
+                              Request Info
+                            </Button>
                             {isAuthenticated && isStudent ? (
-                              <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                              <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
                                 <Link href={`/student/courses/${course.id}`}>
                                   <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
                                   Apply
                                 </Link>
                               </Button>
                             ) : (
-                              <Button asChild size="sm" data-testid={`button-apply-course-${course.id}`}>
+                              <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
                                 <a href="/auth">
                                   <LogIn className="mr-1.5 h-3.5 w-3.5" />
                                   Apply
