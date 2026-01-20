@@ -740,119 +740,101 @@ export default function PublicInstitutions() {
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        {/* Left: Logo and Basic Info */}
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <InstitutionLogo
-                            src={institution.logo}
-                            alt={institution.name}
-                            size="md"
-                            testId={`img-logo-${institution.id}`}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Link href={`/institutions/${institution.id}`}>
-                                <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer" data-testid={`text-name-${institution.id}`}>
-                                  {institution.name}
-                                </h3>
-                              </Link>
-                              {institution.rankingBand && (
-                                <Badge variant="outline" className="text-xs">
-                                  {institution.rankingBand}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {institution.location && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                                <MapPin className="h-3 w-3 flex-shrink-0" />
-                                <span>{institution.location}, {institution.country}</span>
-                              </div>
-                            )}
-                            
-                            {institution.deliveryModes && institution.deliveryModes.length > 0 && (
-                              <div className="text-sm text-muted-foreground">
-                                <span>Attendance: </span>
-                                {institution.deliveryModes.join(' / ')}
-                              </div>
-                            )}
-
-                            <Link href={`/institutions/${institution.id}`}>
-                              <span className="text-sm text-primary hover:underline cursor-pointer mt-1 inline-block">
-                                Visit Institution Page
-                              </span>
-                            </Link>
-                          </div>
+                      {/* Top Row: Badges left, Favorite top right */}
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {institution.rankingBand && (
+                            <Badge variant="outline" className="text-xs">
+                              {institution.rankingBand}
+                            </Badge>
+                          )}
+                          {institution.rankingBand === "Top 100" && (
+                            <Badge variant="secondary" className="text-xs">Global Top 100</Badge>
+                          )}
                         </div>
+                        
+                        {/* Top Right: Favorite */}
+                        <Button
+                          variant={isFavorited(institution.id) ? "default" : "ghost"}
+                          size="icon"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleFavoriteToggle(institution.id);
+                          }}
+                          aria-label={isFavorited(institution.id) ? "Remove from favorites" : "Add to favorites"}
+                          data-testid={`button-favorite-${institution.id}`}
+                        >
+                          <Heart className={`h-4 w-4 ${isFavorited(institution.id) ? "fill-current" : ""}`} />
+                        </Button>
+                      </div>
 
-                        {/* Right: Stats Grid */}
-                        <div className="flex-shrink-0">
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                            {institution.rankingBand && (
-                              <div className="flex items-center gap-2">
-                                <Award className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Global Ranking</div>
-                                  <div className="font-medium">{institution.rankingBand}</div>
-                                </div>
-                              </div>
-                            )}
+                      {/* Main Content: Logo + Institution Info */}
+                      <div className="flex items-start gap-3">
+                        <InstitutionLogo
+                          src={institution.logo}
+                          alt={institution.name}
+                          size="md"
+                          testId={`img-logo-${institution.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/institutions/${institution.id}`}>
+                            <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer mb-1" data-testid={`text-name-${institution.id}`}>
+                              {institution.name}
+                            </h3>
+                          </Link>
+                          
+                          {institution.location && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span>{institution.location}, {institution.country}</span>
+                            </div>
+                          )}
+                          
+                          {institution.deliveryModes && institution.deliveryModes.length > 0 && (
+                            <div className="text-sm text-muted-foreground">
+                              <span>Attendance: </span>
+                              {institution.deliveryModes.join(' / ')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Section: Stats Row + View Details Button */}
+                      <div className="mt-4 pt-3 border-t border-border/50">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          {/* Stats Row - Left */}
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
                             {institution.providerType && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Institution Type</div>
-                                  <div className="font-medium">{institution.providerType}</div>
-                                </div>
+                                <span className="text-muted-foreground">{institution.providerType}</span>
                               </div>
                             )}
                             {institution.coursesCount !== undefined && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <BookOpen className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Courses</div>
-                                  <div className="font-medium">{institution.coursesCount}</div>
-                                </div>
+                                <span className="text-muted-foreground">{institution.coursesCount} Courses</span>
                               </div>
                             )}
                             {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <Percent className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Scholarships</div>
-                                  <div className="font-medium">Up to {institution.scholarshipPercentageMax}%</div>
-                                </div>
+                                <span className="font-medium text-primary">Up to {institution.scholarshipPercentageMax}%</span>
                               </div>
                             )}
                           </div>
                           
-                          {/* Badges */}
-                          <div className="flex gap-2 mt-3 justify-end">
-                            {institution.rankingBand === "Top 100" && (
-                              <Badge variant="secondary" className="text-xs">Global Top 100</Badge>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`h-8 w-8 rounded-full ${
-                                isFavorited(institution.id)
-                                  ? "bg-primary text-white hover:bg-primary/90"
-                                  : ""
-                              }`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleFavoriteToggle(institution.id);
-                              }}
-                              aria-label={isFavorited(institution.id) ? "Remove from favorites" : "Add to favorites"}
-                              data-testid={`button-favorite-${institution.id}`}
-                            >
-                              <Heart
-                                className={`h-4 w-4 ${
-                                  isFavorited(institution.id) ? "fill-current" : ""
-                                }`}
-                              />
-                            </Button>
-                          </div>
+                          {/* View Details Button - Right */}
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            data-testid={`button-view-${institution.id}`}
+                          >
+                            <Link href={`/institutions/${institution.id}`}>
+                              View Details
+                            </Link>
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
