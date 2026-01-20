@@ -203,11 +203,25 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
     setIsDialogOpen(true);
   };
 
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
   const onSubmit = (data: TagFormValues) => {
+    const submissionData = {
+      ...data,
+      slug: data.slug && data.slug.trim() ? data.slug : generateSlug(data.name),
+    };
+    
     if (editingTag) {
-      updateTagMutation.mutate({ id: editingTag.id, data });
+      updateTagMutation.mutate({ id: editingTag.id, data: submissionData });
     } else {
-      createTagMutation.mutate(data);
+      createTagMutation.mutate(submissionData);
     }
   };
 
