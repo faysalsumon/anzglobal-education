@@ -729,15 +729,15 @@ export default function PublicCourses() {
             <p className="text-sm sm:text-base text-muted-foreground">Explore {courses.length} courses from top institutions worldwide</p>
           </div>
 
-          {/* Tabs for Programmes/Universities */}
+          {/* Tabs for Courses/Institutions */}
           <div className="flex justify-center">
             <div className="inline-flex border rounded-lg p-1 bg-muted/30">
-              <Button variant="default" size="sm" className="px-6" data-testid="tab-programmes">
-                Programmes
+              <Button variant="default" size="sm" className="px-6" data-testid="tab-courses">
+                Courses
               </Button>
               <Link href="/institutions">
-                <Button variant="ghost" size="sm" className="px-6" data-testid="tab-universities">
-                  Universities
+                <Button variant="ghost" size="sm" className="px-6" data-testid="tab-institutions">
+                  Institutions
                 </Button>
               </Link>
             </div>

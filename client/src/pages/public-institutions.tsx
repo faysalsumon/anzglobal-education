@@ -566,20 +566,20 @@ export default function PublicInstitutions() {
 
         {/* Page Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Browse Universities & Institutions</h1>
+          <h1 className="text-3xl font-bold mb-2">Browse Institutions</h1>
           <p className="text-muted-foreground">Discover world-class institutions for your education journey</p>
         </div>
 
-        {/* Tabs for Programmes/Universities */}
+        {/* Tabs for Courses/Institutions */}
         <div className="flex justify-center mb-6">
           <div className="inline-flex border rounded-lg p-1 bg-muted/30">
             <Link href="/courses">
-              <Button variant="ghost" size="sm" className="px-6" data-testid="tab-programmes">
-                Programmes
+              <Button variant="ghost" size="sm" className="px-6" data-testid="tab-courses">
+                Courses
               </Button>
             </Link>
-            <Button variant="default" size="sm" className="px-6" data-testid="tab-universities">
-              Universities
+            <Button variant="default" size="sm" className="px-6" data-testid="tab-institutions">
+              Institutions
             </Button>
           </div>
         </div>
