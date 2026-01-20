@@ -107,12 +107,7 @@ export function AdminTagsPanel({ isCTO = false }: AdminTagsPanelProps) {
   });
 
   const { data: tags = [], isLoading } = useQuery<TagType[]>({
-    queryKey: ["/api/admin/tags", { includeInactive: true }],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/tags?includeInactive=true", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch tags");
-      return res.json();
-    },
+    queryKey: ["/api/admin/tags", { includeInactive: "true" }],
   });
 
   const createTagMutation = useMutation({
