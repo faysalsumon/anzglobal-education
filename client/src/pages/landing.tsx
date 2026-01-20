@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University, Blog } from "@shared/schema";
-import { StudentAuthModal } from "@/components/student-auth-modal";
-import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
@@ -26,8 +24,6 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
-  const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
-  const [showInstitutionAuthModal, setShowInstitutionAuthModal] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = useQuery<PlatformStats>({
@@ -154,7 +150,7 @@ export default function Landing() {
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (
-    <PublicLayout onStudentLoginClick={() => setShowStudentAuthModal(true)}>
+    <PublicLayout>
       <Helmet>
         {/* Primary Meta Tags */}
         <title>{pageTitle}</title>
@@ -464,25 +460,29 @@ export default function Landing() {
           <div className="text-center mt-12">
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button 
+                asChild
                 size="lg" 
-                onClick={() => setShowStudentAuthModal(true)}
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
                 data-testid="button-student-get-started"
               >
-                <GraduationCap className="mr-2 h-5 w-5" />
-                Start as a Student
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href="/auth">
+                  <GraduationCap className="mr-2 h-5 w-5" />
+                  Start as a Student
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
               <Button 
+                asChild
                 size="lg" 
                 variant="outline"
-                onClick={() => setShowInstitutionAuthModal(true)}
                 className="px-8 py-6 text-lg"
                 data-testid="button-institution-get-started"
               >
-                <Building2 className="mr-2 h-5 w-5" />
-                Join as an Institution
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href="/auth">
+                  <Building2 className="mr-2 h-5 w-5" />
+                  Join as an Institution
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
@@ -572,14 +572,16 @@ export default function Landing() {
           {/* Institution CTA */}
           <div className="text-center mt-12">
             <Button 
+              asChild
               size="lg" 
-              onClick={() => setShowInstitutionAuthModal(true)}
               className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
               data-testid="button-institution-partner"
             >
-              <Building2 className="mr-2 h-5 w-5" />
-              Partner with Us
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link href="/auth">
+                <Building2 className="mr-2 h-5 w-5" />
+                Partner with Us
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
               Join leading institutions already growing their international presence
@@ -841,40 +843,33 @@ export default function Landing() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button 
+                asChild
                 size="lg" 
                 variant="secondary" 
-                onClick={() => setShowStudentAuthModal(true)}
                 data-testid="button-student-cta"
               >
-                <GraduationCap className="h-5 w-5 mr-2" />
-                I'm a Student
+                <Link href="/auth">
+                  <GraduationCap className="h-5 w-5 mr-2" />
+                  I'm a Student
+                </Link>
               </Button>
               <Button 
+                asChild
                 size="lg" 
                 variant="outline" 
                 className="bg-white/10 hover:bg-white/20 border-white text-white" 
-                onClick={() => setShowInstitutionAuthModal(true)}
                 data-testid="button-institution-cta"
               >
-                <Building2 className="h-5 w-5 mr-2" />
-                I'm an Institution
+                <Link href="/auth">
+                  <Building2 className="h-5 w-5 mr-2" />
+                  I'm an Institution
+                </Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Student Auth Modal */}
-      <StudentAuthModal 
-        open={showStudentAuthModal} 
-        onOpenChange={setShowStudentAuthModal}
-      />
-
-      {/* Institution Auth Modal */}
-      <InstitutionAuthModal 
-        open={showInstitutionAuthModal} 
-        onOpenChange={setShowInstitutionAuthModal}
-      />
     </PublicLayout>
   );
 }
