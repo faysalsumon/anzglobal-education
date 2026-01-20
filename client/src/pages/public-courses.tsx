@@ -1448,11 +1448,16 @@ export default function PublicCourses() {
                                 Request Info
                               </Button>
                               
-                              <Link href={`/courses/${course.id}`}>
-                                <span className="text-sm text-primary hover:underline cursor-pointer whitespace-nowrap" data-testid={`link-view-${course.id}`}>
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                data-testid={`button-view-${course.id}`}
+                              >
+                                <Link href={`/courses/${course.id}`}>
                                   View Details
-                                </span>
-                              </Link>
+                                </Link>
+                              </Button>
                             </div>
                           </div>
                         </div>
