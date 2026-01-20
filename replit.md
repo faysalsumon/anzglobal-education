@@ -83,6 +83,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Filtering & Search**: Discipline-based, course level, natural language search, and location-based course filtering.
   - **Public Courses Page**: Modern two-column layout with sticky left filter sidebar (w-72) featuring collapsible sections with icons, active filter chips with individual clear buttons, and mobile-responsive Sheet drawer for filters. Uses client-side pagination (20/30/50 items per page).
   - **Public Institutions Page**: Server-side pagination with realestate.com.au-style map interface, List/Map toggle, and location autocomplete.
+  - **Cascading Location Filters**: Both courses and institutions pages use cascading Country → State → City filters. Location filter appears at top of sidebar. State dropdown appears only when a country is selected, City dropdown appears only when a state is selected. Location data is extracted from institution campusAddresses JSONB field. Clearing Country auto-clears State and City; clearing State auto-clears City.
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions with 13 categories, flexible assignment, and an Admin UI for management.
 - **Maps & Location**: Google Maps integration for campus locations with custom markers, map-based campus search on public institutions page.
   - **Geocoding Service**: Auto-converts campus addresses to lat/lng coordinates via Google Geocoding API on institution save
