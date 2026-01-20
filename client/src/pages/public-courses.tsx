@@ -1651,32 +1651,6 @@ export default function PublicCourses() {
                                 <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
                               </div>
                             )}
-                            {/* Display all campus cities from institution campusAddresses */}
-                            {(() => {
-                              // Use shared helper to extract cities
-                              const cities = extractCourseCities(course as any);
-                              
-                              // Fall back to course.location if no cities from helper
-                              if (cities.length === 0 && course.location) {
-                                return (
-                                  <div className="flex items-center gap-1.5">
-                                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>{course.location}</span>
-                                  </div>
-                                );
-                              }
-                              
-                              if (cities.length === 0) return null;
-                              
-                              return (
-                                <div className="flex items-center gap-1.5">
-                                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-muted-foreground" data-testid={`text-location-${course.id}`}>
-                                    {cities.join(', ')}
-                                  </span>
-                                </div>
-                              );
-                            })()}
                           </div>
                         </div>
                       </CardContent>
