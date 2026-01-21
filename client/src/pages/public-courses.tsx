@@ -308,96 +308,55 @@ export default function PublicCourses() {
     );
   };
 
-  // Course comparison logic
+  // Course comparison logic - works for guests (localStorage) and logged-in students (API)
   const [location, navigate] = useLocation();
-  const { data: comparisons = [] } = useQuery<CourseComparison[]>({
+  const COMPARISON_STORAGE_KEY = 'course_comparisons';
+  
+  // Guest comparisons stored in localStorage
+  const [guestComparisons, setGuestComparisons] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(COMPARISON_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Sync guest comparisons to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(COMPARISON_STORAGE_KEY, JSON.stringify(guestComparisons));
+    } catch {
+      // localStorage might be full or disabled
+    }
+  }, [guestComparisons]);
+
+  // API comparisons for logged-in students (optional enhancement)
+  const { data: apiComparisons = [] } = useQuery<CourseComparison[]>({
     queryKey: ["/api/student/comparisons"],
     enabled: isAuthenticated && isStudent,
   });
 
-  const addComparisonMutation = useMutation({
-    mutationFn: async (courseId: string) => {
-      return await apiRequest("POST", "/api/student/comparisons", { courseId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
-      toast({
-        title: "Success",
-        description: "Course added to comparison",
-      });
-    },
-    onError: (error: any) => {
-      if (error.message?.includes("already in comparison")) {
-        toast({
-          title: "Already in comparison",
-          description: "This course is already in your comparison list",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to add to comparison",
-          variant: "destructive",
-        });
-      }
-    },
-  });
-
-  const removeComparisonMutation = useMutation({
-    mutationFn: async (comparisonId: string) => {
-      return await apiRequest("DELETE", `/api/student/comparisons/${comparisonId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
-      toast({
-        title: "Success",
-        description: "Course removed from comparison",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to remove from comparison",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const clearAllComparisonsMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("DELETE", "/api/student/comparisons");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/student/comparisons"] });
-      toast({
-        title: "Success",
-        description: "All comparisons cleared",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to clear comparisons",
-        variant: "destructive",
-      });
-    },
-  });
+  // Use guest comparisons (localStorage-based) for everyone
+  // This keeps it simple - comparisons work without login
+  const comparisons = guestComparisons.map((courseId, index) => ({
+    id: `guest-${index}`,
+    courseId,
+    userId: 'guest',
+    createdAt: new Date(),
+  }));
 
   const handleComparisonToggle = (courseId: string) => {
-    if (!isAuthenticated || !isStudent) {
-      setShowLoginModal(true);
-      return;
-    }
+    const isAlreadyComparing = guestComparisons.includes(courseId);
 
-    const existingComparison = comparisons.find(
-      (c) => c.courseId === courseId
-    );
-
-    if (existingComparison) {
-      removeComparisonMutation.mutate(existingComparison.id);
+    if (isAlreadyComparing) {
+      setGuestComparisons(prev => prev.filter(id => id !== courseId));
+      toast({
+        title: "Removed",
+        description: "Course removed from comparison",
+      });
     } else {
-      // Limit to 4 courses for comparison
-      if (comparisons.length >= 4) {
+      if (guestComparisons.length >= 4) {
         toast({
           title: "Comparison limit reached",
           description: "You can compare up to 4 courses at a time",
@@ -405,16 +364,30 @@ export default function PublicCourses() {
         });
         return;
       }
-      addComparisonMutation.mutate(courseId);
+      setGuestComparisons(prev => [...prev, courseId]);
+      toast({
+        title: "Added",
+        description: "Course added to comparison",
+      });
+    }
+  };
+
+  const clearAllComparisonsMutation = {
+    mutate: () => {
+      setGuestComparisons([]);
+      toast({
+        title: "Cleared",
+        description: "All comparisons cleared",
+      });
     }
   };
 
   const isInComparison = (courseId: string) => {
-    return comparisons.some((c) => c.courseId === courseId);
+    return guestComparisons.includes(courseId);
   };
 
   const handleCompare = () => {
-    if (comparisons.length < 2) {
+    if (guestComparisons.length < 2) {
       toast({
         title: "Select more courses",
         description: "Please select at least 2 courses to compare",
@@ -422,7 +395,7 @@ export default function PublicCourses() {
       });
       return;
     }
-    const courseIds = comparisons.map(c => c.courseId).join(',');
+    const courseIds = guestComparisons.join(',');
     navigate(`/compare-courses?courses=${courseIds}`);
   };
 
