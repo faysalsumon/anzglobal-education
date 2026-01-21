@@ -172,25 +172,12 @@ export function TaskDialog({
     }
   }, [task, applicationId, form]);
 
-  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
+  const { data: assignableUsersData } = useQuery<{ users: TeamMember[] }>({
     queryKey: ["/api/admin/assignable-users"],
-    queryFn: async () => {
-      const response = await fetch("/api/admin/assignable-users", {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error("Failed to fetch assignable users");
-      const data = await response.json();
-      // API returns { users: [...] }
-      return (data.users || []).map((user: any) => ({
-        id: user.id,
-        firstName: user.firstName || null,
-        lastName: user.lastName || null,
-        email: user.email || '',
-        profileImageUrl: user.profileImageUrl || null,
-      }));
-    },
     enabled: open,
   });
+  
+  const teamMembers = assignableUsersData?.users || [];
 
   const { data: applicationsData } = useQuery<{ applications: Application[] }>({
     queryKey: ["/api/admin/applications"],
