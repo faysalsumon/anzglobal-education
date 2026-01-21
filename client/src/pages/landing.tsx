@@ -4,9 +4,10 @@ import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle } from "lucide-react";
 import { Link } from "wouter";
-import type { Course, University, Blog } from "@shared/schema";
+import type { Course, University, Blog, Testimonial } from "@shared/schema";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
@@ -44,6 +45,11 @@ export default function Landing() {
   });
 
   const blogs = blogsData?.blogs || [];
+
+  // Fetch published testimonials from CMS
+  const { data: cmsTestimonials = [] } = useQuery<Testimonial[]>({
+    queryKey: ["/api/public/testimonials"],
+  });
 
   // Filter courses or institutions based on search query and type
   const courseSuggestions = searchQuery.trim().length > 0 && searchType === "courses"
@@ -115,33 +121,63 @@ export default function Landing() {
     handleSearch(institution.name);
   };
 
-  // Featured student reviews
-  const featuredReviews = [
+  // Featured student reviews - use CMS testimonials if available, fallback to static data
+  const staticReviews = [
     {
-      id: 1,
+      id: "static-1",
       title: "Dreams Turned Into Reality",
       content: "Studying abroad was always a dream of mine, but I didn't know how to make it a reality. ANZ Global Education made that dream come true. They guided me step-by-step—from career counseling and IELTS preparation to choosing a university and submitting my visa application.",
       studentName: "MD Areen Chowdhury",
-      location: "Melbourne, Australia",
-      institution: "Swinburne University"
+      studentLocation: "Melbourne, Australia",
+      institution: "Swinburne University",
+      imageUrl: ""
     },
     {
-      id: 2,
+      id: "static-2",
       title: "Genuine and Supportive Team",
       content: "ANZ Global Education really stands out because of their honesty and personal care. They didn't just treat me like another student—they listened, guided, and supported me like family. Whether it was choosing the right course, writing my SOP, or preparing for the visa interview, they were always one step ahead.",
       studentName: "AKM ERADAT HOSSAIN NILOY",
-      location: "Melbourne, Australia",
-      institution: "Victoria University"
+      studentLocation: "Melbourne, Australia",
+      institution: "Victoria University",
+      imageUrl: ""
     },
     {
-      id: 3,
+      id: "static-3",
       title: "Support That Feels Like Family",
       content: "What really sets ANZ Global Education apart is how personal and supportive their team is. They treated me not just as a client, but as a member of their own family. I had doubts because my academic background wasn't perfect, but instead of discouraging me, they helped me present my story with honesty and strength.",
       studentName: "Nosin Anjum Promity",
-      location: "Melbourne, Australia",
-      institution: "Victoria University"
+      studentLocation: "Melbourne, Australia",
+      institution: "Victoria University",
+      imageUrl: ""
     }
   ];
+
+  // Use CMS testimonials if available (limit to 3), otherwise fallback to static data
+  const featuredReviews = cmsTestimonials.length > 0
+    ? cmsTestimonials.slice(0, 3).map(t => ({
+        id: t.id,
+        title: t.title,
+        content: t.content,
+        studentName: t.studentName || "Anonymous Student",
+        location: t.studentLocation || "",
+        institution: t.institution || "",
+        imageUrl: t.imageUrl || ""
+      }))
+    : staticReviews.map(t => ({
+        id: t.id,
+        title: t.title,
+        content: t.content,
+        studentName: t.studentName,
+        location: t.studentLocation,
+        institution: t.institution,
+        imageUrl: t.imageUrl
+      }));
+  
+  // Helper function to safely get initials from a name
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name || name.trim() === "") return "??";
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
 
   // SEO data
   const siteUrl = window.location.origin;
@@ -804,17 +840,29 @@ export default function Landing() {
                     <p className="text-muted-foreground text-sm leading-relaxed mb-4 flex-1" data-testid={`text-review-content-${review.id}`}>
                       {review.content}
                     </p>
-                    <div className="border-t pt-4 space-y-2">
-                      <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
-                        {review.studentName}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>{review.location}</span>
+                    <div className="border-t pt-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          {review.imageUrl ? (
+                            <AvatarImage src={review.imageUrl} alt={review.studentName} />
+                          ) : null}
+                          <AvatarFallback className="text-xs">
+                            {getInitials(review.studentName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
+                            {review.studentName}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span>{review.location}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground" data-testid={`text-review-institution-${review.id}`}>
+                            {review.institution}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground" data-testid={`text-review-institution-${review.id}`}>
-                        {review.institution}
-                      </p>
                     </div>
                   </CardContent>
                 </Card>

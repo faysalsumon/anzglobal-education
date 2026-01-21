@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Star, Quote, Users, Settings, FileText, Eye, EyeOff } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Testimonial, Faq, PublicTeamMember, SiteSetting, ContentSnippet } from "@shared/schema";
@@ -188,6 +189,7 @@ function TestimonialsPanel() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Photo</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Student</TableHead>
               <TableHead>Rating</TableHead>
@@ -199,6 +201,16 @@ function TestimonialsPanel() {
           <TableBody>
             {testimonials?.map((testimonial) => (
               <TableRow key={testimonial.id} data-testid={`row-testimonial-${testimonial.id}`}>
+                <TableCell>
+                  <Avatar className="h-8 w-8">
+                    {testimonial.imageUrl ? (
+                      <AvatarImage src={testimonial.imageUrl} alt={testimonial.studentName} />
+                    ) : null}
+                    <AvatarFallback className="text-xs">
+                      {testimonial.studentName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                    </AvatarFallback>
+                  </Avatar>
+                </TableCell>
                 <TableCell className="font-medium">{testimonial.title}</TableCell>
                 <TableCell>{testimonial.studentName}</TableCell>
                 <TableCell>
@@ -245,7 +257,7 @@ function TestimonialsPanel() {
             ))}
             {(!testimonials || testimonials.length === 0) && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No testimonials yet. Add your first testimonial.
                 </TableCell>
               </TableRow>
