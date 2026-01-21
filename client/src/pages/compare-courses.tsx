@@ -169,11 +169,11 @@ export default function CompareCourses() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="absolute top-2 right-2 h-8 w-8"
+                    className="absolute top-2 right-2 sm:top-3 sm:right-3 h-7 w-7 sm:h-8 sm:w-8 bg-[#ff631b] hover:bg-[#ff631b]/90 text-white z-10"
                     onClick={() => removeCourse(course.id)}
                     data-testid={`button-remove-comparison-${course.id}`}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Button>
                   <CardHeader>
                     <div className="flex flex-wrap gap-2 mb-2">
