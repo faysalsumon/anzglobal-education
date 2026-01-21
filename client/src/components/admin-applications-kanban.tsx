@@ -603,9 +603,12 @@ export function AdminApplicationsKanban() {
   });
 
   const applications = applicationsData?.applications || [];
-  // Filter consultants (admin users only)
+  // Filter consultants (admin and platform_admin users)
   const allUsers = usersData?.users || [];
-  const consultants = allUsers.filter(user => (user as any).userType === 'admin');
+  const consultants = allUsers.filter(user => {
+    const userType = (user as any).userType;
+    return userType === 'admin' || userType === 'platform_admin';
+  });
 
   // Filter applications
   const filteredApplications = applications.filter((app) => {
