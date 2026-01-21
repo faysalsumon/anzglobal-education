@@ -335,17 +335,20 @@ export function CrmContactsPanel() {
     enabled: !!selectedContact?.id,
   });
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
-    queryKey: ["/api/super-admin/users", "admin"],
+  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; userType: string }[]>({
+    queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
-      const response = await fetch("/api/super-admin/users?userType=admin", { 
+      const response = await fetch("/api/admin/users", { 
         credentials: 'include',
         headers 
       });
       if (!response.ok) throw new Error("Failed to fetch admins");
       const data = await response.json();
-      return data.users || [];
+      // Filter for admin and platform_admin users
+      return (data.users || []).filter((user: any) => 
+        user.userType === 'admin' || user.userType === 'platform_admin'
+      );
     },
   });
 
