@@ -3867,16 +3867,18 @@ export interface TaskWithRelations extends Task {
 // Workload summary for dashboard
 export interface WorkloadSummary {
   userId: string;
-  userName: string;
-  userEmail: string | null;
-  userRole: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  role: string | null;
   profileImageUrl: string | null;
   totalTasks: number;
   pendingTasks: number;
   inProgressTasks: number;
   completedTasks: number;
   overdueTasks: number;
-  assignedApplications: number;
+  totalApplications: number;
+  activeApplications: number;
   avgTaskCompletionTime?: number; // in hours
 }
 

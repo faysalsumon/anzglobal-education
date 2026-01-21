@@ -2036,18 +2036,25 @@ export class DatabaseStorage implements IStorage {
           avgTaskCompletionTime = Math.round(totalHours / completedTasksWithTimes.length);
         }
 
+        // Count active applications (not completed or cancelled)
+        const activeApps = assignedApps.filter(a => 
+          !['enrolled', 'rejected', 'withdrawn', 'cancelled'].includes(a.stage || '')
+        );
+
         return {
           userId: member.userId,
-          userName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown' : 'Unknown',
-          userEmail: user?.email || null,
-          userRole: member.role,
+          firstName: user?.firstName || null,
+          lastName: user?.lastName || null,
+          email: user?.email || null,
+          role: member.role,
           profileImageUrl: user?.profileImageUrl || null,
           totalTasks: allTasks.length,
           pendingTasks,
           inProgressTasks,
           completedTasks,
           overdueTasks,
-          assignedApplications: assignedApps.length,
+          totalApplications: assignedApps.length,
+          activeApplications: activeApps.length,
           avgTaskCompletionTime,
         };
       })
