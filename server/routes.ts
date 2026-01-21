@@ -556,6 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/institutions', express.static(path.join(process.cwd(), 'public', 'institutions')));
   app.use('/admins', express.static(path.join(process.cwd(), 'public', 'admins')));
   app.use('/contacts', express.static(path.join(process.cwd(), 'public', 'contacts')));
+  app.use('/testimonials', express.static(path.join(process.cwd(), 'public', 'testimonials')));
   
   // Serve attached assets (stock images, generated images, etc.)
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
@@ -13905,6 +13906,56 @@ Sitemap: ${baseUrl}/sitemap.xml
     } catch (error: any) {
       console.error("Error deleting testimonial:", error);
       res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
+  // Upload testimonial photo
+  app.post("/api/admin/cms/testimonials/upload-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image." });
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (req.file.size > maxSize) {
+        return res.status(400).json({ message: "File too large. Maximum size is 5MB." });
+      }
+
+      let resizedBuffer: Buffer;
+      try {
+        await sharp(req.file.buffer).metadata();
+        resizedBuffer = await sharp(req.file.buffer)
+          .resize(200, 200, { fit: 'cover' })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+      } catch (sharpError: any) {
+        console.error("Sharp processing error:", sharpError);
+        return res.status(400).json({ message: "Invalid image file. Please upload a valid image." });
+      }
+
+      const filename = `testimonial-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
+      const localPath = path.join(process.cwd(), 'public', 'testimonials');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+      
+      const photoUrl = `/testimonials/${filename}`;
+
+      res.json({ photoUrl });
+    } catch (error) {
+      console.error("Error uploading testimonial photo:", error);
+      res.status(500).json({ message: "Failed to upload photo" });
     }
   });
 

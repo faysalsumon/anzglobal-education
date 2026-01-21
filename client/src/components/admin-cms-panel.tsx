@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Star, Quote, Users, Settings, FileText, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, Quote, Users, Settings, FileText, Eye, EyeOff, Upload, X, ImageIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -78,6 +78,8 @@ function TestimonialsPanel() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Testimonial | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -95,6 +97,37 @@ function TestimonialsPanel() {
   const { data: testimonials, isLoading } = useQuery<Testimonial[]>({
     queryKey: ["/api/admin/cms/testimonials"],
   });
+
+  const handlePhotoUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('photo', file);
+      
+      const response = await apiRequest('POST', '/api/admin/cms/testimonials/upload-photo', formDataUpload);
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, imageUrl: data.photoUrl }));
+      toast({ title: "Photo uploaded", description: "Student photo has been uploaded successfully." });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message || "Failed to upload photo", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handlePhotoUpload(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setFormData(prev => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => apiRequest("POST", "/api/admin/cms/testimonials", data),
@@ -331,8 +364,66 @@ function TestimonialsPanel() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Student Photo URL (optional)</Label>
-              <Input id="imageUrl" value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://..." data-testid="input-testimonial-image" />
+              <Label>Picture of Student (optional)</Label>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                className="hidden"
+                data-testid="input-testimonial-photo-file"
+              />
+              {formData.imageUrl ? (
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={formData.imageUrl} alt="Student photo" />
+                    <AvatarFallback>
+                      <ImageIcon className="h-6 w-6" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Change Photo
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={handleRemovePhoto}
+                      disabled={isUploading}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="button-upload-testimonial-photo"
+                >
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm font-medium">Click to upload student photo</p>
+                      <p className="text-xs text-muted-foreground">JPEG, PNG, GIF or WebP (max 5MB)</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
