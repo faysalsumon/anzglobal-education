@@ -165,16 +165,17 @@ export default function CompareCourses() {
           <div className="overflow-x-auto pb-4">
             <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${courses.length}, minmax(300px, 1fr))` }}>
               {courses.map((course) => (
-                <Card key={course.id} className="relative" data-testid={`comparison-course-${course.id}`}>
+                <div key={course.id} className="relative" data-testid={`comparison-course-${course.id}`}>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="absolute top-2 right-2 sm:top-3 sm:right-3 h-7 w-7 sm:h-8 sm:w-8 bg-[#ff631b] hover:bg-[#ff631b]/90 text-white z-10"
+                    className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 h-6 w-6 sm:h-7 sm:w-7 bg-[#ff631b] hover:bg-[#ff631b]/90 text-white z-20 rounded-full shadow-md"
                     onClick={() => removeCourse(course.id)}
                     data-testid={`button-remove-comparison-${course.id}`}
                   >
-                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
+                  <Card>
                   <CardHeader>
                     <div className="flex flex-wrap gap-2 mb-2">
                       <Badge className="bg-primary/10 text-primary">{course.level}</Badge>
@@ -276,6 +277,7 @@ export default function CompareCourses() {
                     </div>
                   </CardContent>
                 </Card>
+                </div>
               ))}
             </div>
           </div>
