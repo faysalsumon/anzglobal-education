@@ -13128,8 +13128,14 @@ Sitemap: ${baseUrl}/sitemap.xml
       const user = await storage.getUser(userId);
       const assignedByName = getUserDisplayName(user || { email: 'Unknown' });
       
-      const data = insertTaskSchema.parse({
+      // Transform date strings to Date objects
+      const bodyWithDates = {
         ...req.body,
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined,
+      };
+      
+      const data = insertTaskSchema.parse({
+        ...bodyWithDates,
         createdById: userId,
         assignedByName,
       });
@@ -13166,7 +13172,13 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(404).json({ message: "Task not found" });
       }
       
-      const data = updateTaskSchema.parse(req.body);
+      // Transform date strings to Date objects
+      const bodyWithDates = {
+        ...req.body,
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : req.body.dueDate,
+      };
+      
+      const data = updateTaskSchema.parse(bodyWithDates);
       const task = await storage.updateTask(req.params.id, data);
       
       // Log activity with user attribution
