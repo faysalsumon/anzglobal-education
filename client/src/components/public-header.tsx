@@ -237,8 +237,8 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
               /* Show Login and Sign up buttons when not authenticated */
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
                   size="sm"
+                  className="bg-[#ff631b] text-white border-[#ff631b] hover:bg-[#e55516]"
                   asChild
                   data-testid="button-login"
                 >
@@ -374,8 +374,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     ) : (
                       <div className="flex flex-col gap-2">
                         <Button
-                          variant="outline"
-                          className="w-full"
+                          className="w-full bg-[#ff631b] text-white border-[#ff631b] hover:bg-[#e55516]"
                           asChild
                           data-testid="button-mobile-login"
                         >
