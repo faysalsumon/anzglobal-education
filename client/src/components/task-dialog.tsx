@@ -172,6 +172,20 @@ export function TaskDialog({
 
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
     queryKey: ["/api/admin/team-members"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/team-members", {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error("Failed to fetch team members");
+      const data = await response.json();
+      // Transform the nested user structure to flat structure
+      return data.map((member: any) => ({
+        id: member.user?.id || member.userId,
+        firstName: member.user?.firstName || null,
+        lastName: member.user?.lastName || null,
+        email: member.user?.email || '',
+      })).filter((m: TeamMember) => m.id);
+    },
     enabled: open,
   });
 
