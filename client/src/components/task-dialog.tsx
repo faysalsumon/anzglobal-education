@@ -26,7 +26,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { CalendarIcon, ListTodo, Loader2 } from "lucide-react";
+import { CalendarIcon, ListTodo, Loader2, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -71,6 +72,7 @@ interface TeamMember {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  profileImageUrl: string | null;
 }
 
 interface Application {
@@ -171,20 +173,21 @@ export function TaskDialog({
   }, [task, applicationId, form]);
 
   const { data: teamMembers = [] } = useQuery<TeamMember[]>({
-    queryKey: ["/api/admin/team-members"],
+    queryKey: ["/api/admin/assignable-users"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/team-members", {
+      const response = await fetch("/api/admin/assignable-users", {
         credentials: 'include',
       });
-      if (!response.ok) throw new Error("Failed to fetch team members");
+      if (!response.ok) throw new Error("Failed to fetch assignable users");
       const data = await response.json();
-      // Transform the nested user structure to flat structure
-      return data.map((member: any) => ({
-        id: member.user?.id || member.userId,
-        firstName: member.user?.firstName || null,
-        lastName: member.user?.lastName || null,
-        email: member.user?.email || '',
-      })).filter((m: TeamMember) => m.id);
+      // API returns { users: [...] }
+      return (data.users || []).map((user: any) => ({
+        id: user.id,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        email: user.email || '',
+        profileImageUrl: user.profileImageUrl || null,
+      }));
     },
     enabled: open,
   });
@@ -408,12 +411,31 @@ export function TaskDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__UNASSIGNED__">Unassigned</SelectItem>
-                        {teamMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.firstName} {member.lastName} ({member.email})
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="__UNASSIGNED__">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                <User className="h-3 w-3" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>Unassigned</span>
+                          </div>
+                        </SelectItem>
+                        {teamMembers.map((member) => {
+                          const initials = `${member.firstName?.charAt(0) || ''}${member.lastName?.charAt(0) || ''}`.toUpperCase() || 'U';
+                          const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email;
+                          return (
+                            <SelectItem key={member.id} value={member.id}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={member.profileImageUrl || undefined} alt={fullName} />
+                                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                                </Avatar>
+                                <span>{fullName}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

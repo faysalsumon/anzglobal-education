@@ -5743,6 +5743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: users.firstName,
           lastName: users.lastName,
           userType: users.userType,
+          profileImageUrl: users.profileImageUrl,
         })
         .from(users)
         .where(
