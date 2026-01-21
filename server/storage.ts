@@ -1990,25 +1990,32 @@ export class DatabaseStorage implements IStorage {
 
   // Workload summary operations
   async getTeamWorkloadSummary(): Promise<WorkloadSummary[]> {
-    // Get all admin team members and their assigned work
-    const adminMembers = await db
-      .select({
-        userId: adminTeamMembers.userId,
-        role: adminTeamMembers.role,
-      })
-      .from(adminTeamMembers)
-      .where(eq(adminTeamMembers.isActive, true));
+    // Get all admin/platform_admin users (Supabase authenticated)
+    const adminUsers = await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          eq(users.userType, 'admin'),
+          eq(users.userType, 'platform_admin')
+        )
+      );
 
     const workloadSummaries: WorkloadSummary[] = await Promise.all(
-      adminMembers.map(async (member) => {
-        // Get user details
-        const [user] = await db.select().from(users).where(eq(users.id, member.userId));
+      adminUsers.map(async (user) => {
+        // Get role from admin_team_members if exists, otherwise infer from userType
+        const [teamMember] = await db
+          .select({ role: adminTeamMembers.role })
+          .from(adminTeamMembers)
+          .where(eq(adminTeamMembers.userId, user.id));
+        
+        const role = teamMember?.role || (user.userType === 'platform_admin' ? 'cto' : 'consultant');
         
         // Get task counts
         const allTasks = await db
           .select()
           .from(tasks)
-          .where(eq(tasks.assignedToId, member.userId));
+          .where(eq(tasks.assignedToId, user.id));
         
         const now = new Date();
         const pendingTasks = allTasks.filter(t => t.status === 'pending').length;
@@ -2022,7 +2029,7 @@ export class DatabaseStorage implements IStorage {
         const assignedApps = await db
           .select()
           .from(applications)
-          .where(eq(applications.assignedConsultantId, member.userId));
+          .where(eq(applications.assignedConsultantId, user.id));
 
         // Calculate average task completion time
         const completedTasksWithTimes = allTasks.filter(t => t.status === 'completed' && t.completedAt && t.createdAt);
@@ -2042,12 +2049,12 @@ export class DatabaseStorage implements IStorage {
         );
 
         return {
-          userId: member.userId,
-          firstName: user?.firstName || null,
-          lastName: user?.lastName || null,
-          email: user?.email || null,
-          role: member.role,
-          profileImageUrl: user?.profileImageUrl || null,
+          userId: user.id,
+          firstName: user.firstName || null,
+          lastName: user.lastName || null,
+          email: user.email || null,
+          role: role,
+          profileImageUrl: user.profileImageUrl || null,
           totalTasks: allTasks.length,
           pendingTasks,
           inProgressTasks,
