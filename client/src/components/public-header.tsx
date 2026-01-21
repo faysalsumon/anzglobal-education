@@ -234,26 +234,25 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 </DropdownMenu>
               </>
             ) : (
-              /* Show Login button when not authenticated */
-              onStudentLoginClick ? (
+              /* Show Login and Sign up buttons when not authenticated */
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="default"
+                  variant="outline"
                   size="sm"
-                  onClick={onStudentLoginClick}
-                  data-testid="button-student-login"
+                  asChild
+                  data-testid="button-login"
                 >
-                  Login / Sign up
+                  <a href="/auth?mode=login">Login</a>
                 </Button>
-              ) : (
                 <Button
                   variant="default"
                   size="sm"
                   asChild
-                  data-testid="button-student-login"
+                  data-testid="button-signup"
                 >
-                  <a href="/auth">Login / Sign up</a>
+                  <a href="/auth?mode=signup">Sign up</a>
                 </Button>
-              )
+              </div>
             )}
           </div>
 
@@ -373,28 +372,24 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                         Logout
                       </Button>
                     ) : (
-                      onStudentLoginClick ? (
+                      <div className="flex flex-col gap-2">
                         <Button
-                          variant="default"
+                          variant="outline"
                           className="w-full"
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            onStudentLoginClick();
-                          }}
-                          data-testid="button-mobile-student-login"
+                          asChild
+                          data-testid="button-mobile-login"
                         >
-                          Login / Sign up
+                          <a href="/auth?mode=login" onClick={() => setMobileMenuOpen(false)}>Login</a>
                         </Button>
-                      ) : (
                         <Button
                           variant="default"
                           className="w-full"
                           asChild
-                          data-testid="button-mobile-student-login"
+                          data-testid="button-mobile-signup"
                         >
-                          <a href="/auth">Login / Sign up</a>
+                          <a href="/auth?mode=signup" onClick={() => setMobileMenuOpen(false)}>Sign up</a>
                         </Button>
-                      )
+                      </div>
                     )}
                   </div>
                 </nav>

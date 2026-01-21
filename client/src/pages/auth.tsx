@@ -67,6 +67,17 @@ export default function AuthPage() {
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
   const { user, isAuthenticated, isAuthResolved } = useAuth();
 
+  // Read mode from URL query params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    if (mode === 'signup') {
+      setIsSignup(true);
+    } else if (mode === 'login') {
+      setIsSignup(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthResolved && isAuthenticated && user && !redirectingToAdmin) {
       // Platform admins should not be on this page - they use /admin/login
