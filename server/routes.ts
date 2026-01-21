@@ -13081,9 +13081,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       const userId = req.user.claims.sub;
       const { isAdmin, role } = await isAdminTeamMember(userId);
       
-      // Only CTO and support_manager can see workload summary
-      if (!isAdmin || !['cto', 'support_manager'].includes(role || '')) {
-        return res.status(403).json({ message: "Only CTO and support managers can view workload summary" });
+      // Only CTO can see workload summary
+      if (!isAdmin || role !== 'cto') {
+        return res.status(403).json({ message: "Only CTO can view workload summary" });
       }
       
       const summary = await storage.getTeamWorkloadSummary();

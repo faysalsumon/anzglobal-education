@@ -92,7 +92,7 @@ export function AdminMegaSidebar({
       color: "text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400",
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
-        { icon: BarChart3, label: "Team Workload", value: "team-workload", show: hasFullAdminAccess },
+        { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
         { icon: UserPlus, label: "Leads", value: "crm-leads", show: false }, // Hidden - unified with Contacts
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: true },
         { icon: ClipboardList, label: "Applications", value: "applications", show: true },

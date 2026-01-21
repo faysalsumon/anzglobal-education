@@ -38,9 +38,10 @@ interface AdminSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   hasFullAdminAccess: boolean;
+  isCTO?: boolean;
 }
 
-export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: AdminSidebarProps) {
+export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO = false }: AdminSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { signOut } = useSupabaseAuth();
 
@@ -70,7 +71,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess }: Adm
       icon: BarChart3,
       label: "Team Workload",
       value: "team-workload",
-      show: hasFullAdminAccess, // Only CTO and support_manager
+      show: isCTO, // Only CTO
     },
     {
       icon: UserPlus,
