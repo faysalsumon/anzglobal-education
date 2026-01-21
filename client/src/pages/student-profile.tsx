@@ -435,7 +435,8 @@ function StudentProfileContent() {
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (data: Partial<StudentProfile>) => {
-      if (profile) {
+      // Check if profile exists AND has an id (backend returns fallback object with id: null for new profiles)
+      if (profile && profile.id) {
         return await apiRequest("PUT", "/api/student/profile", data);
       } else {
         // Check for referral code in localStorage (from referral link)
@@ -882,8 +883,11 @@ function StudentProfileContent() {
     async (data) => {
       let photoPath = data.profileImageUrl;
       
+      // Check if profile exists AND has an id (backend returns fallback object with id: null for new profiles)
+      const profileExists = profile && profile.id;
+      
       // Only upload photo if profile exists and a new photo was selected
-      if (photoFile && profile) {
+      if (photoFile && profileExists) {
         const uploadedPath = await uploadPhoto();
         if (uploadedPath) {
           photoPath = uploadedPath;
@@ -894,7 +898,7 @@ function StudentProfileContent() {
       }
       
       // If no profile exists yet and photo was selected, save data first then upload photo
-      if (photoFile && !profile) {
+      if (photoFile && !profileExists) {
         // Save profile data first
         try {
           await createOrUpdateMutation.mutateAsync(data);
