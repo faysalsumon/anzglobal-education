@@ -3,8 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Quote, GraduationCap, MapPin, Building2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Testimonial } from "@shared/schema";
 
-const reviews = [
+const staticReviews = [
   {
     id: 1,
     title: "Trusted Visa Support You Can Count On",
@@ -63,6 +67,29 @@ const reviews = [
 
 export default function StudentReviews() {
   const [, setLocation] = useLocation();
+  
+  const { data: cmsTestimonials = [], isLoading } = useQuery<Testimonial[]>({
+    queryKey: ["/api/public/testimonials"],
+  });
+
+  const reviews = !isLoading && cmsTestimonials.length > 0
+    ? cmsTestimonials.map(t => ({
+        id: t.id,
+        title: t.title || "Student Review",
+        content: t.content,
+        studentName: t.studentName,
+        location: t.studentLocation || "",
+        institution: t.institution || "",
+        imageUrl: t.imageUrl || null,
+      }))
+    : staticReviews;
+
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
 
   return (
     <>
@@ -128,7 +155,33 @@ export default function StudentReviews() {
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto space-y-8">
-              {reviews.map((review, index) => (
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="border-primary/20">
+                    <CardContent className="p-6 md:p-8">
+                      <div className="flex flex-col md:flex-row gap-6">
+                        <Skeleton className="w-20 h-20 md:w-24 md:h-24 rounded-full flex-shrink-0" />
+                        <div className="flex-1 space-y-4">
+                          <div className="flex items-start gap-3">
+                            <Skeleton className="h-8 w-8 flex-shrink-0" />
+                            <div className="flex-1 space-y-3">
+                              <Skeleton className="h-6 w-3/4" />
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-2/3" />
+                            </div>
+                          </div>
+                          <div className="space-y-2 pt-4 border-t border-border">
+                            <Skeleton className="h-4 w-40" />
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-4 w-48" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : reviews.map((review, index) => (
                 <Card 
                   key={review.id} 
                   className="border-primary/20 hover-elevate"
@@ -138,9 +191,18 @@ export default function StudentReviews() {
                     <div className="flex flex-col md:flex-row gap-6">
                       {/* Student Avatar/Info */}
                       <div className="flex-shrink-0">
-                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl md:text-3xl font-bold">
-                          {review.studentName.charAt(0)}
-                        </div>
+                        {review.imageUrl && !review.imageUrl.includes('placeholder') ? (
+                          <Avatar className="w-20 h-20 md:w-24 md:h-24">
+                            <AvatarImage src={review.imageUrl} alt={review.studentName} />
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-2xl md:text-3xl font-bold">
+                              {getInitials(review.studentName)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl md:text-3xl font-bold">
+                            {getInitials(review.studentName)}
+                          </div>
+                        )}
                       </div>
 
                       {/* Review Content */}
