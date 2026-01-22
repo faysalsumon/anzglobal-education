@@ -22,11 +22,122 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // English language test types configuration
-const TEST_TYPE_CONFIG: Record<string, { label: string; maxOverall: number; maxBand: number }> = {
-  ielts: { label: "IELTS", maxOverall: 9, maxBand: 9 },
-  toefl: { label: "TOEFL iBT", maxOverall: 120, maxBand: 30 },
-  pte: { label: "PTE Academic", maxOverall: 90, maxBand: 90 },
-  duolingo: { label: "Duolingo", maxOverall: 160, maxBand: 160 },
+const TEST_TYPE_CONFIG: Record<string, { 
+  label: string; 
+  maxOverall: number; 
+  maxBand: number;
+  range: string;
+  sectionRange: string;
+  overallPlaceholder: string;
+  sectionPlaceholder: string;
+  step: string;
+  supportsAutoCalc: boolean;
+}> = {
+  ielts: { 
+    label: "IELTS", 
+    maxOverall: 9, 
+    maxBand: 9,
+    range: "0-9",
+    sectionRange: "0-9",
+    overallPlaceholder: "e.g., 6.5",
+    sectionPlaceholder: "e.g., 6.0",
+    step: "0.5",
+    supportsAutoCalc: true,
+  },
+  toefl: { 
+    label: "TOEFL iBT", 
+    maxOverall: 120, 
+    maxBand: 30,
+    range: "0-120",
+    sectionRange: "0-30",
+    overallPlaceholder: "e.g., 80",
+    sectionPlaceholder: "e.g., 20",
+    step: "1",
+    supportsAutoCalc: true,
+  },
+  pte: { 
+    label: "PTE Academic", 
+    maxOverall: 90, 
+    maxBand: 90,
+    range: "10-90",
+    sectionRange: "10-90",
+    overallPlaceholder: "e.g., 65",
+    sectionPlaceholder: "e.g., 60",
+    step: "1",
+    supportsAutoCalc: false,
+  },
+  duolingo: { 
+    label: "Duolingo", 
+    maxOverall: 160, 
+    maxBand: 160,
+    range: "10-160",
+    sectionRange: "10-160",
+    overallPlaceholder: "e.g., 110",
+    sectionPlaceholder: "e.g., 105",
+    step: "5",
+    supportsAutoCalc: false,
+  },
+};
+
+// Calculate IELTS overall score using official rounding rules
+const calculateIeltsOverall = (l: number, r: number, w: number, s: number): string => {
+  const avg = (l + r + w + s) / 4;
+  const decimal = avg - Math.floor(avg);
+  let rounded: number;
+  
+  if (decimal >= 0.75) {
+    rounded = Math.ceil(avg);
+  } else if (decimal >= 0.25) {
+    rounded = Math.floor(avg) + 0.5;
+  } else {
+    rounded = Math.floor(avg);
+  }
+  
+  return rounded.toFixed(1);
+};
+
+// Calculate TOEFL overall score (sum of all sections)
+const calculateToeflOverall = (l: number, r: number, w: number, s: number): string => {
+  return (l + r + w + s).toString();
+};
+
+// Helper to compute auto-calculated overall score and determine if it should be auto-set
+const computeAutoOverallScore = (
+  testType: string,
+  listening: string,
+  reading: string,
+  writing: string,
+  speaking: string,
+  currentOverall: string
+): { autoScore: string | null; shouldAutoSet: boolean } => {
+  const config = TEST_TYPE_CONFIG[testType];
+  if (!config?.supportsAutoCalc) {
+    return { autoScore: null, shouldAutoSet: false };
+  }
+  
+  const l = parseFloat(listening);
+  const r = parseFloat(reading);
+  const w = parseFloat(writing);
+  const s = parseFloat(speaking);
+  
+  // All band scores must be valid numbers
+  if (isNaN(l) || isNaN(r) || isNaN(w) || isNaN(s)) {
+    return { autoScore: null, shouldAutoSet: false };
+  }
+  
+  let autoScore: string;
+  if (testType === "ielts") {
+    autoScore = calculateIeltsOverall(l, r, w, s);
+  } else if (testType === "toefl") {
+    autoScore = calculateToeflOverall(l, r, w, s);
+  } else {
+    return { autoScore: null, shouldAutoSet: false };
+  }
+  
+  // Only auto-set if current overall is empty or matches the calculated value
+  const shouldAutoSet = !currentOverall || currentOverall === autoScore;
+  
+  return { autoScore, shouldAutoSet };
 };
 
 interface EnglishRequirement {
@@ -1414,17 +1525,166 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               <label className="text-sm font-medium">Test Type</label>
               <Select
                 value={englishReqForm.testType}
-                onValueChange={(value) => setEnglishReqForm(prev => ({ ...prev, testType: value }))}
+                onValueChange={(value) => {
+                  setEnglishReqForm(prev => ({ 
+                    ...prev, 
+                    testType: value,
+                    minOverallScore: "",
+                    minListeningScore: "",
+                    minReadingScore: "",
+                    minWritingScore: "",
+                    minSpeakingScore: "",
+                  }));
+                }}
               >
                 <SelectTrigger data-testid="select-english-test-type">
                   <SelectValue placeholder="Select test type" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(TEST_TYPE_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                    <SelectItem key={key} value={key}>{config.label} ({config.range})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {englishReqForm.testType && (
+              <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md space-y-1">
+                <p>Score range for {TEST_TYPE_CONFIG[englishReqForm.testType]?.label}: <strong>{TEST_TYPE_CONFIG[englishReqForm.testType]?.range}</strong></p>
+                {TEST_TYPE_CONFIG[englishReqForm.testType]?.supportsAutoCalc ? (
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Overall score will be auto-calculated when you enter all band scores
+                  </p>
+                ) : (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                    {englishReqForm.testType === "pte" ? "PTE uses a proprietary algorithm - enter the required overall score" : 
+                     "Duolingo uses a proprietary algorithm - enter the required overall score"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Min Listening {englishReqForm.testType && `(${TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionRange})`}
+                </label>
+                <Input
+                  type="number"
+                  step={TEST_TYPE_CONFIG[englishReqForm.testType]?.step || "0.5"}
+                  value={englishReqForm.minListeningScore}
+                  onChange={(e) => {
+                    const newListening = e.target.value;
+                    setEnglishReqForm(prev => {
+                      const updated = { ...prev, minListeningScore: newListening };
+                      const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                        prev.testType,
+                        newListening,
+                        prev.minReadingScore,
+                        prev.minWritingScore,
+                        prev.minSpeakingScore,
+                        prev.minOverallScore
+                      );
+                      if (autoScore && shouldAutoSet) {
+                        updated.minOverallScore = autoScore;
+                      }
+                      return updated;
+                    });
+                  }}
+                  placeholder={TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionPlaceholder || "Optional"}
+                  data-testid="input-english-min-listening"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Min Reading {englishReqForm.testType && `(${TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionRange})`}
+                </label>
+                <Input
+                  type="number"
+                  step={TEST_TYPE_CONFIG[englishReqForm.testType]?.step || "0.5"}
+                  value={englishReqForm.minReadingScore}
+                  onChange={(e) => {
+                    const newReading = e.target.value;
+                    setEnglishReqForm(prev => {
+                      const updated = { ...prev, minReadingScore: newReading };
+                      const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                        prev.testType,
+                        prev.minListeningScore,
+                        newReading,
+                        prev.minWritingScore,
+                        prev.minSpeakingScore,
+                        prev.minOverallScore
+                      );
+                      if (autoScore && shouldAutoSet) {
+                        updated.minOverallScore = autoScore;
+                      }
+                      return updated;
+                    });
+                  }}
+                  placeholder={TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionPlaceholder || "Optional"}
+                  data-testid="input-english-min-reading"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Min Writing {englishReqForm.testType && `(${TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionRange})`}
+                </label>
+                <Input
+                  type="number"
+                  step={TEST_TYPE_CONFIG[englishReqForm.testType]?.step || "0.5"}
+                  value={englishReqForm.minWritingScore}
+                  onChange={(e) => {
+                    const newWriting = e.target.value;
+                    setEnglishReqForm(prev => {
+                      const updated = { ...prev, minWritingScore: newWriting };
+                      const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                        prev.testType,
+                        prev.minListeningScore,
+                        prev.minReadingScore,
+                        newWriting,
+                        prev.minSpeakingScore,
+                        prev.minOverallScore
+                      );
+                      if (autoScore && shouldAutoSet) {
+                        updated.minOverallScore = autoScore;
+                      }
+                      return updated;
+                    });
+                  }}
+                  placeholder={TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionPlaceholder || "Optional"}
+                  data-testid="input-english-min-writing"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Min Speaking {englishReqForm.testType && `(${TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionRange})`}
+                </label>
+                <Input
+                  type="number"
+                  step={TEST_TYPE_CONFIG[englishReqForm.testType]?.step || "0.5"}
+                  value={englishReqForm.minSpeakingScore}
+                  onChange={(e) => {
+                    const newSpeaking = e.target.value;
+                    setEnglishReqForm(prev => {
+                      const updated = { ...prev, minSpeakingScore: newSpeaking };
+                      const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                        prev.testType,
+                        prev.minListeningScore,
+                        prev.minReadingScore,
+                        prev.minWritingScore,
+                        newSpeaking,
+                        prev.minOverallScore
+                      );
+                      if (autoScore && shouldAutoSet) {
+                        updated.minOverallScore = autoScore;
+                      }
+                      return updated;
+                    });
+                  }}
+                  placeholder={TEST_TYPE_CONFIG[englishReqForm.testType]?.sectionPlaceholder || "Optional"}
+                  data-testid="input-english-min-speaking"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -1432,65 +1692,32 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                 Minimum Overall Score
                 {englishReqForm.testType && (
                   <span className="text-muted-foreground font-normal ml-1">
-                    (max: {TEST_TYPE_CONFIG[englishReqForm.testType]?.maxOverall})
+                    ({TEST_TYPE_CONFIG[englishReqForm.testType]?.range})
                   </span>
                 )}
+                {(() => {
+                  const { autoScore, shouldAutoSet } = computeAutoOverallScore(
+                    englishReqForm.testType,
+                    englishReqForm.minListeningScore,
+                    englishReqForm.minReadingScore,
+                    englishReqForm.minWritingScore,
+                    englishReqForm.minSpeakingScore,
+                    englishReqForm.minOverallScore
+                  );
+                  if (autoScore && englishReqForm.minOverallScore === autoScore) {
+                    return <span className="text-green-600 dark:text-green-400 font-normal ml-2">(auto-calculated)</span>;
+                  }
+                  return null;
+                })()}
               </label>
               <Input
                 type="number"
-                step="0.5"
+                step={TEST_TYPE_CONFIG[englishReqForm.testType]?.step || "0.5"}
                 value={englishReqForm.minOverallScore}
                 onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minOverallScore: e.target.value }))}
-                placeholder="e.g., 6.5 for IELTS"
+                placeholder={TEST_TYPE_CONFIG[englishReqForm.testType]?.overallPlaceholder || "e.g., 6.5"}
                 data-testid="input-english-min-overall"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Listening</label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={englishReqForm.minListeningScore}
-                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minListeningScore: e.target.value }))}
-                  placeholder="Optional"
-                  data-testid="input-english-min-listening"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Reading</label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={englishReqForm.minReadingScore}
-                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minReadingScore: e.target.value }))}
-                  placeholder="Optional"
-                  data-testid="input-english-min-reading"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Writing</label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={englishReqForm.minWritingScore}
-                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minWritingScore: e.target.value }))}
-                  placeholder="Optional"
-                  data-testid="input-english-min-writing"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Speaking</label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={englishReqForm.minSpeakingScore}
-                  onChange={(e) => setEnglishReqForm(prev => ({ ...prev, minSpeakingScore: e.target.value }))}
-                  placeholder="Optional"
-                  data-testid="input-english-min-speaking"
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
