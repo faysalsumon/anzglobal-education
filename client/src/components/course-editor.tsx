@@ -943,35 +943,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Location/Campus</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Sydney Campus" data-testid="input-course-location" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Australia" data-testid="input-course-country" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
                         name="startDate"
                         render={({ field }) => (
                           <FormItem>
