@@ -203,6 +203,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
   }, {} as Record<string, InstitutionDocument[]>);
 
   return (
+    <>
     <Card data-testid="card-institution-documents">
       <CardHeader>
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -349,16 +350,17 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
           </Tabs>
         )}
       </CardContent>
-
-      {/* Document Preview Modal */}
-      <DocumentPreviewModal
-        open={!!previewDocument}
-        onOpenChange={(open) => !open && setPreviewDocument(null)}
-        documentUrl={previewDocument ? `/api/admin/institution-crm/institutions/${institutionId}/documents/${previewDocument.id}/download` : ""}
-        documentName={previewDocument?.originalFileName || ""}
-        mimeType={previewDocument?.mimeType || undefined}
-      />
     </Card>
+
+    {/* Document Preview Modal - outside Card for proper z-index */}
+    <DocumentPreviewModal
+      open={!!previewDocument}
+      onOpenChange={(open) => !open && setPreviewDocument(null)}
+      documentUrl={previewDocument ? `/api/admin/institution-crm/institutions/${institutionId}/documents/${previewDocument.id}/download` : ""}
+      documentName={previewDocument?.originalFileName || ""}
+      mimeType={previewDocument?.mimeType || undefined}
+    />
+  </>
   );
 }
 
