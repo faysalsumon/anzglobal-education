@@ -149,6 +149,7 @@ export default function PublicInstitutions() {
 
   const {
     filters,
+    setFilters,
     setSearch,
     toggleMultiSelect,
     setRange,
@@ -456,85 +457,156 @@ export default function PublicInstitutions() {
         </div>
       )}
 
-      {/* Country Filter */}
-      {filterMetadata && filterMetadata.countries.length > 0 && (
-        <Collapsible open={openSections.country} onOpenChange={(open) => toggleSection('country', open)}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-            <div className="flex items-center gap-2 font-medium text-sm">
-              <Globe className="h-4 w-4 text-primary" />
-              Country
-              {filters.countries.length > 0 && (
-                <span className="h-2 w-2 rounded-full bg-primary" />
+      {/* Location Filter - Cascading Country → State → City */}
+      {filterMetadata && filterMetadata.countries.length > 0 && (() => {
+        const selectedCountry = filters.countries[0] || "";
+        const selectedState = filters.states[0] || "";
+        const selectedCity = filters.cities[0] || "";
+        
+        const availableStates = selectedCountry 
+          ? (filterMetadata.statesByCountry?.[selectedCountry] || []).sort()
+          : [];
+        
+        const availableCities = selectedCountry && selectedState
+          ? (filterMetadata.citiesByState?.[`${selectedCountry}:${selectedState}`] || []).sort()
+          : [];
+        
+        const handleCountryChange = (val: string) => {
+          if (val === "all") {
+            setFilters(prev => ({ ...prev, countries: [], states: [], cities: [] }));
+          } else {
+            setFilters(prev => ({ ...prev, countries: [val], states: [], cities: [] }));
+          }
+        };
+        
+        const handleStateChange = (val: string) => {
+          if (val === "all") {
+            setFilters(prev => ({ ...prev, states: [], cities: [] }));
+          } else {
+            setFilters(prev => ({ ...prev, states: [val], cities: [] }));
+          }
+        };
+        
+        const handleCityChange = (val: string) => {
+          if (val === "all") {
+            setFilters(prev => ({ ...prev, cities: [] }));
+          } else {
+            setFilters(prev => ({ ...prev, cities: [val] }));
+          }
+        };
+        
+        return (
+          <Collapsible open={openSections.country} onOpenChange={(open) => toggleSection('country', open)}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+              <div className="flex items-center gap-2 font-medium text-sm">
+                <Globe className="h-4 w-4 text-primary" />
+                Location
+                {(selectedCountry || selectedState || selectedCity) && (
+                  <span className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.country ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
+              <Select value={selectedCountry || "all"} onValueChange={handleCountryChange}>
+                <SelectTrigger data-testid="select-country" className="h-9">
+                  <SelectValue placeholder="All Countries" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {filterMetadata.countries.map((ctry) => {
+                    const countryCodeMap: Record<string, string> = {
+                      'Australia': 'au',
+                      'United States': 'us',
+                      'United Kingdom': 'gb',
+                      'Canada': 'ca',
+                      'New Zealand': 'nz',
+                      'Germany': 'de',
+                      'France': 'fr',
+                      'Ireland': 'ie',
+                      'Netherlands': 'nl',
+                      'Singapore': 'sg',
+                      'Japan': 'jp',
+                      'South Korea': 'kr',
+                      'China': 'cn',
+                      'India': 'in',
+                      'Malaysia': 'my',
+                      'Bangladesh': 'bd',
+                      'UAE': 'ae',
+                      'United Arab Emirates': 'ae',
+                      'Italy': 'it',
+                      'Spain': 'es',
+                      'Switzerland': 'ch',
+                      'Sweden': 'se',
+                      'Norway': 'no',
+                      'Denmark': 'dk',
+                      'Finland': 'fi',
+                      'Austria': 'at',
+                      'Belgium': 'be',
+                      'Portugal': 'pt',
+                      'Philippines': 'ph',
+                      'Vietnam': 'vn',
+                      'Thailand': 'th',
+                      'Indonesia': 'id',
+                      'Pakistan': 'pk',
+                      'Nepal': 'np',
+                      'Sri Lanka': 'lk',
+                    };
+                    const countryCode = countryCodeMap[ctry] || 'un';
+                    const flagUrl = `https://flagcdn.com/w20/${countryCode}.png`;
+                    return (
+                      <SelectItem key={ctry} value={ctry}>
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={flagUrl} 
+                            alt={`${ctry} flag`} 
+                            className="w-4 h-auto rounded-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          {ctry}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedCountry && availableStates.length > 0 && (
+                <Select value={selectedState || "all"} onValueChange={handleStateChange}>
+                  <SelectTrigger data-testid="select-state" className="h-9">
+                    <SelectValue placeholder="All States" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All States</SelectItem>
+                    {availableStates.map((st) => (
+                      <SelectItem key={st} value={st}>{st}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </div>
-            {openSections.country ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-1">
-            {filterMetadata.countries.slice(0, 10).map((country) => {
-              const countryCodeMap: Record<string, string> = {
-                'Australia': 'au',
-                'United States': 'us',
-                'United Kingdom': 'gb',
-                'Canada': 'ca',
-                'New Zealand': 'nz',
-                'Germany': 'de',
-                'France': 'fr',
-                'Ireland': 'ie',
-                'Netherlands': 'nl',
-                'Singapore': 'sg',
-                'Japan': 'jp',
-                'South Korea': 'kr',
-                'China': 'cn',
-                'India': 'in',
-                'Malaysia': 'my',
-                'Bangladesh': 'bd',
-                'UAE': 'ae',
-                'United Arab Emirates': 'ae',
-                'Italy': 'it',
-                'Spain': 'es',
-                'Switzerland': 'ch',
-                'Sweden': 'se',
-                'Norway': 'no',
-                'Denmark': 'dk',
-                'Finland': 'fi',
-                'Austria': 'at',
-                'Belgium': 'be',
-                'Portugal': 'pt',
-                'Philippines': 'ph',
-                'Vietnam': 'vn',
-                'Thailand': 'th',
-                'Indonesia': 'id',
-                'Pakistan': 'pk',
-                'Nepal': 'np',
-                'Sri Lanka': 'lk',
-              };
-              const countryCode = countryCodeMap[country] || 'un';
-              const flagUrl = `https://flagcdn.com/w20/${countryCode}.png`;
-              return (
-                <label key={country} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                  <Checkbox
-                    checked={filters.countries.includes(country)}
-                    onCheckedChange={() => toggleMultiSelect('countries', country)}
-                    data-testid={`checkbox-country-${country.toLowerCase().replace(/\s+/g, '-')}`}
-                  />
-                  <img 
-                    src={flagUrl} 
-                    alt={`${country} flag`} 
-                    className="w-5 h-auto rounded-sm"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <span className="text-sm">{country}</span>
-                </label>
-              );
-            })}
-            {filterMetadata.countries.length > 10 && (
-              <p className="text-xs text-muted-foreground px-2 pt-1">+{filterMetadata.countries.length - 10} more</p>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+              {selectedState && availableCities.length > 0 && (
+                <Select value={selectedCity || "all"} onValueChange={handleCityChange}>
+                  <SelectTrigger data-testid="select-city" className="h-9">
+                    <SelectValue placeholder="All Cities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {availableCities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3" />
+                          {city}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })()}
 
       {/* Provider Type Filter - Institution Type */}
       {filterMetadata && filterMetadata.providerTypes.length > 0 && (
@@ -563,88 +635,6 @@ export default function PublicInstitutions() {
           </CollapsibleContent>
         </Collapsible>
       )}
-
-      {/* State Filter - appears when country is selected */}
-      {filterMetadata && filters.countries.length > 0 && (() => {
-        const availableStates = filters.countries.flatMap(
-          country => filterMetadata.statesByCountry?.[country] || []
-        );
-        const uniqueStates = Array.from(new Set(availableStates)).sort();
-        
-        if (uniqueStates.length === 0) return null;
-        
-        return (
-          <Collapsible open={openSections.state} onOpenChange={(open) => toggleSection('state', open)}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-              <div className="flex items-center gap-2 font-medium text-sm">
-                <MapPin className="h-4 w-4 text-primary" />
-                State
-                {filters.states.length > 0 && (
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                )}
-              </div>
-              {openSections.state ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-2 space-y-1">
-              {uniqueStates.slice(0, 15).map((state) => (
-                <label key={state} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                  <Checkbox
-                    checked={filters.states.includes(state)}
-                    onCheckedChange={() => toggleMultiSelect('states', state)}
-                    data-testid={`checkbox-state-${state.toLowerCase().replace(/\s+/g, '-')}`}
-                  />
-                  <span className="text-sm">{state}</span>
-                </label>
-              ))}
-              {uniqueStates.length > 15 && (
-                <p className="text-xs text-muted-foreground px-2 pt-1">+{uniqueStates.length - 15} more</p>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        );
-      })()}
-
-      {/* City Filter - appears when state is selected */}
-      {filterMetadata && filters.states.length > 0 && (() => {
-        const availableCities = filters.countries.flatMap(country => 
-          filters.states.flatMap(state => 
-            filterMetadata.citiesByState?.[`${country}:${state}`] || []
-          )
-        );
-        const uniqueCities = Array.from(new Set(availableCities)).sort();
-        
-        if (uniqueCities.length === 0) return null;
-        
-        return (
-          <Collapsible open={openSections.city} onOpenChange={(open) => toggleSection('city', open)}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-              <div className="flex items-center gap-2 font-medium text-sm">
-                <Building2 className="h-4 w-4 text-primary" />
-                City
-                {filters.cities.length > 0 && (
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                )}
-              </div>
-              {openSections.city ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-2 space-y-1">
-              {uniqueCities.slice(0, 15).map((city) => (
-                <label key={city} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                  <Checkbox
-                    checked={filters.cities.includes(city)}
-                    onCheckedChange={() => toggleMultiSelect('cities', city)}
-                    data-testid={`checkbox-city-${city.toLowerCase().replace(/\s+/g, '-')}`}
-                  />
-                  <span className="text-sm">{city}</span>
-                </label>
-              ))}
-              {uniqueCities.length > 15 && (
-                <p className="text-xs text-muted-foreground px-2 pt-1">+{uniqueCities.length - 15} more</p>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        );
-      })()}
 
       {/* Discipline Filter */}
       {filterMetadata && filterMetadata.disciplines.length > 0 && (
