@@ -53,6 +53,7 @@ import { useQueryParams } from "@/hooks/useQueryParams";
 import { ListPagination } from "@/components/list-pagination";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { getCountryByName, getFlagUrl } from "@/lib/countries";
+import { Slider } from "@/components/ui/slider";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -419,6 +420,7 @@ export default function PublicCourses() {
     const citiesByState: Record<string, Set<string>> = {};
 
     const currencies = new Set<string>();
+    let maxTuitionFee = 0;
     
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
@@ -426,6 +428,10 @@ export default function PublicCourses() {
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
       if (course.currency) currencies.add(course.currency);
+      if (course.fees) {
+        const fee = Number(course.fees);
+        if (fee > maxTuitionFee) maxTuitionFee = fee;
+      }
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
@@ -467,6 +473,9 @@ export default function PublicCourses() {
       ? Array.from(citiesByState[stateKey]).sort()
       : [];
 
+    // Round max tuition to nearest 10000 for nice slider steps
+    const roundedMaxTuition = Math.ceil(maxTuitionFee / 10000) * 10000 || 100000;
+    
     return {
       subjects: Array.from(subjects).sort(),
       disciplines: Array.from(disciplines).sort(),
@@ -476,6 +485,7 @@ export default function PublicCourses() {
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
       states: statesForCountry,
       cities: citiesForState,
+      maxTuition: roundedMaxTuition,
     };
   }, [courses, country, campusState]);
 
@@ -1084,19 +1094,22 @@ export default function PublicCourses() {
                           </div>
                           <ChevronDown className={`h-4 w-4 transition-transform ${openSections.tuition ? 'rotate-180' : ''}`} />
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 space-y-3">
-                          <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-currency-mobile">
-                              <SelectValue placeholder="All Currencies" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Currencies</SelectItem>
-                              {availableFilters.currencies.map((curr) => (
-                                <SelectItem key={curr} value={curr}>{curr}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="grid grid-cols-2 gap-2">
+                        <CollapsibleContent className="pt-2 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">Annual tuition fee</span>
+                            <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-currency-mobile" className="h-7 w-20 text-xs text-primary font-medium border-0 p-0 focus:ring-0">
+                                <SelectValue placeholder="Any" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any</SelectItem>
+                                {availableFilters.currencies.map((curr) => (
+                                  <SelectItem key={curr} value={curr}>{curr}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="text-xs text-muted-foreground mb-1 block">Min</label>
                               <Input
@@ -1104,6 +1117,7 @@ export default function PublicCourses() {
                                 placeholder="0"
                                 value={minFees ?? ""}
                                 onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
+                                className="h-8 text-sm"
                                 data-testid="input-min-fees-mobile"
                               />
                             </div>
@@ -1111,12 +1125,27 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Max</label>
                               <Input
                                 type="number"
-                                placeholder="Any"
+                                placeholder="No Max"
                                 value={maxFees ?? ""}
                                 onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
+                                className="h-8 text-sm"
                                 data-testid="input-max-fees-mobile"
                               />
                             </div>
+                          </div>
+                          <div className="px-1 pt-1">
+                            <Slider
+                              value={[minFees ?? 0, maxFees ?? availableFilters.maxTuition]}
+                              min={0}
+                              max={availableFilters.maxTuition}
+                              step={1000}
+                              onValueChange={([min, max]) => {
+                                setMinFees(min === 0 ? null : min);
+                                setMaxFees(max === availableFilters.maxTuition ? null : max);
+                              }}
+                              className="w-full"
+                              data-testid="slider-tuition-range-mobile"
+                            />
                           </div>
                         </CollapsibleContent>
                       </Collapsible>
@@ -1393,19 +1422,22 @@ export default function PublicCourses() {
                           </div>
                           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.tuition ? 'rotate-180' : ''}`} />
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-3">
-                          <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-currency" className="h-9">
-                              <SelectValue placeholder="All Currencies" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Currencies</SelectItem>
-                              {availableFilters.currencies.map((curr) => (
-                                <SelectItem key={curr} value={curr}>{curr}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="grid grid-cols-2 gap-2">
+                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">Annual tuition fee</span>
+                            <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
+                              <SelectTrigger data-testid="select-currency" className="h-7 w-20 text-xs text-primary font-medium border-0 p-0 focus:ring-0">
+                                <SelectValue placeholder="Any" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any</SelectItem>
+                                {availableFilters.currencies.map((curr) => (
+                                  <SelectItem key={curr} value={curr}>{curr}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="text-xs text-muted-foreground mb-1 block">Min</label>
                               <Input
@@ -1413,7 +1445,7 @@ export default function PublicCourses() {
                                 placeholder="0"
                                 value={minFees ?? ""}
                                 onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
-                                className="h-9"
+                                className="h-8 text-sm"
                                 data-testid="input-min-fees"
                               />
                             </div>
@@ -1421,13 +1453,27 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Max</label>
                               <Input
                                 type="number"
-                                placeholder="Any"
+                                placeholder="No Max"
                                 value={maxFees ?? ""}
                                 onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
-                                className="h-9"
+                                className="h-8 text-sm"
                                 data-testid="input-max-fees"
                               />
                             </div>
+                          </div>
+                          <div className="px-1 pt-1">
+                            <Slider
+                              value={[minFees ?? 0, maxFees ?? availableFilters.maxTuition]}
+                              min={0}
+                              max={availableFilters.maxTuition}
+                              step={1000}
+                              onValueChange={([min, max]) => {
+                                setMinFees(min === 0 ? null : min);
+                                setMaxFees(max === availableFilters.maxTuition ? null : max);
+                              }}
+                              className="w-full"
+                              data-testid="slider-tuition-range"
+                            />
                           </div>
                         </CollapsibleContent>
                       </Collapsible>
