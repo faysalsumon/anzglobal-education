@@ -2011,8 +2011,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
       {/* Generate All Test Types Dialog */}
       <Dialog open={generateTestsDialogOpen} onOpenChange={setGenerateTestsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
               Generate All English Test Requirements
@@ -2021,7 +2021,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               Enter scores for one test type and the system will automatically generate equivalent scores for all other test types.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1">
             <div className="space-y-2">
               <label className="text-sm font-medium">Base Test Type</label>
               <Select
@@ -2224,7 +2224,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               </>
             )}
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-shrink-0 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
