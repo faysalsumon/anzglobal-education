@@ -470,16 +470,50 @@ export default function PublicInstitutions() {
             {openSections.country ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2 space-y-1">
-            {filterMetadata.countries.slice(0, 10).map((country) => (
-              <label key={country} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                <Checkbox
-                  checked={filters.countries.includes(country)}
-                  onCheckedChange={() => toggleMultiSelect('countries', country)}
-                  data-testid={`checkbox-country-${country.toLowerCase().replace(/\s+/g, '-')}`}
-                />
-                <span className="text-sm">{country}</span>
-              </label>
-            ))}
+            {filterMetadata.countries.slice(0, 10).map((country) => {
+              const flagMap: Record<string, string> = {
+                'Australia': '🇦🇺',
+                'United States': '🇺🇸',
+                'United Kingdom': '🇬🇧',
+                'Canada': '🇨🇦',
+                'New Zealand': '🇳🇿',
+                'Germany': '🇩🇪',
+                'France': '🇫🇷',
+                'Ireland': '🇮🇪',
+                'Netherlands': '🇳🇱',
+                'Singapore': '🇸🇬',
+                'Japan': '🇯🇵',
+                'South Korea': '🇰🇷',
+                'China': '🇨🇳',
+                'India': '🇮🇳',
+                'Malaysia': '🇲🇾',
+                'Bangladesh': '🇧🇩',
+                'UAE': '🇦🇪',
+                'United Arab Emirates': '🇦🇪',
+                'Italy': '🇮🇹',
+                'Spain': '🇪🇸',
+                'Switzerland': '🇨🇭',
+                'Sweden': '🇸🇪',
+                'Norway': '🇳🇴',
+                'Denmark': '🇩🇰',
+                'Finland': '🇫🇮',
+                'Austria': '🇦🇹',
+                'Belgium': '🇧🇪',
+                'Portugal': '🇵🇹',
+              };
+              const flag = flagMap[country] || '🌍';
+              return (
+                <label key={country} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                  <Checkbox
+                    checked={filters.countries.includes(country)}
+                    onCheckedChange={() => toggleMultiSelect('countries', country)}
+                    data-testid={`checkbox-country-${country.toLowerCase().replace(/\s+/g, '-')}`}
+                  />
+                  <span className="text-base leading-none">{flag}</span>
+                  <span className="text-sm">{country}</span>
+                </label>
+              );
+            })}
             {filterMetadata.countries.length > 10 && (
               <p className="text-xs text-muted-foreground px-2 pt-1">+{filterMetadata.countries.length - 10} more</p>
             )}
