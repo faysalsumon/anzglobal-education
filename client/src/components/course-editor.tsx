@@ -640,19 +640,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="subject"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Subject *</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Computer Science" data-testid="input-course-subject" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
                         name="courseCode"
                         render={({ field }) => (
                           <FormItem>
@@ -664,9 +651,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           </FormItem>
                         )}
                       />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="level"
