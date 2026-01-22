@@ -421,6 +421,7 @@ export default function PublicCourses() {
 
     const currencies = new Set<string>();
     let maxTuitionFee = 0;
+    let minTuitionFee = Infinity;
     
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
@@ -430,7 +431,10 @@ export default function PublicCourses() {
       if (course.currency) currencies.add(course.currency);
       if (course.fees) {
         const fee = Number(course.fees);
-        if (fee > maxTuitionFee) maxTuitionFee = fee;
+        if (fee > 0) {
+          if (fee > maxTuitionFee) maxTuitionFee = fee;
+          if (fee < minTuitionFee) minTuitionFee = fee;
+        }
       }
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
@@ -473,8 +477,10 @@ export default function PublicCourses() {
       ? Array.from(citiesByState[stateKey]).sort()
       : [];
 
-    // Round max tuition to nearest 10000 for nice slider steps
+    // Round max tuition up to nearest 10000 for nice slider steps
     const roundedMaxTuition = Math.ceil(maxTuitionFee / 10000) * 10000 || 100000;
+    // Round min tuition down to nearest 1000 for nice slider steps
+    const roundedMinTuition = minTuitionFee === Infinity ? 0 : Math.floor(minTuitionFee / 1000) * 1000;
     
     return {
       subjects: Array.from(subjects).sort(),
@@ -485,6 +491,7 @@ export default function PublicCourses() {
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
       states: statesForCountry,
       cities: citiesForState,
+      minTuition: roundedMinTuition,
       maxTuition: roundedMaxTuition,
     };
   }, [courses, country, campusState]);
@@ -1114,9 +1121,13 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Min</label>
                               <Input
                                 type="number"
-                                placeholder="0"
+                                min={0}
+                                placeholder={availableFilters.minTuition.toLocaleString()}
                                 value={minFees ?? ""}
-                                onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
+                                onChange={(e) => {
+                                  const val = e.target.value ? Math.max(0, parseInt(e.target.value)) : null;
+                                  setMinFees(val);
+                                }}
                                 className="h-8 text-sm"
                                 data-testid="input-min-fees-mobile"
                               />
@@ -1125,9 +1136,13 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Max</label>
                               <Input
                                 type="number"
+                                min={0}
                                 placeholder="No Max"
                                 value={maxFees ?? ""}
-                                onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
+                                onChange={(e) => {
+                                  const val = e.target.value ? Math.max(0, parseInt(e.target.value)) : null;
+                                  setMaxFees(val);
+                                }}
                                 className="h-8 text-sm"
                                 data-testid="input-max-fees-mobile"
                               />
@@ -1135,12 +1150,12 @@ export default function PublicCourses() {
                           </div>
                           <div className="px-1 pt-1">
                             <Slider
-                              value={[minFees ?? 0, maxFees ?? availableFilters.maxTuition]}
-                              min={0}
+                              value={[minFees ?? availableFilters.minTuition, maxFees ?? availableFilters.maxTuition]}
+                              min={availableFilters.minTuition}
                               max={availableFilters.maxTuition}
                               step={1000}
                               onValueChange={([min, max]) => {
-                                setMinFees(min === 0 ? null : min);
+                                setMinFees(min === availableFilters.minTuition ? null : min);
                                 setMaxFees(max === availableFilters.maxTuition ? null : max);
                               }}
                               className="w-full"
@@ -1442,9 +1457,13 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Min</label>
                               <Input
                                 type="number"
-                                placeholder="0"
+                                min={0}
+                                placeholder={availableFilters.minTuition.toLocaleString()}
                                 value={minFees ?? ""}
-                                onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
+                                onChange={(e) => {
+                                  const val = e.target.value ? Math.max(0, parseInt(e.target.value)) : null;
+                                  setMinFees(val);
+                                }}
                                 className="h-8 text-sm"
                                 data-testid="input-min-fees"
                               />
@@ -1453,9 +1472,13 @@ export default function PublicCourses() {
                               <label className="text-xs text-muted-foreground mb-1 block">Max</label>
                               <Input
                                 type="number"
+                                min={0}
                                 placeholder="No Max"
                                 value={maxFees ?? ""}
-                                onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
+                                onChange={(e) => {
+                                  const val = e.target.value ? Math.max(0, parseInt(e.target.value)) : null;
+                                  setMaxFees(val);
+                                }}
                                 className="h-8 text-sm"
                                 data-testid="input-max-fees"
                               />
@@ -1463,12 +1486,12 @@ export default function PublicCourses() {
                           </div>
                           <div className="px-1 pt-1">
                             <Slider
-                              value={[minFees ?? 0, maxFees ?? availableFilters.maxTuition]}
-                              min={0}
+                              value={[minFees ?? availableFilters.minTuition, maxFees ?? availableFilters.maxTuition]}
+                              min={availableFilters.minTuition}
                               max={availableFilters.maxTuition}
                               step={1000}
                               onValueChange={([min, max]) => {
-                                setMinFees(min === 0 ? null : min);
+                                setMinFees(min === availableFilters.minTuition ? null : min);
                                 setMaxFees(max === availableFilters.maxTuition ? null : max);
                               }}
                               className="w-full"
