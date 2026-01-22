@@ -13913,7 +13913,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/testimonials/upload-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
+      // support_staff includes marketing_executive role which needs to upload testimonial photos
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Access denied" });
