@@ -877,19 +877,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={form.control}
-                        name="costOfLiving"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cost of Living (Annual)</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" placeholder="20000" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-costOfLiving" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
                   </CardContent>
                 </Card>
