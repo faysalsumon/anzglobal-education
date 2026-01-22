@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
 import { TypingText } from "@/components/typing-text";
@@ -26,6 +26,7 @@ export default function Landing() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [reviewIndex, setReviewIndex] = useState(0);
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
@@ -809,74 +810,128 @@ export default function Landing() {
         </section>
       )}
 
-      {/* Student Reviews Section */}
-      <section className="py-16 md:py-24 bg-card/30">
+      {/* Student Reviews Section - Compact Slider */}
+      <section className="py-12 md:py-16 bg-card/30">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                <Quote className="h-8 w-8 text-primary" />
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                  <Quote className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold">Student Reviews</h2>
+                  <p className="text-sm text-muted-foreground">Real stories from our students</p>
+                </div>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Trusted by Students Worldwide
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Real stories from students who turned their Australian education dreams into reality
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {featuredReviews.map((review) => (
-                <Card 
-                  key={review.id} 
-                  className="hover-elevate h-full"
-                  data-testid={`landing-review-card-${review.id}`}
-                >
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <Quote className="h-8 w-8 text-primary/30 mb-4" />
-                    <h3 className="text-lg font-bold mb-3" data-testid={`text-review-title-${review.id}`}>
-                      {review.title}
-                    </h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed mb-4 flex-1" data-testid={`text-review-content-${review.id}`}>
-                      {review.content}
-                    </p>
-                    <div className="border-t pt-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          {review.imageUrl ? (
-                            <AvatarImage src={review.imageUrl} alt={review.studentName} />
-                          ) : null}
-                          <AvatarFallback className="text-xs">
-                            {getInitials(review.studentName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-1">
-                          <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
-                            {review.studentName}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{review.location}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground" data-testid={`text-review-institution-${review.id}`}>
-                            {review.institution}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="text-center">
               <Link href="/student-reviews">
-                <Button variant="outline" size="lg" data-testid="button-view-all-reviews">
-                  View All Student Reviews
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button variant="ghost" size="sm" data-testid="button-view-all-reviews">
+                  View All
+                  <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
             </div>
+
+            {featuredReviews.length > 0 && (
+              <div className="relative">
+                <div className="overflow-hidden">
+                  <div 
+                    className="flex transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${reviewIndex * 100}%)` }}
+                  >
+                    {featuredReviews.map((review) => (
+                      <div 
+                        key={review.id} 
+                        className="w-full flex-shrink-0 px-1"
+                      >
+                        <Card 
+                          className="hover-elevate"
+                          data-testid={`landing-review-card-${review.id}`}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex gap-4">
+                              <Avatar className="h-12 w-12 flex-shrink-0">
+                                {review.imageUrl ? (
+                                  <AvatarImage src={review.imageUrl} alt={review.studentName} />
+                                ) : null}
+                                <AvatarFallback className="text-sm">
+                                  {getInitials(review.studentName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div>
+                                    <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
+                                      {review.studentName}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      {review.location && (
+                                        <>
+                                          <MapPin className="h-3 w-3" />
+                                          <span>{review.location}</span>
+                                        </>
+                                      )}
+                                      {review.institution && (
+                                        <span className="truncate">• {review.institution}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Quote className="h-5 w-5 text-primary/30 flex-shrink-0" />
+                                </div>
+                                <h3 className="font-medium text-sm mb-1" data-testid={`text-review-title-${review.id}`}>
+                                  {review.title}
+                                </h3>
+                                <p className="text-muted-foreground text-sm line-clamp-2" data-testid={`text-review-content-${review.id}`}>
+                                  {review.content}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {featuredReviews.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 h-8 w-8 rounded-full bg-background shadow-md"
+                      onClick={() => setReviewIndex((prev) => (prev === 0 ? featuredReviews.length - 1 : prev - 1))}
+                      data-testid="button-review-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 h-8 w-8 rounded-full bg-background shadow-md"
+                      onClick={() => setReviewIndex((prev) => (prev === featuredReviews.length - 1 ? 0 : prev + 1))}
+                      data-testid="button-review-next"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                {featuredReviews.length > 1 && (
+                  <div className="flex justify-center gap-1.5 mt-4">
+                    {featuredReviews.map((_, idx) => (
+                      <button
+                        key={idx}
+                        className={`h-2 rounded-full transition-all ${
+                          idx === reviewIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                        }`}
+                        onClick={() => setReviewIndex(idx)}
+                        data-testid={`button-review-dot-${idx}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
