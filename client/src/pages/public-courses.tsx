@@ -992,30 +992,6 @@ export default function PublicCourses() {
                         </CollapsibleContent>
                       </Collapsible>
 
-                      {/* Subject */}
-                      <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
-                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-                          <div className="flex items-center gap-2 font-medium text-sm">
-                            <BookOpen className="h-4 w-4 text-primary" />
-                            Subject
-                          </div>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.subject ? 'rotate-180' : ''}`} />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2">
-                          <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-subject-mobile">
-                              <SelectValue placeholder="All Subjects" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Subjects</SelectItem>
-                              {availableFilters.subjects.map((subj) => (
-                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </CollapsibleContent>
-                      </Collapsible>
-
                       {/* Discipline */}
                       <Collapsible open={openSections.discipline} onOpenChange={(open) => toggleSection('discipline', open)}>
                         <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
@@ -1253,31 +1229,6 @@ export default function PublicCourses() {
                               </SelectContent>
                             </Select>
                           )}
-                        </CollapsibleContent>
-                      </Collapsible>
-
-                      {/* Subject */}
-                      <Collapsible open={openSections.subject} onOpenChange={(open) => toggleSection('subject', open)}>
-                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
-                          <div className="flex items-center gap-2 font-medium text-sm">
-                            <BookOpen className="h-4 w-4 text-primary" />
-                            Subject
-                            {subject && <span className="w-2 h-2 rounded-full bg-primary" />}
-                          </div>
-                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.subject ? 'rotate-180' : ''}`} />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 pb-3 px-1">
-                          <Select value={subject || "all"} onValueChange={(val) => setSubject(val === "all" ? "" : val)}>
-                            <SelectTrigger data-testid="select-subject" className="h-9">
-                              <SelectValue placeholder="All Subjects" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Subjects</SelectItem>
-                              {availableFilters.subjects.map((subj) => (
-                                <SelectItem key={subj} value={subj}>{subj}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </CollapsibleContent>
                       </Collapsible>
 
