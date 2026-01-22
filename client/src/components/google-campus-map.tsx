@@ -10,6 +10,7 @@ interface GoogleCampusMapProps {
   selectedCampusIndex?: number | null;
   onMarkerClick?: (index: number) => void;
   height?: string;
+  logoUrl?: string;
 }
 
 export function GoogleCampusMap({ 
@@ -17,7 +18,8 @@ export function GoogleCampusMap({
   institutionName,
   selectedCampusIndex = null,
   onMarkerClick,
-  height = "400px"
+  height = "400px",
+  logoUrl
 }: GoogleCampusMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,19 +104,27 @@ export function GoogleCampusMap({
               }
             }
 
-            // Create marker
+            // Create marker with logo or default icon
+            const markerIcon = logoUrl 
+              ? {
+                  url: logoUrl,
+                  scaledSize: new google.maps.Size(32, 32),
+                  anchor: new google.maps.Point(16, 16),
+                }
+              : {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: "#3465A5",
+                  fillOpacity: 1,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2,
+                };
+
             const marker = new google.maps.Marker({
               map: mapInstance,
               position: position,
               title: `${institutionName} - ${campus.name}`,
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: "#3465A5",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
-              },
+              icon: markerIcon,
             });
 
             // Store marker with its index

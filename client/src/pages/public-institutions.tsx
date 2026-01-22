@@ -1146,6 +1146,7 @@ export default function PublicInstitutions() {
                   selectedCampusIndex={selectedCampusIndex}
                   onMarkerClick={(index) => setSelectedCampusIndex(index)}
                   height="260px"
+                  logoUrl={selectedInstitutionForMap.logo}
                 />
               </div>
             )}
