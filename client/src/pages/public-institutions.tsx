@@ -471,37 +471,45 @@ export default function PublicInstitutions() {
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2 space-y-1">
             {filterMetadata.countries.slice(0, 10).map((country) => {
-              const flagMap: Record<string, string> = {
-                'Australia': '🇦🇺',
-                'United States': '🇺🇸',
-                'United Kingdom': '🇬🇧',
-                'Canada': '🇨🇦',
-                'New Zealand': '🇳🇿',
-                'Germany': '🇩🇪',
-                'France': '🇫🇷',
-                'Ireland': '🇮🇪',
-                'Netherlands': '🇳🇱',
-                'Singapore': '🇸🇬',
-                'Japan': '🇯🇵',
-                'South Korea': '🇰🇷',
-                'China': '🇨🇳',
-                'India': '🇮🇳',
-                'Malaysia': '🇲🇾',
-                'Bangladesh': '🇧🇩',
-                'UAE': '🇦🇪',
-                'United Arab Emirates': '🇦🇪',
-                'Italy': '🇮🇹',
-                'Spain': '🇪🇸',
-                'Switzerland': '🇨🇭',
-                'Sweden': '🇸🇪',
-                'Norway': '🇳🇴',
-                'Denmark': '🇩🇰',
-                'Finland': '🇫🇮',
-                'Austria': '🇦🇹',
-                'Belgium': '🇧🇪',
-                'Portugal': '🇵🇹',
+              const countryCodeMap: Record<string, string> = {
+                'Australia': 'au',
+                'United States': 'us',
+                'United Kingdom': 'gb',
+                'Canada': 'ca',
+                'New Zealand': 'nz',
+                'Germany': 'de',
+                'France': 'fr',
+                'Ireland': 'ie',
+                'Netherlands': 'nl',
+                'Singapore': 'sg',
+                'Japan': 'jp',
+                'South Korea': 'kr',
+                'China': 'cn',
+                'India': 'in',
+                'Malaysia': 'my',
+                'Bangladesh': 'bd',
+                'UAE': 'ae',
+                'United Arab Emirates': 'ae',
+                'Italy': 'it',
+                'Spain': 'es',
+                'Switzerland': 'ch',
+                'Sweden': 'se',
+                'Norway': 'no',
+                'Denmark': 'dk',
+                'Finland': 'fi',
+                'Austria': 'at',
+                'Belgium': 'be',
+                'Portugal': 'pt',
+                'Philippines': 'ph',
+                'Vietnam': 'vn',
+                'Thailand': 'th',
+                'Indonesia': 'id',
+                'Pakistan': 'pk',
+                'Nepal': 'np',
+                'Sri Lanka': 'lk',
               };
-              const flag = flagMap[country] || '🌍';
+              const countryCode = countryCodeMap[country] || 'un';
+              const flagUrl = `https://flagcdn.com/w20/${countryCode}.png`;
               return (
                 <label key={country} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
                   <Checkbox
@@ -509,7 +517,14 @@ export default function PublicInstitutions() {
                     onCheckedChange={() => toggleMultiSelect('countries', country)}
                     data-testid={`checkbox-country-${country.toLowerCase().replace(/\s+/g, '-')}`}
                   />
-                  <span className="text-base leading-none">{flag}</span>
+                  <img 
+                    src={flagUrl} 
+                    alt={`${country} flag`} 
+                    className="w-5 h-auto rounded-sm"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
                   <span className="text-sm">{country}</span>
                 </label>
               );
