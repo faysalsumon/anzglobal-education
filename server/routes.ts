@@ -7879,6 +7879,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single institution by ID (for super admin - includes all data for course editor)
+  app.get("/api/super-admin/institutions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const institutionId = req.params.id;
+      const institution = await storage.getUniversityById(institutionId);
+      
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
+      res.json(institution);
+    } catch (error) {
+      console.error("Error fetching institution:", error);
+      res.status(500).json({ message: "Failed to fetch institution" });
+    }
+  });
+
   // Get institutions assigned to or created by the current admin user
   // This endpoint is for team members who don't have full admin access
   app.get("/api/admin/my-institutions", isAuthenticated, async (req: any, res) => {
