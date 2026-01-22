@@ -20,6 +20,7 @@ import { GalleryImageManager } from "@/components/gallery-image-manager";
 import { InstitutionContactsPanel } from "@/components/institution-contacts-panel";
 import { InstitutionBusinessTermsPanel } from "@/components/institution-business-terms-panel";
 import { InstitutionDocumentsPanel } from "@/components/institution-documents-panel";
+import { InstitutionScholarshipsPanel } from "@/components/institution-scholarships-panel";
 import { CountrySelect } from "@/components/ui/country-select";
 import { FeaturedCoursesSelector } from "@/components/featured-courses-selector";
 import { DisciplineSelector } from "@/components/discipline-selector";
@@ -983,6 +984,10 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
         {institution && (
           <div className="space-y-6 mt-6">
+            <InstitutionScholarshipsPanel
+              institutionId={institution.id}
+              institutionName={institution.name}
+            />
             <InstitutionContactsPanel
               institutionId={institution.id}
               institutionName={institution.name}
