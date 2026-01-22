@@ -55,8 +55,6 @@ const institutionSchema = z.object({
   providerType: z.string().min(1, "Provider type is required"),
   numberOfCampuses: optionalPositiveInt,
   establishedYear: optionalYear,
-  scholarshipPercentageMin: optionalPercentage,
-  scholarshipPercentageMax: optionalPercentage,
   logo: z.string().optional(),
   topDisciplines: z.array(z.string()).optional(),
   topCourses: z.string().optional(),
@@ -69,7 +67,6 @@ const institutionSchema = z.object({
     postcode: z.string(),
     country: z.string(),
   })).optional(),
-  hasScholarship: z.boolean().optional(),
 });
 
 const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
@@ -85,8 +82,6 @@ interface Institution {
   providerType: string | null;
   numberOfCampuses: number | null;
   establishedYear: number | null;
-  scholarshipPercentageMin: number | null;
-  scholarshipPercentageMax: number | null;
   topDisciplines: string[] | null;
   logo: string | null;
   topCourses: string[] | null;
@@ -222,11 +217,6 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const allTags = groupedTags ? Object.values(groupedTags).flat() : [];
   const selectedTags = allTags.filter(t => selectedTagIds.includes(t.id));
 
-  const hasScholarship = institution ? (
-    institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMin !== undefined ||
-    institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax !== undefined
-  ) : false;
-
   const form = useForm<z.infer<typeof institutionSchema>>({
     resolver: zodResolver(institutionSchema),
     defaultValues: {
@@ -239,14 +229,11 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       providerType: institution?.providerType || "",
       numberOfCampuses: institution?.numberOfCampuses as any,
       establishedYear: institution?.establishedYear as any,
-      scholarshipPercentageMin: institution?.scholarshipPercentageMin as any,
-      scholarshipPercentageMax: institution?.scholarshipPercentageMax as any,
       logo: institution?.logo || "",
       topDisciplines: institution?.topDisciplines || [],
       topCourses: institution?.topCourses?.join(", ") || "",
       institutionGallery: institution?.institutionGallery || [],
       campusAddresses: institution?.campusAddresses || [],
-      hasScholarship,
     },
   });
 
@@ -307,16 +294,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       topCourses: featuredCourses.length > 0 || legacyCourseNames.length > 0
         ? [...featuredCourses.map(c => c.id), ...legacyCourseNames]
         : undefined,
-      scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
-      scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
       publishStatus,
       ...(publishStatus === 'published' && {
         publishedAt: new Date().toISOString(),
         publishedByUserId: userId,
       }),
     };
-    
-    delete apiData.hasScholarship;
     
     if (institution?.id) {
       updateMutation.mutate({ id: institution.id, data: apiData });
@@ -618,63 +601,6 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       )}
                     </div>
 
-                    <div className="space-y-3 pt-2">
-                      <FormLabel>Scholarships Available?</FormLabel>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={form.watch("hasScholarship") === true ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => form.setValue("hasScholarship", true)}
-                          data-testid="button-institution-scholarshipYes"
-                        >
-                          Yes
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={form.watch("hasScholarship") === false ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            form.setValue("hasScholarship", false);
-                            form.setValue("scholarshipPercentageMin", "" as any);
-                            form.setValue("scholarshipPercentageMax", "" as any);
-                          }}
-                          data-testid="button-institution-scholarshipNo"
-                        >
-                          No
-                        </Button>
-                      </div>
-                      {form.watch("hasScholarship") === true && (
-                        <div className="grid grid-cols-2 gap-4 mt-3">
-                          <FormField
-                            control={form.control}
-                            name="scholarshipPercentageMin"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Scholarship Min %</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" placeholder="10" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-institution-scholarshipPercentageMin" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="scholarshipPercentageMax"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Scholarship Max %</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" placeholder="20" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-institution-scholarshipPercentageMax" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
 

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -415,6 +415,27 @@ interface TagType {
   isActive: boolean;
 }
 
+interface ScholarshipType {
+  id: string;
+  institutionId: string;
+  name: string;
+  description: string | null;
+  valueType: 'percentage' | 'fixed';
+  value: number;
+  currency: string | null;
+  status: 'open' | 'not_open_yet' | 'closed';
+  startDate: string | null;
+  endDate: string | null;
+  eligibility: string | null;
+  applicationUrl: string | null;
+}
+
+const SCHOLARSHIP_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  not_open_yet: 'Not Open Yet',
+  closed: 'Closed',
+};
+
 const TAG_CATEGORY_LABELS: Record<string, { label: string; description: string; icon: typeof Sparkles }> = {
   feature: { label: 'Features', description: 'Course features', icon: Sparkles },
   delivery: { label: 'Delivery', description: 'How the course is delivered', icon: Monitor },
@@ -436,6 +457,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>(course?.universityId || "");
   const [selectedCampusIds, setSelectedCampusIds] = useState<string[]>(course?.campusLocations || []);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedScholarshipIds, setSelectedScholarshipIds] = useState<string[]>([]);
   
   // English requirements state
   const [englishReqDialogOpen, setEnglishReqDialogOpen] = useState(false);
@@ -482,6 +504,18 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
   const { data: courseTags } = useQuery<TagType[]>({
     queryKey: ["/api/courses", course?.id, "tags"],
+    enabled: !!course?.id,
+  });
+
+  // Institution scholarships query (available scholarships for the selected institution)
+  const { data: institutionScholarships = [] } = useQuery<ScholarshipType[]>({
+    queryKey: ["/api/institutions", selectedInstitutionId, "scholarships"],
+    enabled: !!selectedInstitutionId,
+  });
+
+  // Course scholarships query (scholarships linked to this course)
+  const { data: courseScholarships = [] } = useQuery<ScholarshipType[]>({
+    queryKey: ["/api/courses", course?.id, "scholarships"],
     enabled: !!course?.id,
   });
 
@@ -680,6 +714,13 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     }
   }, [courseTags]);
 
+  // Sync selected scholarship IDs when course scholarships load
+  useEffect(() => {
+    if (courseScholarships) {
+      setSelectedScholarshipIds(courseScholarships.map(s => s.id));
+    }
+  }, [courseScholarships]);
+
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -760,8 +801,13 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       return response.json();
     },
     onSuccess: async (newCourse: any) => {
-      if (newCourse?.id && selectedTagIds.length > 0) {
-        await saveTagsMutation.mutateAsync({ courseId: newCourse.id, tagIds: selectedTagIds });
+      if (newCourse?.id) {
+        // Save tags if any selected
+        if (selectedTagIds.length > 0) {
+          await saveTagsMutation.mutateAsync({ courseId: newCourse.id, tagIds: selectedTagIds });
+        }
+        // Always save scholarships (including empty array to clear all)
+        await saveScholarshipsMutation.mutateAsync({ courseId: newCourse.id, scholarshipIds: selectedScholarshipIds });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course created successfully" });
@@ -779,10 +825,13 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     },
     onSuccess: async (result: any) => {
       if (result?.id) {
+        // Always save tags and scholarships (including empty arrays to clear all)
         await saveTagsMutation.mutateAsync({ courseId: result.id, tagIds: selectedTagIds });
+        await saveScholarshipsMutation.mutateAsync({ courseId: result.id, scholarshipIds: selectedScholarshipIds });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "scholarships"] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
       toast({ title: "Success", description: "Course updated successfully" });
       onBack();
     },
@@ -799,6 +848,33 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       console.error("Failed to save course tags:", error);
     },
   });
+
+  // Save scholarships mutation
+  const saveScholarshipsMutation = useMutation({
+    mutationFn: async ({ courseId, scholarshipIds }: { courseId: string; scholarshipIds: string[] }) => {
+      return apiRequest("PUT", `/api/admin/courses/${courseId}/scholarships`, { scholarshipIds });
+    },
+    onError: (error: any) => {
+      console.error("Failed to save course scholarships:", error);
+    },
+  });
+
+  const handleScholarshipToggle = (scholarshipId: string) => {
+    setSelectedScholarshipIds(prev =>
+      prev.includes(scholarshipId) ? prev.filter(id => id !== scholarshipId) : [...prev, scholarshipId]
+    );
+  };
+
+  const getSelectedScholarships = (): ScholarshipType[] => {
+    return institutionScholarships.filter(s => selectedScholarshipIds.includes(s.id));
+  };
+
+  const formatScholarshipValue = (scholarship: ScholarshipType) => {
+    if (scholarship.valueType === 'percentage') {
+      return `${scholarship.value}%`;
+    }
+    return `${scholarship.currency || 'AUD'} ${scholarship.value.toLocaleString()}`;
+  };
 
   const handleTagToggle = (tagId: string) => {
     setSelectedTagIds(prev =>
@@ -1667,6 +1743,112 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   </CardContent>
                 </Card>
 
+                {/* Scholarships Section - only show if institution has scholarships */}
+                {selectedInstitutionId && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <GraduationCap className="h-5 w-5" />
+                          Scholarships
+                        </CardTitle>
+                        {selectedScholarshipIds.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedScholarshipIds.length} selected
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription>Select scholarships available for this course</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-0">
+                      {institutionScholarships.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-2" data-testid="text-no-scholarships">
+                          No scholarships available for this institution. Add scholarships in the institution editor first.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {institutionScholarships.map((scholarship) => {
+                            const isSelected = selectedScholarshipIds.includes(scholarship.id);
+                            return (
+                              <div
+                                key={scholarship.id}
+                                onClick={() => handleScholarshipToggle(scholarship.id)}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors border ${
+                                  isSelected 
+                                    ? 'bg-primary/10 border-primary/30' 
+                                    : 'hover:bg-muted/50 border-transparent'
+                                }`}
+                                data-testid={`scholarship-option-${scholarship.id}`}
+                              >
+                                <div 
+                                  className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                                    isSelected 
+                                      ? 'bg-primary border-primary' 
+                                      : 'border-muted-foreground/30'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">{scholarship.name}</span>
+                                    <Badge 
+                                      variant={scholarship.status === 'open' ? 'default' : scholarship.status === 'closed' ? 'destructive' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {SCHOLARSHIP_STATUS_LABELS[scholarship.status]}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                    <span className="flex items-center gap-1">
+                                      <DollarSign className="h-3 w-3" />
+                                      {formatScholarshipValue(scholarship)}
+                                    </span>
+                                    {scholarship.description && (
+                                      <span className="truncate max-w-[200px]">
+                                        {scholarship.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {selectedScholarshipIds.length > 0 && (
+                        <div className="pt-3 border-t mt-3">
+                          <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                            Selected Scholarships
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {getSelectedScholarships().map((scholarship) => (
+                              <Badge
+                                key={scholarship.id}
+                                variant="default"
+                                className="cursor-pointer pr-1"
+                                data-testid={`selected-scholarship-${scholarship.id}`}
+                              >
+                                {scholarship.name} ({formatScholarshipValue(scholarship)})
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleScholarshipToggle(scholarship.id);
+                                  }}
+                                  className="ml-1 hover:bg-white/20 rounded-full p-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {course && (
                   <Card>
