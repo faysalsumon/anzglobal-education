@@ -1609,19 +1609,138 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="eligibilityRequirements"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Eligibility Requirements</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Academic and other eligibility requirements..." rows={3} data-testid="input-course-eligibilityRequirements" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Entry Requirements Section - Academic Qualifications */}
+                    {selectedInstitutionId && currentCourseLevel && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <FormLabel className="flex items-center gap-2">
+                            <FileCheck className="h-4 w-4" />
+                            Entry Requirements
+                          </FormLabel>
+                          {selectedEntryRequirements.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedEntryRequirements.length} requirements
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Loading state */}
+                        {(templatesLoading || entryReqLoading) && (
+                          <p className="text-sm text-muted-foreground py-2">
+                            Loading requirements...
+                          </p>
+                        )}
+
+                        {/* Recommended Requirements from Templates */}
+                        {!templatesLoading && entryRequirementTemplates.length > 0 && (
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">
+                              Recommended Requirements (click to add/remove)
+                            </label>
+                            <div className={`flex flex-wrap gap-1.5 ${saveEntryRequirementsMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}>
+                              {entryRequirementTemplates.map((template) => {
+                                const isSelected = selectedEntryRequirements.some(
+                                  r => r.qualificationTypeId === template.qualificationTypeId
+                                );
+                                return (
+                                  <Badge
+                                    key={template.id}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className="cursor-pointer"
+                                    onClick={() => handleEntryRequirementToggle(template)}
+                                    data-testid={`entry-req-template-${template.qualificationTypeId}`}
+                                  >
+                                    {template.displayLabel || `${template.qualification.name} (${template.qualification.country})`}
+                                    {template.minGrade && ` - Min: ${template.minGrade}`}
+                                    {isSelected && <Check className="h-3 w-3 ml-1" />}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {!templatesLoading && entryRequirementTemplates.length === 0 && institutionCountry && (
+                          <p className="text-sm text-muted-foreground py-2">
+                            No requirement templates configured for {currentCourseLevel} courses in {institutionCountry}. 
+                            Contact system admin to add templates.
+                          </p>
+                        )}
+
+                        {/* Selected Requirements with Editable Grades */}
+                        {selectedEntryRequirements.length > 0 && (
+                          <div className={`space-y-2 pt-2 border-t ${saveEntryRequirementsMutation.isPending ? 'opacity-50' : ''}`}>
+                            <label className="text-xs font-medium text-muted-foreground">
+                              Selected Entry Requirements
+                            </label>
+                            <div className="space-y-2">
+                              {selectedEntryRequirements.map((req) => {
+                                const template = entryRequirementTemplates.find(
+                                  t => t.qualificationTypeId === req.qualificationTypeId
+                                );
+                                const existingReq = courseEntryRequirements.find(
+                                  r => r.qualificationTypeId === req.qualificationTypeId
+                                );
+                                const qualName = template?.qualification?.name || existingReq?.qualification?.name || 'Unknown';
+                                const qualCountry = template?.qualification?.country || existingReq?.qualification?.country || '';
+                                
+                                return (
+                                  <div 
+                                    key={req.qualificationTypeId}
+                                    className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
+                                    data-testid={`selected-entry-req-${req.qualificationTypeId}`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-medium">
+                                        {qualName}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground ml-2">
+                                        ({qualCountry})
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Input
+                                        type="text"
+                                        placeholder="Min grade"
+                                        value={req.minGrade}
+                                        onChange={(e) => handleUpdateEntryRequirementGrade(req.qualificationTypeId, e.target.value)}
+                                        className="w-24 text-sm"
+                                        disabled={saveEntryRequirementsMutation.isPending}
+                                        data-testid={`entry-req-grade-${req.qualificationTypeId}`}
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleRemoveEntryRequirement(req.qualificationTypeId)}
+                                        disabled={saveEntryRequirementsMutation.isPending}
+                                        data-testid={`remove-entry-req-${req.qualificationTypeId}`}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Message when institution/level not selected */}
+                    {(!selectedInstitutionId || !currentCourseLevel) && (
+                      <div className="space-y-2">
+                        <FormLabel className="flex items-center gap-2">
+                          <FileCheck className="h-4 w-4" />
+                          Entry Requirements
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Select an institution and course level to configure entry requirements.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Structured English Requirements Section */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -1967,131 +2086,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                 </button>
                               </Badge>
                             ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Entry Requirements Section */}
-                {selectedInstitutionId && currentCourseLevel && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <CardTitle className="flex items-center gap-2">
-                          <FileCheck className="h-5 w-5" />
-                          Entry Requirements
-                        </CardTitle>
-                        {selectedEntryRequirements.length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {selectedEntryRequirements.length} requirements
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription>
-                        Define academic qualifications required for course entry
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-0">
-                      {/* Loading state */}
-                      {(templatesLoading || entryReqLoading) && (
-                        <p className="text-sm text-muted-foreground py-2">
-                          Loading requirements...
-                        </p>
-                      )}
-
-                      {/* Recommended Requirements from Templates */}
-                      {!templatesLoading && entryRequirementTemplates.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-medium text-muted-foreground">
-                            Recommended Requirements (click to add/remove)
-                          </label>
-                          <div className={`flex flex-wrap gap-1.5 ${saveEntryRequirementsMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}>
-                            {entryRequirementTemplates.map((template) => {
-                              const isSelected = selectedEntryRequirements.some(
-                                r => r.qualificationTypeId === template.qualificationTypeId
-                              );
-                              return (
-                                <Badge
-                                  key={template.id}
-                                  variant={isSelected ? "default" : "outline"}
-                                  className="cursor-pointer"
-                                  onClick={() => handleEntryRequirementToggle(template)}
-                                  data-testid={`entry-req-template-${template.qualificationTypeId}`}
-                                >
-                                  {template.displayLabel || `${template.qualification.name} (${template.qualification.country})`}
-                                  {template.minGrade && ` - Min: ${template.minGrade}`}
-                                  {isSelected && <Check className="h-3 w-3 ml-1" />}
-                                </Badge>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {!templatesLoading && entryRequirementTemplates.length === 0 && institutionCountry && (
-                        <p className="text-sm text-muted-foreground py-2">
-                          No requirement templates configured for {currentCourseLevel} courses in {institutionCountry}. 
-                          Contact system admin to add templates.
-                        </p>
-                      )}
-
-                      {/* Selected Requirements with Editable Grades */}
-                      {selectedEntryRequirements.length > 0 && (
-                        <div className={`space-y-2 pt-2 border-t ${saveEntryRequirementsMutation.isPending ? 'opacity-50' : ''}`}>
-                          <label className="text-xs font-medium text-muted-foreground">
-                            Selected Entry Requirements
-                          </label>
-                          <div className="space-y-2">
-                            {selectedEntryRequirements.map((req) => {
-                              const template = entryRequirementTemplates.find(
-                                t => t.qualificationTypeId === req.qualificationTypeId
-                              );
-                              const existingReq = courseEntryRequirements.find(
-                                r => r.qualificationTypeId === req.qualificationTypeId
-                              );
-                              const qualName = template?.qualification?.name || existingReq?.qualification?.name || 'Unknown';
-                              const qualCountry = template?.qualification?.country || existingReq?.qualification?.country || '';
-                              
-                              return (
-                                <div 
-                                  key={req.qualificationTypeId}
-                                  className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
-                                  data-testid={`selected-entry-req-${req.qualificationTypeId}`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-sm font-medium">
-                                      {qualName}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                      ({qualCountry})
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Input
-                                      type="text"
-                                      placeholder="Min grade"
-                                      value={req.minGrade}
-                                      onChange={(e) => handleUpdateEntryRequirementGrade(req.qualificationTypeId, e.target.value)}
-                                      className="w-24 text-sm"
-                                      disabled={saveEntryRequirementsMutation.isPending}
-                                      data-testid={`entry-req-grade-${req.qualificationTypeId}`}
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleRemoveEntryRequirement(req.qualificationTypeId)}
-                                      disabled={saveEntryRequirementsMutation.isPending}
-                                      data-testid={`remove-entry-req-${req.qualificationTypeId}`}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              );
-                            })}
                           </div>
                         </div>
                       )}
