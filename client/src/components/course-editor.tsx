@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -459,6 +459,13 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedScholarshipIds, setSelectedScholarshipIds] = useState<string[]>([]);
   
+  // Entry requirements state
+  const [selectedEntryRequirements, setSelectedEntryRequirements] = useState<Array<{
+    qualificationTypeId: string;
+    minGrade: string;
+    customNotes?: string;
+  }>>([]);
+  
   // English requirements state
   const [englishReqDialogOpen, setEnglishReqDialogOpen] = useState(false);
   const [editingEnglishReq, setEditingEnglishReq] = useState<EnglishRequirement | null>(null);
@@ -516,6 +523,56 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   // Course scholarships query (scholarships linked to this course)
   const { data: courseScholarships = [] } = useQuery<ScholarshipType[]>({
     queryKey: ["/api/courses", course?.id, "scholarships"],
+    enabled: !!course?.id,
+  });
+
+  // Get current course level to determine entry requirement templates
+  const currentCourseLevel = form.watch("level");
+
+  // Entry requirement templates query (based on course level and institution country)
+  const templateQueryUrl = currentCourseLevel && selectedInstitution?.country 
+    ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(selectedInstitution.country)}`
+    : null;
+
+  const { data: entryRequirementTemplates = [], isLoading: templatesLoading } = useQuery<Array<{
+    id: string;
+    courseLevel: string;
+    institutionCountry: string;
+    qualificationTypeId: string;
+    minGrade: string | null;
+    displayLabel: string | null;
+    displayOrder: number;
+    isDefault: boolean;
+    qualification: {
+      id: string;
+      country: string;
+      name: string;
+      fullName: string | null;
+      levelCategory: string;
+      gradingScale: string | null;
+    };
+  }>>({
+    queryKey: [templateQueryUrl],
+    enabled: !!templateQueryUrl,
+  });
+
+  // Course entry requirements query (existing requirements for this course)
+  const { data: courseEntryRequirements = [], isLoading: entryReqLoading } = useQuery<Array<{
+    id: string;
+    courseId: string;
+    qualificationTypeId: string;
+    minGrade: string | null;
+    customNotes: string | null;
+    displayOrder: number;
+    qualification: {
+      id: string;
+      country: string;
+      name: string;
+      fullName: string | null;
+      levelCategory: string;
+    };
+  }>>({
+    queryKey: ["/api/courses", course?.id, "entry-requirements"],
     enabled: !!course?.id,
   });
 
@@ -721,6 +778,17 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     }
   }, [courseScholarships]);
 
+  // Sync entry requirements when course entry requirements load
+  useEffect(() => {
+    if (courseEntryRequirements && courseEntryRequirements.length > 0) {
+      setSelectedEntryRequirements(courseEntryRequirements.map(r => ({
+        qualificationTypeId: r.qualificationTypeId,
+        minGrade: r.minGrade || "",
+        customNotes: r.customNotes || undefined,
+      })));
+    }
+  }, [courseEntryRequirements]);
+
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -808,6 +876,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         }
         // Always save scholarships (including empty array to clear all)
         await saveScholarshipsMutation.mutateAsync({ courseId: newCourse.id, scholarshipIds: selectedScholarshipIds });
+        // Save entry requirements
+        await saveEntryRequirementsMutation.mutateAsync({ courseId: newCourse.id, requirements: selectedEntryRequirements });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course created successfully" });
@@ -828,8 +898,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         // Always save tags and scholarships (including empty arrays to clear all)
         await saveTagsMutation.mutateAsync({ courseId: result.id, tagIds: selectedTagIds });
         await saveScholarshipsMutation.mutateAsync({ courseId: result.id, scholarshipIds: selectedScholarshipIds });
+        await saveEntryRequirementsMutation.mutateAsync({ courseId: result.id, requirements: selectedEntryRequirements });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "scholarships"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "entry-requirements"] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course updated successfully" });
@@ -858,6 +930,56 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       console.error("Failed to save course scholarships:", error);
     },
   });
+
+  // Save entry requirements mutation
+  const saveEntryRequirementsMutation = useMutation({
+    mutationFn: async ({ courseId, requirements }: { 
+      courseId: string; 
+      requirements: Array<{ qualificationTypeId: string; minGrade: string; customNotes?: string }> 
+    }) => {
+      return apiRequest("PUT", `/api/admin/courses/${courseId}/entry-requirements`, { requirements });
+    },
+    onSuccess: () => {
+      if (course?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "entry-requirements"] });
+      }
+    },
+    onError: (error: any) => {
+      console.error("Failed to save entry requirements:", error);
+    },
+  });
+
+  // Handle adding/toggling an entry requirement from a template
+  const handleEntryRequirementToggle = (template: {
+    qualificationTypeId: string;
+    minGrade: string | null;
+    displayLabel: string | null;
+    qualification: { id: string; name: string };
+  }) => {
+    const exists = selectedEntryRequirements.find(r => r.qualificationTypeId === template.qualificationTypeId);
+    if (exists) {
+      // Remove it
+      setSelectedEntryRequirements(prev => prev.filter(r => r.qualificationTypeId !== template.qualificationTypeId));
+    } else {
+      // Add it
+      setSelectedEntryRequirements(prev => [...prev, {
+        qualificationTypeId: template.qualificationTypeId,
+        minGrade: template.minGrade || "",
+      }]);
+    }
+  };
+
+  // Remove an entry requirement
+  const handleRemoveEntryRequirement = (qualificationTypeId: string) => {
+    setSelectedEntryRequirements(prev => prev.filter(r => r.qualificationTypeId !== qualificationTypeId));
+  };
+
+  // Update min grade for an entry requirement
+  const handleUpdateEntryRequirementGrade = (qualificationTypeId: string, minGrade: string) => {
+    setSelectedEntryRequirements(prev => prev.map(r => 
+      r.qualificationTypeId === qualificationTypeId ? { ...r, minGrade } : r
+    ));
+  };
 
   const handleScholarshipToggle = (scholarshipId: string) => {
     setSelectedScholarshipIds(prev =>
@@ -1843,6 +1965,131 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                 </button>
                               </Badge>
                             ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Entry Requirements Section */}
+                {selectedInstitutionId && currentCourseLevel && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <CardTitle className="flex items-center gap-2">
+                          <FileCheck className="h-5 w-5" />
+                          Entry Requirements
+                        </CardTitle>
+                        {selectedEntryRequirements.length > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedEntryRequirements.length} requirements
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription>
+                        Define academic qualifications required for course entry
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-0">
+                      {/* Loading state */}
+                      {(templatesLoading || entryReqLoading) && (
+                        <p className="text-sm text-muted-foreground py-2">
+                          Loading requirements...
+                        </p>
+                      )}
+
+                      {/* Recommended Requirements from Templates */}
+                      {!templatesLoading && entryRequirementTemplates.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Recommended Requirements (click to add/remove)
+                          </label>
+                          <div className={`flex flex-wrap gap-1.5 ${saveEntryRequirementsMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {entryRequirementTemplates.map((template) => {
+                              const isSelected = selectedEntryRequirements.some(
+                                r => r.qualificationTypeId === template.qualificationTypeId
+                              );
+                              return (
+                                <Badge
+                                  key={template.id}
+                                  variant={isSelected ? "default" : "outline"}
+                                  className="cursor-pointer"
+                                  onClick={() => handleEntryRequirementToggle(template)}
+                                  data-testid={`entry-req-template-${template.qualificationTypeId}`}
+                                >
+                                  {template.displayLabel || `${template.qualification.name} (${template.qualification.country})`}
+                                  {template.minGrade && ` - Min: ${template.minGrade}`}
+                                  {isSelected && <Check className="h-3 w-3 ml-1" />}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {!templatesLoading && entryRequirementTemplates.length === 0 && selectedInstitution?.country && (
+                        <p className="text-sm text-muted-foreground py-2">
+                          No requirement templates configured for {currentCourseLevel} courses in {selectedInstitution.country}. 
+                          Contact system admin to add templates.
+                        </p>
+                      )}
+
+                      {/* Selected Requirements with Editable Grades */}
+                      {selectedEntryRequirements.length > 0 && (
+                        <div className={`space-y-2 pt-2 border-t ${saveEntryRequirementsMutation.isPending ? 'opacity-50' : ''}`}>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Selected Entry Requirements
+                          </label>
+                          <div className="space-y-2">
+                            {selectedEntryRequirements.map((req) => {
+                              const template = entryRequirementTemplates.find(
+                                t => t.qualificationTypeId === req.qualificationTypeId
+                              );
+                              const existingReq = courseEntryRequirements.find(
+                                r => r.qualificationTypeId === req.qualificationTypeId
+                              );
+                              const qualName = template?.qualification?.name || existingReq?.qualification?.name || 'Unknown';
+                              const qualCountry = template?.qualification?.country || existingReq?.qualification?.country || '';
+                              
+                              return (
+                                <div 
+                                  key={req.qualificationTypeId}
+                                  className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
+                                  data-testid={`selected-entry-req-${req.qualificationTypeId}`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm font-medium">
+                                      {qualName}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      ({qualCountry})
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Input
+                                      type="text"
+                                      placeholder="Min grade"
+                                      value={req.minGrade}
+                                      onChange={(e) => handleUpdateEntryRequirementGrade(req.qualificationTypeId, e.target.value)}
+                                      className="w-24 text-sm"
+                                      disabled={saveEntryRequirementsMutation.isPending}
+                                      data-testid={`entry-req-grade-${req.qualificationTypeId}`}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleRemoveEntryRequirement(req.qualificationTypeId)}
+                                      disabled={saveEntryRequirementsMutation.isPending}
+                                      data-testid={`remove-entry-req-${req.qualificationTypeId}`}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

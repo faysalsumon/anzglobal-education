@@ -82,6 +82,14 @@ import {
   courseScholarships,
   insertScholarshipSchema,
   insertCourseScholarshipSchema,
+  // Academic qualification imports
+  academicQualificationTypes,
+  qualificationEquivalencies,
+  courseLevelRequirementTemplates,
+  courseEntryRequirements,
+  insertAcademicQualificationTypeSchema,
+  insertCourseLevelRequirementTemplateSchema,
+  insertCourseEntryRequirementSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -15544,6 +15552,362 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END SCHOLARSHIPS API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // ACADEMIC QUALIFICATION & ENTRY REQUIREMENTS API ENDPOINTS
+  // Smart matching system for course entry requirements
+  // ============================================
+
+  // Get all academic qualification types (optionally filtered by country)
+  app.get("/api/academic-qualifications", async (req, res) => {
+    try {
+      const { country, levelCategory } = req.query;
+      
+      let query = db.select().from(academicQualificationTypes).where(eq(academicQualificationTypes.isActive, true));
+      
+      const results = await query.orderBy(
+        academicQualificationTypes.country,
+        academicQualificationTypes.displayOrder
+      );
+      
+      // Filter in application if query params provided
+      let filtered = results;
+      if (country) {
+        filtered = filtered.filter(q => q.country === country);
+      }
+      if (levelCategory) {
+        filtered = filtered.filter(q => q.levelCategory === levelCategory);
+      }
+      
+      res.json(filtered);
+    } catch (error: any) {
+      console.error("Error fetching academic qualifications:", error);
+      res.status(500).json({ message: "Failed to fetch academic qualifications" });
+    }
+  });
+
+  // Get qualification types grouped by country
+  app.get("/api/academic-qualifications/grouped", async (req, res) => {
+    try {
+      const results = await db
+        .select()
+        .from(academicQualificationTypes)
+        .where(eq(academicQualificationTypes.isActive, true))
+        .orderBy(academicQualificationTypes.country, academicQualificationTypes.displayOrder);
+      
+      // Group by country
+      const grouped: Record<string, typeof results> = {};
+      for (const qual of results) {
+        if (!grouped[qual.country]) {
+          grouped[qual.country] = [];
+        }
+        grouped[qual.country].push(qual);
+      }
+      
+      res.json(grouped);
+    } catch (error: any) {
+      console.error("Error fetching grouped qualifications:", error);
+      res.status(500).json({ message: "Failed to fetch qualifications" });
+    }
+  });
+
+  // Create a new academic qualification type (admin only)
+  app.post("/api/admin/academic-qualifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const data = req.body;
+      
+      const [newQual] = await db
+        .insert(academicQualificationTypes)
+        .values(data)
+        .returning();
+      
+      res.status(201).json(newQual);
+    } catch (error: any) {
+      console.error("Error creating academic qualification:", error);
+      res.status(500).json({ message: "Failed to create academic qualification" });
+    }
+  });
+
+  // Update an academic qualification type (admin only)
+  app.patch("/api/admin/academic-qualifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+      
+      const [updated] = await db
+        .update(academicQualificationTypes)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(academicQualificationTypes.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Academic qualification not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating academic qualification:", error);
+      res.status(500).json({ message: "Failed to update academic qualification" });
+    }
+  });
+
+  // Delete an academic qualification type (admin only)
+  app.delete("/api/admin/academic-qualifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db
+        .delete(academicQualificationTypes)
+        .where(eq(academicQualificationTypes.id, id));
+      
+      res.json({ message: "Academic qualification deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting academic qualification:", error);
+      res.status(500).json({ message: "Failed to delete academic qualification" });
+    }
+  });
+
+  // Get requirement templates by course level and institution country
+  app.get("/api/course-level-requirements", async (req, res) => {
+    try {
+      const { courseLevel, institutionCountry } = req.query;
+      
+      if (!courseLevel || !institutionCountry) {
+        return res.status(400).json({ message: "courseLevel and institutionCountry are required" });
+      }
+      
+      const templates = await db
+        .select({
+          id: courseLevelRequirementTemplates.id,
+          courseLevel: courseLevelRequirementTemplates.courseLevel,
+          institutionCountry: courseLevelRequirementTemplates.institutionCountry,
+          qualificationTypeId: courseLevelRequirementTemplates.qualificationTypeId,
+          minGrade: courseLevelRequirementTemplates.minGrade,
+          displayLabel: courseLevelRequirementTemplates.displayLabel,
+          displayOrder: courseLevelRequirementTemplates.displayOrder,
+          isDefault: courseLevelRequirementTemplates.isDefault,
+          qualification: academicQualificationTypes,
+        })
+        .from(courseLevelRequirementTemplates)
+        .innerJoin(
+          academicQualificationTypes,
+          eq(courseLevelRequirementTemplates.qualificationTypeId, academicQualificationTypes.id)
+        )
+        .where(
+          and(
+            eq(courseLevelRequirementTemplates.courseLevel, courseLevel as string),
+            eq(courseLevelRequirementTemplates.institutionCountry, institutionCountry as string),
+            eq(courseLevelRequirementTemplates.isActive, true)
+          )
+        )
+        .orderBy(courseLevelRequirementTemplates.displayOrder);
+      
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching course level requirements:", error);
+      res.status(500).json({ message: "Failed to fetch requirement templates" });
+    }
+  });
+
+  // Create a new requirement template (admin only)
+  app.post("/api/admin/course-level-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      const data = req.body;
+      
+      const [newTemplate] = await db
+        .insert(courseLevelRequirementTemplates)
+        .values(data)
+        .returning();
+      
+      res.status(201).json(newTemplate);
+    } catch (error: any) {
+      console.error("Error creating requirement template:", error);
+      res.status(500).json({ message: "Failed to create requirement template" });
+    }
+  });
+
+  // Update a requirement template (admin only)
+  app.patch("/api/admin/course-level-requirements/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+      
+      const [updated] = await db
+        .update(courseLevelRequirementTemplates)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(courseLevelRequirementTemplates.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement template not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating requirement template:", error);
+      res.status(500).json({ message: "Failed to update requirement template" });
+    }
+  });
+
+  // Delete a requirement template (admin only)
+  app.delete("/api/admin/course-level-requirements/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      await db
+        .delete(courseLevelRequirementTemplates)
+        .where(eq(courseLevelRequirementTemplates.id, id));
+      
+      res.json({ message: "Requirement template deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting requirement template:", error);
+      res.status(500).json({ message: "Failed to delete requirement template" });
+    }
+  });
+
+  // Get entry requirements for a specific course
+  app.get("/api/courses/:courseId/entry-requirements", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      const requirements = await db
+        .select({
+          id: courseEntryRequirements.id,
+          courseId: courseEntryRequirements.courseId,
+          qualificationTypeId: courseEntryRequirements.qualificationTypeId,
+          minGrade: courseEntryRequirements.minGrade,
+          customNotes: courseEntryRequirements.customNotes,
+          displayOrder: courseEntryRequirements.displayOrder,
+          qualification: academicQualificationTypes,
+        })
+        .from(courseEntryRequirements)
+        .innerJoin(
+          academicQualificationTypes,
+          eq(courseEntryRequirements.qualificationTypeId, academicQualificationTypes.id)
+        )
+        .where(eq(courseEntryRequirements.courseId, courseId))
+        .orderBy(courseEntryRequirements.displayOrder);
+      
+      res.json(requirements);
+    } catch (error: any) {
+      console.error("Error fetching course entry requirements:", error);
+      res.status(500).json({ message: "Failed to fetch entry requirements" });
+    }
+  });
+
+  // Set entry requirements for a course (replaces all existing)
+  app.put("/api/admin/courses/:courseId/entry-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { requirements } = req.body; // Array of { qualificationTypeId, minGrade, customNotes }
+      
+      // Delete existing requirements
+      await db
+        .delete(courseEntryRequirements)
+        .where(eq(courseEntryRequirements.courseId, courseId));
+      
+      // Insert new requirements
+      if (requirements && requirements.length > 0) {
+        const toInsert = requirements.map((req: any, index: number) => ({
+          courseId,
+          qualificationTypeId: req.qualificationTypeId,
+          minGrade: req.minGrade || null,
+          customNotes: req.customNotes || null,
+          displayOrder: index,
+        }));
+        
+        await db.insert(courseEntryRequirements).values(toInsert);
+      }
+      
+      // Fetch and return updated requirements
+      const updated = await db
+        .select({
+          id: courseEntryRequirements.id,
+          courseId: courseEntryRequirements.courseId,
+          qualificationTypeId: courseEntryRequirements.qualificationTypeId,
+          minGrade: courseEntryRequirements.minGrade,
+          customNotes: courseEntryRequirements.customNotes,
+          displayOrder: courseEntryRequirements.displayOrder,
+          qualification: academicQualificationTypes,
+        })
+        .from(courseEntryRequirements)
+        .innerJoin(
+          academicQualificationTypes,
+          eq(courseEntryRequirements.qualificationTypeId, academicQualificationTypes.id)
+        )
+        .where(eq(courseEntryRequirements.courseId, courseId))
+        .orderBy(courseEntryRequirements.displayOrder);
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating course entry requirements:", error);
+      res.status(500).json({ message: "Failed to update entry requirements" });
+    }
+  });
+
+  // Add a single entry requirement to a course
+  app.post("/api/admin/courses/:courseId/entry-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { qualificationTypeId, minGrade, customNotes } = req.body;
+      
+      // Check if already exists
+      const existing = await db
+        .select()
+        .from(courseEntryRequirements)
+        .where(
+          and(
+            eq(courseEntryRequirements.courseId, courseId),
+            eq(courseEntryRequirements.qualificationTypeId, qualificationTypeId)
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        return res.status(409).json({ message: "This qualification requirement already exists for this course" });
+      }
+      
+      const [newReq] = await db
+        .insert(courseEntryRequirements)
+        .values({
+          courseId,
+          qualificationTypeId,
+          minGrade: minGrade || null,
+          customNotes: customNotes || null,
+        })
+        .returning();
+      
+      res.status(201).json(newReq);
+    } catch (error: any) {
+      console.error("Error adding course entry requirement:", error);
+      res.status(500).json({ message: "Failed to add entry requirement" });
+    }
+  });
+
+  // Remove an entry requirement from a course
+  app.delete("/api/admin/courses/:courseId/entry-requirements/:requirementId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId, requirementId } = req.params;
+      
+      await db
+        .delete(courseEntryRequirements)
+        .where(
+          and(
+            eq(courseEntryRequirements.courseId, courseId),
+            eq(courseEntryRequirements.id, requirementId)
+          )
+        );
+      
+      res.json({ message: "Entry requirement removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing entry requirement:", error);
+      res.status(500).json({ message: "Failed to remove entry requirement" });
+    }
+  });
+
+  // ============================================
+  // END ACADEMIC QUALIFICATION API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available

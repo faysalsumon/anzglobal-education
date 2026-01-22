@@ -1049,6 +1049,180 @@ export type InsertCourseScholarship = z.infer<typeof insertCourseScholarshipSche
 export type CourseScholarship = typeof courseScholarships.$inferSelect;
 
 // ============================================
+// ACADEMIC QUALIFICATION & ENTRY REQUIREMENTS SYSTEM
+// Smart matching system for course entry requirements
+// ============================================
+
+// Level category enum for qualification categorization
+export const qualificationLevelCategoryEnum = pgEnum('qualification_level_category', [
+  'primary',           // Primary school (Year 6 equivalent)
+  'lower_secondary',   // Year 8-10 equivalent (SSC, O-Levels)
+  'upper_secondary',   // Year 11-12 equivalent (HSC, A-Levels)
+  'foundation',        // Foundation/pathway programs
+  'certificate',       // Certificate I-IV
+  'diploma',           // Diploma/Advanced Diploma
+  'bachelor',          // Bachelor's degree
+  'postgrad_cert',     // Graduate Certificate/Diploma
+  'masters',           // Master's degree
+  'doctoral',          // PhD/Doctoral
+]);
+
+// Academic Qualification Types - Master list of qualifications by country
+export const academicQualificationTypes = pgTable("academic_qualification_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Country and naming
+  country: varchar("country", { length: 100 }).notNull(), // e.g., "Bangladesh", "Australia", "UK"
+  countryCode: varchar("country_code", { length: 3 }), // ISO code: "BD", "AU", "UK"
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "HSC", "Year 12 / ATAR", "A-Levels"
+  fullName: varchar("full_name", { length: 500 }), // e.g., "Higher Secondary Certificate"
+  
+  // Categorization
+  levelCategory: qualificationLevelCategoryEnum("level_category").notNull(),
+  
+  // Grading details
+  gradingScale: varchar("grading_scale", { length: 50 }), // e.g., "5.0", "4.0", "100", "ATAR"
+  gradingType: varchar("grading_type", { length: 50 }), // e.g., "gpa", "percentage", "points", "grades"
+  minGrade: varchar("min_grade", { length: 50 }), // Minimum passing grade
+  maxGrade: varchar("max_grade", { length: 50 }), // Maximum grade
+  
+  // Display and sorting
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  
+  // Metadata
+  notes: text("notes"), // Additional information
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  countryIdx: index("qual_types_country_idx").on(table.country),
+  countryCodeIdx: index("qual_types_country_code_idx").on(table.countryCode),
+  levelCategoryIdx: index("qual_types_level_category_idx").on(table.levelCategory),
+  activeIdx: index("qual_types_active_idx").on(table.isActive),
+}));
+
+// Qualification Equivalencies - Maps between source and target qualifications with grade mapping
+export const qualificationEquivalencies = pgTable("qualification_equivalencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Source qualification (student's qualification)
+  sourceQualificationId: varchar("source_qualification_id").notNull().references(() => academicQualificationTypes.id, { onDelete: "cascade" }),
+  
+  // Target qualification (destination country requirement)
+  targetQualificationId: varchar("target_qualification_id").notNull().references(() => academicQualificationTypes.id, { onDelete: "cascade" }),
+  
+  // Grade range mapping
+  sourceGradeMin: varchar("source_grade_min", { length: 50 }).notNull(), // e.g., "4.0"
+  sourceGradeMax: varchar("source_grade_max", { length: 50 }), // e.g., "4.49" (null means 4.0+)
+  targetEquivalent: varchar("target_equivalent", { length: 100 }).notNull(), // e.g., "ATAR 75"
+  
+  // Confidence and notes
+  confidenceLevel: varchar("confidence_level", { length: 20 }).default("standard"), // "exact", "standard", "approximate"
+  notes: text("notes"),
+  
+  // Metadata
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  sourceQualIdx: index("qual_equiv_source_idx").on(table.sourceQualificationId),
+  targetQualIdx: index("qual_equiv_target_idx").on(table.targetQualificationId),
+  sourceTargetIdx: index("qual_equiv_source_target_idx").on(table.sourceQualificationId, table.targetQualificationId),
+}));
+
+// Course Level Requirement Templates - Pre-set defaults by destination country + course level
+export const courseLevelRequirementTemplates = pgTable("course_level_requirement_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Course level (matches courseLevelEnum)
+  courseLevel: courseLevelEnum("course_level").notNull(),
+  
+  // Destination country (institution country)
+  institutionCountry: varchar("institution_country", { length: 100 }).notNull(),
+  
+  // Requirement details
+  qualificationTypeId: varchar("qualification_type_id").notNull().references(() => academicQualificationTypes.id, { onDelete: "cascade" }),
+  minGrade: varchar("min_grade", { length: 100 }), // e.g., "ATAR 65", "GPA 3.0"
+  
+  // Display
+  displayLabel: varchar("display_label", { length: 255 }), // e.g., "Year 12 with ATAR 65"
+  displayOrder: integer("display_order").default(0),
+  isDefault: boolean("is_default").default(false), // Auto-select when creating course
+  isActive: boolean("is_active").default(true),
+  
+  // Metadata
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseLevelIdx: index("course_level_req_level_idx").on(table.courseLevel),
+  countryIdx: index("course_level_req_country_idx").on(table.institutionCountry),
+  levelCountryIdx: index("course_level_req_level_country_idx").on(table.courseLevel, table.institutionCountry),
+  qualTypeIdx: index("course_level_req_qual_type_idx").on(table.qualificationTypeId),
+}));
+
+// Course Entry Requirements - Selected requirements for each course
+export const courseEntryRequirements = pgTable("course_entry_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Course reference
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  
+  // Requirement (qualification type)
+  qualificationTypeId: varchar("qualification_type_id").notNull().references(() => academicQualificationTypes.id, { onDelete: "cascade" }),
+  
+  // Grade requirement
+  minGrade: varchar("min_grade", { length: 100 }), // e.g., "ATAR 65", "GPA 3.0"
+  
+  // Custom notes for this course's specific requirement
+  customNotes: text("custom_notes"),
+  
+  // Display order
+  displayOrder: integer("display_order").default(0),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseIdx: index("course_entry_req_course_idx").on(table.courseId),
+  qualTypeIdx: index("course_entry_req_qual_type_idx").on(table.qualificationTypeId),
+  courseQualUnique: unique("course_qual_unique").on(table.courseId, table.qualificationTypeId),
+}));
+
+// Insert schemas and types for Academic Qualification System
+export const insertAcademicQualificationTypeSchema = createInsertSchema(academicQualificationTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAcademicQualificationType = z.infer<typeof insertAcademicQualificationTypeSchema>;
+export type AcademicQualificationType = typeof academicQualificationTypes.$inferSelect;
+
+export const insertQualificationEquivalencySchema = createInsertSchema(qualificationEquivalencies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertQualificationEquivalency = z.infer<typeof insertQualificationEquivalencySchema>;
+export type QualificationEquivalency = typeof qualificationEquivalencies.$inferSelect;
+
+export const insertCourseLevelRequirementTemplateSchema = createInsertSchema(courseLevelRequirementTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCourseLevelRequirementTemplate = z.infer<typeof insertCourseLevelRequirementTemplateSchema>;
+export type CourseLevelRequirementTemplate = typeof courseLevelRequirementTemplates.$inferSelect;
+
+export const insertCourseEntryRequirementSchema = createInsertSchema(courseEntryRequirements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCourseEntryRequirement = z.infer<typeof insertCourseEntryRequirementSchema>;
+export type CourseEntryRequirement = typeof courseEntryRequirements.$inferSelect;
+
+// ============================================
 // INSTITUTION TAGS JUNCTION
 // Uses unified tags table with appliesTo='institutions' or 'both'
 // ============================================
