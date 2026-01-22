@@ -3440,8 +3440,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/courses/:courseId/english-requirements", isAuthenticated, async (req: any, res) => {
     try {
       // Verify user has admin or institution_admin access
-      const userType = req.user?.claims?.user_metadata?.userType;
-      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -3461,8 +3465,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
     try {
       // Verify user has admin or institution_admin access
-      const userType = req.user?.claims?.user_metadata?.userType;
-      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
@@ -3484,8 +3492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/courses/:courseId/english-requirements/:id", isAuthenticated, async (req: any, res) => {
     try {
       // Verify user has admin or institution_admin access
-      const userType = req.user?.claims?.user_metadata?.userType;
-      if (!userType || !['platform_admin', 'admin', 'institution_admin'].includes(userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
