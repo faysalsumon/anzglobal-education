@@ -111,6 +111,7 @@ type FilterSnapshot = {
   campusCity: string;
   minFees: number | null;
   maxFees: number | null;
+  feeCurrency: string;
 };
 
 // Create snapshot from current state
@@ -125,7 +126,8 @@ const createStateSnapshot = (
   universityFilter: string,
   campusCity: string,
   minFees: number | null,
-  maxFees: number | null
+  maxFees: number | null,
+  feeCurrency: string
 ): FilterSnapshot => ({
   searchTerm,
   subject,
@@ -138,6 +140,7 @@ const createStateSnapshot = (
   campusCity,
   minFees,
   maxFees,
+  feeCurrency,
 });
 
 // Create snapshot from URL params
@@ -153,6 +156,7 @@ const createParamsSnapshot = (params: URLSearchParams): FilterSnapshot => ({
   campusCity: params.get('city') || "",
   minFees: params.get('minFees') ? parseInt(params.get('minFees')!) : null,
   maxFees: params.get('maxFees') ? parseInt(params.get('maxFees')!) : null,
+  feeCurrency: params.get('currency') || "",
 });
 
 // Compare two snapshots
@@ -168,7 +172,8 @@ const snapshotsEqual = (a: FilterSnapshot, b: FilterSnapshot): boolean => {
     a.universityFilter === b.universityFilter &&
     a.campusCity === b.campusCity &&
     a.minFees === b.minFees &&
-    a.maxFees === b.maxFees
+    a.maxFees === b.maxFees &&
+    a.feeCurrency === b.feeCurrency
   );
 };
 
@@ -186,6 +191,7 @@ export default function PublicCourses() {
   const [campusCity, setCampusCity] = useState<string>("");
   const [minFees, setMinFees] = useState<number | null>(null);
   const [maxFees, setMaxFees] = useState<number | null>(null);
+  const [feeCurrency, setFeeCurrency] = useState<string>("");
   const [highlightedCourseId, setHighlightedCourseId] = useState<number | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedCourseForLead, setSelectedCourseForLead] = useState<CourseWithDetails | null>(null);
@@ -198,6 +204,7 @@ export default function PublicCourses() {
     discipline: true,
     level: true,
     location: true,
+    tuition: true,
   });
   
   // Reset collapsible sections to open when mobile sheet closes
@@ -209,6 +216,7 @@ export default function PublicCourses() {
         discipline: true,
         level: true,
         location: true,
+        tuition: true,
       });
     }
   };
@@ -410,11 +418,14 @@ export default function PublicCourses() {
     const statesByCountry: Record<string, Set<string>> = {};
     const citiesByState: Record<string, Set<string>> = {};
 
+    const currencies = new Set<string>();
+    
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
       if (course.discipline) disciplines.add(course.discipline);
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
+      if (course.currency) currencies.add(course.currency);
       if (course.university && course.universityId) {
         universities.set(course.universityId, course.university.name);
       }
@@ -461,6 +472,7 @@ export default function PublicCourses() {
       disciplines: Array.from(disciplines).sort(),
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
+      currencies: Array.from(currencies).sort(),
       universities: Array.from(universities.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
       states: statesForCountry,
       cities: citiesForState,
@@ -478,8 +490,10 @@ export default function PublicCourses() {
     if (country) count++;
     if (campusState) count++;
     if (campusCity) count++;
+    if (feeCurrency) count++;
+    if (minFees !== null || maxFees !== null) count++;
     return count;
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, campusCity]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, campusCity, feeCurrency, minFees, maxFees]);
 
   // Toggle collapsible section
   const toggleSection = (section: string, open?: boolean) => {
@@ -496,6 +510,9 @@ export default function PublicCourses() {
     setCountry("");
     setCampusState("");
     setCampusCity("");
+    setFeeCurrency("");
+    setMinFees(null);
+    setMaxFees(null);
     setHighlightedCourseId(null);
     setCurrentPage(1);
   };
@@ -516,7 +533,7 @@ export default function PublicCourses() {
     
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency
     );
     
     // If they don't match, hydrate state from URL
@@ -533,6 +550,7 @@ export default function PublicCourses() {
       if (urlSnapshot.campusCity !== campusCity) setCampusCity(urlSnapshot.campusCity);
       if (urlSnapshot.minFees !== minFees) setMinFees(urlSnapshot.minFees);
       if (urlSnapshot.maxFees !== maxFees) setMaxFees(urlSnapshot.maxFees);
+      if (urlSnapshot.feeCurrency !== feeCurrency) setFeeCurrency(urlSnapshot.feeCurrency);
       
       // Mark that we're pending hydration of this snapshot
       pendingUrlHydrationRef.current = urlSnapshot;
@@ -635,7 +653,7 @@ export default function PublicCourses() {
   useEffect(() => {
     // Create snapshot of current state
     const currentSnapshot = createStateSnapshot(
-      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees
+      searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency
     );
     
     // If we're pending hydration
@@ -663,8 +681,9 @@ export default function PublicCourses() {
       city: campusCity || undefined,
       minFees: minFees !== null ? minFees.toString() : undefined,
       maxFees: maxFees !== null ? maxFees.toString() : undefined,
+      currency: feeCurrency || undefined,
     });
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, setParams]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency, setParams]);
 
   const filteredCourses = courses.filter((course) => {
     if (searchTerm && !course.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -713,7 +732,10 @@ export default function PublicCourses() {
       if (!hasMatchingCity) return false;
     }
     
-    // Budget filtering
+    // Currency filtering
+    if (feeCurrency && course.currency !== feeCurrency) return false;
+    
+    // Budget filtering (only filter if there are fees to compare)
     if (minFees !== null || maxFees !== null) {
       const courseFees = Number(course.fees) || 0;
       if (minFees !== null && courseFees < minFees) return false;
@@ -726,7 +748,7 @@ export default function PublicCourses() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees]);
+  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency]);
 
   // Sort filtered courses
   const sortedCourses = useMemo(() => {
@@ -1053,6 +1075,52 @@ export default function PublicCourses() {
                         </CollapsibleContent>
                       </Collapsible>
 
+                      {/* Tuition Fees */}
+                      <Collapsible open={openSections.tuition} onOpenChange={(open) => toggleSection('tuition', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            Tuition Fees
+                          </div>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${openSections.tuition ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 space-y-3">
+                          <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-currency-mobile">
+                              <SelectValue placeholder="All Currencies" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Currencies</SelectItem>
+                              {availableFilters.currencies.map((curr) => (
+                                <SelectItem key={curr} value={curr}>{curr}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Min</label>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={minFees ?? ""}
+                                onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
+                                data-testid="input-min-fees-mobile"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Max</label>
+                              <Input
+                                type="number"
+                                placeholder="Any"
+                                value={maxFees ?? ""}
+                                onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
+                                data-testid="input-max-fees-mobile"
+                              />
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
                     </div>
 
                     <Button className="w-full mt-4" onClick={() => setMobileFiltersOpen(false)} data-testid="button-apply-filters-mobile">
@@ -1158,6 +1226,26 @@ export default function PublicCourses() {
                             <Badge variant="secondary" className="gap-1 pr-1 text-xs">
                               {campusCity}
                               <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setCampusCity("")} data-testid="button-clear-city">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {feeCurrency && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {feeCurrency}
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setFeeCurrency("")} data-testid="button-clear-currency">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                          {(minFees !== null || maxFees !== null) && (
+                            <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                              {minFees !== null && maxFees !== null 
+                                ? `${minFees.toLocaleString()} - ${maxFees.toLocaleString()}`
+                                : minFees !== null 
+                                  ? `Min: ${minFees.toLocaleString()}`
+                                  : `Max: ${maxFees?.toLocaleString()}`}
+                              <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => { setMinFees(null); setMaxFees(null); }} data-testid="button-clear-fees">
                                 <X className="h-3 w-3" />
                               </button>
                             </Badge>
@@ -1292,6 +1380,55 @@ export default function PublicCourses() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Tuition Fees */}
+                      <Collapsible open={openSections.tuition} onOpenChange={(open) => toggleSection('tuition', open)}>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                          <div className="flex items-center gap-2 font-medium text-sm">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            Tuition Fees
+                            {(feeCurrency || minFees !== null || maxFees !== null) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.tuition ? 'rotate-180' : ''}`} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 pb-3 px-1 space-y-3">
+                          <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
+                            <SelectTrigger data-testid="select-currency" className="h-9">
+                              <SelectValue placeholder="All Currencies" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Currencies</SelectItem>
+                              {availableFilters.currencies.map((curr) => (
+                                <SelectItem key={curr} value={curr}>{curr}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Min</label>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={minFees ?? ""}
+                                onChange={(e) => setMinFees(e.target.value ? parseInt(e.target.value) : null)}
+                                className="h-9"
+                                data-testid="input-min-fees"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Max</label>
+                              <Input
+                                type="number"
+                                placeholder="Any"
+                                value={maxFees ?? ""}
+                                onChange={(e) => setMaxFees(e.target.value ? parseInt(e.target.value) : null)}
+                                className="h-9"
+                                data-testid="input-max-fees"
+                              />
+                            </div>
+                          </div>
                         </CollapsibleContent>
                       </Collapsible>
 
