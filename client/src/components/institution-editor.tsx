@@ -496,34 +496,19 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       )}
                     />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="establishedYear"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Established Year</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" placeholder="1950" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-institution-establishedYear" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="numberOfCampuses"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Number of Campuses</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="number" placeholder="1" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-institution-numberOfCampuses" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="numberOfCampuses"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Campuses</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" placeholder="1" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-institution-numberOfCampuses" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </CardContent>
                 </Card>
 
