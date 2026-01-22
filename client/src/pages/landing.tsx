@@ -833,88 +833,91 @@ export default function Landing() {
             </div>
 
             {featuredReviews.length > 0 && (
-              <div className="relative">
-                <div className="overflow-hidden">
-                  <div 
-                    className="flex transition-transform duration-300 ease-in-out"
-                    style={{ transform: `translateX(-${reviewIndex * 100}%)` }}
-                  >
-                    {featuredReviews.map((review) => (
-                      <div 
-                        key={review.id} 
-                        className="w-full flex-shrink-0 px-1"
-                      >
-                        <Card 
-                          className="hover-elevate"
-                          data-testid={`landing-review-card-${review.id}`}
-                        >
-                          <CardContent className="p-5">
-                            <div className="flex gap-4">
-                              <Avatar className="h-12 w-12 flex-shrink-0">
-                                {review.imageUrl ? (
-                                  <AvatarImage src={review.imageUrl} alt={review.studentName} />
-                                ) : null}
-                                <AvatarFallback className="text-sm">
-                                  {getInitials(review.studentName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <div>
-                                    <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
-                                      {review.studentName}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      {review.location && (
-                                        <>
-                                          <MapPin className="h-3 w-3" />
-                                          <span>{review.location}</span>
-                                        </>
-                                      )}
-                                      {review.institution && (
-                                        <span className="truncate">• {review.institution}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <Quote className="h-5 w-5 text-primary/30 flex-shrink-0" />
-                                </div>
-                                <h3 className="font-medium text-sm mb-1" data-testid={`text-review-title-${review.id}`}>
-                                  {review.title}
-                                </h3>
-                                <p className="text-muted-foreground text-sm line-clamp-2" data-testid={`text-review-content-${review.id}`}>
-                                  {review.content}
-                                </p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {featuredReviews.length > 1 && (
-                  <>
+              <div>
+                <div className="relative flex items-center gap-2">
+                  {featuredReviews.length > 1 && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 h-8 w-8 rounded-full bg-background shadow-md"
+                      className="h-8 w-8 rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === 0 ? featuredReviews.length - 1 : prev - 1))}
                       data-testid="button-review-prev"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
+                  )}
+                  
+                  <div className="flex-1 overflow-hidden">
+                    <div 
+                      className="flex transition-transform duration-300 ease-in-out"
+                      style={{ transform: `translateX(-${reviewIndex * 100}%)` }}
+                    >
+                      {featuredReviews.map((review) => (
+                        <div 
+                          key={review.id} 
+                          className="w-full flex-shrink-0"
+                        >
+                          <Card 
+                            className="hover-elevate"
+                            data-testid={`landing-review-card-${review.id}`}
+                          >
+                            <CardContent className="p-5">
+                              <div className="flex gap-4">
+                                <Avatar className="h-12 w-12 flex-shrink-0">
+                                  {review.imageUrl ? (
+                                    <AvatarImage src={review.imageUrl} alt={review.studentName} />
+                                  ) : null}
+                                  <AvatarFallback className="text-sm">
+                                    {getInitials(review.studentName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-2">
+                                    <div>
+                                      <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
+                                        {review.studentName}
+                                      </p>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {review.location && (
+                                          <>
+                                            <MapPin className="h-3 w-3" />
+                                            <span>{review.location}</span>
+                                          </>
+                                        )}
+                                        {review.institution && (
+                                          <span className="truncate">• {review.institution}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Quote className="h-5 w-5 text-primary/30 flex-shrink-0" />
+                                  </div>
+                                  <h3 className="font-medium text-sm mb-1" data-testid={`text-review-title-${review.id}`}>
+                                    {review.title}
+                                  </h3>
+                                  <p className="text-muted-foreground text-sm line-clamp-2" data-testid={`text-review-content-${review.id}`}>
+                                    {review.content}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {featuredReviews.length > 1 && (
                     <Button
                       variant="outline"
                       size="icon"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 h-8 w-8 rounded-full bg-background shadow-md"
+                      className="h-8 w-8 rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === featuredReviews.length - 1 ? 0 : prev + 1))}
                       data-testid="button-review-next"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
-                  </>
-                )}
+                  )}
+                </div>
 
                 {featuredReviews.length > 1 && (
                   <div className="flex justify-center gap-1.5 mt-4">
