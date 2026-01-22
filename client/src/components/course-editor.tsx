@@ -1548,24 +1548,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </div>
                       )}
                     </div>
-                    
-                    {/* Keep the text field for additional notes */}
-                    <FormField
-                      control={form.control}
-                      name="englishRequirements"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Additional Notes</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Any additional notes about English requirements..." rows={2} data-testid="input-course-englishRequirements" />
-                          </FormControl>
-                          <FormDescription>
-                            Add any additional notes that don't fit in the structured requirements above.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </CardContent>
                 </Card>
 
