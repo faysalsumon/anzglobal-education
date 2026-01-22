@@ -426,29 +426,6 @@ export default function PublicInstitutionDetail() {
               </Card>
             )}
 
-            {institution.topDisciplines && institution.topDisciplines.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Disciplines</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {institution.topDisciplines.map((discipline, index) => (
-                      <Badge
-                        key={discipline}
-                        variant="secondary"
-                        className="text-sm"
-                        data-testid={`badge-discipline-${index}`}
-                      >
-                        <GraduationCap className="h-3 w-3 mr-1" />
-                        {discipline}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Featured Courses */}
             {institution.topCourses && institution.topCourses.length > 0 && (
               <Card>
@@ -551,6 +528,30 @@ export default function PublicInstitutionDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Top Disciplines - moved to sidebar */}
+            {institution.topDisciplines && institution.topDisciplines.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Disciplines</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {institution.topDisciplines.map((discipline, index) => (
+                      <Badge
+                        key={discipline}
+                        variant="secondary"
+                        className="text-sm"
+                        data-testid={`badge-discipline-${index}`}
+                      >
+                        <GraduationCap className="h-3 w-3 mr-1" />
+                        {discipline}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Google Map for Campus Locations */}
             {campuses.length > 0 ? (
