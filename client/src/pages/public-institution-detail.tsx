@@ -593,14 +593,31 @@ export default function PublicInstitutionDetail() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {institution.topCourses.map((course, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                        <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
-                          {course}
-                        </span>
-                      </li>
-                    ))}
+                    {institution.topCourses.map((courseIdOrName, index) => {
+                      const linkedCourse = institutionCourses.find(c => c.id === courseIdOrName);
+                      if (linkedCourse) {
+                        return (
+                          <li key={index} className="flex items-start gap-2">
+                            <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                            <Link 
+                              href={`/courses/${linkedCourse.id}`}
+                              className="text-primary hover:underline cursor-pointer"
+                              data-testid={`link-course-${index}`}
+                            >
+                              {linkedCourse.title}
+                            </Link>
+                          </li>
+                        );
+                      }
+                      return (
+                        <li key={index} className="flex items-start gap-2">
+                          <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                          <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
+                            {courseIdOrName}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </CardContent>
               </Card>

@@ -21,6 +21,12 @@ import { InstitutionContactsPanel } from "@/components/institution-contacts-pane
 import { InstitutionBusinessTermsPanel } from "@/components/institution-business-terms-panel";
 import { InstitutionDocumentsPanel } from "@/components/institution-documents-panel";
 import { CountrySelect } from "@/components/ui/country-select";
+import { FeaturedCoursesSelector } from "@/components/featured-courses-selector";
+
+interface FeaturedCourse {
+  id: string;
+  title: string;
+}
 
 const optionalPositiveInt = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -127,6 +133,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
+  const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
 
   // Fetch grouped tags for picker
   const { data: groupedTags } = useQuery<Record<string, InstitutionTagItem[]>>({
@@ -146,6 +154,40 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       setSelectedTagIds(institutionCurrentTags.map(t => t.id));
     }
   }, [institutionCurrentTags]);
+
+  // Fetch course details for existing topCourses IDs
+  const { data: coursesData } = useQuery<{ courses: Array<{ id: string; title: string; level: string; subject: string }> }>({
+    queryKey: ["/api/courses", { universityId: institution?.id }],
+    queryFn: async () => {
+      if (!institution?.id) return { courses: [] };
+      const res = await fetch(`/api/courses?universityId=${institution.id}&limit=100`);
+      if (!res.ok) return { courses: [] };
+      return res.json();
+    },
+    enabled: !!institution?.id,
+  });
+
+  // Initialize featured courses from existing topCourses IDs and preserve legacy names
+  useEffect(() => {
+    if (institution?.topCourses && coursesData?.courses) {
+      const courseMap = new Map(coursesData.courses.map(c => [c.id, c]));
+      const matchingCourses: FeaturedCourse[] = [];
+      const unmatchedLegacy: string[] = [];
+      
+      institution.topCourses.forEach(entry => {
+        const course = courseMap.get(entry);
+        if (course) {
+          matchingCourses.push({ id: course.id, title: course.title });
+        } else {
+          // This is a legacy text-based name (not a valid course ID)
+          unmatchedLegacy.push(entry);
+        }
+      });
+      
+      setFeaturedCourses(matchingCourses);
+      setLegacyCourseNames(unmatchedLegacy);
+    }
+  }, [institution?.topCourses, coursesData]);
 
   // Update tags mutation
   const updateTagsMutation = useMutation({
@@ -260,8 +302,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       topDisciplines: data.topDisciplines 
         ? data.topDisciplines.split(',').map(d => d.trim()).filter(Boolean)
         : undefined,
-      topCourses: data.topCourses
-        ? data.topCourses.split(',').map(c => c.trim()).filter(Boolean)
+      topCourses: featuredCourses.length > 0 || legacyCourseNames.length > 0
+        ? [...featuredCourses.map(c => c.id), ...legacyCourseNames]
         : undefined,
       scholarshipPercentageMin: data.hasScholarship ? data.scholarshipPercentageMin : undefined,
       scholarshipPercentageMax: data.hasScholarship ? data.scholarshipPercentageMax : undefined,
@@ -555,19 +597,32 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="topCourses"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Top Courses (comma-separated)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Bachelor of IT, Master of Business, Diploma in Nursing" data-testid="input-institution-topCourses" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="space-y-2">
+                      <FormLabel>Featured Courses</FormLabel>
+                      <FormDescription className="text-xs">
+                        Select published courses to feature on the institution's public page
+                      </FormDescription>
+                      <FeaturedCoursesSelector
+                        institutionId={institution?.id || ""}
+                        value={featuredCourses}
+                        onChange={setFeaturedCourses}
+                        maxCourses={10}
+                      />
+                      {legacyCourseNames.length > 0 && (
+                        <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Legacy course names (not linked to course records):
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {legacyCourseNames.map((name, index) => (
+                              <Badge key={index} variant="outline" className="text-xs" data-testid={`badge-legacy-course-${index}`}>
+                                {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    />
+                    </div>
 
                     <div className="space-y-3 pt-2">
                       <FormLabel>Scholarships Available?</FormLabel>
