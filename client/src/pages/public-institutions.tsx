@@ -844,7 +844,7 @@ export default function PublicInstitutions() {
                   >
                     <CardContent className="p-4">
                       {/* Top Row: Badges left, Favorite top right */}
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-center mb-3">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
                             <Badge variant="default" className="text-xs">
