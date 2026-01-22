@@ -526,56 +526,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     enabled: !!course?.id,
   });
 
-  // Get current course level to determine entry requirement templates
-  const currentCourseLevel = form.watch("level");
-
-  // Entry requirement templates query (based on course level and institution country)
-  const templateQueryUrl = currentCourseLevel && selectedInstitution?.country 
-    ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(selectedInstitution.country)}`
-    : null;
-
-  const { data: entryRequirementTemplates = [], isLoading: templatesLoading } = useQuery<Array<{
-    id: string;
-    courseLevel: string;
-    institutionCountry: string;
-    qualificationTypeId: string;
-    minGrade: string | null;
-    displayLabel: string | null;
-    displayOrder: number;
-    isDefault: boolean;
-    qualification: {
-      id: string;
-      country: string;
-      name: string;
-      fullName: string | null;
-      levelCategory: string;
-      gradingScale: string | null;
-    };
-  }>>({
-    queryKey: [templateQueryUrl],
-    enabled: !!templateQueryUrl,
-  });
-
-  // Course entry requirements query (existing requirements for this course)
-  const { data: courseEntryRequirements = [], isLoading: entryReqLoading } = useQuery<Array<{
-    id: string;
-    courseId: string;
-    qualificationTypeId: string;
-    minGrade: string | null;
-    customNotes: string | null;
-    displayOrder: number;
-    qualification: {
-      id: string;
-      country: string;
-      name: string;
-      fullName: string | null;
-      levelCategory: string;
-    };
-  }>>({
-    queryKey: ["/api/courses", course?.id, "entry-requirements"],
-    enabled: !!course?.id,
-  });
-
   // English requirements query
   const { data: englishRequirements = [], isLoading: englishReqLoading } = useQuery<EnglishRequirement[]>({
     queryKey: ["/api/courses", course?.id, "english-requirements"],
@@ -778,17 +728,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     }
   }, [courseScholarships]);
 
-  // Sync entry requirements when course entry requirements load
-  useEffect(() => {
-    if (courseEntryRequirements && courseEntryRequirements.length > 0) {
-      setSelectedEntryRequirements(courseEntryRequirements.map(r => ({
-        qualificationTypeId: r.qualificationTypeId,
-        minGrade: r.minGrade || "",
-        customNotes: r.customNotes || undefined,
-      })));
-    }
-  }, [courseEntryRequirements]);
-
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -822,6 +761,69 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       careerPath: course?.careerPath || "",
     },
   });
+
+  // Get current course level to determine entry requirement templates (must be after form definition)
+  const currentCourseLevel = form.watch("level");
+
+  // Entry requirement templates query (based on course level and institution country)
+  // Get country from first campus address
+  const institutionCountry = selectedInstitution?.campusAddresses?.[0]?.country;
+  const templateQueryUrl = currentCourseLevel && institutionCountry 
+    ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(institutionCountry)}`
+    : null;
+
+  const { data: entryRequirementTemplates = [], isLoading: templatesLoading } = useQuery<Array<{
+    id: string;
+    courseLevel: string;
+    institutionCountry: string;
+    qualificationTypeId: string;
+    minGrade: string | null;
+    displayLabel: string | null;
+    displayOrder: number;
+    isDefault: boolean;
+    qualification: {
+      id: string;
+      country: string;
+      name: string;
+      fullName: string | null;
+      levelCategory: string;
+      gradingScale: string | null;
+    };
+  }>>({
+    queryKey: [templateQueryUrl],
+    enabled: !!templateQueryUrl,
+  });
+
+  // Course entry requirements query (existing requirements for this course)
+  const { data: courseEntryRequirements = [], isLoading: entryReqLoading } = useQuery<Array<{
+    id: string;
+    courseId: string;
+    qualificationTypeId: string;
+    minGrade: string | null;
+    customNotes: string | null;
+    displayOrder: number;
+    qualification: {
+      id: string;
+      country: string;
+      name: string;
+      fullName: string | null;
+      levelCategory: string;
+    };
+  }>>({
+    queryKey: ["/api/courses", course?.id, "entry-requirements"],
+    enabled: !!course?.id,
+  });
+
+  // Sync entry requirements when course entry requirements load (must be after query definition)
+  useEffect(() => {
+    if (courseEntryRequirements && courseEntryRequirements.length > 0) {
+      setSelectedEntryRequirements(courseEntryRequirements.map(r => ({
+        qualificationTypeId: r.qualificationTypeId,
+        minGrade: r.minGrade || "",
+        customNotes: r.customNotes || undefined,
+      })));
+    }
+  }, [courseEntryRequirements]);
 
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -2028,9 +2030,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </div>
                       )}
 
-                      {!templatesLoading && entryRequirementTemplates.length === 0 && selectedInstitution?.country && (
+                      {!templatesLoading && entryRequirementTemplates.length === 0 && institutionCountry && (
                         <p className="text-sm text-muted-foreground py-2">
-                          No requirement templates configured for {currentCourseLevel} courses in {selectedInstitution.country}. 
+                          No requirement templates configured for {currentCourseLevel} courses in {institutionCountry}. 
                           Contact system admin to add templates.
                         </p>
                       )}
