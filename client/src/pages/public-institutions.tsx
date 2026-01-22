@@ -464,11 +464,11 @@ export default function PublicInstitutions() {
         const selectedCity = filters.cities[0] || "";
         
         const availableStates = selectedCountry 
-          ? (filterMetadata.statesByCountry?.[selectedCountry] || []).sort()
+          ? Array.from(new Set(filterMetadata.statesByCountry?.[selectedCountry] || [])).sort()
           : [];
         
         const availableCities = selectedCountry && selectedState
-          ? (filterMetadata.citiesByState?.[`${selectedCountry}:${selectedState}`] || []).sort()
+          ? Array.from(new Set(filterMetadata.citiesByState?.[`${selectedCountry}:${selectedState}`] || [])).sort()
           : [];
         
         const handleCountryChange = (val: string) => {
