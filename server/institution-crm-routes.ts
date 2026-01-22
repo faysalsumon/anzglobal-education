@@ -19,21 +19,9 @@ import { eq, desc, and, asc } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import multer from "multer";
 import path from "path";
+import fs from "fs/promises";
 
 const router = Router();
-
-let objectStorageClient: any = null;
-async function getStorageClient() {
-  if (!objectStorageClient) {
-    try {
-      const { Client } = await import("@replit/object-storage");
-      objectStorageClient = new Client();
-    } catch (e) {
-      console.error("Object storage not available:", e);
-    }
-  }
-  return objectStorageClient;
-}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -493,13 +481,12 @@ router.post(
       const ext = path.extname(file.originalname);
       const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, "_");
       const fileName = `${baseName}_${timestamp}${ext}`;
-      const storagePath = `.private/institutions/${institutionId}/${category}/${fileName}`;
       
-      const client = await getStorageClient();
-      if (!client) {
-        return res.status(500).json({ message: "Object storage not available" });
-      }
-      await client.uploadFromBytes(storagePath, file.buffer);
+      // Use local file storage (like testimonials) for reliability
+      const localDir = path.join(process.cwd(), 'private', 'institutions', institutionId, category);
+      await fs.mkdir(localDir, { recursive: true });
+      const storagePath = path.join(localDir, fileName);
+      await fs.writeFile(storagePath, file.buffer);
       
       const [newDocument] = await db
         .insert(institutionDocuments)
@@ -555,25 +542,22 @@ router.get("/institutions/:institutionId/documents/:documentId/download", requir
       return res.status(404).json({ message: "Document not found" });
     }
     
-    const client = await getStorageClient();
-    if (!client) {
-      return res.status(500).json({ message: "Object storage not available" });
-    }
-    
-    const { ok, value: fileBuffer } = await client.downloadAsBytes(document.filePath);
-    
-    if (!ok || !fileBuffer) {
+    // Read from local file storage
+    try {
+      const fileBuffer = await fs.readFile(document.filePath);
+      
+      res.setHeader("Content-Type", document.mimeType || "application/octet-stream");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(document.originalFileName)}"`
+      );
+      res.setHeader("Content-Length", fileBuffer.length);
+      
+      res.send(fileBuffer);
+    } catch (fileError) {
+      console.error("File not found:", document.filePath);
       return res.status(404).json({ message: "File not found in storage" });
     }
-    
-    res.setHeader("Content-Type", document.mimeType || "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(document.originalFileName)}"`
-    );
-    res.setHeader("Content-Length", fileBuffer.length);
-    
-    res.send(Buffer.from(fileBuffer));
   } catch (error) {
     console.error("Error downloading document:", error);
     res.status(500).json({ message: "Failed to download document" });
@@ -646,11 +630,9 @@ router.delete("/institutions/:institutionId/documents/:documentId", requireAdmin
       return res.status(404).json({ message: "Document not found" });
     }
     
+    // Delete from local file storage
     try {
-      const client = await getStorageClient();
-      if (client) {
-        await client.delete(document.filePath);
-      }
+      await fs.unlink(document.filePath);
     } catch (storageError) {
       console.error("Error deleting file from storage:", storageError);
     }
