@@ -22,6 +22,7 @@ import { InstitutionBusinessTermsPanel } from "@/components/institution-business
 import { InstitutionDocumentsPanel } from "@/components/institution-documents-panel";
 import { CountrySelect } from "@/components/ui/country-select";
 import { FeaturedCoursesSelector } from "@/components/featured-courses-selector";
+import { DisciplineSelector } from "@/components/discipline-selector";
 
 interface FeaturedCourse {
   id: string;
@@ -56,7 +57,7 @@ const institutionSchema = z.object({
   scholarshipPercentageMin: optionalPercentage,
   scholarshipPercentageMax: optionalPercentage,
   logo: z.string().optional(),
-  topDisciplines: z.string().optional(),
+  topDisciplines: z.array(z.string()).optional(),
   topCourses: z.string().optional(),
   institutionGallery: z.array(z.string()).optional(),
   campusAddresses: z.array(z.object({
@@ -240,7 +241,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       scholarshipPercentageMin: institution?.scholarshipPercentageMin as any,
       scholarshipPercentageMax: institution?.scholarshipPercentageMax as any,
       logo: institution?.logo || "",
-      topDisciplines: institution?.topDisciplines?.join(", ") || "",
+      topDisciplines: institution?.topDisciplines || [],
       topCourses: institution?.topCourses?.join(", ") || "",
       institutionGallery: institution?.institutionGallery || [],
       campusAddresses: institution?.campusAddresses || [],
@@ -299,8 +300,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
     const apiData: any = {
       ...data,
-      topDisciplines: data.topDisciplines 
-        ? data.topDisciplines.split(',').map(d => d.trim()).filter(Boolean)
+      topDisciplines: data.topDisciplines && data.topDisciplines.length > 0
+        ? data.topDisciplines
         : undefined,
       topCourses: featuredCourses.length > 0 || legacyCourseNames.length > 0
         ? [...featuredCourses.map(c => c.id), ...legacyCourseNames]
@@ -573,9 +574,16 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       name="topDisciplines"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Top Disciplines (comma-separated)</FormLabel>
+                          <FormLabel>Top Disciplines</FormLabel>
+                          <FormDescription className="text-xs">
+                            Select disciplines offered by this institution
+                          </FormDescription>
                           <FormControl>
-                            <Input {...field} placeholder="Computer Science, Business, Engineering" data-testid="input-institution-topDisciplines" />
+                            <DisciplineSelector
+                              value={field.value || []}
+                              onChange={field.onChange}
+                              maxDisciplines={10}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
