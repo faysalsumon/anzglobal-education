@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getCsrfToken } from "@/hooks/useCsrf";
 import { supabase } from "@/lib/supabase";
-import { Upload, Download, Trash2, FileText, FolderOpen, File, Plus, Lock } from "lucide-react";
+import { Upload, Download, Trash2, FileText, FolderOpen, File, Plus, Lock, Eye } from "lucide-react";
+import { DocumentPreviewModal } from "@/components/document-preview-modal";
 
 const DOCUMENT_CATEGORIES = [
   { value: "application_forms", label: "Application Forms", icon: FileText },
@@ -58,6 +59,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
   const [uploadDescription, setUploadDescription] = useState("");
   const [isConfidential, setIsConfidential] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<InstitutionDocument | null>(null);
 
   const documentsUrl = selectedCategory === "all"
     ? `/api/admin/institution-crm/institutions/${institutionId}/documents`
@@ -319,6 +321,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
                 <DocumentRow
                   key={doc.id}
                   doc={doc}
+                  onView={() => setPreviewDocument(doc)}
                   onDownload={() => handleDownload(doc)}
                   onDelete={() => deleteMutation.mutate(doc.id)}
                   isDeleting={deleteMutation.isPending}
@@ -333,6 +336,7 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
                   <DocumentRow
                     key={doc.id}
                     doc={doc}
+                    onView={() => setPreviewDocument(doc)}
                     onDownload={() => handleDownload(doc)}
                     onDelete={() => deleteMutation.mutate(doc.id)}
                     isDeleting={deleteMutation.isPending}
@@ -345,12 +349,22 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
           </Tabs>
         )}
       </CardContent>
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        open={!!previewDocument}
+        onOpenChange={(open) => !open && setPreviewDocument(null)}
+        documentUrl={previewDocument ? `/api/admin/institution-crm/institutions/${institutionId}/documents/${previewDocument.id}/download` : ""}
+        documentName={previewDocument?.originalFileName || ""}
+        mimeType={previewDocument?.mimeType || undefined}
+      />
     </Card>
   );
 }
 
 function DocumentRow({
   doc,
+  onView,
   onDownload,
   onDelete,
   isDeleting,
@@ -358,6 +372,7 @@ function DocumentRow({
   formatFileSize,
 }: {
   doc: InstitutionDocument;
+  onView: () => void;
   onDownload: () => void;
   onDelete: () => void;
   isDeleting: boolean;
@@ -395,6 +410,15 @@ function DocumentRow({
         </div>
       </div>
       <div className="flex items-center gap-1 ml-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onView}
+          data-testid={`button-view-${doc.id}`}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
