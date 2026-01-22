@@ -846,6 +846,12 @@ export default function PublicInstitutions() {
                       {/* Top Row: Badges left, Favorite top right */}
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex flex-wrap items-center gap-1.5">
+                          {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
+                            <Badge variant="default" className="text-xs">
+                              <Award className="h-3 w-3 mr-1" />
+                              Up to {institution.scholarshipPercentageMax}% Scholarship
+                            </Badge>
+                          )}
                           {institution.rankingBand && (
                             <Badge variant="outline" className="text-xs">
                               {institution.rankingBand}
@@ -917,12 +923,6 @@ export default function PublicInstitutions() {
                               <div className="flex items-center gap-1.5">
                                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-muted-foreground">{institution.coursesCount} Courses</span>
-                              </div>
-                            )}
-                            {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <Award className="h-4 w-4 text-primary" />
-                                <span className="font-medium text-primary">Scholarship up to {institution.scholarshipPercentageMax}%</span>
                               </div>
                             )}
                           </div>
