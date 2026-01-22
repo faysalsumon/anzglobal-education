@@ -872,7 +872,7 @@ export default function PublicInstitutions() {
                       </div>
 
                       {/* Main Content: Logo + Institution Info */}
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-3">
                         <InstitutionLogo
                           src={institution.logo}
                           alt={institution.name}
