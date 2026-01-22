@@ -363,6 +363,18 @@ export default function PublicInstitutionDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">
+            {/* About (Full Description or Legacy Description) - moved to top */}
+            <Card>
+              <CardHeader>
+                <CardTitle>About {institution.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-full-description">
+                  {institution.fullDescription || institution.description}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Institution Gallery */}
             {institution.institutionGallery && institution.institutionGallery.length > 0 && (
               <Card>
@@ -413,18 +425,6 @@ export default function PublicInstitutionDetail() {
                 </CardContent>
               </Card>
             )}
-
-            {/* About (Full Description or Legacy Description) */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About {institution.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-full-description">
-                  {institution.fullDescription || institution.description}
-                </div>
-              </CardContent>
-            </Card>
 
             {institution.topDisciplines && institution.topDisciplines.length > 0 && (
               <Card>
