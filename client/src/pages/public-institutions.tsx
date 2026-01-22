@@ -487,6 +487,34 @@ export default function PublicInstitutions() {
         </Collapsible>
       )}
 
+      {/* Provider Type Filter - Institution Type */}
+      {filterMetadata && filterMetadata.providerTypes.length > 0 && (
+        <Collapsible open={openSections.providerType} onOpenChange={(open) => toggleSection('providerType', open)}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+            <div className="flex items-center gap-2 font-medium text-sm">
+              <Building2 className="h-4 w-4 text-primary" />
+              Institution Type
+              {filters.providerTypes.length > 0 && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+            {openSections.providerType ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-1">
+            {filterMetadata.providerTypes.map((type) => (
+              <label key={type} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                <Checkbox
+                  checked={filters.providerTypes.includes(type)}
+                  onCheckedChange={() => toggleMultiSelect('providerTypes', type)}
+                  data-testid={`checkbox-type-${type.toLowerCase().replace(/\s+/g, '-')}`}
+                />
+                <span className="text-sm">{type}</span>
+              </label>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* State Filter - appears when country is selected */}
       {filterMetadata && filters.countries.length > 0 && (() => {
         const availableStates = filters.countries.flatMap(
@@ -596,34 +624,6 @@ export default function PublicInstitutions() {
             {filterMetadata.disciplines.length > 10 && (
               <p className="text-xs text-muted-foreground px-2 pt-1">+{filterMetadata.disciplines.length - 10} more</p>
             )}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
-      {/* Provider Type Filter */}
-      {filterMetadata && filterMetadata.providerTypes.length > 0 && (
-        <Collapsible open={openSections.providerType} onOpenChange={(open) => toggleSection('providerType', open)}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-            <div className="flex items-center gap-2 font-medium text-sm">
-              <Building2 className="h-4 w-4 text-primary" />
-              Institution Type
-              {filters.providerTypes.length > 0 && (
-                <span className="h-2 w-2 rounded-full bg-primary" />
-              )}
-            </div>
-            {openSections.providerType ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-1">
-            {filterMetadata.providerTypes.map((type) => (
-              <label key={type} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                <Checkbox
-                  checked={filters.providerTypes.includes(type)}
-                  onCheckedChange={() => toggleMultiSelect('providerTypes', type)}
-                  data-testid={`checkbox-type-${type.toLowerCase().replace(/\s+/g, '-')}`}
-                />
-                <span className="text-sm">{type}</span>
-              </label>
-            ))}
           </CollapsibleContent>
         </Collapsible>
       )}
