@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getCsrfToken } from "@/hooks/useCsrf";
+import { supabase } from "@/lib/supabase";
 import { Upload, Download, Trash2, FileText, FolderOpen, File, Plus, Lock } from "lucide-react";
 
 const DOCUMENT_CATEGORIES = [
@@ -68,9 +70,22 @@ export function InstitutionDocumentsPanel({ institutionId, institutionName }: In
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      // Get CSRF token and Supabase session for auth
+      const csrfToken = await getCsrfToken();
+      const { data: { session } } = await supabase?.auth.getSession() || { data: { session: null } };
+      
+      const headers: Record<string, string> = {
+        "X-CSRF-Token": csrfToken,
+      };
+      
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+      
       const res = await fetch(`/api/admin/institution-crm/institutions/${institutionId}/documents`, {
         method: "POST",
         credentials: "include",
+        headers,
         body: formData,
       });
       if (!res.ok) {

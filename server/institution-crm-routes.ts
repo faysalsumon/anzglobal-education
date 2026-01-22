@@ -63,10 +63,9 @@ async function isAdminTeamMember(userId: string): Promise<{ isAdmin: boolean; ro
 
 async function requireAdmin(req: any, res: any, next: any) {
   try {
-    if (!req.isAuthenticated?.() || !req.user) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
+    // Support both Supabase and session-based auth
+    // isAuthenticated middleware from supabase-middleware.ts already validates auth
+    // and sets up req.user with claims.sub
     const userId = getUserId(req);
     if (!userId) {
       return res.status(401).json({ message: "Authentication required" });
