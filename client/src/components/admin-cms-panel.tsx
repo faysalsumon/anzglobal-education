@@ -164,6 +164,26 @@ function TestimonialsPanel() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "draft" | "published" }) => 
+      apiRequest("PATCH", `/api/admin/cms/testimonials/${id}`, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/testimonials"] });
+      toast({ 
+        title: variables.status === "published" ? "Published" : "Unpublished", 
+        description: `Testimonial has been ${variables.status === "published" ? "published" : "set to draft"}.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const handleToggleStatus = (testimonial: Testimonial) => {
+    const newStatus = testimonial.status === "published" ? "draft" : "published";
+    toggleStatusMutation.mutate({ id: testimonial.id, status: newStatus });
+  };
+
   const handleOpenCreate = () => {
     setEditing(null);
     setFormData({ title: "", content: "", studentName: "", studentLocation: "", studentCountry: "", institution: "", course: "", imageUrl: "", rating: 5, status: "draft", displayOrder: testimonials?.length || 0 });
@@ -254,10 +274,19 @@ function TestimonialsPanel() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={testimonial.status === "published" ? "default" : "secondary"}>
-                    {testimonial.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-                    {testimonial.status}
-                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleStatus(testimonial)}
+                    disabled={toggleStatusMutation.isPending}
+                    className="p-0 h-auto"
+                    data-testid={`button-toggle-status-${testimonial.id}`}
+                  >
+                    <Badge variant={testimonial.status === "published" ? "default" : "secondary"} className="cursor-pointer">
+                      {testimonial.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                      {testimonial.status}
+                    </Badge>
+                  </Button>
                 </TableCell>
                 <TableCell>{testimonial.displayOrder}</TableCell>
                 <TableCell className="text-right">
@@ -489,6 +518,26 @@ function FaqsPanel() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "draft" | "published" }) => 
+      apiRequest("PATCH", `/api/admin/cms/faqs/${id}`, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/faqs"] });
+      toast({ 
+        title: variables.status === "published" ? "Published" : "Unpublished", 
+        description: `FAQ has been ${variables.status === "published" ? "published" : "set to draft"}.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const handleToggleStatus = (faq: Faq) => {
+    const newStatus = faq.status === "published" ? "draft" : "published";
+    toggleStatusMutation.mutate({ id: faq.id, status: newStatus });
+  };
+
   const handleOpenCreate = () => {
     setEditing(null);
     setFormData({ question: "", answer: "", category: "general", status: "draft", displayOrder: faqs?.length || 0 });
@@ -556,10 +605,19 @@ function FaqsPanel() {
                   <Badge variant="outline">{faq.category || "general"}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={faq.status === "published" ? "default" : "secondary"}>
-                    {faq.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-                    {faq.status}
-                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleStatus(faq)}
+                    disabled={toggleStatusMutation.isPending}
+                    className="p-0 h-auto"
+                    data-testid={`button-toggle-faq-status-${faq.id}`}
+                  >
+                    <Badge variant={faq.status === "published" ? "default" : "secondary"} className="cursor-pointer">
+                      {faq.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                      {faq.status}
+                    </Badge>
+                  </Button>
                 </TableCell>
                 <TableCell>{faq.displayOrder}</TableCell>
                 <TableCell className="text-right">
@@ -715,6 +773,26 @@ function TeamPanel() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "draft" | "published" }) => 
+      apiRequest("PATCH", `/api/admin/cms/team-members/${id}`, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cms/team-members"] });
+      toast({ 
+        title: variables.status === "published" ? "Published" : "Unpublished", 
+        description: `Team member has been ${variables.status === "published" ? "published" : "set to draft"}.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const handleToggleStatus = (member: PublicTeamMember) => {
+    const newStatus = member.status === "published" ? "draft" : "published";
+    toggleStatusMutation.mutate({ id: member.id, status: newStatus });
+  };
+
   const handleOpenCreate = () => {
     setEditing(null);
     setFormData({ name: "", role: "", bio: "", imageUrl: "", emailAddress: "", linkedinUrl: "", status: "draft", displayOrder: members?.length || 0 });
@@ -783,10 +861,19 @@ function TeamPanel() {
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell>{member.role}</TableCell>
                 <TableCell>
-                  <Badge variant={member.status === "published" ? "default" : "secondary"}>
-                    {member.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-                    {member.status}
-                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleStatus(member)}
+                    disabled={toggleStatusMutation.isPending}
+                    className="p-0 h-auto"
+                    data-testid={`button-toggle-team-status-${member.id}`}
+                  >
+                    <Badge variant={member.status === "published" ? "default" : "secondary"} className="cursor-pointer">
+                      {member.status === "published" ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                      {member.status}
+                    </Badge>
+                  </Button>
                 </TableCell>
                 <TableCell>{member.displayOrder}</TableCell>
                 <TableCell className="text-right">
