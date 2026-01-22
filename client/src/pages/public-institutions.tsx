@@ -9,11 +9,12 @@ import {
   Search, MapPin, Home, Heart, Map as MapIcon, List, 
   Building2, GraduationCap, Award, BookOpen, Sparkles,
   ChevronDown, ChevronRight, RotateCcw, Filter, X, ArrowUpDown,
-  Globe
+  Globe, Navigation
 } from "lucide-react";
 import { InstitutionMapSearch } from "@/components/institution-map-search";
 import type { InstitutionCampus } from "@/components/institution-map-search";
 import { PublicLayout } from "@/components/public-layout";
+import { GoogleCampusMap } from "@/components/google-campus-map";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -129,6 +130,11 @@ export default function PublicInstitutions() {
   const [pageSize, setPageSize] = useState(20);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
+  
+  // Campus map dialog state
+  const [campusMapDialogOpen, setCampusMapDialogOpen] = useState(false);
+  const [selectedInstitutionForMap, setSelectedInstitutionForMap] = useState<University | null>(null);
+  const [selectedCampusIndex, setSelectedCampusIndex] = useState<number>(0);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     country: true,
     state: true,
@@ -170,6 +176,26 @@ export default function PublicInstitutions() {
       });
     }
   };
+
+  // Open campus map dialog for a specific city or show all campuses
+  const openCampusMapForCity = useCallback((institution: University, cityName?: string) => {
+    const campuses = institution.campusAddresses || [];
+    
+    if (cityName) {
+      // Find the campus index matching this city (case-insensitive, trimmed)
+      const normalizedCity = cityName.trim().toLowerCase();
+      const campusIndex = campuses.findIndex((c: CampusAddress) => 
+        c.city?.trim().toLowerCase() === normalizedCity
+      );
+      setSelectedCampusIndex(campusIndex >= 0 ? campusIndex : 0);
+    } else {
+      // No specific city - show first campus (for "+N more" button)
+      setSelectedCampusIndex(0);
+    }
+    
+    setSelectedInstitutionForMap(institution);
+    setCampusMapDialogOpen(true);
+  }, []);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -949,23 +975,45 @@ export default function PublicInstitutions() {
                                   <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                   <div className="flex flex-wrap gap-1">
                                     {uniqueCities.slice(0, 4).map((city, idx) => (
-                                      <Badge 
-                                        key={idx} 
-                                        variant="outline" 
-                                        className="text-xs py-0 px-1.5"
-                                        data-testid={`badge-city-${institution.id}-${idx}`}
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          openCampusMapForCity(institution, city);
+                                        }}
+                                        className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-md"
+                                        data-testid={`button-city-map-${institution.id}-${idx}`}
                                       >
-                                        {city}
-                                      </Badge>
+                                        <Badge 
+                                          variant="outline" 
+                                          className="text-xs py-0 px-1.5 cursor-pointer"
+                                          data-testid={`badge-city-${institution.id}-${idx}`}
+                                        >
+                                          {city}
+                                        </Badge>
+                                      </button>
                                     ))}
                                     {uniqueCities.length > 4 && (
-                                      <Badge 
-                                        variant="outline" 
-                                        className="text-xs py-0 px-1.5"
-                                        data-testid={`badge-city-more-${institution.id}`}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          openCampusMapForCity(institution);
+                                        }}
+                                        className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded-md"
+                                        data-testid={`button-city-more-${institution.id}`}
                                       >
-                                        +{uniqueCities.length - 4} more
-                                      </Badge>
+                                        <Badge 
+                                          variant="outline" 
+                                          className="text-xs py-0 px-1.5 cursor-pointer"
+                                          data-testid={`badge-city-more-${institution.id}`}
+                                        >
+                                          +{uniqueCities.length - 4} more
+                                        </Badge>
+                                      </button>
                                     )}
                                   </div>
                                 </div>
@@ -1038,6 +1086,82 @@ export default function PublicInstitutions() {
             >
               <Link href="/">Go to Login</Link>
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Campus Map Dialog */}
+      <Dialog open={campusMapDialogOpen} onOpenChange={setCampusMapDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="dialog-campus-map">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Navigation className="h-5 w-5" />
+              {selectedInstitutionForMap?.name} - Campus Locations
+            </DialogTitle>
+            <DialogDescription>
+              View campus location on the map
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Selected Campus Info */}
+            {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 0 && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <h4 className="font-medium text-sm mb-1" data-testid="text-dialog-campus-name">
+                  {selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.name || 'Main Campus'}
+                </h4>
+                <p className="text-sm text-muted-foreground" data-testid="text-dialog-campus-address">
+                  {[
+                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.street,
+                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.city,
+                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.state,
+                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.postcode,
+                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.country
+                  ].filter(Boolean).join(', ')}
+                </p>
+              </div>
+            )}
+            
+            {/* Map Component */}
+            {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 0 && (
+              <div className="rounded-lg overflow-hidden border">
+                <GoogleCampusMap
+                  campuses={selectedInstitutionForMap.campusAddresses.map((c: CampusAddress) => ({
+                    name: c.name || 'Campus',
+                    address: c.address || [c.street, c.city, c.state, c.postcode, c.country].filter(Boolean).join(', '),
+                    city: c.city || '',
+                    state: c.state || '',
+                    postcode: c.postcode || '',
+                    country: c.country || '',
+                    latitude: c.latitude || '',
+                    longitude: c.longitude || ''
+                  }))}
+                  institutionName={selectedInstitutionForMap.name}
+                  selectedCampusIndex={selectedCampusIndex}
+                  onMarkerClick={(index) => setSelectedCampusIndex(index)}
+                />
+              </div>
+            )}
+
+            {/* Campus Navigation (if multiple campuses) */}
+            {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-sm text-muted-foreground mr-2">Switch campus:</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedInstitutionForMap.campusAddresses.map((campus: CampusAddress, index: number) => (
+                    <Button
+                      key={index}
+                      variant={selectedCampusIndex === index ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCampusIndex(index)}
+                      data-testid={`button-switch-campus-${index}`}
+                    >
+                      {campus.name || campus.city || `Campus ${index + 1}`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
