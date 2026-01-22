@@ -813,8 +813,6 @@ export const courses = pgTable("courses", {
   // Additional course details
   courseCode: text("course_code"),
   prPathway: boolean("pr_pathway").default(false),
-  scholarshipPercentageMin: integer("scholarship_percentage_min"),
-  scholarshipPercentageMax: integer("scholarship_percentage_max"),
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
   curriculumUrl: text("curriculum_url"),
@@ -969,6 +967,87 @@ export const courseEnglishRequirements = pgTable("course_english_requirements", 
   courseIdx: index("course_english_req_course_idx").on(table.courseId),
   testTypeIdx: index("course_english_req_test_type_idx").on(table.testType),
 }));
+
+// ============================================
+// INSTITUTION SCHOLARSHIPS SYSTEM
+// Institution-wide scholarships that can be linked to courses
+// Similar pattern to campus locations
+// ============================================
+
+// Scholarship status enum
+export const scholarshipStatusEnum = pgEnum('scholarship_status', [
+  'open',           // Currently accepting applications
+  'not_open_yet',   // Applications will open in the future
+  'closed',         // Applications are closed
+]);
+
+// Scholarship value type enum
+export const scholarshipValueTypeEnum = pgEnum('scholarship_value_type', [
+  'percentage',     // e.g., 20% off tuition
+  'fixed',          // e.g., $5,000
+]);
+
+// Scholarships table - institution-wide scholarships
+export const scholarships = pgTable("scholarships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
+  
+  // Basic information
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Value details
+  valueType: scholarshipValueTypeEnum("value_type").notNull(),
+  value: decimal("value", { precision: 12, scale: 2 }).notNull(), // Amount or percentage
+  currency: varchar("currency", { length: 3 }).default("AUD"), // For fixed amounts
+  
+  // Status and dates
+  status: scholarshipStatusEnum("status").default("open").notNull(),
+  startDate: date("start_date"), // When applications open
+  endDate: date("end_date"), // When applications close
+  
+  // Eligibility and details
+  eligibility: text("eligibility"), // Who can apply
+  applicationUrl: text("application_url"), // Link to apply
+  
+  // Metadata
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  institutionIdx: index("scholarships_institution_idx").on(table.institutionId),
+  statusIdx: index("scholarships_status_idx").on(table.status),
+  activeIdx: index("scholarships_active_idx").on(table.isActive),
+  dateRangeIdx: index("scholarships_date_range_idx").on(table.startDate, table.endDate),
+}));
+
+// Course-Scholarships junction table - links courses to available scholarships
+export const courseScholarships = pgTable("course_scholarships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  scholarshipId: varchar("scholarship_id").notNull().references(() => scholarships.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  courseScholarshipUnique: unique("course_scholarship_unique").on(table.courseId, table.scholarshipId),
+  courseIdx: index("course_scholarships_course_idx").on(table.courseId),
+  scholarshipIdx: index("course_scholarships_scholarship_idx").on(table.scholarshipId),
+}));
+
+// Insert schemas and types
+export const insertScholarshipSchema = createInsertSchema(scholarships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertScholarship = z.infer<typeof insertScholarshipSchema>;
+export type Scholarship = typeof scholarships.$inferSelect;
+
+export const insertCourseScholarshipSchema = createInsertSchema(courseScholarships).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCourseScholarship = z.infer<typeof insertCourseScholarshipSchema>;
+export type CourseScholarship = typeof courseScholarships.$inferSelect;
 
 // ============================================
 // INSTITUTION TAGS JUNCTION
@@ -2718,42 +2797,6 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   applicationFees: optionalNumber,
   minimumAge: optionalInteger,
   
-  // Validate scholarship range
-  scholarshipPercentageMin: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      if (typeof val === "number") return Number.isInteger(val) ? val : val; // Return floats as-is for validation error
-      if (typeof val === "string") {
-        const trimmed = val.trim();
-        if (trimmed === "") return undefined;
-        // Only accept integer strings (no decimals)
-        if (!/^-?\d+$/.test(trimmed)) return val; // Return original to trigger validation error
-        const parsed = parseInt(trimmed, 10);
-        if (isNaN(parsed)) return val;
-        return parsed;
-      }
-      return val;
-    },
-    z.number().int().min(0).max(100).optional()
-  ),
-  scholarshipPercentageMax: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      if (typeof val === "number") return Number.isInteger(val) ? val : val; // Return floats as-is for validation error
-      if (typeof val === "string") {
-        const trimmed = val.trim();
-        if (trimmed === "") return undefined;
-        // Only accept integer strings (no decimals)
-        if (!/^-?\d+$/.test(trimmed)) return val; // Return original to trigger validation error
-        const parsed = parseInt(trimmed, 10);
-        if (isNaN(parsed)) return val;
-        return parsed;
-      }
-      return val;
-    },
-    z.number().int().min(0).max(100).optional()
-  ),
-  
   // Validate English requirements structure
   englishRequirementsStructured: z.object({
     IELTS: z.object({
@@ -2775,18 +2818,8 @@ const baseCourseSchema = createInsertSchema(courses).omit({
   deliveryMode: z.enum(['online', 'on-campus', 'hybrid']).optional(),
 });
 
-// Refined schema with validation - use for backend
-export const insertCourseSchema = baseCourseSchema.refine((data) => {
-  // If both min and max are provided, ensure min <= max
-  if (data.scholarshipPercentageMin !== null && data.scholarshipPercentageMin !== undefined &&
-      data.scholarshipPercentageMax !== null && data.scholarshipPercentageMax !== undefined) {
-    return data.scholarshipPercentageMin <= data.scholarshipPercentageMax;
-  }
-  return true;
-}, {
-  message: "Scholarship minimum percentage must be less than or equal to maximum percentage",
-  path: ["scholarshipPercentageMin"],
-});
+// Export the course schema - use for backend
+export const insertCourseSchema = baseCourseSchema;
 
 // Export base schema for frontend forms that need to extend it
 export { baseCourseSchema };
@@ -3621,8 +3654,6 @@ export const scrapedCourses = pgTable("scraped_courses", {
   thumbnailUrl: text("thumbnail_url"),
   courseCode: text("course_code"),
   prPathway: boolean("pr_pathway"),
-  scholarshipPercentageMin: integer("scholarship_percentage_min"),
-  scholarshipPercentageMax: integer("scholarship_percentage_max"),
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
   curriculumUrl: text("curriculum_url"),
