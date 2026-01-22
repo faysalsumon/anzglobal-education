@@ -1095,7 +1095,15 @@ export default function PublicInstitutions() {
         <DialogContent className="max-w-lg p-4" data-testid="dialog-campus-map">
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Navigation className="h-4 w-4" />
+              {selectedInstitutionForMap?.logo ? (
+                <img 
+                  src={selectedInstitutionForMap.logo} 
+                  alt={selectedInstitutionForMap.name}
+                  className="h-6 w-6 rounded object-contain"
+                />
+              ) : (
+                <Navigation className="h-4 w-4" />
+              )}
               {selectedInstitutionForMap?.name}
             </DialogTitle>
           </DialogHeader>
