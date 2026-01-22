@@ -52,6 +52,7 @@ import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { ListPagination } from "@/components/list-pagination";
 import { InstitutionLogo } from "@/components/institution-logo";
+import { getCountryByName, getFlagUrl } from "@/lib/countries";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -943,9 +944,18 @@ export default function PublicCourses() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => (
-                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
-                              ))}
+                              {availableFilters.countries.map((ctry) => {
+                                const countryData = getCountryByName(ctry);
+                                const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
+                                return (
+                                  <SelectItem key={ctry} value={ctry}>
+                                    <div className="flex items-center gap-2">
+                                      {flagUrl && <img src={flagUrl} alt={ctry} className="w-5 h-auto rounded-sm" />}
+                                      {ctry}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           {country && availableFilters.states.length > 0 && (
@@ -1198,9 +1208,18 @@ export default function PublicCourses() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => (
-                                <SelectItem key={ctry} value={ctry}>{ctry}</SelectItem>
-                              ))}
+                              {availableFilters.countries.map((ctry) => {
+                                const countryData = getCountryByName(ctry);
+                                const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
+                                return (
+                                  <SelectItem key={ctry} value={ctry}>
+                                    <div className="flex items-center gap-2">
+                                      {flagUrl && <img src={flagUrl} alt={ctry} className="w-5 h-auto rounded-sm" />}
+                                      {ctry}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           {country && availableFilters.states.length > 0 && (
