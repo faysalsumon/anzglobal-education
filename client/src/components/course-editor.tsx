@@ -9,9 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -273,13 +274,13 @@ interface TagType {
   isActive: boolean;
 }
 
-const TAG_CATEGORY_LABELS: Record<string, { label: string; description: string }> = {
-  feature: { label: 'Features', description: 'Course features' },
-  delivery: { label: 'Delivery', description: 'How the course is delivered' },
-  career: { label: 'Career', description: 'Career outcomes' },
-  skill: { label: 'Skills', description: 'Skills and learning approaches' },
-  industry: { label: 'Industry', description: 'Industry sectors' },
-  audience: { label: 'Audience', description: 'Target students' },
+const TAG_CATEGORY_LABELS: Record<string, { label: string; description: string; icon: typeof Sparkles }> = {
+  feature: { label: 'Features', description: 'Course features', icon: Sparkles },
+  delivery: { label: 'Delivery', description: 'How the course is delivered', icon: Monitor },
+  career: { label: 'Career', description: 'Career outcomes', icon: Briefcase },
+  skill: { label: 'Skills', description: 'Skills and learning approaches', icon: Target },
+  industry: { label: 'Industry', description: 'Industry sectors', icon: Factory },
+  audience: { label: 'Audience', description: 'Target students', icon: Users },
 };
 
 interface CourseEditorProps {
@@ -1312,18 +1313,99 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
               <div className="space-y-6">
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Tag className="h-5 w-5" />
-                      Course Tags
-                    </CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Tag className="h-5 w-5" />
+                        Course Tags
+                      </CardTitle>
+                      {selectedTagIds.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedTagIds.length} selected
+                        </Badge>
+                      )}
+                    </div>
                     <CardDescription>Select tags to help students find this course</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-2 pt-0">
+                    {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => {
+                      const categoryConfig = TAG_CATEGORY_LABELS[category];
+                      const CategoryIcon = categoryConfig?.icon || Tag;
+                      const selectedInCategory = categoryTags.filter((tag: TagType) => 
+                        selectedTagIds.includes(String(tag.id))
+                      ).length;
+                      
+                      return (
+                        <Collapsible key={category} defaultOpen={selectedInCategory > 0}>
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-2.5 rounded-md hover:bg-muted/50 transition-colors group">
+                            <div className="flex items-center gap-2">
+                              <CategoryIcon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">{categoryConfig?.label || category}</span>
+                              {selectedInCategory > 0 && (
+                                <Badge variant="default" className="text-xs h-5 px-1.5">
+                                  {selectedInCategory}
+                                </Badge>
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pt-1 pb-2">
+                            <div className="space-y-0.5 pl-6">
+                              {categoryTags.map((tag: TagType) => {
+                                const isSelected = selectedTagIds.includes(String(tag.id));
+                                return (
+                                  <div
+                                    key={tag.id}
+                                    onClick={() => handleTagToggle(String(tag.id))}
+                                    className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+                                      isSelected 
+                                        ? 'bg-primary/10 text-primary' 
+                                        : 'hover:bg-muted/50'
+                                    }`}
+                                    data-testid={`tag-option-${tag.slug}`}
+                                  >
+                                    <div 
+                                      className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                                        isSelected 
+                                          ? 'bg-primary border-primary' 
+                                          : 'border-muted-foreground/30'
+                                      }`}
+                                      style={isSelected ? { backgroundColor: tag.color || undefined } : {}}
+                                    >
+                                      {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </div>
+                                    <span className="text-sm flex-1">{tag.name}</span>
+                                    {tag.description && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                            {tag.description}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{tag.description}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    })}
+                    
+                    {!groupedTags && (
+                      <div className="flex items-center justify-center py-4">
+                        <p className="text-sm text-muted-foreground">Loading tags...</p>
+                      </div>
+                    )}
+
                     {selectedTagIds.length > 0 && (
-                      <div className="mb-3">
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                          Selected ({selectedTagIds.length})
+                      <div className="pt-3 border-t mt-3">
+                        <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                          Selected Tags
                         </label>
                         <div className="flex flex-wrap gap-1.5">
                           {getSelectedTags().map((tag) => (
@@ -1345,43 +1427,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           ))}
                         </div>
                       </div>
-                    )}
-                    
-                    {groupedTags && Object.entries(groupedTags).map(([category, categoryTags]) => (
-                      <div key={category}>
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                          {TAG_CATEGORY_LABELS[category]?.label || category}
-                        </label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {categoryTags.map((tag: TagType) => {
-                            const isSelected = selectedTagIds.includes(String(tag.id));
-                            return (
-                              <Tooltip key={tag.id}>
-                                <TooltipTrigger asChild>
-                                  <Badge
-                                    variant={isSelected ? "default" : "outline"}
-                                    style={isSelected ? { backgroundColor: tag.color || '#3B82F6' } : {}}
-                                    className={`cursor-pointer transition-all ${isSelected ? '' : 'hover:bg-muted'}`}
-                                    onClick={() => handleTagToggle(String(tag.id))}
-                                    data-testid={`tag-option-${tag.slug}`}
-                                  >
-                                    {tag.name}
-                                  </Badge>
-                                </TooltipTrigger>
-                                {tag.description && (
-                                  <TooltipContent>
-                                    <p>{tag.description}</p>
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {!groupedTags && (
-                      <p className="text-sm text-muted-foreground">Loading tags...</p>
                     )}
                   </CardContent>
                 </Card>
