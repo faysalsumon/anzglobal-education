@@ -1308,69 +1308,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Career & Pathways</CardTitle>
-                    <CardDescription>Career outcomes and study pathways</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="pathways"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pathways (Comma-separated)</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="University degrees, Advanced studies" rows={2} data-testid="input-course-pathways" />
-                          </FormControl>
-                          <FormDescription>Enter progression routes separated by commas</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="studyAreas"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Study Areas (Comma-separated)</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Programming, Database Design, Web Development" rows={2} data-testid="input-course-studyAreas" />
-                          </FormControl>
-                          <FormDescription>Enter study topics separated by commas</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="careerOutcomes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Career Outcomes (Comma-separated)</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Software Engineer, Data Analyst, Web Developer" rows={2} data-testid="input-course-careerOutcomes" />
-                          </FormControl>
-                          <FormDescription>Enter career paths separated by commas</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="careerPath"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Career Path Description</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="Detailed career progression and trajectory..." rows={3} data-testid="input-course-careerPath" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
               </div>
 
               <div className="space-y-6">
