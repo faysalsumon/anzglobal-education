@@ -1470,41 +1470,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Extract states and cities from campusAddresses grouped by country
       type CampusAddr = { country?: string; state?: string; city?: string };
-      const statesByCountry: Record<string, string[]> = {};
-      const citiesByState: Record<string, string[]> = {};
+      const statesByCountrySet: Record<string, Set<string>> = {};
+      const citiesByStateSet: Record<string, Set<string>> = {};
       
       for (const institution of approvedInstitutions) {
         const campusAddresses = institution.campusAddresses as CampusAddr[] | null;
         if (campusAddresses && Array.isArray(campusAddresses)) {
           for (const campus of campusAddresses) {
-            const country = campus.country || institution.country;
-            const state = campus.state;
-            const city = campus.city;
+            const country = (campus.country || institution.country || "").trim();
+            const state = (campus.state || "").trim();
+            const city = (campus.city || "").trim();
             
             if (country && state) {
-              if (!statesByCountry[country]) statesByCountry[country] = [];
-              if (!statesByCountry[country].includes(state)) {
-                statesByCountry[country].push(state);
-              }
+              if (!statesByCountrySet[country]) statesByCountrySet[country] = new Set();
+              statesByCountrySet[country].add(state);
               
               if (city) {
                 const stateKey = `${country}:${state}`;
-                if (!citiesByState[stateKey]) citiesByState[stateKey] = [];
-                if (!citiesByState[stateKey].includes(city)) {
-                  citiesByState[stateKey].push(city);
-                }
+                if (!citiesByStateSet[stateKey]) citiesByStateSet[stateKey] = new Set();
+                citiesByStateSet[stateKey].add(city);
               }
             }
           }
         }
       }
       
-      // Sort the states and cities
-      for (const country of Object.keys(statesByCountry)) {
-        statesByCountry[country].sort();
+      // Convert Sets to sorted arrays
+      const statesByCountry: Record<string, string[]> = {};
+      const citiesByState: Record<string, string[]> = {};
+      for (const country of Object.keys(statesByCountrySet)) {
+        statesByCountry[country] = Array.from(statesByCountrySet[country]).sort();
       }
-      for (const stateKey of Object.keys(citiesByState)) {
-        citiesByState[stateKey].sort();
+      for (const stateKey of Object.keys(citiesByStateSet)) {
+        citiesByState[stateKey] = Array.from(citiesByStateSet[stateKey]).sort();
       }
 
       // Calculate ranges
