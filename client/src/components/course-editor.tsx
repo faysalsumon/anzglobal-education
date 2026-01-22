@@ -210,8 +210,8 @@ const generateEquivalentRequirements = (
           testType,
           minOverallScore: converted.overall.toString(),
         };
-        // For TOEFL, include section scores
-        if (testType === 'toefl' && converted.section) {
+        // Include section scores for all test types that have them
+        if (converted.section) {
           result.minListeningScore = converted.section.toString();
           result.minReadingScore = converted.section.toString();
           result.minWritingScore = converted.section.toString();
