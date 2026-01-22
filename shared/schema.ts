@@ -1008,7 +1008,6 @@ export const scholarships = pgTable("scholarships", {
   
   // Eligibility and details
   eligibility: text("eligibility"), // Who can apply
-  applicationUrl: text("application_url"), // Link to apply
   
   // Metadata
   isActive: boolean("is_active").default(true),

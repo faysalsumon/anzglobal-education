@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, GraduationCap, Calendar, DollarSign, Link as LinkIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, GraduationCap, Calendar, DollarSign } from "lucide-react";
 
 type ScholarshipStatus = "open" | "not_open_yet" | "closed";
 type ScholarshipValueType = "percentage" | "fixed";
@@ -27,7 +27,6 @@ interface Scholarship {
   startDate: string | null;
   endDate: string | null;
   eligibility: string | null;
-  applicationUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,7 +41,6 @@ interface ScholarshipFormData {
   startDate: string;
   endDate: string;
   eligibility: string;
-  applicationUrl: string;
 }
 
 const defaultFormData: ScholarshipFormData = {
@@ -55,7 +53,6 @@ const defaultFormData: ScholarshipFormData = {
   startDate: "",
   endDate: "",
   eligibility: "",
-  applicationUrl: "",
 };
 
 const STATUS_LABELS: Record<ScholarshipStatus, string> = {
@@ -98,7 +95,6 @@ export function InstitutionScholarshipsPanel({ institutionId, institutionName }:
         startDate: data.startDate || null,
         endDate: data.endDate || null,
         eligibility: data.eligibility || null,
-        applicationUrl: data.applicationUrl || null,
       };
       const response = await apiRequest("POST", `/api/admin/institutions/${institutionId}/scholarships`, payload);
       return response.json();
@@ -125,7 +121,6 @@ export function InstitutionScholarshipsPanel({ institutionId, institutionName }:
         startDate: data.startDate || null,
         endDate: data.endDate || null,
         eligibility: data.eligibility || null,
-        applicationUrl: data.applicationUrl || null,
       };
       const response = await apiRequest("PATCH", `/api/admin/scholarships/${id}`, payload);
       return response.json();
@@ -173,7 +168,6 @@ export function InstitutionScholarshipsPanel({ institutionId, institutionName }:
       startDate: scholarship.startDate ? scholarship.startDate.split("T")[0] : "",
       endDate: scholarship.endDate ? scholarship.endDate.split("T")[0] : "",
       eligibility: scholarship.eligibility || "",
-      applicationUrl: scholarship.applicationUrl || "",
     });
     setIsDialogOpen(true);
   };
@@ -431,20 +425,6 @@ export function InstitutionScholarshipsPanel({ institutionId, institutionName }:
                 placeholder="Who is eligible for this scholarship?"
                 rows={2}
                 data-testid="input-scholarship-eligibility"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="applicationUrl" className="flex items-center gap-1">
-                <LinkIcon className="h-3 w-3" />
-                Application URL
-              </Label>
-              <Input
-                id="applicationUrl"
-                type="url"
-                value={formData.applicationUrl}
-                onChange={(e) => setFormData({ ...formData, applicationUrl: e.target.value })}
-                placeholder="https://..."
-                data-testid="input-scholarship-url"
               />
             </div>
           </div>
