@@ -1578,7 +1578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         intakePeriods,
         facilities,
         disciplines,
-        tags,
+        tags: filterTags,
         scholarshipMin,
         scholarshipMax,
         tuitionMin,
@@ -1688,10 +1688,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Tags filter (array overlap)
-      if (tags) {
-        const tagList = Array.isArray(tags) ? tags : [tags];
+      if (filterTags) {
+        const tagList = Array.isArray(filterTags) ? filterTags : [filterTags];
         institutions = institutions.filter(i => 
-          i.tags && i.tags.some(tag => tagList.includes(tag))
+          i.tags && i.tags.some(tag => tagList.includes(tag as string))
         );
       }
 
