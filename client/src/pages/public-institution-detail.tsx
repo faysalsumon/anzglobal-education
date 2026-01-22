@@ -474,60 +474,7 @@ export default function PublicInstitutionDetail() {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
-            {/* Google Map for Campus Locations */}
-            {campuses.length > 0 ? (
-              <GoogleCampusMap
-                campuses={campuses}
-                institutionName={institution.name}
-                selectedCampusIndex={selectedCampusIndex}
-                onMarkerClick={(index) => setSelectedCampusIndex(index)}
-              />
-            ) : null}
-
-            {/* Campus Locations Text */}
-            {campuses.length > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Campus Addresses</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {campuses.map((campus, index) => (
-                    <div 
-                      key={index} 
-                      className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
-                        selectedCampusIndex === index 
-                          ? 'bg-blue-50 dark:bg-blue-950/30 border-2 border-primary' 
-                          : 'border-2 border-transparent'
-                      }`}
-                      data-testid={`campus-${index}`}
-                      onClick={() => setSelectedCampusIndex(selectedCampusIndex === index ? null : index)}
-                    >
-                      <p className={`text-sm font-medium ${
-                        selectedCampusIndex === index ? 'text-primary' : ''
-                      }`}>
-                        {campus.name}
-                      </p>
-                      <div className="flex items-start gap-2">
-                        <MapPin className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
-                          selectedCampusIndex === index ? 'text-primary' : 'text-muted-foreground'
-                        }`} />
-                        <div className="text-sm text-muted-foreground">
-                          {(campus.street || campus.address) && <p>{campus.street || campus.address}</p>}
-                          <p>
-                            {[campus.city, campus.state, campus.postcode].filter(Boolean).join(', ')}
-                          </p>
-                          {campus.country && <p>{campus.country}</p>}
-                        </div>
-                      </div>
-                      {index < campuses.length - 1 && (
-                        <div className="border-t pt-4 mt-4" />
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ) : null}
-
+            {/* Institution Details - moved to top */}
             <Card>
               <CardHeader>
                 <CardTitle>Institution Details</CardTitle>
@@ -604,6 +551,60 @@ export default function PublicInstitutionDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Google Map for Campus Locations */}
+            {campuses.length > 0 ? (
+              <GoogleCampusMap
+                campuses={campuses}
+                institutionName={institution.name}
+                selectedCampusIndex={selectedCampusIndex}
+                onMarkerClick={(index) => setSelectedCampusIndex(index)}
+              />
+            ) : null}
+
+            {/* Campus Locations Text */}
+            {campuses.length > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campus Addresses</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {campuses.map((campus, index) => (
+                    <div 
+                      key={index} 
+                      className={`space-y-1 p-3 rounded-md cursor-pointer transition-colors hover-elevate ${
+                        selectedCampusIndex === index 
+                          ? 'bg-blue-50 dark:bg-blue-950/30 border-2 border-primary' 
+                          : 'border-2 border-transparent'
+                      }`}
+                      data-testid={`campus-${index}`}
+                      onClick={() => setSelectedCampusIndex(selectedCampusIndex === index ? null : index)}
+                    >
+                      <p className={`text-sm font-medium ${
+                        selectedCampusIndex === index ? 'text-primary' : ''
+                      }`}>
+                        {campus.name}
+                      </p>
+                      <div className="flex items-start gap-2">
+                        <MapPin className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                          selectedCampusIndex === index ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                        <div className="text-sm text-muted-foreground">
+                          {(campus.street || campus.address) && <p>{campus.street || campus.address}</p>}
+                          <p>
+                            {[campus.city, campus.state, campus.postcode].filter(Boolean).join(', ')}
+                          </p>
+                          {campus.country && <p>{campus.country}</p>}
+                        </div>
+                      </div>
+                      {index < campuses.length - 1 && (
+                        <div className="border-t pt-4 mt-4" />
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         </div>
 
