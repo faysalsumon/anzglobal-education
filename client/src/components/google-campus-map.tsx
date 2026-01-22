@@ -25,7 +25,7 @@ export function GoogleCampusMap({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -43,10 +43,76 @@ export function GoogleCampusMap({
       key: apiKey,
     });
 
+    // Create styled marker element with logo
+    const createMarkerElement = (isSelected: boolean = false) => {
+      const container = document.createElement("div");
+      container.className = "campus-marker";
+      container.style.cssText = `
+        width: ${isSelected ? "48px" : "40px"};
+        height: ${isSelected ? "48px" : "40px"};
+        border-radius: 50%;
+        overflow: hidden;
+        border: ${isSelected ? "3px solid #3465A5" : "2px solid #FF5000"};
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      if (logoUrl) {
+        const img = document.createElement("img");
+        img.src = logoUrl;
+        img.alt = institutionName;
+        img.style.cssText = `
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 3px;
+          background: white;
+        `;
+        img.onerror = () => {
+          container.innerHTML = `
+            <div style="
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              font-size: 12px;
+              color: #FF5000;
+              background: white;
+            ">${institutionName.charAt(0).toUpperCase()}</div>
+          `;
+        };
+        container.appendChild(img);
+      } else {
+        container.innerHTML = `
+          <div style="
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #FF5000;
+            background: white;
+          ">${institutionName.charAt(0).toUpperCase()}</div>
+        `;
+      }
+
+      return container;
+    };
+
     const initMap = async () => {
       try {
-        // Load Google Maps library
+        // Load Google Maps libraries
         await importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
         
         const geocoder = new google.maps.Geocoder();
 
@@ -59,6 +125,7 @@ export function GoogleCampusMap({
           mapTypeControl: true,
           streetViewControl: true,
           fullscreenControl: true,
+          mapId: "campus-map",
         });
 
         setMap(mapInstance);
@@ -66,7 +133,7 @@ export function GoogleCampusMap({
         // Geocode each campus address and add markers
         const bounds = new google.maps.LatLngBounds();
         let markersAdded = 0;
-        const markers: google.maps.Marker[] = [];
+        const markers: google.maps.marker.AdvancedMarkerElement[] = [];
 
         for (let i = 0; i < campuses.length; i++) {
           const campus = campuses[i];
@@ -104,27 +171,14 @@ export function GoogleCampusMap({
               }
             }
 
-            // Create marker with logo or default icon
-            const markerIcon = logoUrl 
-              ? {
-                  url: logoUrl,
-                  scaledSize: new google.maps.Size(32, 32),
-                  anchor: new google.maps.Point(16, 16),
-                }
-              : {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: "#3465A5",
-                  fillOpacity: 1,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 2,
-                };
-
-            const marker = new google.maps.Marker({
+            // Create advanced marker with custom element
+            const markerContent = createMarkerElement(selectedCampusIndex === i);
+            
+            const marker = new AdvancedMarkerElement({
               map: mapInstance,
               position: position,
               title: `${institutionName} - ${campus.name}`,
-              icon: markerIcon,
+              content: markerContent,
             });
 
             // Store marker with its index
@@ -192,41 +246,74 @@ export function GoogleCampusMap({
   useEffect(() => {
     if (!markersRef.current.length || !map) return;
 
+    // Helper to create marker element for updates
+    const createUpdatedMarkerElement = (isSelected: boolean = false) => {
+      const container = document.createElement("div");
+      container.className = "campus-marker";
+      container.style.cssText = `
+        width: ${isSelected ? "48px" : "40px"};
+        height: ${isSelected ? "48px" : "40px"};
+        border-radius: 50%;
+        overflow: hidden;
+        border: ${isSelected ? "3px solid #3465A5" : "2px solid #FF5000"};
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+
+      if (logoUrl) {
+        const img = document.createElement("img");
+        img.src = logoUrl;
+        img.alt = institutionName;
+        img.style.cssText = `
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 3px;
+          background: white;
+        `;
+        container.appendChild(img);
+      } else {
+        container.innerHTML = `
+          <div style="
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #FF5000;
+            background: white;
+          ">${institutionName.charAt(0).toUpperCase()}</div>
+        `;
+      }
+
+      return container;
+    };
+
     markersRef.current.forEach((marker, index) => {
       if (!marker) return;
 
       const isSelected = selectedCampusIndex === index;
       
-      marker.setIcon({
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: isSelected ? 14 : 10,
-        fillColor: isSelected ? "#FFB380" : "#3465A5",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: isSelected ? 3 : 2,
-      });
+      // Update marker content for selection state
+      marker.content = createUpdatedMarkerElement(isSelected);
 
-      // Add bounce animation and pan to selected marker
-      if (isSelected) {
-        marker.setAnimation(google.maps.Animation.BOUNCE);
-        // Pan map to center on selected marker
-        const position = marker.getPosition();
-        if (position) {
-          map.panTo(position);
-          // Zoom in slightly if needed
-          if (map.getZoom() && map.getZoom()! < 14) {
-            map.setZoom(14);
-          }
+      // Pan to selected marker
+      if (isSelected && marker.position) {
+        map.panTo(marker.position as google.maps.LatLng);
+        // Zoom in slightly if needed
+        if (map.getZoom() && map.getZoom()! < 14) {
+          map.setZoom(14);
         }
-        // Stop bouncing after 2 seconds
-        setTimeout(() => {
-          marker.setAnimation(null);
-        }, 2000);
-      } else {
-        marker.setAnimation(null);
       }
     });
-  }, [selectedCampusIndex, map]);
+  }, [selectedCampusIndex, map, logoUrl, institutionName]);
 
   if (!campuses || campuses.length === 0) {
     return null;
