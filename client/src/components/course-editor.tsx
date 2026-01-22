@@ -68,7 +68,7 @@ const courseSchema = z.object({
   universityId: z.string().min(1, "Institution is required"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  subject: z.string().min(1, "Subject is required"),
+  subject: z.string().optional(),
   level: z.string().optional(),
   discipline: z.string().optional(),
   subDisciplineId: z.string().optional(),
