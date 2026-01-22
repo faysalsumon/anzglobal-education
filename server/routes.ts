@@ -3514,6 +3514,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch create English requirements (for generating all test types at once)
+  app.post("/api/courses/:courseId/english-requirements/batch", isAuthenticated, async (req: any, res) => {
+    try {
+      // Verify user has admin or institution_admin access
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { requirements } = req.body;
+      if (!Array.isArray(requirements) || requirements.length === 0) {
+        return res.status(400).json({ message: "Requirements array is required" });
+      }
+
+      // Get existing requirements for this course to check for duplicates
+      const existingRequirements = await storage.getEnglishRequirementsByCourseId(req.params.courseId);
+      const existingTestTypes = new Set(existingRequirements.map(r => r.testType));
+
+      const createdRequirements = [];
+      const skippedTestTypes = [];
+
+      for (const requirement of requirements) {
+        // Skip if test type already exists for this course
+        if (existingTestTypes.has(requirement.testType)) {
+          skippedTestTypes.push(requirement.testType);
+          continue;
+        }
+
+        const data = insertCourseEnglishRequirementSchema.parse({
+          ...requirement,
+          courseId: req.params.courseId,
+        });
+
+        const created = await storage.createEnglishRequirement(data);
+        createdRequirements.push(created);
+        existingTestTypes.add(requirement.testType);
+      }
+
+      res.json({ 
+        created: createdRequirements, 
+        skipped: skippedTestTypes,
+        message: skippedTestTypes.length > 0 
+          ? `Created ${createdRequirements.length} requirements. Skipped ${skippedTestTypes.length} (already exist: ${skippedTestTypes.join(', ')})`
+          : `Created ${createdRequirements.length} requirements successfully`
+      });
+    } catch (error: any) {
+      console.error("Error batch creating English requirements:", error);
+      res.status(400).json({ message: error.message || "Failed to create English requirements" });
+    }
+  });
+
   // Employment history routes (optional)
   app.get("/api/student/employments", isAuthenticated, async (req: any, res) => {
     try {

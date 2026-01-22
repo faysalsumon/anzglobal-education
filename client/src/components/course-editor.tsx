@@ -80,6 +80,151 @@ const TEST_TYPE_CONFIG: Record<string, {
   },
 };
 
+// English test score equivalency table with ranges (based on official conversion charts)
+// Using IELTS as the base reference since it's the most commonly used
+// Ranges are [min, max) - min is inclusive, max is exclusive
+const SCORE_EQUIVALENCY_TABLE: { 
+  ielts: number; 
+  toefl: { min: number; max: number; section: number }; 
+  pte: { min: number; max: number; section: number }; 
+  duolingo: { min: number; max: number; section: number };
+}[] = [
+  { ielts: 4.0, toefl: { min: 0, max: 35, section: 8 }, pte: { min: 10, max: 36, section: 30 }, duolingo: { min: 10, max: 75, section: 65 } },
+  { ielts: 4.5, toefl: { min: 35, max: 46, section: 9 }, pte: { min: 36, max: 42, section: 36 }, duolingo: { min: 75, max: 85, section: 75 } },
+  { ielts: 5.0, toefl: { min: 46, max: 60, section: 12 }, pte: { min: 42, max: 50, section: 42 }, duolingo: { min: 85, max: 95, section: 85 } },
+  { ielts: 5.5, toefl: { min: 60, max: 78, section: 15 }, pte: { min: 50, max: 58, section: 50 }, duolingo: { min: 95, max: 105, section: 95 } },
+  { ielts: 6.0, toefl: { min: 78, max: 88, section: 20 }, pte: { min: 58, max: 65, section: 58 }, duolingo: { min: 105, max: 115, section: 105 } },
+  { ielts: 6.5, toefl: { min: 88, max: 98, section: 22 }, pte: { min: 65, max: 73, section: 65 }, duolingo: { min: 115, max: 125, section: 115 } },
+  { ielts: 7.0, toefl: { min: 98, max: 107, section: 25 }, pte: { min: 73, max: 79, section: 73 }, duolingo: { min: 125, max: 135, section: 125 } },
+  { ielts: 7.5, toefl: { min: 107, max: 113, section: 27 }, pte: { min: 79, max: 85, section: 79 }, duolingo: { min: 135, max: 145, section: 135 } },
+  { ielts: 8.0, toefl: { min: 113, max: 117, section: 28 }, pte: { min: 85, max: 88, section: 85 }, duolingo: { min: 145, max: 155, section: 145 } },
+  { ielts: 8.5, toefl: { min: 117, max: 120, section: 29 }, pte: { min: 88, max: 90, section: 88 }, duolingo: { min: 155, max: 160, section: 155 } },
+  { ielts: 9.0, toefl: { min: 120, max: 121, section: 30 }, pte: { min: 90, max: 91, section: 90 }, duolingo: { min: 160, max: 161, section: 160 } },
+];
+
+// Find the equivalent IELTS band for a given overall score using range-based lookup
+const findEquivalentIeltsBand = (testType: string, overallScore: number): number | null => {
+  if (testType === 'ielts') {
+    // Round to nearest 0.5 for IELTS
+    const rounded = Math.round(overallScore * 2) / 2;
+    return Math.max(4.0, Math.min(9.0, rounded));
+  }
+  
+  // Find the range that contains this score
+  for (const row of SCORE_EQUIVALENCY_TABLE) {
+    const range = row[testType as keyof typeof row];
+    if (typeof range === 'object' && 'min' in range && 'max' in range) {
+      if (overallScore >= range.min && overallScore < range.max) {
+        return row.ielts;
+      }
+    }
+  }
+  
+  // If score is above max, return highest band
+  const lastRow = SCORE_EQUIVALENCY_TABLE[SCORE_EQUIVALENCY_TABLE.length - 1];
+  const lastRange = lastRow[testType as keyof typeof lastRow];
+  if (typeof lastRange === 'object' && 'min' in lastRange && overallScore >= lastRange.min) {
+    return lastRow.ielts;
+  }
+  
+  // If score is below min, return lowest band
+  return SCORE_EQUIVALENCY_TABLE[0].ielts;
+};
+
+// Convert a score from one test type to another using range-based equivalency
+const convertScore = (fromType: string, toType: string, overallScore: number, bandScore?: number): { overall: number; section: number } | null => {
+  // First, find equivalent IELTS band using ranges
+  const ieltsBand = findEquivalentIeltsBand(fromType, overallScore);
+  if (ieltsBand === null) return null;
+  
+  // Find the exact matching row for this IELTS band
+  const row = SCORE_EQUIVALENCY_TABLE.find(r => r.ielts === ieltsBand);
+  if (!row) {
+    // Find closest row if exact match not found
+    const closest = SCORE_EQUIVALENCY_TABLE.reduce((prev, curr) => 
+      Math.abs(curr.ielts - ieltsBand) < Math.abs(prev.ielts - ieltsBand) ? curr : prev
+    );
+    if (!closest) return null;
+    
+    if (toType === 'ielts') {
+      return { overall: closest.ielts, section: bandScore || closest.ielts };
+    }
+    const targetScores = closest[toType as keyof typeof closest];
+    if (typeof targetScores === 'object' && 'min' in targetScores) {
+      return { overall: targetScores.min, section: targetScores.section };
+    }
+    return null;
+  }
+  
+  if (toType === 'ielts') {
+    return { overall: row.ielts, section: bandScore || row.ielts };
+  }
+  
+  const targetScores = row[toType as keyof typeof row];
+  if (typeof targetScores === 'object' && 'min' in targetScores) {
+    // Return the minimum of the range as the equivalent score
+    return { overall: targetScores.min, section: targetScores.section };
+  }
+  return null;
+};
+
+// Generate all equivalent test requirements from a base test
+const generateEquivalentRequirements = (
+  baseTestType: string,
+  overallScore: number,
+  bandScores?: { listening?: number; reading?: number; writing?: number; speaking?: number }
+): Array<{
+  testType: string;
+  minOverallScore: string;
+  minListeningScore?: string;
+  minReadingScore?: string;
+  minWritingScore?: string;
+  minSpeakingScore?: string;
+}> => {
+  const results: Array<{
+    testType: string;
+    minOverallScore: string;
+    minListeningScore?: string;
+    minReadingScore?: string;
+    minWritingScore?: string;
+    minSpeakingScore?: string;
+  }> = [];
+  
+  const testTypes = Object.keys(TEST_TYPE_CONFIG);
+  
+  for (const testType of testTypes) {
+    if (testType === baseTestType) {
+      // Include original test with its exact scores
+      results.push({
+        testType,
+        minOverallScore: overallScore.toString(),
+        minListeningScore: bandScores?.listening?.toString(),
+        minReadingScore: bandScores?.reading?.toString(),
+        minWritingScore: bandScores?.writing?.toString(),
+        minSpeakingScore: bandScores?.speaking?.toString(),
+      });
+    } else {
+      const converted = convertScore(baseTestType, testType, overallScore, bandScores?.listening);
+      if (converted) {
+        const result: typeof results[0] = {
+          testType,
+          minOverallScore: converted.overall.toString(),
+        };
+        // For TOEFL, include section scores
+        if (testType === 'toefl' && converted.section) {
+          result.minListeningScore = converted.section.toString();
+          result.minReadingScore = converted.section.toString();
+          result.minWritingScore = converted.section.toString();
+          result.minSpeakingScore = converted.section.toString();
+        }
+        results.push(result);
+      }
+    }
+  }
+  
+  return results;
+};
+
 // Calculate IELTS overall score using official rounding rules
 const calculateIeltsOverall = (l: number, r: number, w: number, s: number): string => {
   const avg = (l + r + w + s) / 4;
@@ -309,6 +454,26 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     notes: "",
     isPreferred: false,
   });
+  
+  // Generate all tests dialog state
+  const [generateTestsDialogOpen, setGenerateTestsDialogOpen] = useState(false);
+  const [generateTestsForm, setGenerateTestsForm] = useState({
+    baseTestType: "ielts",
+    minOverallScore: "",
+    minListeningScore: "",
+    minReadingScore: "",
+    minWritingScore: "",
+    minSpeakingScore: "",
+    notes: "",
+  });
+  const [generatedPreview, setGeneratedPreview] = useState<Array<{
+    testType: string;
+    minOverallScore: string;
+    minListeningScore?: string;
+    minReadingScore?: string;
+    minWritingScore?: string;
+    minSpeakingScore?: string;
+  }>>([]);
 
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/super-admin/institutions", selectedInstitutionId],
@@ -374,6 +539,86 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       toast({ title: "Failed to delete requirement", description: error.message, variant: "destructive" });
     },
   });
+
+  // Batch insert mutation for generating all test types
+  const batchCreateEnglishReqMutation = useMutation({
+    mutationFn: async (requirements: Array<{
+      testType: string;
+      minOverallScore: string;
+      minListeningScore?: string;
+      minReadingScore?: string;
+      minWritingScore?: string;
+      minSpeakingScore?: string;
+      notes?: string;
+    }>) => {
+      const response = await apiRequest("POST", `/api/courses/${course?.id}/english-requirements/batch`, { requirements });
+      return response.json();
+    },
+    onSuccess: (data: { created: any[]; skipped: string[]; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id, "english-requirements"] });
+      setGenerateTestsDialogOpen(false);
+      resetGenerateTestsForm();
+      
+      if (data.skipped && data.skipped.length > 0) {
+        toast({ 
+          title: `Created ${data.created.length} requirements`, 
+          description: `Skipped ${data.skipped.length} (already exist: ${data.skipped.map(t => TEST_TYPE_CONFIG[t]?.label || t).join(', ')})`,
+          variant: "default"
+        });
+      } else {
+        toast({ 
+          title: "All English requirements generated successfully", 
+          description: `Added ${data.created.length} test types with equivalent scores.` 
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to generate requirements", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetGenerateTestsForm = () => {
+    setGenerateTestsForm({
+      baseTestType: "ielts",
+      minOverallScore: "",
+      minListeningScore: "",
+      minReadingScore: "",
+      minWritingScore: "",
+      minSpeakingScore: "",
+      notes: "",
+    });
+    setGeneratedPreview([]);
+  };
+
+  const handleGeneratePreview = () => {
+    const overall = parseFloat(generateTestsForm.minOverallScore);
+    if (isNaN(overall)) return;
+    
+    const bandScores = {
+      listening: generateTestsForm.minListeningScore ? parseFloat(generateTestsForm.minListeningScore) : undefined,
+      reading: generateTestsForm.minReadingScore ? parseFloat(generateTestsForm.minReadingScore) : undefined,
+      writing: generateTestsForm.minWritingScore ? parseFloat(generateTestsForm.minWritingScore) : undefined,
+      speaking: generateTestsForm.minSpeakingScore ? parseFloat(generateTestsForm.minSpeakingScore) : undefined,
+    };
+    
+    const generated = generateEquivalentRequirements(
+      generateTestsForm.baseTestType,
+      overall,
+      bandScores
+    );
+    setGeneratedPreview(generated);
+  };
+
+  const handleConfirmGenerateAll = () => {
+    if (generatedPreview.length === 0) return;
+    
+    const requirementsWithNotes = generatedPreview.map(req => ({
+      ...req,
+      notes: generateTestsForm.notes || undefined,
+    }));
+    
+    batchCreateEnglishReqMutation.mutate(requirementsWithNotes);
+  };
 
   const resetEnglishReqForm = () => {
     setEnglishReqForm({
@@ -1188,16 +1433,31 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       <div className="flex items-center justify-between">
                         <FormLabel>English Language Requirements</FormLabel>
                         {course?.id && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleAddEnglishReq}
-                            data-testid="button-add-english-requirement"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add Test
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="default"
+                              onClick={() => {
+                                resetGenerateTestsForm();
+                                setGenerateTestsDialogOpen(true);
+                              }}
+                              data-testid="button-generate-all-tests"
+                            >
+                              <Sparkles className="h-4 w-4 mr-1" />
+                              Generate All Tests
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={handleAddEnglishReq}
+                              data-testid="button-add-english-requirement"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add Test
+                            </Button>
+                          </div>
                         )}
                       </div>
                       
@@ -1209,7 +1469,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       
                       {course?.id && englishRequirements.length === 0 && (
                         <p className="text-sm text-muted-foreground">
-                          No English requirements added yet. Click "Add Test" to add accepted test types.
+                          No English requirements added yet. Click "Generate All Tests" to quickly add all test types with equivalent scores, or "Add Test" to add individual tests.
                         </p>
                       )}
                       
@@ -1744,6 +2004,245 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               data-testid="button-save-english-req"
             >
               {createEnglishReqMutation.isPending || updateEnglishReqMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate All Test Types Dialog */}
+      <Dialog open={generateTestsDialogOpen} onOpenChange={setGenerateTestsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Generate All English Test Requirements
+            </DialogTitle>
+            <DialogDescription>
+              Enter scores for one test type and the system will automatically generate equivalent scores for all other test types.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Base Test Type</label>
+              <Select
+                value={generateTestsForm.baseTestType}
+                onValueChange={(value) => {
+                  setGenerateTestsForm(prev => ({ 
+                    ...prev, 
+                    baseTestType: value,
+                    minOverallScore: "",
+                    minListeningScore: "",
+                    minReadingScore: "",
+                    minWritingScore: "",
+                    minSpeakingScore: "",
+                  }));
+                  setGeneratedPreview([]);
+                }}
+              >
+                <SelectTrigger data-testid="select-base-test-type">
+                  <SelectValue placeholder="Select base test type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEST_TYPE_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                We recommend using IELTS as the base since it's the most widely recognized standard.
+              </p>
+            </div>
+
+            {generateTestsForm.baseTestType && (
+              <>
+                <div className="bg-muted/50 px-3 py-2 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    Score range for {TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.label}: <strong>{TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.range}</strong>
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Min Listening {`(${TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionRange})`}
+                    </label>
+                    <Input
+                      type="number"
+                      step={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.step || "0.5"}
+                      value={generateTestsForm.minListeningScore}
+                      onChange={(e) => {
+                        setGenerateTestsForm(prev => ({ ...prev, minListeningScore: e.target.value }));
+                        setGeneratedPreview([]);
+                      }}
+                      placeholder={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionPlaceholder}
+                      data-testid="input-generate-listening"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Min Reading {`(${TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionRange})`}
+                    </label>
+                    <Input
+                      type="number"
+                      step={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.step || "0.5"}
+                      value={generateTestsForm.minReadingScore}
+                      onChange={(e) => {
+                        setGenerateTestsForm(prev => ({ ...prev, minReadingScore: e.target.value }));
+                        setGeneratedPreview([]);
+                      }}
+                      placeholder={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionPlaceholder}
+                      data-testid="input-generate-reading"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Min Writing {`(${TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionRange})`}
+                    </label>
+                    <Input
+                      type="number"
+                      step={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.step || "0.5"}
+                      value={generateTestsForm.minWritingScore}
+                      onChange={(e) => {
+                        setGenerateTestsForm(prev => ({ ...prev, minWritingScore: e.target.value }));
+                        setGeneratedPreview([]);
+                      }}
+                      placeholder={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionPlaceholder}
+                      data-testid="input-generate-writing"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Min Speaking {`(${TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionRange})`}
+                    </label>
+                    <Input
+                      type="number"
+                      step={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.step || "0.5"}
+                      value={generateTestsForm.minSpeakingScore}
+                      onChange={(e) => {
+                        setGenerateTestsForm(prev => ({ ...prev, minSpeakingScore: e.target.value }));
+                        setGeneratedPreview([]);
+                      }}
+                      placeholder={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.sectionPlaceholder}
+                      data-testid="input-generate-speaking"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Minimum Overall Score <span className="text-red-500">*</span>
+                    <span className="text-muted-foreground font-normal ml-1">
+                      ({TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.range})
+                    </span>
+                  </label>
+                  <Input
+                    type="number"
+                    step={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.step || "0.5"}
+                    value={generateTestsForm.minOverallScore}
+                    onChange={(e) => {
+                      setGenerateTestsForm(prev => ({ ...prev, minOverallScore: e.target.value }));
+                      setGeneratedPreview([]);
+                    }}
+                    placeholder={TEST_TYPE_CONFIG[generateTestsForm.baseTestType]?.overallPlaceholder}
+                    data-testid="input-generate-overall"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Notes (Optional)</label>
+                  <Input
+                    value={generateTestsForm.notes}
+                    onChange={(e) => setGenerateTestsForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="e.g., No band less than 6.0"
+                    data-testid="input-generate-notes"
+                  />
+                </div>
+
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleGeneratePreview}
+                  disabled={!generateTestsForm.minOverallScore}
+                  className="w-full"
+                  data-testid="button-preview-equivalents"
+                >
+                  Preview Equivalent Scores
+                </Button>
+
+                {generatedPreview.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Preview - Equivalent Requirements</label>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Test Type</TableHead>
+                            <TableHead>Min Overall</TableHead>
+                            <TableHead>Band Scores (L/R/W/S)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {generatedPreview.map((req) => (
+                            <TableRow 
+                              key={req.testType} 
+                              className={req.testType === generateTestsForm.baseTestType ? "bg-primary/5" : ""}
+                              data-testid={`preview-row-${req.testType}`}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {TEST_TYPE_CONFIG[req.testType]?.label}
+                                  {req.testType === generateTestsForm.baseTestType && (
+                                    <Badge variant="secondary" className="text-xs">Base</Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">{req.minOverallScore}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {[req.minListeningScore, req.minReadingScore, req.minWritingScore, req.minSpeakingScore]
+                                  .filter(Boolean)
+                                  .length > 0 ? (
+                                  <>
+                                    {req.minListeningScore && `L:${req.minListeningScore}`}
+                                    {req.minReadingScore && ` R:${req.minReadingScore}`}
+                                    {req.minWritingScore && ` W:${req.minWritingScore}`}
+                                    {req.minSpeakingScore && ` S:${req.minSpeakingScore}`}
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Score conversions are based on official equivalency tables. You can edit individual requirements after generation if needed.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setGenerateTestsDialogOpen(false);
+                resetGenerateTestsForm();
+              }}
+              data-testid="button-cancel-generate"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmGenerateAll}
+              disabled={generatedPreview.length === 0 || batchCreateEnglishReqMutation.isPending}
+              data-testid="button-confirm-generate"
+            >
+              {batchCreateEnglishReqMutation.isPending ? "Generating..." : `Generate ${generatedPreview.length} Requirements`}
             </Button>
           </div>
         </DialogContent>
