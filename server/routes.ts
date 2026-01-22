@@ -13809,7 +13809,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.post("/api/admin/cms/testimonials", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
+      // support_staff includes marketing_executive role which needs to create testimonials
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
@@ -13842,7 +13843,8 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.patch("/api/admin/cms/testimonials/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_manager']);
+      // support_staff includes marketing_executive role which needs to update testimonials
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin', 'support_staff']);
       
       if (!access) {
         return res.status(403).json({ message: "Admin access required" });
