@@ -426,27 +426,6 @@ export default function PublicInstitutionDetail() {
               </Card>
             )}
 
-            {/* Featured Courses */}
-            {institution.topCourses && institution.topCourses.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Featured Courses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {institution.topCourses.map((course, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                        <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
-                          {course}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
           </div>
 
           {/* Sidebar Info */}
@@ -549,6 +528,27 @@ export default function PublicInstitutionDetail() {
                       </Badge>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Featured Courses - moved to sidebar */}
+            {institution.topCourses && institution.topCourses.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Featured Courses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {institution.topCourses.map((course, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                        <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
+                          {course}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </CardContent>
               </Card>
             )}
