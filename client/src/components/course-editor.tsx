@@ -349,8 +349,6 @@ const courseSchema = z.object({
   eligibilityRequirements: z.string().optional(),
   englishRequirements: z.string().optional(),
   courseCode: z.string().optional(),
-  scholarshipPercentageMin: optionalIntPercentage,
-  scholarshipPercentageMax: optionalIntPercentage,
   pathways: z.string().optional(),
   studyAreas: z.string().optional(),
   careerOutcomes: z.string().optional(),
@@ -396,8 +394,6 @@ interface Course {
   eligibilityRequirements?: string | null;
   englishRequirements?: string | null;
   courseCode?: string | null;
-  scholarshipPercentageMin?: number | null;
-  scholarshipPercentageMax?: number | null;
   pathways?: string[] | null;
   studyAreas?: string[] | null;
   careerOutcomes?: string[] | null;
@@ -711,8 +707,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       eligibilityRequirements: course?.eligibilityRequirements || "",
       englishRequirements: course?.englishRequirements || "",
       courseCode: course?.courseCode || "",
-      scholarshipPercentageMin: course?.scholarshipPercentageMin || ("" as any),
-      scholarshipPercentageMax: course?.scholarshipPercentageMax || ("" as any),
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
       careerOutcomes: Array.isArray(course?.careerOutcomes) ? course.careerOutcomes.join(", ") : "",
@@ -1673,40 +1667,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Scholarships</CardTitle>
-                    <CardDescription>Available scholarship percentages</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="scholarshipPercentageMin"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Scholarship Min %</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" placeholder="10" min="0" max="100" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-course-scholarshipMin" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="scholarshipPercentageMax"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Scholarship Max %</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="number" placeholder="50" min="0" max="100" onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : "")} data-testid="input-course-scholarshipMax" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
 
                 {course && (
                   <Card>

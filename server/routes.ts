@@ -77,6 +77,11 @@ import {
   // Institution tags imports (uses unified tags table)
   institutionTags,
   insertInstitutionTagSchema,
+  // Scholarship imports
+  scholarships,
+  courseScholarships,
+  insertScholarshipSchema,
+  insertCourseScholarshipSchema,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -15327,6 +15332,218 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END INSTITUTION TAGS API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // INSTITUTION SCHOLARSHIPS API ENDPOINTS
+  // Scholarships are institution-wide and can be linked to courses
+  // ============================================
+
+  // Get all scholarships for an institution
+  app.get("/api/institutions/:institutionId/scholarships", async (req, res) => {
+    try {
+      const { institutionId } = req.params;
+      
+      const institutionScholarships = await db
+        .select()
+        .from(scholarships)
+        .where(eq(scholarships.institutionId, institutionId))
+        .orderBy(desc(scholarships.createdAt));
+      
+      res.json(institutionScholarships);
+    } catch (error: any) {
+      console.error("Error fetching scholarships:", error);
+      res.status(500).json({ message: "Failed to fetch scholarships" });
+    }
+  });
+
+  // Get a single scholarship by ID
+  app.get("/api/scholarships/:id", async (req, res) => {
+    try {
+      const scholarship = await db
+        .select()
+        .from(scholarships)
+        .where(eq(scholarships.id, req.params.id))
+        .limit(1);
+      
+      if (scholarship.length === 0) {
+        return res.status(404).json({ message: "Scholarship not found" });
+      }
+      
+      res.json(scholarship[0]);
+    } catch (error: any) {
+      console.error("Error fetching scholarship:", error);
+      res.status(500).json({ message: "Failed to fetch scholarship" });
+    }
+  });
+
+  // Create a new scholarship (authenticated)
+  app.post("/api/admin/institutions/:institutionId/scholarships", isAuthenticated, async (req: any, res) => {
+    try {
+      const { institutionId } = req.params;
+      
+      const validatedData = insertScholarshipSchema.parse({
+        ...req.body,
+        institutionId,
+      });
+      
+      const [newScholarship] = await db
+        .insert(scholarships)
+        .values(validatedData)
+        .returning();
+      
+      res.status(201).json(newScholarship);
+    } catch (error: any) {
+      console.error("Error creating scholarship:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid scholarship data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create scholarship" });
+    }
+  });
+
+  // Update a scholarship (authenticated)
+  app.patch("/api/admin/scholarships/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [updatedScholarship] = await db
+        .update(scholarships)
+        .set({
+          ...req.body,
+          updatedAt: new Date(),
+        })
+        .where(eq(scholarships.id, id))
+        .returning();
+      
+      if (!updatedScholarship) {
+        return res.status(404).json({ message: "Scholarship not found" });
+      }
+      
+      res.json(updatedScholarship);
+    } catch (error: any) {
+      console.error("Error updating scholarship:", error);
+      res.status(500).json({ message: "Failed to update scholarship" });
+    }
+  });
+
+  // Delete a scholarship (authenticated)
+  app.delete("/api/admin/scholarships/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // This will also cascade delete related course_scholarships
+      const [deletedScholarship] = await db
+        .delete(scholarships)
+        .where(eq(scholarships.id, id))
+        .returning();
+      
+      if (!deletedScholarship) {
+        return res.status(404).json({ message: "Scholarship not found" });
+      }
+      
+      res.json({ message: "Scholarship deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting scholarship:", error);
+      res.status(500).json({ message: "Failed to delete scholarship" });
+    }
+  });
+
+  // ============================================
+  // COURSE SCHOLARSHIPS JUNCTION API ENDPOINTS
+  // Link scholarships to courses
+  // ============================================
+
+  // Get all scholarships for a course
+  app.get("/api/courses/:courseId/scholarships", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      const courseScholarshipsList = await db
+        .select({
+          scholarship: scholarships,
+        })
+        .from(courseScholarships)
+        .innerJoin(scholarships, eq(courseScholarships.scholarshipId, scholarships.id))
+        .where(eq(courseScholarships.courseId, courseId));
+      
+      res.json(courseScholarshipsList.map(cs => cs.scholarship));
+    } catch (error: any) {
+      console.error("Error fetching course scholarships:", error);
+      res.status(500).json({ message: "Failed to fetch course scholarships" });
+    }
+  });
+
+  // Set scholarships for a course (replace all)
+  app.put("/api/admin/courses/:courseId/scholarships", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { scholarshipIds } = req.body;
+      
+      // Delete existing course-scholarship associations
+      await db.delete(courseScholarships).where(eq(courseScholarships.courseId, courseId));
+      
+      // Insert new associations
+      if (scholarshipIds && scholarshipIds.length > 0) {
+        const newAssociations = scholarshipIds.map((scholarshipId: string) => ({
+          courseId,
+          scholarshipId,
+        }));
+        await db.insert(courseScholarships).values(newAssociations);
+      }
+      
+      // Return updated scholarships
+      const updatedScholarships = await db
+        .select({ scholarship: scholarships })
+        .from(courseScholarships)
+        .innerJoin(scholarships, eq(courseScholarships.scholarshipId, scholarships.id))
+        .where(eq(courseScholarships.courseId, courseId));
+      
+      res.json(updatedScholarships.map(cs => cs.scholarship));
+    } catch (error: any) {
+      console.error("Error setting course scholarships:", error);
+      res.status(500).json({ message: "Failed to set course scholarships" });
+    }
+  });
+
+  // Add a scholarship to a course
+  app.post("/api/admin/courses/:courseId/scholarships/:scholarshipId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId, scholarshipId } = req.params;
+      
+      await db.insert(courseScholarships).values({
+        courseId,
+        scholarshipId,
+      });
+      
+      res.status(201).json({ message: "Scholarship linked to course" });
+    } catch (error: any) {
+      console.error("Error adding scholarship to course:", error);
+      res.status(500).json({ message: "Failed to add scholarship to course" });
+    }
+  });
+
+  // Remove a scholarship from a course
+  app.delete("/api/admin/courses/:courseId/scholarships/:scholarshipId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId, scholarshipId } = req.params;
+      
+      await db.delete(courseScholarships).where(
+        and(
+          eq(courseScholarships.courseId, courseId),
+          eq(courseScholarships.scholarshipId, scholarshipId)
+        )
+      );
+      
+      res.json({ message: "Scholarship removed from course" });
+    } catch (error: any) {
+      console.error("Error removing scholarship from course:", error);
+      res.status(500).json({ message: "Failed to remove scholarship from course" });
+    }
+  });
+
+  // ============================================
+  // END SCHOLARSHIPS API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available
