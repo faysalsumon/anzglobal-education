@@ -31,7 +31,7 @@ export function AdminCmsPanel() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CmsTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="testimonials" data-testid="tab-testimonials">
             <Quote className="h-4 w-4 mr-2 hidden sm:inline" />
             Testimonials
@@ -39,10 +39,6 @@ export function AdminCmsPanel() {
           <TabsTrigger value="faqs" data-testid="tab-faqs">
             <FileText className="h-4 w-4 mr-2 hidden sm:inline" />
             FAQs
-          </TabsTrigger>
-          <TabsTrigger value="team" data-testid="tab-team">
-            <Users className="h-4 w-4 mr-2 hidden sm:inline" />
-            Team
           </TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-settings">
             <Settings className="h-4 w-4 mr-2 hidden sm:inline" />
@@ -59,9 +55,6 @@ export function AdminCmsPanel() {
         </TabsContent>
         <TabsContent value="faqs" className="mt-6">
           <FaqsPanel />
-        </TabsContent>
-        <TabsContent value="team" className="mt-6">
-          <TeamPanel />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
           <SettingsPanel />
