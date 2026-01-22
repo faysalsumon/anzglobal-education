@@ -2090,10 +2090,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get distinct disciplines from the enum for Tier 1
-  app.get("/api/disciplines", async (_req, res) => {
+  // Get all main disciplines (master list for admin selection)
+  app.get("/api/disciplines/all", async (_req, res) => {
     try {
-      // Return the discipline values from the enum for Tier 1 selection
+      // Return the full list of main disciplines for selection
       const disciplines = [
         'Accounting, Business & Finance',
         'Agriculture & Forestry',
@@ -2111,9 +2111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Short Courses',
         'Trade',
       ];
-      res.json(disciplines);
+      res.json(disciplines.map(name => ({ name, count: 0 })));
     } catch (error) {
-      console.error("Error fetching disciplines:", error);
+      console.error("Error fetching all disciplines:", error);
       res.status(500).json({ message: "Failed to fetch disciplines" });
     }
   });

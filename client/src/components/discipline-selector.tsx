@@ -36,7 +36,7 @@ export function DisciplineSelector({
   const [open, setOpen] = useState(false);
 
   const { data: disciplines, isLoading } = useQuery<Discipline[]>({
-    queryKey: ["/api/disciplines"],
+    queryKey: ["/api/disciplines/all"],
     enabled: open,
   });
 
@@ -127,7 +127,6 @@ export function DisciplineSelector({
                             {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                           </div>
                           <span className="flex-1">{discipline.name}</span>
-                          <span className="text-xs text-muted-foreground">({discipline.count})</span>
                         </CommandItem>
                       );
                     })}
