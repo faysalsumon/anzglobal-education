@@ -811,7 +811,7 @@ export default function Landing() {
       )}
 
       {/* Student Reviews Section - Compact Slider */}
-      <section className="py-12 md:py-16 bg-card/30">
+      <section className="py-12 md:py-16 bg-blue-50 dark:bg-blue-950/20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
