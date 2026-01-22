@@ -9,13 +9,15 @@ interface GoogleCampusMapProps {
   institutionName: string;
   selectedCampusIndex?: number | null;
   onMarkerClick?: (index: number) => void;
+  height?: string;
 }
 
 export function GoogleCampusMap({ 
   campuses, 
   institutionName,
   selectedCampusIndex = null,
-  onMarkerClick
+  onMarkerClick,
+  height = "400px"
 }: GoogleCampusMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -235,7 +237,7 @@ export function GoogleCampusMap({
       </CardHeader>
       <CardContent>
         {isLoading && (
-          <div className="flex items-center justify-center h-[400px] bg-muted rounded-md">
+          <div className="flex items-center justify-center bg-muted rounded-md" style={{ height }}>
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">Loading map...</p>
@@ -243,7 +245,7 @@ export function GoogleCampusMap({
           </div>
         )}
         {error && (
-          <div className="flex items-center justify-center h-[400px] bg-muted rounded-md">
+          <div className="flex items-center justify-center bg-muted rounded-md" style={{ height }}>
             <div className="text-center">
               <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">{error}</p>
@@ -252,7 +254,8 @@ export function GoogleCampusMap({
         )}
         <div
           ref={mapRef}
-          className={`w-full h-[400px] rounded-md ${isLoading || error ? 'hidden' : ''}`}
+          className={`w-full rounded-md ${isLoading || error ? 'hidden' : ''}`}
+          style={{ height }}
           data-testid="google-map"
         />
       </CardContent>

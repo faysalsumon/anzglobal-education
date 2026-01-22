@@ -1090,41 +1090,39 @@ export default function PublicInstitutions() {
         </DialogContent>
       </Dialog>
 
-      {/* Campus Map Dialog */}
+      {/* Campus Map Dialog - Compact Medium Size */}
       <Dialog open={campusMapDialogOpen} onOpenChange={setCampusMapDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="dialog-campus-map">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Navigation className="h-5 w-5" />
-              {selectedInstitutionForMap?.name} - Campus Locations
+        <DialogContent className="max-w-lg p-4" data-testid="dialog-campus-map">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Navigation className="h-4 w-4" />
+              {selectedInstitutionForMap?.name}
             </DialogTitle>
-            <DialogDescription>
-              View campus location on the map
-            </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            {/* Selected Campus Info */}
+          <div className="space-y-3">
+            {/* Selected Campus Info - Compact */}
             {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 0 && (
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <h4 className="font-medium text-sm mb-1" data-testid="text-dialog-campus-name">
-                  {selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.name || 'Main Campus'}
-                </h4>
-                <p className="text-sm text-muted-foreground" data-testid="text-dialog-campus-address">
-                  {[
-                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.street,
-                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.city,
-                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.state,
-                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.postcode,
-                    selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.country
-                  ].filter(Boolean).join(', ')}
-                </p>
+              <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-md">
+                <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <span className="font-medium text-sm" data-testid="text-dialog-campus-name">
+                    {selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.name || 'Main Campus'}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-1" data-testid="text-dialog-campus-address">
+                    — {[
+                      selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.city,
+                      selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.state,
+                      selectedInstitutionForMap.campusAddresses[selectedCampusIndex]?.postcode
+                    ].filter(Boolean).join(', ')}
+                  </span>
+                </div>
               </div>
             )}
             
-            {/* Map Component */}
+            {/* Compact Map */}
             {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 0 && (
-              <div className="rounded-lg overflow-hidden border">
+              <div className="rounded-md overflow-hidden border h-[260px]">
                 <GoogleCampusMap
                   campuses={selectedInstitutionForMap.campusAddresses.map((c: CampusAddress) => ({
                     name: c.name || 'Campus',
@@ -1139,27 +1137,27 @@ export default function PublicInstitutions() {
                   institutionName={selectedInstitutionForMap.name}
                   selectedCampusIndex={selectedCampusIndex}
                   onMarkerClick={(index) => setSelectedCampusIndex(index)}
+                  height="260px"
                 />
               </div>
             )}
 
-            {/* Campus Navigation (if multiple campuses) */}
+            {/* Campus Switcher - Compact */}
             {selectedInstitutionForMap?.campusAddresses && selectedInstitutionForMap.campusAddresses.length > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-sm text-muted-foreground mr-2">Switch campus:</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedInstitutionForMap.campusAddresses.map((campus: CampusAddress, index: number) => (
-                    <Button
-                      key={index}
-                      variant={selectedCampusIndex === index ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCampusIndex(index)}
-                      data-testid={`button-switch-campus-${index}`}
-                    >
-                      {campus.name || campus.city || `Campus ${index + 1}`}
-                    </Button>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">Campus:</span>
+                {selectedInstitutionForMap.campusAddresses.map((campus: CampusAddress, index: number) => (
+                  <Button
+                    key={index}
+                    variant={selectedCampusIndex === index ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    onClick={() => setSelectedCampusIndex(index)}
+                    data-testid={`button-switch-campus-${index}`}
+                  >
+                    {campus.name || campus.city || `Campus ${index + 1}`}
+                  </Button>
+                ))}
               </div>
             )}
           </div>
