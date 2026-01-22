@@ -71,6 +71,13 @@ type CampusAddress = {
   longitude?: string;
 };
 
+type StructuredTag = {
+  id: string;
+  name: string;
+  category: string;
+  color: string | null;
+};
+
 type University = {
   id: string;
   name: string;
@@ -100,6 +107,7 @@ type University = {
   topDisciplines: string[] | null;
   coursesCount?: number;
   campusAddresses?: CampusAddress[] | null;
+  structuredTags?: StructuredTag[];
 };
 
 type FilterMetadata = {
@@ -991,6 +999,43 @@ export default function PublicInstitutions() {
                               </div>
                             )}
                           </div>
+                          
+                          {/* Location & Type Tags */}
+                          {(() => {
+                            const locationTags = institution.structuredTags?.filter(t => t.category === 'location') || [];
+                            const typeTags = institution.structuredTags?.filter(t => t.category === 'type') || [];
+                            const relevantTags = [...typeTags, ...locationTags];
+                            
+                            if (relevantTags.length === 0) return null;
+                            
+                            return (
+                              <div 
+                                className="flex flex-wrap items-center gap-1.5"
+                                data-testid={`institution-tags-${institution.id}`}
+                              >
+                                {relevantTags.slice(0, 5).map((tag) => (
+                                  <Badge 
+                                    key={tag.id}
+                                    variant="secondary" 
+                                    className="text-xs py-0 px-2"
+                                    style={tag.color ? { backgroundColor: `${tag.color}20`, borderColor: tag.color, color: tag.color } : undefined}
+                                    data-testid={`badge-tag-${institution.id}-${tag.id}`}
+                                  >
+                                    {tag.name}
+                                  </Badge>
+                                ))}
+                                {relevantTags.length > 5 && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs py-0 px-1.5"
+                                    data-testid={`badge-tags-more-${institution.id}`}
+                                  >
+                                    +{relevantTags.length - 5}
+                                  </Badge>
+                                )}
+                              </div>
+                            );
+                          })()}
                           
                           {/* Campus Cities Row + View Details Button */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

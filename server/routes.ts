@@ -1748,9 +1748,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endIndex = startIndex + pageSizeNum;
         institutions = institutions.slice(startIndex, endIndex);
         
+        // Fetch structured tags for all institutions in the current page
+        const institutionIds = institutions.map(i => i.id);
+        const allInstitutionTags = institutionIds.length > 0 
+          ? await db.select({
+              institutionId: institutionTags.institutionId,
+              tagId: tags.id,
+              tagName: tags.name,
+              tagCategory: tags.category,
+              tagColor: tags.color,
+            })
+            .from(institutionTags)
+            .innerJoin(tags, eq(institutionTags.tagId, tags.id))
+            .where(inArray(institutionTags.institutionId, institutionIds))
+          : [];
+        
+        // Group tags by institution
+        const tagsByInstitution = new Map<string, Array<{ id: string; name: string; category: string; color: string | null }>>();
+        for (const tag of allInstitutionTags) {
+          if (!tagsByInstitution.has(tag.institutionId)) {
+            tagsByInstitution.set(tag.institutionId, []);
+          }
+          tagsByInstitution.get(tag.institutionId)!.push({
+            id: tag.tagId,
+            name: tag.tagName,
+            category: tag.tagCategory,
+            color: tag.tagColor,
+          });
+        }
+        
+        // Add structured tags to each institution
+        const institutionsWithTags = institutions.map(inst => ({
+          ...inst,
+          structuredTags: tagsByInstitution.get(inst.id) || [],
+        }));
+        
         // Return paginated response with total count
         res.json({
-          items: institutions,
+          items: institutionsWithTags,
           totalCount,
           page: pageNum,
           pageSize: pageSizeNum,
@@ -1758,7 +1793,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Return unpaginated response for backward compatibility
-        res.json(institutions);
+        // Also include structured tags for consistency
+        const institutionIds = institutions.map(i => i.id);
+        const allInstitutionTags = institutionIds.length > 0 
+          ? await db.select({
+              institutionId: institutionTags.institutionId,
+              tagId: tags.id,
+              tagName: tags.name,
+              tagCategory: tags.category,
+              tagColor: tags.color,
+            })
+            .from(institutionTags)
+            .innerJoin(tags, eq(institutionTags.tagId, tags.id))
+            .where(inArray(institutionTags.institutionId, institutionIds))
+          : [];
+        
+        const tagsByInstitution = new Map<string, Array<{ id: string; name: string; category: string; color: string | null }>>();
+        for (const tag of allInstitutionTags) {
+          if (!tagsByInstitution.has(tag.institutionId)) {
+            tagsByInstitution.set(tag.institutionId, []);
+          }
+          tagsByInstitution.get(tag.institutionId)!.push({
+            id: tag.tagId,
+            name: tag.tagName,
+            category: tag.tagCategory,
+            color: tag.tagColor,
+          });
+        }
+        
+        const institutionsWithTags = institutions.map(inst => ({
+          ...inst,
+          structuredTags: tagsByInstitution.get(inst.id) || [],
+        }));
+        
+        res.json(institutionsWithTags);
       }
     } catch (error) {
       console.error("Error fetching institutions:", error);
