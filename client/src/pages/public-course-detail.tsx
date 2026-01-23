@@ -303,16 +303,6 @@ export default function PublicCourseDetail() {
 
                 {/* Feature Badges - Prominent highlights only */}
                 <div className="flex flex-wrap gap-2">
-                  {/* Scholarship Badge */}
-                  {course.university && ((course.university.scholarshipPercentageMin !== null && course.university.scholarshipPercentageMin !== undefined && course.university.scholarshipPercentageMin > 0) || 
-                    (course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined && course.university.scholarshipPercentageMax > 0)) && (
-                    <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
-                      <Award className="h-3 w-3 mr-1" />
-                      {course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined && course.university.scholarshipPercentageMax > 0
-                        ? `Up to ${course.university.scholarshipPercentageMax}%`
-                        : `${course.university.scholarshipPercentageMin}%`} Scholarship
-                    </Badge>
-                  )}
                   {course.prPathway && (
                     <Badge className="bg-gradient-to-r from-primary to-primary/80 border-0 text-white px-4 py-1.5" data-testid="badge-pr-pathway">
                       <Plane className="h-3 w-3 mr-1" />
