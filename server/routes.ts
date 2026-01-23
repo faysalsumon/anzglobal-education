@@ -6236,6 +6236,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      if (error?.status === 402 || error?.code === 402) {
+        return res.status(402).json({ 
+          message: "OpenRouter credits exhausted. Please add more credits to your OpenRouter account or use a different API key." 
+        });
+      }
+      
       if (error.message?.includes('Failed to fetch URL')) {
         return res.status(400).json({ 
           message: "Could not access the URL. The website may be blocking requests or the URL may be incorrect." 
