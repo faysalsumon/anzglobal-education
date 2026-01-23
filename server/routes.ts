@@ -1395,7 +1395,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has university access OR admin access
-      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
+      // Include 'marketing' role since Marketing Executives need to upload gallery images
+      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin', 'marketing']);
       const adminAccess = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!universityAccess && !adminAccess) {
@@ -1434,7 +1435,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // Check if user has university access OR admin access
-      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin']);
+      // Include 'marketing' role since Marketing Executives need to generate gallery images
+      const universityAccess = await checkUniversityAccess(userId, ['cto', 'admin', 'marketing']);
       const adminAccess = await checkAdminAccess(userId, ['cto', 'support_manager']);
       
       if (!universityAccess && !adminAccess) {
