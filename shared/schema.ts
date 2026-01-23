@@ -581,6 +581,7 @@ export const universities = pgTable("universities", {
   publishStatus: varchar("publish_status", { length: 20 }).notNull().default("draft"), // 'draft', 'published'
   publishedAt: timestamp("published_at"),
   publishedByUserId: varchar("published_by_user_id").references(() => users.id), // User who published
+  visibility: varchar("visibility", { length: 20 }).notNull().default("public"), // 'public' | 'private' - private institutions only visible to logged-in students
   
   // Audit trail for tracking
   createdByUserId: varchar("created_by_user_id").references(() => users.id), // User who created the institution
