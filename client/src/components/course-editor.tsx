@@ -2694,15 +2694,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   onClick={async () => {
                     setIsGeneratingAiReqs(true);
                     try {
-                      const response = await fetch("/api/ai/generate-entry-requirements", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          courseLevel: currentCourseLevel,
-                          institutionCountry: institutionCountry,
-                          courseName: form.getValues("title"),
-                          discipline: form.getValues("discipline"),
-                        }),
+                      const response = await apiRequest("POST", "/api/ai/generate-entry-requirements", {
+                        courseLevel: currentCourseLevel,
+                        institutionCountry: institutionCountry,
+                        courseName: form.getValues("title"),
+                        discipline: form.getValues("discipline"),
                       });
                       if (response.ok) {
                         const data = await response.json();
@@ -2852,22 +2848,18 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     onClick={async () => {
                       setIsGeneratingEquivalencies(true);
                       try {
-                        const response = await fetch("/api/ai/generate-equivalencies", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            requirements: selectedEntryRequirements.map(req => {
-                              const template = entryRequirementTemplates.find(
-                                t => t.qualificationTypeId === req.qualificationTypeId
-                              );
-                              return {
-                                qualificationName: template?.qualification?.name || "",
-                                qualificationCountry: template?.qualification?.country || institutionCountry || "",
-                                minGrade: req.minGrade,
-                              };
-                            }),
-                            sourceCountries: ["Bangladesh", "India", "Nepal"],
+                        const response = await apiRequest("POST", "/api/ai/generate-equivalencies", {
+                          requirements: selectedEntryRequirements.map(req => {
+                            const template = entryRequirementTemplates.find(
+                              t => t.qualificationTypeId === req.qualificationTypeId
+                            );
+                            return {
+                              qualificationName: template?.qualification?.name || "",
+                              qualificationCountry: template?.qualification?.country || institutionCountry || "",
+                              minGrade: req.minGrade,
+                            };
                           }),
+                          sourceCountries: ["Bangladesh", "India", "Nepal"],
                         });
                         if (response.ok) {
                           const data = await response.json();
@@ -2995,10 +2987,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   })) || []);
                   
                 try {
-                  const response = await fetch("/api/admin/qualification-equivalencies/batch", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ equivalencies: approvedEquivalencies }),
+                  const response = await apiRequest("POST", "/api/admin/qualification-equivalencies/batch", {
+                    equivalencies: approvedEquivalencies,
                   });
                   if (response.ok) {
                     const data = await response.json();
