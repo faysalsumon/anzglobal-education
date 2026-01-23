@@ -328,7 +328,7 @@ export default function PublicCourseDetail() {
                   <div className="bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl p-4 border border-primary/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Tag className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">Course Feature</span>
+                      <span className="text-sm font-semibold text-foreground">Course Features</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {courseTags.map((tag) => (
