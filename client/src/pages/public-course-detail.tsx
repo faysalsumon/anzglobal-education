@@ -274,28 +274,28 @@ export default function PublicCourseDetail() {
                     {course.title}
                   </h1>
                   {/* Course Code with Level and Apply By */}
-                  <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-3">
                     {course.courseCode && (
-                      <span className="text-lg" data-testid="text-course-code">
+                      <span className="text-lg text-muted-foreground" data-testid="text-course-code">
                         Course Code: {course.courseCode}
                       </span>
                     )}
                     {course.level && (
                       <>
                         <span className="text-muted-foreground/50">•</span>
-                        <span className="flex items-center gap-1.5 text-base" data-testid="text-course-level">
-                          <GraduationCap className="h-4 w-4 text-primary" />
+                        <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-course-level">
+                          <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
                           {course.level}
-                        </span>
+                        </Badge>
                       </>
                     )}
                     {course.applicationDeadline && (
                       <>
                         <span className="text-muted-foreground/50">•</span>
-                        <span className="flex items-center gap-1.5 text-base" data-testid="text-apply-by">
-                          <Calendar className="h-4 w-4 text-primary" />
+                        <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-apply-by">
+                          <Calendar className="h-3.5 w-3.5 mr-1.5" />
                           Apply by {course.applicationDeadline}
-                        </span>
+                        </Badge>
                       </>
                     )}
                   </div>
@@ -377,46 +377,46 @@ export default function PublicCourseDetail() {
               </div>
             </div>
 
-            {/* Quick Stats Card */}
+            {/* Quick Stats Card - Compact & Responsive */}
             <div className="lg:col-span-1">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
+              <Card className="bg-background/60 backdrop-blur-sm border-primary/20">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
                     Quick Facts
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 px-4 pb-4">
                   {course.fees && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <DollarSign className="h-4 w-4 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <DollarSign className="h-3.5 w-3.5 text-primary" />
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Annual Tuition</p>
-                        <p className="text-lg font-bold" data-testid="text-annual-tuition">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Annual Tuition</p>
+                        <p className="text-sm font-bold truncate" data-testid="text-annual-tuition">{course.currency} {Number(course.fees).toLocaleString()}</p>
                       </div>
                     </div>
                   )}
                   {course.duration && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-secondary/10 rounded-lg">
-                        <Clock className="h-4 w-4 text-secondary" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md">
+                        <Clock className="h-3.5 w-3.5 text-secondary" />
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="font-semibold" data-testid="text-duration">{course.duration}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Duration</p>
+                        <p className="text-sm font-semibold" data-testid="text-duration">{course.duration}</p>
                       </div>
                     </div>
                   )}
                   {course.startDate && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-secondary/10 rounded-lg">
-                        <Calendar className="h-4 w-4 text-secondary" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md">
+                        <Calendar className="h-3.5 w-3.5 text-secondary" />
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Next Intake</p>
-                        <p className="font-semibold" data-testid="text-next-intake">{course.startDate}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Next Intake</p>
+                        <p className="text-sm font-semibold" data-testid="text-next-intake">{course.startDate}</p>
                       </div>
                     </div>
                   )}
