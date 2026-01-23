@@ -515,6 +515,30 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     minSpeakingScore?: string;
   }>>([]);
 
+  // AI Course Data Extraction state
+  const [aiExtractDialogOpen, setAiExtractDialogOpen] = useState(false);
+  const [isExtractingCourseData, setIsExtractingCourseData] = useState(false);
+  const [extractedCourseData, setExtractedCourseData] = useState<{
+    title?: string;
+    description?: string;
+    courseCode?: string;
+    level?: string;
+    discipline?: string;
+    duration?: string;
+    durationMonths?: number;
+    durationWeeks?: number;
+    fees?: number;
+    currency?: string;
+    applicationFees?: number;
+    intakes?: string[];
+    prerequisites?: string;
+    eligibilityRequirements?: string;
+    englishRequirements?: string;
+    careerOutcomes?: string[];
+    careerPath?: string;
+    studyAreas?: string[];
+  } | null>(null);
+
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/super-admin/institutions", selectedInstitutionId],
     enabled: !!selectedInstitutionId,
@@ -967,6 +991,88 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     },
   });
 
+  // AI Course Data Extraction mutation
+  const extractCourseDataMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const response = await apiRequest("POST", "/api/ai/extract-course-from-url", { url });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.data) {
+        setExtractedCourseData(data.data);
+        setAiExtractDialogOpen(true);
+      } else {
+        toast({
+          title: "No data found",
+          description: "Could not extract course information from this URL.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error("Failed to extract course data:", error);
+      toast({
+        title: "Extraction failed",
+        description: error.message || "Could not extract course data from the URL.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle AI extraction from URL
+  const handleExtractFromUrl = async () => {
+    const url = form.getValues("sourceUrl");
+    if (!url) {
+      toast({
+        title: "URL required",
+        description: "Please enter a course page URL first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsExtractingCourseData(true);
+    try {
+      await extractCourseDataMutation.mutateAsync(url);
+    } finally {
+      setIsExtractingCourseData(false);
+    }
+  };
+
+  // Apply extracted data to form
+  const handleApplyExtractedData = () => {
+    if (!extractedCourseData) return;
+    
+    const data = extractedCourseData;
+    
+    // Apply each field if it has a value
+    if (data.title) form.setValue("title", data.title);
+    if (data.description) form.setValue("description", data.description);
+    if (data.courseCode) form.setValue("courseCode", data.courseCode);
+    if (data.level) form.setValue("level", data.level);
+    if (data.discipline) form.setValue("discipline", data.discipline);
+    if (data.duration) form.setValue("duration", data.duration);
+    if (data.durationMonths) form.setValue("durationMonths", data.durationMonths);
+    if (data.durationWeeks) form.setValue("durationWeeks", data.durationWeeks);
+    if (data.fees) form.setValue("fees", data.fees);
+    if (data.currency) form.setValue("currency", data.currency);
+    if (data.applicationFees !== undefined) form.setValue("applicationFees", data.applicationFees);
+    if (data.intakes && data.intakes.length > 0) form.setValue("intakes", data.intakes.join(", "));
+    if (data.prerequisites) form.setValue("prerequisites", data.prerequisites);
+    if (data.eligibilityRequirements) form.setValue("eligibilityRequirements", data.eligibilityRequirements);
+    if (data.englishRequirements) form.setValue("englishRequirements", data.englishRequirements);
+    if (data.careerOutcomes && data.careerOutcomes.length > 0) form.setValue("careerOutcomes", data.careerOutcomes.join(", "));
+    if (data.careerPath) form.setValue("careerPath", data.careerPath);
+    if (data.studyAreas && data.studyAreas.length > 0) form.setValue("studyAreas", data.studyAreas.join(", "));
+    
+    setAiExtractDialogOpen(false);
+    setExtractedCourseData(null);
+    
+    toast({
+      title: "Data applied",
+      description: "Extracted course data has been applied to the form. Remember to Save the course.",
+    });
+  };
+
   // Handle adding/toggling an entry requirement from a template
   const handleEntryRequirementToggle = (template: {
     qualificationTypeId: string;
@@ -1216,15 +1322,37 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             <ExternalLink className="h-4 w-4" />
                             Course Page URL
                           </FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="url"
-                              placeholder="https://institution.edu/courses/course-name" 
-                              data-testid="input-course-source-url" 
-                            />
-                          </FormControl>
-                          <FormDescription>Direct link to this course on the institution's website</FormDescription>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="url"
+                                placeholder="https://institution.edu/courses/course-name" 
+                                data-testid="input-course-source-url" 
+                              />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="default"
+                              onClick={handleExtractFromUrl}
+                              disabled={isExtractingCourseData || !field.value}
+                              data-testid="button-ai-extract-course"
+                            >
+                              {isExtractingCourseData ? (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+                                  Extracting...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  AI Extract
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormDescription>Direct link to this course on the institution's website. Click "AI Extract" to auto-fill course details.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -2829,6 +2957,165 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
       {/* AI Equivalencies are now automatically generated when entry requirements are saved */}
       {/* No manual approval dialog needed - fully automatic */}
+
+      {/* AI Course Data Extraction Preview Dialog */}
+      <Dialog open={aiExtractDialogOpen} onOpenChange={setAiExtractDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Extracted Course Data
+            </DialogTitle>
+            <DialogDescription>
+              Review the extracted data below. Click "Apply to Form" to populate the form fields.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {extractedCourseData && (
+            <div className="flex-1 overflow-y-auto space-y-4 py-4">
+              {/* Title */}
+              {extractedCourseData.title && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Title</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.title}</div>
+                </div>
+              )}
+              
+              {/* Description */}
+              {extractedCourseData.description && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Description</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {extractedCourseData.description}
+                  </div>
+                </div>
+              )}
+              
+              {/* Grid for smaller fields */}
+              <div className="grid grid-cols-2 gap-3">
+                {extractedCourseData.courseCode && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Course Code</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.courseCode}</div>
+                  </div>
+                )}
+                {extractedCourseData.level && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Level</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.level}</div>
+                  </div>
+                )}
+                {extractedCourseData.discipline && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Discipline</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.discipline}</div>
+                  </div>
+                )}
+                {extractedCourseData.duration && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Duration</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.duration}</div>
+                  </div>
+                )}
+                {extractedCourseData.fees && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Tuition Fees</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">
+                      {extractedCourseData.currency || 'AUD'} {extractedCourseData.fees.toLocaleString()}
+                    </div>
+                  </div>
+                )}
+                {extractedCourseData.applicationFees !== undefined && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Application Fee</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">
+                      {extractedCourseData.applicationFees === 0 ? 'Waived' : `${extractedCourseData.currency || 'AUD'} ${extractedCourseData.applicationFees}`}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Intakes */}
+              {extractedCourseData.intakes && extractedCourseData.intakes.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Intakes</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.intakes.join(", ")}</div>
+                </div>
+              )}
+              
+              {/* Requirements */}
+              {extractedCourseData.prerequisites && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Prerequisites</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">{extractedCourseData.prerequisites}</div>
+                </div>
+              )}
+              {extractedCourseData.eligibilityRequirements && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Eligibility Requirements</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">{extractedCourseData.eligibilityRequirements}</div>
+                </div>
+              )}
+              {extractedCourseData.englishRequirements && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">English Requirements</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">{extractedCourseData.englishRequirements}</div>
+                </div>
+              )}
+              
+              {/* Career */}
+              {extractedCourseData.careerOutcomes && extractedCourseData.careerOutcomes.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Career Outcomes</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.careerOutcomes.join(", ")}</div>
+                </div>
+              )}
+              {extractedCourseData.careerPath && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Career Path</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">{extractedCourseData.careerPath}</div>
+                </div>
+              )}
+              
+              {/* Study Areas */}
+              {extractedCourseData.studyAreas && extractedCourseData.studyAreas.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Study Areas</label>
+                  <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.studyAreas.join(", ")}</div>
+                </div>
+              )}
+              
+              {/* Summary of found fields */}
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Found {Object.keys(extractedCourseData).filter(k => extractedCourseData[k as keyof typeof extractedCourseData] != null).length} fields from the course page.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAiExtractDialogOpen(false);
+                setExtractedCourseData(null);
+              }}
+              data-testid="button-cancel-extract"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApplyExtractedData}
+              disabled={!extractedCourseData}
+              data-testid="button-apply-extracted-data"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Apply to Form
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

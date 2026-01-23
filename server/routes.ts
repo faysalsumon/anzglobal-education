@@ -115,6 +115,7 @@ import {
   parseNaturalLanguageInstitutionQuery,
   generateEntryRequirements,
   generateQualificationEquivalencies,
+  extractCourseDataFromUrl,
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
@@ -6190,6 +6191,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to generate equivalencies. Please try again." });
+    }
+  });
+
+  // AI-powered course data extraction from URL
+  app.post("/api/ai/extract-course-from-url", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { url } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ message: "URL is required" });
+      }
+      
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+
+      console.log(`[AI Extract] Starting extraction from: ${url}`);
+      const extractedData = await extractCourseDataFromUrl(url);
+      console.log(`[AI Extract] Completed extraction, found ${Object.keys(extractedData).filter(k => extractedData[k as keyof typeof extractedData] != null).length} fields`);
+
+      res.json({ data: extractedData });
+    } catch (error: any) {
+      console.error("Error extracting course data from URL:", error);
+      
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. Please configure OpenRouter in AI Settings." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "API quota exceeded. Please check your OpenRouter account." 
+        });
+      }
+      
+      if (error.message?.includes('Failed to fetch URL')) {
+        return res.status(400).json({ 
+          message: "Could not access the URL. The website may be blocking requests or the URL may be incorrect." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to extract course data. Please try again." });
     }
   });
 

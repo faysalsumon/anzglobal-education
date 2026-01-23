@@ -694,7 +694,7 @@ Extract the following fields and return as JSON:
   }
 }
 
-interface ExtractedCourseData {
+interface InternalExtractedCourseData {
   title: string | null;
   description: string | null;
   subject: string | null;
@@ -1176,5 +1176,169 @@ Return ONLY a JSON object where keys are the destination qualification names:
   } catch (error) {
     console.error("Failed to parse AI equivalencies:", error);
     return {};
+  }
+}
+
+/**
+ * AI-powered course data extraction from URL
+ * Fetches webpage content and uses AI to extract structured course information
+ */
+export interface ExtractedCourseData {
+  title?: string;
+  description?: string;
+  courseCode?: string;
+  level?: string;
+  discipline?: string;
+  duration?: string;
+  durationMonths?: number;
+  durationWeeks?: number;
+  fees?: number;
+  currency?: string;
+  applicationFees?: number;
+  intakes?: string[];
+  prerequisites?: string;
+  eligibilityRequirements?: string;
+  englishRequirements?: string;
+  careerOutcomes?: string[];
+  careerPath?: string;
+  studyAreas?: string[];
+}
+
+export async function extractCourseDataFromUrl(url: string): Promise<ExtractedCourseData> {
+  checkAIConfigured();
+  
+  // Use existing validateUrl which includes DNS resolution checks and SSRF protection
+  const validatedUrl = await validateUrl(url);
+  
+  console.log(`[AI] Fetching course page: ${validatedUrl.toString()}`);
+  
+  // Fetch with timeout (30 seconds)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  
+  try {
+    const response = await fetch(validatedUrl.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; StudyMatchBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: controller.signal,
+      redirect: 'manual', // Prevent following redirects to avoid SSRF bypass
+    });
+    
+    clearTimeout(timeout);
+    
+    // Reject redirects to prevent SSRF bypass via redirect chains
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Redirects are not allowed for security. Please provide the final URL.');
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
+      throw new Error('URL does not return HTML content');
+    }
+    
+    // Limit response size (5MB max) - use streaming to avoid memory issues
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+      throw new Error('Response too large (max 5MB)');
+    }
+    
+    // Stream response with size limit
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Unable to read response body');
+    }
+    
+    const chunks: Uint8Array[] = [];
+    let totalSize = 0;
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      totalSize += value.length;
+      if (totalSize > MAX_SIZE) {
+        reader.cancel();
+        throw new Error('Response too large (max 5MB)');
+      }
+      
+      chunks.push(value);
+    }
+    
+    const html = new TextDecoder().decode(Buffer.concat(chunks.map(c => Buffer.from(c))));
+  
+    // Use Cheerio to extract clean text content
+    const cheerio = await import('cheerio');
+    const $ = cheerio.load(html);
+    
+    // Remove scripts, styles, navigation, footer, etc.
+    $('script, style, nav, footer, header, aside, .navigation, .footer, .header, .sidebar, .menu, .cookie-banner, .popup, iframe, noscript').remove();
+    
+    // Extract main content
+    const mainContent = $('main, article, .content, .main-content, #content, #main').text() || $('body').text();
+    
+    // Clean up whitespace
+    const cleanedContent = mainContent
+      .replace(/\s+/g, ' ')
+      .replace(/\n+/g, '\n')
+      .trim()
+      .substring(0, 15000); // Limit content to avoid token limits
+    
+    console.log(`[AI] Extracted ${cleanedContent.length} characters of content`);
+    
+    const prompt = `You are an expert at extracting course information from educational institution webpages.
+
+Analyze the following webpage content from a course page and extract structured information.
+
+WEBPAGE CONTENT:
+${cleanedContent}
+
+Extract the following fields if available (return null for fields not found):
+
+1. title - The full course name/title
+2. description - A compelling course description (2-3 paragraphs, rewrite for a student-focused platform)
+3. courseCode - Course code or CRICOS code if available
+4. level - One of: "Certificate II", "Certificate III", "Certificate IV", "Diploma", "Advanced Diploma", "Bachelor Degree", "Masters Degree", "Doctoral Degree"
+5. discipline - One of: "Accounting, Business & Finance", "Agriculture & Forestry", "Applied Sciences & Professions", "Arts, Design & Architecture", "Computer Science & IT", "Education & Training", "Engineering & Technology", "Environmental Studies & Earth Sciences", "Hospitality, Leisure & Sports", "Humanities", "Journalism & Media", "Law", "Medicine & Health", "Short Courses", "Trade"
+6. duration - Text description like "3 years" or "2 years full-time"
+7. durationMonths - Numeric duration in months
+8. durationWeeks - Numeric duration in weeks (if specified)
+9. fees - Annual tuition fees as a number (without currency symbol)
+10. currency - Currency code like "AUD", "USD", "GBP"
+11. applicationFees - Application fee as a number (0 if waived)
+12. intakes - Array of intake months like ["February", "July"]
+13. prerequisites - Academic prerequisites and prior learning requirements
+14. eligibilityRequirements - General eligibility requirements
+15. englishRequirements - English language test requirements (IELTS, TOEFL, PTE scores)
+16. careerOutcomes - Array of potential career roles/job titles
+17. careerPath - Description of career progression opportunities
+18. studyAreas - Array of main subject areas or majors
+
+Return a JSON object with these fields. For the description, rewrite it to be engaging and student-focused for an education platform, not just a copy from the source.`;
+
+    console.log(`[AI] Extracting course data using configured model`);
+    const content = await createAiCompletion(prompt, { maxTokens: 2000, json: true });
+    
+    try {
+      const parsed = JSON.parse(content || "{}");
+      console.log(`[AI] Successfully extracted course data with ${Object.keys(parsed).filter(k => parsed[k] != null).length} fields`);
+      return parsed;
+    } catch (parseError) {
+      console.error("Failed to parse AI course extraction:", parseError);
+      return {} as ExtractedCourseData;
+    }
+  } catch (fetchError: any) {
+    clearTimeout(timeout);
+    if (fetchError.name === 'AbortError') {
+      throw new Error('Request timed out (30 second limit)');
+    }
+    throw fetchError;
   }
 }
