@@ -235,7 +235,6 @@ export default function PublicCourseDetail() {
                       </div>
                     )}
                     <div>
-                      <p className="text-sm text-muted-foreground">Offered by</p>
                       <p className="font-semibold" data-testid="text-university-name">{course.university.name}</p>
                     </div>
                   </div>
