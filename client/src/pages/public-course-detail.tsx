@@ -364,8 +364,7 @@ export default function PublicCourseDetail() {
                       {courseTags.map((tag) => (
                         <Badge 
                           key={tag.id} 
-                          variant="secondary" 
-                          className="px-3 py-1.5 bg-background/80 border border-primary/20"
+                          className="px-3 py-1.5 bg-background/80 border border-primary/20 text-[#3573A7] font-semibold text-[14px]"
                           data-testid={`badge-tag-${tag.slug}`}
                         >
                           <span className="w-2 h-2 rounded-full bg-primary mr-2" />
