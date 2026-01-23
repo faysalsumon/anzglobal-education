@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -129,6 +129,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
   const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
@@ -472,10 +473,69 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Description</FormLabel>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <FormLabel>Description</FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isGeneratingDescription || !form.watch("website")}
+                              onClick={async () => {
+                                const websiteUrl = form.watch("website");
+                                if (!websiteUrl) {
+                                  toast({
+                                    title: "Website URL required",
+                                    description: "Please enter the institution website URL first",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                setIsGeneratingDescription(true);
+                                try {
+                                  const response = await apiRequest("POST", "/api/ai/generate-institution-description-from-url", {
+                                    url: websiteUrl,
+                                  });
+                                  const data = await response.json();
+                                  if (data.description) {
+                                    form.setValue("description", data.description);
+                                    toast({
+                                      title: "Description generated",
+                                      description: "AI has generated a description based on the website content",
+                                    });
+                                  }
+                                } catch (error: any) {
+                                  const errorMessage = error.message || "Failed to generate description";
+                                  toast({
+                                    title: "Generation failed",
+                                    description: errorMessage,
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setIsGeneratingDescription(false);
+                                }
+                              }}
+                              data-testid="button-ai-generate-description"
+                            >
+                              {isGeneratingDescription ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-1" />
+                                  AI Generate
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <FormControl>
-                            <Textarea {...field} placeholder="Brief description of the institution" rows={4} data-testid="input-institution-description" />
+                            <Textarea {...field} placeholder="Brief description of the institution" rows={6} data-testid="input-institution-description" />
                           </FormControl>
+                          <FormDescription className="text-xs">
+                            Enter the website URL above and click "AI Generate" to auto-generate a description
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

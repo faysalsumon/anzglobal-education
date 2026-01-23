@@ -108,6 +108,7 @@ import {
   generateCareerGoals,
   generateInstitutionSmallDescription,
   generateInstitutionFullDescription,
+  generateInstitutionDescriptionFromWebsite,
   generateInstitutionGalleryImages,
   extractInstitutionDataFromWebsite,
   extractCourseDataFromWebsite,
@@ -1222,6 +1223,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to generate description. Please try again." });
+    }
+  });
+
+  app.post("/api/ai/generate-institution-description-from-url", isAuthenticated, async (req: any, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ message: "Website URL is required" });
+      }
+
+      const description = await generateInstitutionDescriptionFromWebsite(url);
+      res.json({ description });
+    } catch (error: any) {
+      console.error("Error generating institution description from URL:", error);
+      
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
+        });
+      }
+
+      if (error?.error?.code === 'invalid_api_key') {
+        return res.status(401).json({ 
+          message: "Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable." 
+        });
+      }
+      
+      res.status(500).json({ message: error.message || "Failed to generate description from website. Please try again." });
     }
   });
 

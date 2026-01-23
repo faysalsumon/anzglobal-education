@@ -45,9 +45,10 @@ async function getAiSettings(): Promise<{ model: string; temperature: number; ma
   
   try {
     const allSettings = await storage.getAllAiSettings();
-    cachedModelId = allSettings.find(s => s.settingKey === "default_model")?.modelId || DEFAULT_MODEL;
-    cachedTemperature = parseFloat(allSettings.find(s => s.settingKey === "default_model")?.temperature || "0.7");
-    cachedMaxTokens = parseInt(allSettings.find(s => s.settingKey === "default_model")?.maxTokens || "2048");
+    const defaultSettings = allSettings.find(s => s.settingKey === "default_model");
+    cachedModelId = defaultSettings?.modelId || DEFAULT_MODEL;
+    cachedTemperature = parseFloat(String(defaultSettings?.temperature ?? "0.7"));
+    cachedMaxTokens = parseInt(String(defaultSettings?.maxTokens ?? "2048"));
     settingsCacheTimestamp = now;
     return { model: cachedModelId, temperature: cachedTemperature, maxTokens: cachedMaxTokens };
   } catch (error) {
@@ -322,6 +323,100 @@ The description should be 4-5 paragraphs and include:
 Write in a professional, inspiring tone suitable for prospective students and their families.`;
 
   return createAiCompletion(prompt, { maxTokens: 800 });
+}
+
+export async function generateInstitutionDescriptionFromWebsite(url: string): Promise<string> {
+  checkAIConfigured();
+  
+  // Validate URL to prevent SSRF (includes DNS resolution checks)
+  const validatedUrl = await validateUrl(url);
+  
+  // Fetch webpage content with timeout and size limits
+  let htmlContent: string;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(validatedUrl.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
+      },
+      signal: controller.signal,
+      redirect: 'manual',
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.status >= 300 && response.status < 400) {
+      throw new Error('Redirects are not allowed for security reasons. Please provide the final URL.');
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch website: ${response.statusText}`);
+    }
+    
+    const MAX_SIZE = 2 * 1024 * 1024;
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+      throw new Error('Website content too large (max 2MB)');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Unable to read response body');
+    }
+
+    let receivedLength = 0;
+    const chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      chunks.push(value);
+      receivedLength += value.length;
+
+      if (receivedLength > MAX_SIZE) {
+        reader.cancel();
+        throw new Error('Website content exceeded size limit (max 2MB)');
+      }
+    }
+
+    const chunksAll = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      chunksAll.set(chunk, position);
+      position += chunk.length;
+    }
+
+    htmlContent = new TextDecoder('utf-8').decode(chunksAll);
+    
+    if (htmlContent.length > 50000) {
+      htmlContent = htmlContent.substring(0, 50000);
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to fetch website content: ${error.message}`);
+  }
+
+  const prompt = `You are an expert copywriter for educational institutions. Analyze the following webpage content and generate a compelling, professional description for this institution.
+
+IMPORTANT INSTRUCTIONS:
+- Write a 4-5 paragraph description (200-300 words total)
+- Focus on what makes this institution unique and valuable to prospective students
+- Include information about academic programs, facilities, student support, and outcomes if mentioned
+- Write in a professional, inspiring tone suitable for prospective students and their families
+- Base your description ONLY on information found in the website content
+- Do not make up facts or statistics not present in the content
+- If limited information is available, focus on what you can confidently infer
+
+Website URL: ${url}
+
+Webpage Content:
+${htmlContent}
+
+Generate a professional institution description:`;
+
+  return createAiCompletion(prompt, { maxTokens: 600 });
 }
 
 export async function generateInstitutionGalleryImages(
