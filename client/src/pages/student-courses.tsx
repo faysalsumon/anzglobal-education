@@ -38,8 +38,9 @@ function StudentCoursesContent() {
     }
   }, []);
 
+  // Include private institutions since this is the student portal (logged-in users)
   const { data: courses = [], isLoading } = useQuery<CourseWithUniversity[]>({
-    queryKey: ["/api/courses"],
+    queryKey: ["/api/courses", { includePrivate: "true" }],
   });
 
   const { data: favorites = [] } = useQuery<Favorite[]>({
