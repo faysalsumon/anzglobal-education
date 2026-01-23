@@ -206,10 +206,10 @@ export default function CourseDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Modern AI-Style Hero Section */}
+      {/* Clean Hero Section - No Duplicates */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 py-12 relative">
+        <div className="container mx-auto px-4 py-8 relative">
           {/* Breadcrumb */}
           <nav className="flex flex-wrap items-center gap-2 text-sm mb-6" data-testid="breadcrumb">
             <Link href="/student/dashboard" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-dashboard">
@@ -223,187 +223,102 @@ export default function CourseDetail() {
             <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{course.title}</span>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Hero Content */}
-            <div className="lg:col-span-2">
-              <div className="flex flex-col gap-6">
-                {/* University Badge */}
-                {course.university && (
-                  <div className="flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit">
-                    {course.university.logo && (
-                      <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center">
-                        <img
-                          src={course.university.logo}
-                          alt={course.university.name}
-                          className="w-full h-full object-contain"
-                          data-testid="img-university-logo"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-muted-foreground">Offered by</p>
-                      <p className="font-semibold" data-testid="text-university-name">{course.university.name}</p>
-                    </div>
+          {/* Course Title and Key Info */}
+          <div className="max-w-4xl">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2" data-testid="text-course-title">
+              {course.title}
+            </h1>
+            {course.courseCode && (
+              <p className="text-muted-foreground mb-4" data-testid="text-course-code">
+                Course Code: {course.courseCode}
+              </p>
+            )}
+
+            {/* Feature Badges - Compact Row */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {course.duration && (
+                <Badge variant="secondary" className="px-3 py-1" data-testid="badge-duration">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {course.duration}
+                </Badge>
+              )}
+              {course.deliveryMode && (
+                <Badge variant="secondary" className="px-3 py-1" data-testid="badge-delivery-mode">
+                  <MonitorPlay className="h-3 w-3 mr-1" />
+                  {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
+                </Badge>
+              )}
+              {course.university && ((course.university.scholarshipPercentageMin !== null && course.university.scholarshipPercentageMin !== undefined) || 
+                (course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined)) && (
+                <Badge className="bg-green-600 border-0 text-white px-3 py-1" data-testid="badge-scholarship">
+                  <Award className="h-3 w-3 mr-1" />
+                  {course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined
+                    ? `Up to ${course.university.scholarshipPercentageMax}%`
+                    : `${course.university.scholarshipPercentageMin}%`} Scholarship
+                </Badge>
+              )}
+              {course.prPathway && (
+                <Badge className="bg-primary border-0 text-white px-3 py-1" data-testid="badge-pr-pathway">
+                  <Plane className="h-3 w-3 mr-1" />
+                  PR Pathway
+                </Badge>
+              )}
+              {course.internshipAvailable && (
+                <Badge variant="secondary" className="px-3 py-1" data-testid="badge-internship">
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  Internship
+                </Badge>
+              )}
+            </div>
+
+            {/* Hero Action Buttons */}
+            <div className="flex flex-wrap gap-3">
+              {existingApplication ? (
+                <>
+                  <div className={`p-3 rounded-lg border flex items-center gap-2 ${getStatusColor(existingApplication.application.status)}`} data-testid="alert-application-status-hero">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="font-medium text-sm" data-testid="text-application-status-hero">
+                      Application: {getStatusLabel(existingApplication.application.status)}
+                    </span>
                   </div>
-                )}
-
-                {/* Course Title with Gradient */}
-                <div>
-                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-course-title">
-                    {course.title}
-                  </h1>
-                  {course.courseCode && (
-                    <p className="text-lg text-muted-foreground" data-testid="text-course-code">
-                      Course Code: {course.courseCode}
-                    </p>
-                  )}
-                </div>
-
-                {/* Feature Badges */}
-                <div className="flex flex-wrap gap-2">
-                  {((course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined) || 
-                    (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined)) && (
-                    <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
-                      <Award className="h-3 w-3 mr-1" />
-                      {course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined
-                        ? `Up to ${course.scholarshipPercentageMax}%`
-                        : `${course.scholarshipPercentageMin}%`} Scholarship
-                    </Badge>
-                  )}
-                  {course.prPathway && (
-                    <Badge className="bg-gradient-to-r from-primary to-primary/80 border-0 text-white px-4 py-1.5" data-testid="badge-pr-pathway">
-                      <Plane className="h-3 w-3 mr-1" />
-                      PR Pathway
-                    </Badge>
-                  )}
-                  {course.deliveryMode && (
-                    <Badge className="bg-gradient-to-r from-accent to-accent/80 border-0 text-white px-4 py-1.5" data-testid="badge-delivery-mode">
-                      <MonitorPlay className="h-3 w-3 mr-1" />
-                      {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
-                    </Badge>
-                  )}
-                  {course.internshipAvailable && (
-                    <Badge className="bg-gradient-to-r from-accent to-accent/80 border-0 text-white px-4 py-1.5" data-testid="badge-internship">
-                      <Briefcase className="h-3 w-3 mr-1" />
-                      Internship Available
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Student Actions */}
-                <div className="flex flex-wrap gap-3 mt-2">
-                  {existingApplication ? (
-                    <Button asChild size="lg" className="flex-1 min-w-[200px]" data-testid="button-view-application">
-                      <Link href={`/student/applications`}>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        View Application
-                      </Link>
-                    </Button>
-                  ) : (
+                  <Button asChild variant="outline" data-testid="button-view-application-hero">
+                    <Link href="/student/applications">
+                      View Application
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {user ? (
                     <Button 
-                      size="lg" 
-                      className="flex-1 min-w-[200px]"
+                      size="lg"
                       onClick={() => setShowApplicationForm(true)}
-                      data-testid="button-apply-now"
+                      data-testid="button-apply-now-hero"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Apply Now
                     </Button>
+                  ) : (
+                    <Button asChild size="lg" data-testid="button-login-to-apply-hero">
+                      <Link href="/login">
+                        <Send className="h-4 w-4 mr-2" />
+                        Login to Apply
+                      </Link>
+                    </Button>
                   )}
-                  <Button
-                    size="lg"
-                    variant={isFavorited ? "default" : "outline"}
-                    onClick={() => toggleFavoriteMutation.mutate()}
-                    disabled={toggleFavoriteMutation.isPending}
-                    data-testid="button-toggle-favorite"
-                  >
-                    <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
-                    {isFavorited ? "Saved" : "Save"}
-                  </Button>
-                </div>
-
-                {/* Application Status */}
-                {existingApplication && (
-                  <div className={`p-4 rounded-lg border ${getStatusColor(existingApplication.application.status)}`} data-testid="alert-application-status">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold" data-testid="text-application-status">Application Status: {getStatusLabel(existingApplication.application.status)}</p>
-                        <p className="text-sm opacity-80">You have already applied to this course</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Stats Card */}
-            <div className="lg:col-span-1">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Quick Facts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {course.fees && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <DollarSign className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Annual Tuition</p>
-                        <p className="text-lg font-bold" data-testid="text-annual-tuition">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  )}
-                  {course.duration && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-secondary/10 rounded-lg">
-                        <Clock className="h-4 w-4 text-secondary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="font-semibold" data-testid="text-duration">{course.duration}</p>
-                      </div>
-                    </div>
-                  )}
-                  {course.location && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-accent/10 rounded-lg">
-                        <MapPin className="h-4 w-4 text-accent" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Location</p>
-                        <p className="font-semibold" data-testid="text-location">{course.location}</p>
-                      </div>
-                    </div>
-                  )}
-                  {course.subject && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Discipline</p>
-                        <p className="font-semibold" data-testid="text-discipline">{course.subject}</p>
-                      </div>
-                    </div>
-                  )}
-                  {course.startDate && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-secondary/10 rounded-lg">
-                        <Calendar className="h-4 w-4 text-secondary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Next Intake</p>
-                        <p className="font-semibold" data-testid="text-next-intake">{course.startDate}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </>
+              )}
+              {isStudent && (
+                <Button
+                  variant={isFavorited ? "default" : "outline"}
+                  onClick={() => toggleFavoriteMutation.mutate()}
+                  disabled={toggleFavoriteMutation.isPending}
+                  data-testid="button-toggle-favorite-hero"
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                  {isFavorited ? "Saved" : "Save"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -509,61 +424,6 @@ export default function CourseDetail() {
               </CardContent>
             </Card>
 
-            {/* Modern Financial Breakdown */}
-            {(course.fees || course.costOfLiving || course.applicationFees) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    Investment Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {course.fees && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-annual-tuition">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Annual Tuition</span>
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <GraduationCap className="h-4 w-4 text-primary" />
-                          </div>
-                        </div>
-                        <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Per year</p>
-                      </div>
-                    )}
-                    {course.costOfLiving && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Living Costs</span>
-                          <div className="p-2 bg-secondary/10 rounded-lg">
-                            <Home className="h-4 w-4 text-secondary" />
-                          </div>
-                        </div>
-                        <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
-                      </div>
-                    )}
-                    {course.applicationFees !== null && course.applicationFees !== undefined && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Application Fee</span>
-                          <div className="p-2 bg-accent/10 rounded-lg">
-                            <CheckCircle className="h-4 w-4 text-accent" />
-                          </div>
-                        </div>
-                        <p className="text-3xl font-bold" data-testid="text-application-fee-amount">
-                          {Number(course.applicationFees) > 0 
-                            ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
-                            : "Waived"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">One-time</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Eligibility Requirements */}
             {course.eligibilityRequirements && (
@@ -802,40 +662,173 @@ export default function CourseDetail() {
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Institution Card */}
-            {course.university && (
-              <Card className="sticky top-6">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    About the Institution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="font-semibold">{course.university.name}</p>
-                    {course.university.country && (
-                      <p className="text-sm text-muted-foreground">
-                        {course.university.country}
+          {/* Unified Sticky Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-4">
+              {/* Key Facts & Apply Card */}
+              <Card className="border-primary/20">
+                <CardContent className="pt-6 space-y-5">
+                  {/* Tuition - Primary Info */}
+                  {course.fees && (
+                    <div className="text-center pb-4 border-b">
+                      <p className="text-sm text-muted-foreground mb-1">Annual Tuition</p>
+                      <p className="text-2xl font-bold text-primary" data-testid="text-annual-tuition">
+                        {course.currency} {Number(course.fees).toLocaleString()}
                       </p>
+                      {course.applicationFees !== null && course.applicationFees !== undefined && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Application Fee: {Number(course.applicationFees) > 0 
+                            ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
+                            : "Waived"}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick Stats Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {course.duration && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Clock className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Duration</p>
+                        <p className="text-sm font-semibold" data-testid="text-duration">{course.duration}</p>
+                      </div>
+                    )}
+                    {course.startDate && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Next Intake</p>
+                        <p className="text-sm font-semibold" data-testid="text-next-intake">{course.startDate}</p>
+                      </div>
+                    )}
+                    {course.location && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <MapPin className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Location</p>
+                        <p className="text-sm font-semibold" data-testid="text-location">{course.location}</p>
+                      </div>
+                    )}
+                    {course.subject && (
+                      <div className="text-center p-3 bg-muted/50 rounded-lg">
+                        <BookOpen className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Discipline</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject}</p>
+                      </div>
                     )}
                   </div>
-                  {course.university.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-4">
-                      {course.university.description}
-                    </p>
+
+                  {/* Application Status or Apply Button */}
+                  {existingApplication ? (
+                    <div className={`p-3 rounded-lg border ${getStatusColor(existingApplication.application.status)}`} data-testid="alert-application-status">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        <div>
+                          <p className="text-sm font-semibold" data-testid="text-application-status">
+                            Status: {getStatusLabel(existingApplication.application.status)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button asChild size="sm" variant="outline" className="w-full mt-2" data-testid="button-view-application">
+                        <Link href="/student/applications">
+                          View Application
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {user ? (
+                        <Button 
+                          size="lg" 
+                          className="w-full"
+                          onClick={() => setShowApplicationForm(true)}
+                          data-testid="button-apply-now"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Apply Now
+                        </Button>
+                      ) : (
+                        <Button asChild size="lg" className="w-full" data-testid="button-login-to-apply">
+                          <Link href="/login">
+                            <Send className="h-4 w-4 mr-2" />
+                            Login to Apply
+                          </Link>
+                        </Button>
+                      )}
+                      {isStudent && (
+                        <Button
+                          size="sm"
+                          variant={isFavorited ? "default" : "outline"}
+                          onClick={() => toggleFavoriteMutation.mutate()}
+                          disabled={toggleFavoriteMutation.isPending}
+                          className="w-full"
+                          data-testid="button-toggle-favorite"
+                        >
+                          <Heart className={`h-4 w-4 mr-2 ${isFavorited ? "fill-current" : ""}`} />
+                          {isFavorited ? "Saved to Favorites" : "Save Course"}
+                        </Button>
+                      )}
+                    </div>
                   )}
-                  <Button variant="outline" size="sm" asChild className="w-full" data-testid="button-view-institution">
-                    <Link href={`/institutions/${course.university.id}`}>
-                      <Building2 className="mr-2 h-4 w-4" />
-                      View Institution
-                    </Link>
-                  </Button>
                 </CardContent>
               </Card>
-            )}
+
+              {/* Institution Card */}
+              {course.university && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-muted-foreground">OFFERED BY</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {course.university.logo && (
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted p-1.5 flex items-center justify-center">
+                          <img
+                            src={course.university.logo}
+                            alt={course.university.name}
+                            className="w-full h-full object-contain"
+                            data-testid="img-university-logo"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-sm" data-testid="text-university-name">{course.university.name}</p>
+                        {course.university.country && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {course.university.country}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Institution Quick Stats */}
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between py-1.5 border-b">
+                        <span className="text-muted-foreground flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5" /> Type
+                        </span>
+                        <Badge variant="secondary" className="text-xs">Institution</Badge>
+                      </div>
+                      {course.university.establishedYear && (
+                        <div className="flex items-center justify-between py-1.5 border-b">
+                          <span className="text-muted-foreground flex items-center gap-2">
+                            <Calendar className="h-3.5 w-3.5" /> Established
+                          </span>
+                          <span className="font-medium">{course.university.establishedYear}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button variant="outline" size="sm" asChild className="w-full" data-testid="button-view-institution">
+                      <Link href={`/institutions/${course.university.id}`}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        View Institution Profile
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
       </div>
