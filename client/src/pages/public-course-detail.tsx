@@ -650,8 +650,8 @@ export default function PublicCourseDetail() {
               <Card id="details" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Course Details & Logistics
+                    <MapPin className="h-5 w-5 text-primary" />
+                    Available Campus Locations
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-5">
