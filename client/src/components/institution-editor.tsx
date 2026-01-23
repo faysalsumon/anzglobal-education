@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -96,6 +97,7 @@ interface Institution {
   }> | null;
   approvalStatus: string | null;
   publishStatus?: string | null;
+  visibility?: string | null; // 'public' | 'private'
   isActive: boolean;
 }
 
@@ -286,7 +288,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     }
   };
 
-  const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
+  const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft', visibility: 'public' | 'private' = 'public') => {
     const apiData: any = {
       ...data,
       topDisciplines: data.topDisciplines && data.topDisciplines.length > 0
@@ -296,6 +298,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         ? [...featuredCourses.map(c => c.id), ...legacyCourseNames]
         : undefined,
       publishStatus,
+      visibility,
       ...(publishStatus === 'published' && {
         publishedAt: new Date().toISOString(),
         publishedByUserId: userId,
@@ -330,8 +333,13 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
               {institution?.id ? "Edit Institution" : "Create Institution"}
             </h1>
             {institution?.publishStatus && (
-              <Badge variant={institution.publishStatus === 'published' ? 'default' : 'outline'}>
-                {institution.publishStatus === 'published' ? 'Published' : 'Draft'}
+              <Badge 
+                variant={institution.publishStatus === 'published' ? 'default' : 'outline'}
+                className={institution.publishStatus === 'published' && institution.visibility === 'private' ? 'bg-amber-500' : ''}
+              >
+                {institution.publishStatus === 'published' 
+                  ? (institution.visibility === 'private' ? 'Private' : 'Published') 
+                  : 'Draft'}
               </Badge>
             )}
           </div>
@@ -370,30 +378,64 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
               <span className="hidden sm:inline">{isSubmitting ? "Saving..." : "Save Draft"}</span>
               <span className="sm:hidden">{isSubmitting ? "..." : "Save"}</span>
             </Button>
-            <Button 
-              size="sm"
-              disabled={isSubmitting}
-              onClick={async () => {
-                const formData = form.getValues();
-                const isValid = await form.trigger();
-                if (isValid) {
-                  handleSubmit(formData, 'published');
-                } else {
-                  const errors = form.formState.errors;
-                  const errorFields = Object.keys(errors).join(', ');
-                  toast({
-                    title: "Validation Error",
-                    description: `Please fix the following fields: ${errorFields}`,
-                    variant: "destructive",
-                  });
-                }
-              }}
-              data-testid="button-publish"
-            >
-              <Globe className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">{isSubmitting ? "Publishing..." : "Publish"}</span>
-              <span className="sm:hidden">{isSubmitting ? "..." : "Publish"}</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  size="sm"
+                  disabled={isSubmitting}
+                  data-testid="button-publish-dropdown"
+                >
+                  <Globe className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">{isSubmitting ? "Publishing..." : "Publish"}</span>
+                  <span className="sm:hidden">{isSubmitting ? "..." : "Publish"}</span>
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const formData = form.getValues();
+                    const isValid = await form.trigger();
+                    if (isValid) {
+                      handleSubmit(formData, 'published', 'public');
+                    } else {
+                      const errors = form.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-publish-public"
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  Publish Publicly
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const formData = form.getValues();
+                    const isValid = await form.trigger();
+                    if (isValid) {
+                      handleSubmit(formData, 'published', 'private');
+                    } else {
+                      const errors = form.formState.errors;
+                      const errorFields = Object.keys(errors).join(', ');
+                      toast({
+                        title: "Validation Error",
+                        description: `Please fix the following fields: ${errorFields}`,
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-publish-private"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Publish Privately
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
