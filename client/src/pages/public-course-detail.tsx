@@ -273,21 +273,19 @@ export default function PublicCourseDetail() {
                   <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-course-title">
                     {course.title}
                   </h1>
-                  {/* Course Code with Level and Apply By */}
+                  {/* Course Code with Level */}
                   <div className="flex flex-wrap items-center gap-3">
                     {course.courseCode && (
-                      <span className="text-lg text-muted-foreground" data-testid="text-course-code">
-                        Course Code: {course.courseCode}
-                      </span>
+                      <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-course-code">
+                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        Code: {course.courseCode}
+                      </Badge>
                     )}
                     {course.level && (
-                      <>
-                        <span className="text-muted-foreground/50">•</span>
-                        <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-course-level">
-                          <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
-                          {course.level}
-                        </Badge>
-                      </>
+                      <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-course-level">
+                        <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
+                        {course.level}
+                      </Badge>
                     )}
                   </div>
                 </div>
