@@ -21,12 +21,10 @@ interface SectionConfig {
 const sections: SectionConfig[] = [
   { id: "about", label: "About", icon: <GraduationCap className="h-4 w-4" /> },
   { id: "fees", label: "Investment", icon: <DollarSign className="h-4 w-4" /> },
-  { id: "eligibility", label: "Eligibility", icon: <CheckCircle className="h-4 w-4" /> },
+  { id: "eligibility", label: "Requirements", icon: <CheckCircle className="h-4 w-4" /> },
   { id: "academic", label: "Academic", icon: <FileText className="h-4 w-4" /> },
-  { id: "english", label: "English", icon: <Globe className="h-4 w-4" /> },
   { id: "career", label: "Career", icon: <Target className="h-4 w-4" /> },
   { id: "pathways", label: "Pathways", icon: <Layers className="h-4 w-4" /> },
-  { id: "prerequisites", label: "Prerequisites", icon: <FileText className="h-4 w-4" /> },
   { id: "internship", label: "Internship", icon: <Briefcase className="h-4 w-4" /> },
   { id: "details", label: "Location", icon: <BookOpen className="h-4 w-4" /> },
 ];

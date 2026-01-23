@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
@@ -169,19 +170,14 @@ export default function PublicCourseDetail() {
       sections.push("fees");
     }
     
-    // Eligibility section
-    if (course.eligibilityRequirements) {
+    // Requirements section (combines eligibility, english, prerequisites)
+    if (course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured || course.prerequisites) {
       sections.push("eligibility");
     }
     
     // Academic requirements section
     if (course.academicRequirements || course.minimumAge) {
       sections.push("academic");
-    }
-    
-    // English requirements section
-    if (englishRequirements.length > 0 || course.englishRequirements) {
-      sections.push("english");
     }
     
     // Career section
@@ -192,11 +188,6 @@ export default function PublicCourseDetail() {
     // Pathways section
     if (course.pathways && course.pathways.length > 0) {
       sections.push("pathways");
-    }
-    
-    // Prerequisites section
-    if (course.prerequisites) {
-      sections.push("prerequisites");
     }
     
     // Internship details section
@@ -672,19 +663,179 @@ export default function PublicCourseDetail() {
               </Card>
             )}
 
-            {/* Eligibility Requirements */}
-            {course.eligibilityRequirements && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300" id="eligibility">
+            {/* Combined Requirements Section (English, Eligibility, Prerequisites) */}
+            {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured || course.prerequisites) && (
+              <Card className="border-primary/10 hover-elevate transition-all duration-300" id="eligibility" data-testid="card-requirements">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-primary" />
-                    Eligibility Requirements
+                    Entry Requirements
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-eligibility">
-                    {course.eligibilityRequirements}
-                  </p>
+                  <Tabs defaultValue={englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured ? "english" : course.eligibilityRequirements ? "eligibility" : "prerequisites"} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 mb-6">
+                      <TabsTrigger 
+                        value="english" 
+                        disabled={!(englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured)}
+                        className="flex items-center gap-2"
+                        data-testid="tab-english"
+                      >
+                        <Globe className="h-4 w-4" />
+                        <span className="hidden sm:inline">English</span>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="eligibility" 
+                        disabled={!course.eligibilityRequirements}
+                        className="flex items-center gap-2"
+                        data-testid="tab-eligibility"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="hidden sm:inline">Eligibility</span>
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="prerequisites" 
+                        disabled={!course.prerequisites}
+                        className="flex items-center gap-2"
+                        data-testid="tab-prerequisites"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="hidden sm:inline">Prerequisites</span>
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* English Language Requirements Tab */}
+                    <TabsContent value="english" className="space-y-6">
+                      {englishRequirements.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50">
+                                <th className="p-3 text-left font-semibold">Test Type</th>
+                                <th className="p-3 text-center font-semibold">Overall</th>
+                                <th className="p-3 text-center font-semibold">Listening</th>
+                                <th className="p-3 text-center font-semibold">Reading</th>
+                                <th className="p-3 text-center font-semibold">Writing</th>
+                                <th className="p-3 text-center font-semibold">Speaking</th>
+                                <th className="p-3 text-left font-semibold">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {englishRequirements.map((req) => (
+                                <tr key={req.id} className="border-b" data-testid={`row-english-req-${req.id}`}>
+                                  <td className="p-3 font-medium">
+                                    <div className="flex items-center gap-2">
+                                      {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
+                                      {req.isPreferred && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          <Star className="h-3 w-3 mr-1" />
+                                          Preferred
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="p-3 text-center font-semibold text-primary" data-testid={`text-${req.testType}-overall`}>
+                                    {req.minOverallScore}
+                                  </td>
+                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-listening`}>
+                                    {req.minListeningScore || "—"}
+                                  </td>
+                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-reading`}>
+                                    {req.minReadingScore || "—"}
+                                  </td>
+                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-writing`}>
+                                    {req.minWritingScore || "—"}
+                                  </td>
+                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-speaking`}>
+                                    {req.minSpeakingScore || "—"}
+                                  </td>
+                                  <td className="p-3 text-sm text-muted-foreground">
+                                    {req.notes || "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : course.englishRequirementsStructured && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50">
+                                <th className="p-3 text-left font-semibold">Test Type</th>
+                                <th className="p-3 text-center font-semibold">Overall</th>
+                                <th className="p-3 text-center font-semibold">Min Each Band</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {course.englishRequirementsStructured.IELTS && (
+                                <tr className="border-b">
+                                  <td className="p-3 font-medium">IELTS</td>
+                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-ielts-overall">
+                                    {course.englishRequirementsStructured.IELTS.overall || "—"}
+                                  </td>
+                                  <td className="p-3 text-center" data-testid="text-ielts-min-band">
+                                    {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
+                                  </td>
+                                </tr>
+                              )}
+                              {course.englishRequirementsStructured.TOEFL && (
+                                <tr className="border-b">
+                                  <td className="p-3 font-medium">TOEFL</td>
+                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-toefl-overall">
+                                    {course.englishRequirementsStructured.TOEFL.overall || "—"}
+                                  </td>
+                                  <td className="p-3 text-center">—</td>
+                                </tr>
+                              )}
+                              {course.englishRequirementsStructured.PTE && (
+                                <tr className="border-b">
+                                  <td className="p-3 font-medium">PTE</td>
+                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-pte-overall">
+                                    {course.englishRequirementsStructured.PTE.overall || "—"}
+                                  </td>
+                                  <td className="p-3 text-center">—</td>
+                                </tr>
+                              )}
+                              {course.englishRequirementsStructured.Duolingo && (
+                                <tr className="border-b">
+                                  <td className="p-3 font-medium">Duolingo</td>
+                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-duolingo-overall">
+                                    {course.englishRequirementsStructured.Duolingo.overall || "—"}
+                                  </td>
+                                  <td className="p-3 text-center">—</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      {course.englishRequirements && (
+                        <div className="space-y-2">
+                          {(englishRequirements.length > 0 || course.englishRequirementsStructured) && (
+                            <p className="text-sm font-semibold text-muted-foreground">Additional Information:</p>
+                          )}
+                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">
+                            {course.englishRequirements}
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Eligibility Requirements Tab */}
+                    <TabsContent value="eligibility">
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-eligibility">
+                        {course.eligibilityRequirements}
+                      </p>
+                    </TabsContent>
+
+                    {/* Prerequisites Tab */}
+                    <TabsContent value="prerequisites">
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-prerequisites">
+                        {course.prerequisites}
+                      </p>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             )}
@@ -709,138 +860,6 @@ export default function PublicCourseDetail() {
                     <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-academic-requirements">
                       {course.academicRequirements}
                     </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* English Language Requirements */}
-            {(englishRequirements.length > 0 || course.englishRequirements) && (
-              <Card id="english" className="border-primary/10 hover-elevate transition-all duration-300">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-primary" />
-                    English Language Requirements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-6">
-                  {/* Display structured English requirements from database */}
-                  {englishRequirements.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-3 text-left font-semibold">Test Type</th>
-                            <th className="p-3 text-center font-semibold">Overall</th>
-                            <th className="p-3 text-center font-semibold">Listening</th>
-                            <th className="p-3 text-center font-semibold">Reading</th>
-                            <th className="p-3 text-center font-semibold">Writing</th>
-                            <th className="p-3 text-center font-semibold">Speaking</th>
-                            <th className="p-3 text-left font-semibold">Notes</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {englishRequirements.map((req) => (
-                            <tr key={req.id} className="border-b" data-testid={`row-english-req-${req.id}`}>
-                              <td className="p-3 font-medium">
-                                <div className="flex items-center gap-2">
-                                  {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
-                                  {req.isPreferred && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      <Star className="h-3 w-3 mr-1" />
-                                      Preferred
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 text-center font-semibold text-primary" data-testid={`text-${req.testType}-overall`}>
-                                {req.minOverallScore}
-                              </td>
-                              <td className="p-3 text-center" data-testid={`text-${req.testType}-listening`}>
-                                {req.minListeningScore || "—"}
-                              </td>
-                              <td className="p-3 text-center" data-testid={`text-${req.testType}-reading`}>
-                                {req.minReadingScore || "—"}
-                              </td>
-                              <td className="p-3 text-center" data-testid={`text-${req.testType}-writing`}>
-                                {req.minWritingScore || "—"}
-                              </td>
-                              <td className="p-3 text-center" data-testid={`text-${req.testType}-speaking`}>
-                                {req.minSpeakingScore || "—"}
-                              </td>
-                              <td className="p-3 text-sm text-muted-foreground">
-                                {req.notes || "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : course.englishRequirementsStructured && (
-                    /* Legacy JSONB fallback for backward compatibility */
-                    (<div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="p-3 text-left font-semibold">Test Type</th>
-                            <th className="p-3 text-center font-semibold">Overall</th>
-                            <th className="p-3 text-center font-semibold">Min Each Band</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {course.englishRequirementsStructured.IELTS && (
-                            <tr className="border-b">
-                              <td className="p-3 font-medium">IELTS</td>
-                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-ielts-overall">
-                                {course.englishRequirementsStructured.IELTS.overall || "—"}
-                              </td>
-                              <td className="p-3 text-center" data-testid="text-ielts-min-band">
-                                {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
-                              </td>
-                            </tr>
-                          )}
-                          {course.englishRequirementsStructured.TOEFL && (
-                            <tr className="border-b">
-                              <td className="p-3 font-medium">TOEFL</td>
-                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-toefl-overall">
-                                {course.englishRequirementsStructured.TOEFL.overall || "—"}
-                              </td>
-                              <td className="p-3 text-center">—</td>
-                            </tr>
-                          )}
-                          {course.englishRequirementsStructured.PTE && (
-                            <tr className="border-b">
-                              <td className="p-3 font-medium">PTE</td>
-                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-pte-overall">
-                                {course.englishRequirementsStructured.PTE.overall || "—"}
-                              </td>
-                              <td className="p-3 text-center">—</td>
-                            </tr>
-                          )}
-                          {course.englishRequirementsStructured.Duolingo && (
-                            <tr className="border-b">
-                              <td className="p-3 font-medium">Duolingo</td>
-                              <td className="p-3 text-center font-semibold text-primary" data-testid="text-duolingo-overall">
-                                {course.englishRequirementsStructured.Duolingo.overall || "—"}
-                              </td>
-                              <td className="p-3 text-center">—</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>)
-                  )}
-                  
-                  {/* Display additional notes from the text field */}
-                  {course.englishRequirements && (
-                    <div className="space-y-2">
-                      {(englishRequirements.length > 0 || course.englishRequirementsStructured) && (
-                        <p className="text-sm font-semibold text-muted-foreground">Additional Information:</p>
-                      )}
-                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">
-                        {course.englishRequirements}
-                      </p>
-                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -921,23 +940,6 @@ export default function PublicCourseDetail() {
                       </Badge>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Prerequisites Section */}
-            {course.prerequisites && (
-              <Card id="prerequisites" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-prerequisites">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Prerequisites
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-prerequisites">
-                    {course.prerequisites}
-                  </p>
                 </CardContent>
               </Card>
             )}
