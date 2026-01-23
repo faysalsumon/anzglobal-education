@@ -114,8 +114,13 @@ export function LeadFormDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && (
         <DialogTrigger asChild>
-          <Button size="lg" variant={buttonVariant} className="w-full" data-testid="button-request-info">
-            <Info className="h-5 w-5 mr-2" />
+          <Button 
+            size="sm" 
+            variant={buttonVariant} 
+            className="w-full border-accent text-accent hover:bg-accent hover:text-white" 
+            data-testid="button-request-info"
+          >
+            <Info className="h-3.5 w-3.5 mr-1.5" />
             Request More Information
           </Button>
         </DialogTrigger>

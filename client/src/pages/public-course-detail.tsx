@@ -750,36 +750,36 @@ export default function PublicCourseDetail() {
                 {existingApplication ? (
                   <Button 
                     asChild 
-                    className="w-full shadow-lg shadow-green-500/20 bg-green-600" 
-                    size="lg"
+                    className="w-full shadow-md shadow-green-500/20 bg-green-600" 
+                    size="sm"
                     data-testid="button-already-applied"
                   >
                     <Link href="/student/applications">
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                       Applied for this course
                     </Link>
                   </Button>
                 ) : isStudent ? (
                   <Button 
                     asChild 
-                    className="w-full shadow-lg shadow-primary/20" 
-                    size="lg"
+                    className="w-full shadow-md shadow-primary/20" 
+                    size="sm"
                     data-testid="button-apply-now"
                   >
                     <Link href={`/student/courses/${course.id}`}>
-                      <GraduationCap className="h-4 w-4 mr-2" />
+                      <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
                       Apply Now
                     </Link>
                   </Button>
                 ) : (
                   <Button 
                     asChild 
-                    className="w-full shadow-lg shadow-primary/20" 
-                    size="lg"
+                    className="w-full shadow-md shadow-primary/20" 
+                    size="sm"
                     data-testid="button-login-apply"
                   >
                     <a href="/auth">
-                      <LogIn className="h-4 w-4 mr-2" />
+                      <LogIn className="h-3.5 w-3.5 mr-1.5" />
                       Login to Apply
                     </a>
                   </Button>
