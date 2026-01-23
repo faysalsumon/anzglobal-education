@@ -942,35 +942,40 @@ export default function Landing() {
       {/* CTA Section */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl rounded-2xl bg-gradient-to-r from-primary to-secondary p-8 text-center text-white md:p-12">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">Ready to Get Started?</h2>
-            <p className="mb-8 text-lg opacity-90">
-              Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Button 
-                asChild
-                size="lg" 
-                variant="secondary" 
-                data-testid="button-student-cta"
-              >
-                <Link href="/auth">
-                  <GraduationCap className="h-5 w-5 mr-2" />
-                  I'm a Student
-                </Link>
-              </Button>
-              <Button 
-                asChild
-                size="lg" 
-                variant="outline" 
-                className="bg-white/10 hover:bg-white/20 border-white text-white" 
-                data-testid="button-institution-cta"
-              >
-                <Link href="/auth">
-                  <Building2 className="h-5 w-5 mr-2" />
-                  I'm an Institution
-                </Link>
-              </Button>
+          <div className="mx-auto max-w-4xl rounded-3xl bg-gradient-to-br from-[#3465A5] via-[#2a5286] to-[#1e3a5f] p-8 md:p-12 relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+            
+            <div className="relative z-10 text-center">
+              <h2 className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white">Ready to Get Started?</h2>
+              <p className="mb-8 text-base sm:text-lg text-white/85 max-w-2xl mx-auto">
+                Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                <Button 
+                  asChild
+                  size="lg" 
+                  className="w-full sm:w-auto bg-white text-[#3465A5] hover:bg-white/90 font-semibold shadow-lg" 
+                  data-testid="button-student-cta"
+                >
+                  <Link href="/auth">
+                    <GraduationCap className="h-5 w-5 mr-2" />
+                    I'm a Student
+                  </Link>
+                </Button>
+                <Button 
+                  asChild
+                  size="lg" 
+                  className="w-full sm:w-auto bg-[#FF5000] hover:bg-[#e64800] text-white font-semibold shadow-lg border-0" 
+                  data-testid="button-institution-cta"
+                >
+                  <Link href="/auth">
+                    <Building2 className="h-5 w-5 mr-2" />
+                    I'm an Institution
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
