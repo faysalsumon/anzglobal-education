@@ -207,13 +207,13 @@ export default function PublicCourseDetail() {
 
                 {/* Feature Badges */}
                 <div className="flex flex-wrap gap-2">
-                  {((course.scholarshipPercentageMin !== null && course.scholarshipPercentageMin !== undefined && course.scholarshipPercentageMin > 0) || 
-                    (course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined && course.scholarshipPercentageMax > 0)) && (
+                  {course.university && ((course.university.scholarshipPercentageMin !== null && course.university.scholarshipPercentageMin !== undefined && course.university.scholarshipPercentageMin > 0) || 
+                    (course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined && course.university.scholarshipPercentageMax > 0)) && (
                     <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
                       <Award className="h-3 w-3 mr-1" />
-                      {course.scholarshipPercentageMax !== null && course.scholarshipPercentageMax !== undefined && course.scholarshipPercentageMax > 0
-                        ? `Up to ${course.scholarshipPercentageMax}%`
-                        : `${course.scholarshipPercentageMin}%`} Scholarship
+                      {course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined && course.university.scholarshipPercentageMax > 0
+                        ? `Up to ${course.university.scholarshipPercentageMax}%`
+                        : `${course.university.scholarshipPercentageMin}%`} Scholarship
                     </Badge>
                   )}
                   {course.prPathway && (
@@ -738,6 +738,25 @@ export default function PublicCourseDetail() {
                     </a>
                   </Button>
                 )}
+
+                {/* Request More Information - Combined CTA */}
+                <div className="pt-4 border-t space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-sm">Get More Information</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Request detailed course information and we'll get back to you shortly.
+                    </p>
+                  </div>
+                  {course.university && (
+                    <LeadFormDialog
+                      courseId={course.id}
+                      universityId={course.universityId}
+                      courseName={course.title}
+                      universityName={course.university.name}
+                    />
+                  )}
+                </div>
+
                 <div className="pt-4 border-t">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Sparkles className="h-4 w-4 text-primary" />
@@ -835,32 +854,6 @@ export default function PublicCourseDetail() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Request Information Card */}
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
-              <CardHeader className="border-b bg-gradient-to-r from-background/80 to-primary/10">
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-8 bg-gradient-to-r from-primary to-accent rounded-full"></div>
-                  <CardTitle className="text-sm uppercase tracking-wider text-primary">Interested?</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                <div className="space-y-2">
-                  <h3 className="font-bold text-lg">Get More Information</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Request detailed course information and we'll get back to you shortly.
-                  </p>
-                </div>
-                {course.university && (
-                  <LeadFormDialog
-                    courseId={course.id}
-                    universityId={course.universityId}
-                    courseName={course.title}
-                    universityName={course.university.name}
-                  />
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
