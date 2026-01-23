@@ -9,11 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -359,6 +360,7 @@ const courseSchema = z.object({
 interface Institution {
   id: string;
   name: string;
+  logo?: string | null;
   campusAddresses?: Array<{
     name?: string;
     address: string;
@@ -1272,10 +1274,18 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                 <SelectValue placeholder="Select institution" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
+                            <SelectContent position="popper" className="max-h-[280px] overflow-y-auto">
                               {institutions?.map((institution) => (
                                 <SelectItem key={institution.id} value={institution.id}>
-                                  {institution.name}
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={institution.logo || undefined} alt={institution.name} />
+                                      <AvatarFallback className="text-xs bg-muted">
+                                        <Building2 className="h-3 w-3" />
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate">{institution.name}</span>
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
