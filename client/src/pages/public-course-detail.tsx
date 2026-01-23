@@ -323,13 +323,6 @@ export default function PublicCourseDetail() {
                       {course.location || course.country}
                     </Badge>
                   )}
-                  {/* Discipline Badge */}
-                  {(course.subject || course.discipline) && (
-                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-discipline">
-                      <BookOpen className="h-3 w-3 mr-1" />
-                      {course.subject || course.discipline}
-                    </Badge>
-                  )}
                 </div>
 
                 {/* Tags Ribbon Section */}
@@ -366,6 +359,17 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
+                  {(course.subject || course.discipline) && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Discipline</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject || course.discipline}</p>
+                      </div>
+                    </div>
+                  )}
                   {course.fees && (
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-primary/10 rounded-md">
