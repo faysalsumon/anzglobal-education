@@ -61,6 +61,27 @@ export default function PublicCourseDetail() {
     enabled: !!courseId,
   });
 
+  // Fetch academic entry requirements (AI-generated qualification requirements)
+  interface CourseEntryRequirement {
+    id: string;
+    courseId: string;
+    qualificationTypeId: string;
+    minGrade: string | null;
+    customNotes: string | null;
+    displayOrder: number;
+    qualification: {
+      id: string;
+      name: string;
+      country: string;
+      category: string;
+      levelOrder: number;
+    };
+  }
+  const { data: entryRequirements = [] } = useQuery<CourseEntryRequirement[]>({
+    queryKey: ["/api/courses", courseId, "entry-requirements"],
+    enabled: !!courseId,
+  });
+
   // Fetch course tags
   interface CourseTag {
     id: number;
@@ -171,7 +192,7 @@ export default function PublicCourseDetail() {
     }
     
     // Requirements section (combines eligibility, english, prerequisites)
-    if (course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites) {
+    if (course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites || entryRequirements.length > 0) {
       sections.push("eligibility");
     }
     
@@ -201,7 +222,7 @@ export default function PublicCourseDetail() {
     }
     
     return sections;
-  }, [course, englishRequirements]);
+  }, [course, englishRequirements, entryRequirements]);
 
   if (isLoading) {
     return (
@@ -664,7 +685,7 @@ export default function PublicCourseDetail() {
             )}
 
             {/* Combined Requirements Section (English, Eligibility, Prerequisites) */}
-            {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites) && (
+            {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites || entryRequirements.length > 0) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300" id="eligibility" data-testid="card-requirements">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -673,7 +694,7 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <Tabs defaultValue={englishRequirements.length > 0 || course.englishRequirementsStructured ? "english" : course.eligibilityRequirements ? "eligibility" : "prerequisites"} className="w-full">
+                  <Tabs defaultValue={englishRequirements.length > 0 || course.englishRequirementsStructured ? "english" : (course.eligibilityRequirements || entryRequirements.length > 0) ? "eligibility" : "prerequisites"} className="w-full">
                     <TabsList className="grid w-full grid-cols-3 mb-6">
                       <TabsTrigger 
                         value="english" 
@@ -686,7 +707,7 @@ export default function PublicCourseDetail() {
                       </TabsTrigger>
                       <TabsTrigger 
                         value="eligibility" 
-                        disabled={!course.eligibilityRequirements}
+                        disabled={!(course.eligibilityRequirements || entryRequirements.length > 0)}
                         className="flex items-center gap-2"
                         data-testid="tab-eligibility"
                       >
@@ -813,10 +834,64 @@ export default function PublicCourseDetail() {
                     </TabsContent>
 
                     {/* Eligibility Requirements Tab */}
-                    <TabsContent value="eligibility">
-                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-eligibility">
-                        {course.eligibilityRequirements}
-                      </p>
+                    <TabsContent value="eligibility" className="space-y-6">
+                      {/* AI-Generated Academic Entry Requirements */}
+                      {entryRequirements.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <GraduationCap className="h-4 w-4 text-primary" />
+                            <h4 className="font-semibold text-sm">Academic Qualifications Accepted</h4>
+                          </div>
+                          <div className="grid gap-3">
+                            {entryRequirements.map((req) => (
+                              <div 
+                                key={req.id} 
+                                className="flex items-center justify-between p-4 rounded-lg border bg-muted/30"
+                                data-testid={`entry-req-${req.id}`}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium" data-testid={`entry-req-name-${req.id}`}>
+                                      {req.qualification.name}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {req.qualification.country}
+                                    </Badge>
+                                  </div>
+                                  {req.customNotes && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {req.customNotes}
+                                    </p>
+                                  )}
+                                </div>
+                                {req.minGrade && (
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Minimum</p>
+                                    <p className="font-bold text-primary" data-testid={`entry-req-grade-${req.id}`}>
+                                      {req.minGrade}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Legacy Text-Based Eligibility Requirements */}
+                      {course.eligibilityRequirements && (
+                        <div className="space-y-2">
+                          {entryRequirements.length > 0 && (
+                            <div className="flex items-center gap-2 mb-3">
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-semibold text-sm text-muted-foreground">Additional Notes</h4>
+                            </div>
+                          )}
+                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-eligibility">
+                            {course.eligibilityRequirements}
+                          </p>
+                        </div>
+                      )}
                     </TabsContent>
 
                     {/* Prerequisites Tab */}
