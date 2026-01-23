@@ -482,6 +482,26 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   
   // Generate all tests dialog state
   const [generateTestsDialogOpen, setGenerateTestsDialogOpen] = useState(false);
+  
+  // AI Entry Requirements dialog state
+  const [aiEntryReqDialogOpen, setAiEntryReqDialogOpen] = useState(false);
+  const [aiGeneratedRequirements, setAiGeneratedRequirements] = useState<Array<{
+    qualificationName: string;
+    qualificationCountry: string;
+    minGrade: string;
+    isSelected: boolean;
+    equivalencies?: Array<{
+      sourceCountry: string;
+      sourceQualification: string;
+      equivalentGrade: string;
+      isApproved: boolean;
+    }>;
+  }>>([]);
+  const [isGeneratingAiReqs, setIsGeneratingAiReqs] = useState(false);
+  
+  // AI Equivalencies dialog state  
+  const [aiEquivalenciesDialogOpen, setAiEquivalenciesDialogOpen] = useState(false);
+  const [isGeneratingEquivalencies, setIsGeneratingEquivalencies] = useState(false);
   const [generateTestsForm, setGenerateTestsForm] = useState({
     baseTestType: "ielts",
     minOverallScore: "",
@@ -1617,11 +1637,41 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             <FileCheck className="h-4 w-4" />
                             Entry Requirements
                           </FormLabel>
-                          {selectedEntryRequirements.length > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              {selectedEntryRequirements.length} requirements
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {selectedEntryRequirements.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedEntryRequirements.length} requirements
+                              </Badge>
+                            )}
+                            {course?.id && (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => setAiEntryReqDialogOpen(true)}
+                                  disabled={isGeneratingAiReqs}
+                                  data-testid="button-ai-generate-entry-reqs"
+                                >
+                                  <Sparkles className="h-4 w-4 mr-1" />
+                                  AI Generate
+                                </Button>
+                                {selectedEntryRequirements.length > 0 && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setAiEquivalenciesDialogOpen(true)}
+                                    disabled={isGeneratingEquivalencies}
+                                    data-testid="button-generate-equivalencies"
+                                  >
+                                    <Globe className="h-4 w-4 mr-1" />
+                                    Equivalencies
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                         
                         {/* Loading state */}
@@ -2610,6 +2660,374 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
               data-testid="button-confirm-generate"
             >
               {batchCreateEnglishReqMutation.isPending ? "Generating..." : `Generate ${generatedPreview.length} Requirements`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Entry Requirements Dialog */}
+      <Dialog open={aiEntryReqDialogOpen} onOpenChange={setAiEntryReqDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Generate Entry Requirements
+            </DialogTitle>
+            <DialogDescription>
+              AI will suggest appropriate entry requirements based on course level and institution country
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {isGeneratingAiReqs ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm text-muted-foreground">Generating requirements...</p>
+              </div>
+            ) : aiGeneratedRequirements.length === 0 ? (
+              <div className="text-center py-8">
+                <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  Click "Generate" to get AI-suggested entry requirements for this {currentCourseLevel || "course"} in {institutionCountry || "your institution's country"}.
+                </p>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    setIsGeneratingAiReqs(true);
+                    try {
+                      const response = await fetch("/api/ai/generate-entry-requirements", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          courseLevel: currentCourseLevel,
+                          institutionCountry: institutionCountry,
+                          courseName: form.getValues("title"),
+                          discipline: form.getValues("discipline"),
+                        }),
+                      });
+                      if (response.ok) {
+                        const data = await response.json();
+                        setAiGeneratedRequirements(data.requirements || []);
+                      } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        toast({
+                          title: "AI Generation Failed",
+                          description: errorData.message || "Failed to generate entry requirements. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error generating requirements:", error);
+                      toast({
+                        title: "Error",
+                        description: "An unexpected error occurred while generating requirements.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsGeneratingAiReqs(false);
+                    }
+                  }}
+                  data-testid="button-start-ai-generation"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Requirements
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="text-sm font-medium">AI Suggested Requirements</label>
+                <p className="text-xs text-muted-foreground">Select the requirements you want to add to this course</p>
+                <div className="space-y-2">
+                  {aiGeneratedRequirements.map((req, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                        req.isSelected ? "bg-primary/10 border-primary/30" : "hover:bg-muted/50"
+                      }`}
+                      onClick={() => {
+                        const updated = [...aiGeneratedRequirements];
+                        updated[index].isSelected = !updated[index].isSelected;
+                        setAiGeneratedRequirements(updated);
+                      }}
+                      data-testid={`ai-req-option-${index}`}
+                    >
+                      <div
+                        className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                          req.isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
+                        }`}
+                      >
+                        {req.isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{req.qualificationName}</span>
+                          <Badge variant="outline" className="text-xs">{req.qualificationCountry}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Minimum: {req.minGrade}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 flex-shrink-0 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAiEntryReqDialogOpen(false);
+                setAiGeneratedRequirements([]);
+              }}
+              data-testid="button-cancel-ai-reqs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={aiGeneratedRequirements.filter(r => r.isSelected).length === 0}
+              onClick={async () => {
+                const selectedReqs = aiGeneratedRequirements.filter(r => r.isSelected);
+                for (const req of selectedReqs) {
+                  const matchingTemplate = entryRequirementTemplates.find(
+                    t => t.qualification?.name?.toLowerCase().includes(req.qualificationName.toLowerCase())
+                  );
+                  if (matchingTemplate) {
+                    const alreadySelected = selectedEntryRequirements.some(
+                      r => r.qualificationTypeId === matchingTemplate.qualificationTypeId
+                    );
+                    if (!alreadySelected) {
+                      setSelectedEntryRequirements(prev => [
+                        ...prev,
+                        {
+                          qualificationTypeId: matchingTemplate.qualificationTypeId,
+                          minGrade: req.minGrade,
+                        }
+                      ]);
+                    }
+                  }
+                }
+                setAiEntryReqDialogOpen(false);
+                setAiGeneratedRequirements([]);
+              }}
+              data-testid="button-apply-ai-reqs"
+            >
+              Apply {aiGeneratedRequirements.filter(r => r.isSelected).length} Requirements
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Equivalencies Dialog */}
+      <Dialog open={aiEquivalenciesDialogOpen} onOpenChange={setAiEquivalenciesDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Generate International Equivalencies
+            </DialogTitle>
+            <DialogDescription>
+              AI will suggest equivalent qualifications from international education systems
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {isGeneratingEquivalencies ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-sm text-muted-foreground">Generating equivalencies for Bangladesh, India, Nepal...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center py-4">
+                  <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Generate international equivalents for your {selectedEntryRequirements.length} entry requirement(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    This will create mappings for Bangladesh (HSC), India (12th Standard), and Nepal (+2) students
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      setIsGeneratingEquivalencies(true);
+                      try {
+                        const response = await fetch("/api/ai/generate-equivalencies", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            requirements: selectedEntryRequirements.map(req => {
+                              const template = entryRequirementTemplates.find(
+                                t => t.qualificationTypeId === req.qualificationTypeId
+                              );
+                              return {
+                                qualificationName: template?.qualification?.name || "",
+                                qualificationCountry: template?.qualification?.country || institutionCountry || "",
+                                minGrade: req.minGrade,
+                              };
+                            }),
+                            sourceCountries: ["Bangladesh", "India", "Nepal"],
+                          }),
+                        });
+                        if (response.ok) {
+                          const data = await response.json();
+                          const updated = aiGeneratedRequirements.length > 0 
+                            ? aiGeneratedRequirements 
+                            : selectedEntryRequirements.map(req => {
+                                const template = entryRequirementTemplates.find(
+                                  t => t.qualificationTypeId === req.qualificationTypeId
+                                );
+                                return {
+                                  qualificationName: template?.qualification?.name || "",
+                                  qualificationCountry: template?.qualification?.country || "",
+                                  minGrade: req.minGrade,
+                                  isSelected: true,
+                                  equivalencies: data.equivalencies?.[template?.qualification?.name || ""] || [],
+                                };
+                              });
+                          setAiGeneratedRequirements(updated);
+                        } else {
+                          const errorData = await response.json().catch(() => ({}));
+                          toast({
+                            title: "AI Generation Failed",
+                            description: errorData.message || "Failed to generate equivalencies. Please try again.",
+                            variant: "destructive",
+                          });
+                        }
+                      } catch (error) {
+                        console.error("Error generating equivalencies:", error);
+                        toast({
+                          title: "Error",
+                          description: "An unexpected error occurred while generating equivalencies.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsGeneratingEquivalencies(false);
+                      }
+                    }}
+                    data-testid="button-start-equivalency-generation"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Equivalencies
+                  </Button>
+                </div>
+
+                {aiGeneratedRequirements.some(r => r.equivalencies && r.equivalencies.length > 0) && (
+                  <div className="space-y-4">
+                    <label className="text-sm font-medium">AI Suggested Equivalencies</label>
+                    {aiGeneratedRequirements.filter(r => r.equivalencies && r.equivalencies.length > 0).map((req, reqIndex) => (
+                      <div key={reqIndex} className="border rounded-md p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default">{req.qualificationName}</Badge>
+                          <span className="text-sm text-muted-foreground">({req.qualificationCountry}) - Min: {req.minGrade}</span>
+                        </div>
+                        <div className="pl-4 space-y-1">
+                          {req.equivalencies?.map((eq, eqIndex) => (
+                            <div
+                              key={eqIndex}
+                              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                                eq.isApproved ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/50"
+                              }`}
+                              onClick={() => {
+                                const updated = [...aiGeneratedRequirements];
+                                if (updated[reqIndex].equivalencies) {
+                                  updated[reqIndex].equivalencies![eqIndex].isApproved = !eq.isApproved;
+                                }
+                                setAiGeneratedRequirements(updated);
+                              }}
+                            >
+                              <div
+                                className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                                  eq.isApproved ? "bg-green-500 border-green-500" : "border-muted-foreground/30"
+                                }`}
+                              >
+                                {eq.isApproved && <Check className="h-3 w-3 text-white" />}
+                              </div>
+                              <div className="flex-1">
+                                <span className="text-sm">
+                                  {eq.sourceCountry}: {eq.sourceQualification} <span className="font-medium">{eq.equivalentGrade}</span>
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 flex-shrink-0 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAiEquivalenciesDialogOpen(false);
+                setAiGeneratedRequirements([]);
+              }}
+              data-testid="button-cancel-equivalencies"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!aiGeneratedRequirements.some(r => r.equivalencies?.some(eq => eq.isApproved))}
+              onClick={async () => {
+                const approvedEquivalencies = aiGeneratedRequirements
+                  .filter(r => r.equivalencies?.some(eq => eq.isApproved))
+                  .flatMap(r => r.equivalencies?.filter(eq => eq.isApproved).map(eq => ({
+                    sourceQualification: {
+                      country: eq.sourceCountry,
+                      name: eq.sourceQualification,
+                      levelCategory: "secondary",
+                    },
+                    targetQualification: {
+                      country: r.qualificationCountry,
+                      name: r.qualificationName,
+                      levelCategory: "secondary",
+                    },
+                    sourceGradeMin: eq.equivalentGrade?.split("-")[0]?.trim() || eq.equivalentGrade || "",
+                    sourceGradeMax: eq.equivalentGrade?.includes("-") ? eq.equivalentGrade.split("-")[1]?.trim() : undefined,
+                    targetEquivalent: r.minGrade || "",
+                    confidenceLevel: "standard",
+                    notes: `AI-generated equivalency for ${eq.sourceCountry} ${eq.sourceQualification}`,
+                  })) || []);
+                  
+                try {
+                  const response = await fetch("/api/admin/qualification-equivalencies/batch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ equivalencies: approvedEquivalencies }),
+                  });
+                  if (response.ok) {
+                    const data = await response.json();
+                    toast({
+                      title: "Equivalencies Saved",
+                      description: `Successfully saved ${data.savedCount || approvedEquivalencies.length} equivalencies.`,
+                    });
+                    setAiEquivalenciesDialogOpen(false);
+                    setAiGeneratedRequirements([]);
+                  } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    toast({
+                      title: "Save Failed",
+                      description: errorData.message || "Failed to save equivalencies. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (error) {
+                  console.error("Error saving equivalencies:", error);
+                  toast({
+                    title: "Error",
+                    description: "An unexpected error occurred while saving equivalencies.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              data-testid="button-save-equivalencies"
+            >
+              Save Approved Equivalencies
             </Button>
           </div>
         </DialogContent>

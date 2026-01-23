@@ -91,6 +91,16 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - **Public Institutions Map View**: realestate.com.au-style interface with List/Map toggle, location autocomplete, and "update map as it moves" functionality
   - **InstitutionMapSearch Component**: Embeddable map component with `hideInternalToggle` prop for page-level integration
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content including Testimonials, FAQs, Team Members, Site Settings, and Content Snippets.
+- **AI Qualification Equivalency System**: Smart academic qualification matching with AI-powered cross-country equivalency generation.
+  - **AI Entry Requirements Generation**: GPT-4o generates entry requirements based on course level and institution country
+  - **AI Equivalency Generation**: Generates international equivalencies for source countries (Bangladesh HSC, India 12th Standard, Nepal +2)
+  - **Admin Approval Workflow**: AI-suggested equivalencies require admin review and approval before saving
+  - **Batch Save**: Approved equivalencies saved to qualification_equivalencies table with deduplication
+  - **Database Schema**: Uses academicQualificationTypes and qualificationEquivalencies tables with source/target mapping
+  - **API Endpoints**:
+    - `POST /api/ai/generate-entry-requirements` - Generate AI-suggested entry requirements
+    - `POST /api/ai/generate-equivalencies` - Generate international equivalencies
+    - `POST /api/admin/qualification-equivalencies/batch` - Save approved equivalencies
 
 ### Security Implementations
 - **CSRF Protection**: Double-submit CSRF token pattern.

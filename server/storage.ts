@@ -123,6 +123,9 @@ import {
   type RegionWithDetails,
   type CourseRegionVariantWithRelations,
   type ResolvedCourseData,
+  // Qualification system imports
+  academicQualificationTypes,
+  qualificationEquivalencies,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
@@ -437,6 +440,17 @@ export interface IStorage {
   
   // Course resolution with region fallback
   resolveCourseForRegion(courseId: string, regionCode: string, pathwayCode?: string): Promise<ResolvedCourseData | undefined>;
+  
+  // Qualification equivalencies operations
+  batchSaveQualificationEquivalencies(equivalencies: Array<{
+    sourceQualification: { country: string; name: string; levelCategory: string };
+    targetQualification: { country: string; name: string; levelCategory: string };
+    sourceGradeMin: string;
+    sourceGradeMax?: string;
+    targetEquivalent: string;
+    confidenceLevel?: string;
+    notes?: string;
+  }>): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2750,6 +2764,125 @@ export class DatabaseStorage implements IStorage {
       localizedTitle: (localized?.content as any)?.title,
       localizedDescription: (localized?.content as any)?.description,
     };
+  }
+  
+  // Qualification equivalencies operations
+  async batchSaveQualificationEquivalencies(equivalencies: Array<{
+    sourceQualification: { country: string; name: string; levelCategory: string };
+    targetQualification: { country: string; name: string; levelCategory: string };
+    sourceGradeMin: string;
+    sourceGradeMax?: string;
+    targetEquivalent: string;
+    confidenceLevel?: string;
+    notes?: string;
+  }>): Promise<number> {
+    let savedCount = 0;
+    
+    for (const equiv of equivalencies) {
+      try {
+        // Get or create source qualification type
+        let [sourceQual] = await db
+          .select()
+          .from(academicQualificationTypes)
+          .where(
+            and(
+              eq(academicQualificationTypes.country, equiv.sourceQualification.country),
+              eq(academicQualificationTypes.name, equiv.sourceQualification.name),
+              eq(academicQualificationTypes.levelCategory, equiv.sourceQualification.levelCategory as any)
+            )
+          );
+        
+        if (!sourceQual) {
+          [sourceQual] = await db
+            .insert(academicQualificationTypes)
+            .values({
+              country: equiv.sourceQualification.country,
+              name: equiv.sourceQualification.name,
+              levelCategory: equiv.sourceQualification.levelCategory as any,
+              isActive: true,
+            })
+            .returning();
+        }
+        
+        // Get or create target qualification type
+        let [targetQual] = await db
+          .select()
+          .from(academicQualificationTypes)
+          .where(
+            and(
+              eq(academicQualificationTypes.country, equiv.targetQualification.country),
+              eq(academicQualificationTypes.name, equiv.targetQualification.name),
+              eq(academicQualificationTypes.levelCategory, equiv.targetQualification.levelCategory as any)
+            )
+          );
+        
+        if (!targetQual) {
+          [targetQual] = await db
+            .insert(academicQualificationTypes)
+            .values({
+              country: equiv.targetQualification.country,
+              name: equiv.targetQualification.name,
+              levelCategory: equiv.targetQualification.levelCategory as any,
+              isActive: true,
+            })
+            .returning();
+        }
+        
+        // Check if equivalency already exists (match on source, target, min AND max for uniqueness)
+        const matchConditions = [
+          eq(qualificationEquivalencies.sourceQualificationId, sourceQual.id),
+          eq(qualificationEquivalencies.targetQualificationId, targetQual.id),
+          eq(qualificationEquivalencies.sourceGradeMin, equiv.sourceGradeMin),
+        ];
+        
+        // Include sourceGradeMax in matching to ensure correct row updates
+        if (equiv.sourceGradeMax) {
+          matchConditions.push(eq(qualificationEquivalencies.sourceGradeMax, equiv.sourceGradeMax));
+        } else {
+          matchConditions.push(isNull(qualificationEquivalencies.sourceGradeMax));
+        }
+        
+        const [existingEquiv] = await db
+          .select()
+          .from(qualificationEquivalencies)
+          .where(and(...matchConditions));
+        
+        if (existingEquiv) {
+          // Update existing equivalency
+          await db
+            .update(qualificationEquivalencies)
+            .set({
+              sourceGradeMax: equiv.sourceGradeMax || null,
+              targetEquivalent: equiv.targetEquivalent,
+              confidenceLevel: equiv.confidenceLevel || 'standard',
+              notes: equiv.notes || null,
+              updatedAt: new Date(),
+            })
+            .where(eq(qualificationEquivalencies.id, existingEquiv.id));
+        } else {
+          // Insert new equivalency
+          await db
+            .insert(qualificationEquivalencies)
+            .values({
+              sourceQualificationId: sourceQual.id,
+              targetQualificationId: targetQual.id,
+              sourceGradeMin: equiv.sourceGradeMin,
+              sourceGradeMax: equiv.sourceGradeMax || null,
+              targetEquivalent: equiv.targetEquivalent,
+              confidenceLevel: equiv.confidenceLevel || 'standard',
+              notes: equiv.notes || null,
+              isActive: true,
+            });
+        }
+        
+        savedCount++;
+      } catch (error) {
+        console.error("Error saving equivalency:", error);
+        // Continue with other equivalencies
+      }
+    }
+    
+    return savedCount;
   }
 }
 

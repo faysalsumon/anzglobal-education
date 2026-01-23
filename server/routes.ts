@@ -113,6 +113,8 @@ import {
   extractCourseDataFromWebsite,
   parseNaturalLanguageQuery,
   parseNaturalLanguageInstitutionQuery,
+  generateEntryRequirements,
+  generateQualificationEquivalencies,
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
@@ -6103,6 +6105,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to generate content. Please try again." });
+    }
+  });
+
+  // AI-powered entry requirements generation
+  app.post("/api/ai/generate-entry-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      // Check admin access
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { courseLevel, institutionCountry, courseName, discipline } = req.body;
+      
+      if (!courseLevel || !institutionCountry) {
+        return res.status(400).json({ message: "Course level and institution country are required" });
+      }
+
+      const requirements = await generateEntryRequirements(
+        courseLevel,
+        institutionCountry,
+        courseName,
+        discipline
+      );
+
+      res.json({ requirements });
+    } catch (error: any) {
+      console.error("Error generating entry requirements:", error);
+      
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate entry requirements. Please try again." });
+    }
+  });
+
+  // AI-powered qualification equivalency generation
+  app.post("/api/ai/generate-equivalencies", isAuthenticated, async (req: any, res) => {
+    try {
+      // Check admin access
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { requirements, sourceCountries } = req.body;
+      
+      if (!requirements || !Array.isArray(requirements) || requirements.length === 0) {
+        return res.status(400).json({ message: "At least one requirement is needed" });
+      }
+      
+      if (!sourceCountries || !Array.isArray(sourceCountries) || sourceCountries.length === 0) {
+        return res.status(400).json({ message: "At least one source country is required" });
+      }
+
+      const equivalencies = await generateQualificationEquivalencies(requirements, sourceCountries);
+
+      res.json({ equivalencies });
+    } catch (error: any) {
+      console.error("Error generating equivalencies:", error);
+      
+      if (error?.code === 'ai_not_configured' || error?.status === 503) {
+        return res.status(503).json({ 
+          message: "AI features are not yet configured. OpenAI integration will be set up in a later stage of platform development." 
+        });
+      }
+      
+      if (error?.error?.code === 'insufficient_quota' || error?.status === 429) {
+        return res.status(429).json({ 
+          message: "OpenAI API quota exceeded. Please add credits to your OpenAI account." 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to generate equivalencies. Please try again." });
+    }
+  });
+
+  // Batch save qualification equivalencies
+  app.post("/api/admin/qualification-equivalencies/batch", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { equivalencies } = req.body;
+      
+      if (!equivalencies || !Array.isArray(equivalencies)) {
+        return res.status(400).json({ message: "Equivalencies array is required" });
+      }
+
+      // Get or create qualification types and save equivalencies
+      const savedCount = await storage.batchSaveQualificationEquivalencies(equivalencies);
+
+      res.json({ 
+        success: true, 
+        message: `Successfully saved ${savedCount} equivalencies`,
+        savedCount 
+      });
+    } catch (error) {
+      console.error("Error saving equivalencies:", error);
+      res.status(500).json({ message: "Failed to save equivalencies" });
     }
   });
 

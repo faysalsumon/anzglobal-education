@@ -1057,3 +1057,142 @@ Return ONLY a JSON object with the extracted parameters. If a parameter cannot b
     return { originalQuery: query };
   }
 }
+
+/**
+ * AI-powered entry requirements generation for courses
+ * Suggests appropriate academic entry requirements based on course level and institution country
+ */
+export async function generateEntryRequirements(
+  courseLevel: string,
+  institutionCountry: string,
+  courseName?: string,
+  discipline?: string
+): Promise<Array<{
+  qualificationName: string;
+  qualificationCountry: string;
+  minGrade: string;
+  isSelected: boolean;
+}>> {
+  checkAIConfigured();
+
+  const prompt = `You are an expert in international education requirements. Generate appropriate academic entry requirements for a ${courseLevel} course${courseName ? ` called "${courseName}"` : ""}${discipline ? ` in ${discipline}` : ""} at an institution in ${institutionCountry}.
+
+Based on ${institutionCountry}'s education standards, suggest 2-4 appropriate entry pathways/qualifications.
+
+For each requirement, provide:
+- The qualification name (e.g., "Year 12", "Foundation Year", "Diploma", "A-Levels", "IB Diploma")
+- The country this qualification is from (should be ${institutionCountry})
+- The minimum grade/score required (e.g., "ATAR 65", "GPA 2.5", "BBC", "Score 28")
+
+Return ONLY a JSON object with this exact structure:
+{
+  "requirements": [
+    {
+      "qualificationName": "Year 12",
+      "qualificationCountry": "Australia",
+      "minGrade": "ATAR 65",
+      "isSelected": true
+    }
+  ]
+}
+
+Consider the course level when setting requirements:
+- Bachelor/Undergraduate: High school completion or equivalent
+- Master/Postgraduate: Bachelor degree or equivalent
+- Diploma/Certificate: High school or prior diploma
+- Foundation: Lower high school requirements`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 500,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    const parsed = JSON.parse(content);
+    return parsed.requirements || [];
+  } catch (error) {
+    console.error("Failed to parse AI entry requirements:", error);
+    return [];
+  }
+}
+
+/**
+ * AI-powered qualification equivalency generation
+ * Maps destination country requirements to equivalent qualifications in source countries
+ */
+export async function generateQualificationEquivalencies(
+  requirements: Array<{
+    qualificationName: string;
+    qualificationCountry: string;
+    minGrade: string;
+  }>,
+  sourceCountries: string[]
+): Promise<Record<string, Array<{
+  sourceCountry: string;
+  sourceQualification: string;
+  equivalentGrade: string;
+  isApproved: boolean;
+}>>> {
+  checkAIConfigured();
+
+  const requirementsList = requirements.map(r => 
+    `- ${r.qualificationName} (${r.qualificationCountry}) with minimum ${r.minGrade}`
+  ).join("\n");
+
+  const prompt = `You are an expert in international education credential equivalency. Given the following entry requirements from destination country institutions:
+
+${requirementsList}
+
+Generate equivalent qualifications for students from these source countries: ${sourceCountries.join(", ")}.
+
+For EACH source country, provide the equivalent local qualification and minimum grade that would be considered equivalent to each destination requirement.
+
+Use these known equivalencies as guidance:
+- Bangladesh HSC uses GPA scale 1.0-5.0 (5.0 is best)
+- India 12th Standard uses percentage marks (0-100%)
+- Nepal +2/Higher Secondary uses divisions (First: 60%+, Second: 45-60%)
+- Bangladesh Bachelor/Honours uses GPA 1.0-4.0 (4.0 is best)
+
+For example:
+- Australian ATAR 65 ≈ Bangladesh HSC GPA 3.5/5.0 ≈ India 12th 60% ≈ Nepal +2 First Division
+- Australian ATAR 75 ≈ Bangladesh HSC GPA 4.0/5.0 ≈ India 12th 70%
+- Australian ATAR 85 ≈ Bangladesh HSC GPA 4.5/5.0 ≈ India 12th 80%
+
+Return ONLY a JSON object where keys are the destination qualification names:
+{
+  "Year 12": [
+    {
+      "sourceCountry": "Bangladesh",
+      "sourceQualification": "HSC",
+      "equivalentGrade": "GPA 3.5/5.0",
+      "isApproved": false
+    },
+    {
+      "sourceCountry": "India",
+      "sourceQualification": "12th Standard",
+      "equivalentGrade": "60%",
+      "isApproved": false
+    }
+  ]
+}`;
+
+  const response = await openai!.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 1000,
+  });
+
+  const content = response.choices[0]?.message?.content || "{}";
+  
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Failed to parse AI equivalencies:", error);
+    return {};
+  }
+}
