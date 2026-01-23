@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +10,15 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag
+  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart
 } from "lucide-react";
-import type { Course, University, Application } from "@shared/schema";
+import type { Course, University, Application, Favorite } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseSectionNav } from "@/components/course-section-nav";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -79,6 +81,80 @@ export default function PublicCourseDetail() {
 
   const applications = applicationsData?.applications || [];
   const existingApplication = applications.find(app => app.application.courseId === courseId);
+
+  const { toast } = useToast();
+
+  // Favorites functionality for students
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ["/api/student/favorites"],
+    enabled: isStudent,
+  });
+
+  const isFavorited = favorites.some(
+    (f) => f.itemType === "course" && f.itemId === courseId
+  );
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: async (data: { itemType: string; itemId: string }) => {
+      return await apiRequest("POST", "/api/student/favorites", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Added to favorites",
+        description: "Course saved to your favorites!",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("already favorited")) {
+        toast({
+          title: "Already favorited",
+          description: "This course is already in your favorites",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add to favorites",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (favoriteId: string) => {
+      return await apiRequest("DELETE", `/api/student/favorites/${favoriteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({
+        title: "Removed from favorites",
+        description: "Course removed from your favorites",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFavoriteToggle = () => {
+    if (!isStudent || !courseId) return;
+
+    const existingFavorite = favorites.find(
+      (f) => f.itemType === "course" && f.itemId === courseId
+    );
+
+    if (existingFavorite) {
+      removeFavoriteMutation.mutate(existingFavorite.id);
+    } else {
+      addFavoriteMutation.mutate({ itemType: "course", itemId: courseId });
+    }
+  };
 
   // Calculate which sections are visible based on course data (must be before early returns for React hooks rules)
   const visibleSections = useMemo(() => {
@@ -230,18 +306,38 @@ export default function PublicCourseDetail() {
       <div id="course-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
         <div className="container mx-auto px-4 py-12 relative">
-          {/* Breadcrumb */}
-          <nav className="flex flex-wrap items-center gap-2 text-sm mb-6" data-testid="breadcrumb">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-home">
-              <Home className="h-4 w-4" />
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <Link href="/courses" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-courses">
-              Courses
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{course.title}</span>
-          </nav>
+          {/* Breadcrumb with Favorite Button */}
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <nav className="flex flex-wrap items-center gap-2 text-sm" data-testid="breadcrumb">
+              <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-home">
+                <Home className="h-4 w-4" />
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <Link href="/courses" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-courses">
+                Courses
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{course.title}</span>
+            </nav>
+            
+            {/* Favorite Button - Red heart for students */}
+            {isStudent && (
+              <Button
+                size="sm"
+                variant={isFavorited ? "default" : "outline"}
+                onClick={handleFavoriteToggle}
+                disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+                className={isFavorited 
+                  ? "bg-red-500 hover:bg-red-600 text-white border-red-500" 
+                  : "text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600"
+                }
+                data-testid="button-favorite-course"
+              >
+                <Heart className={`h-4 w-4 mr-1.5 ${isFavorited ? "fill-current" : ""}`} />
+                {isFavorited ? "Saved" : "Save"}
+              </Button>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Hero Content */}
