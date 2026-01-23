@@ -20,7 +20,7 @@ interface SectionConfig {
 
 const sections: SectionConfig[] = [
   { id: "about", label: "About", icon: <GraduationCap className="h-4 w-4" /> },
-  { id: "fees", label: "Investment", icon: <DollarSign className="h-4 w-4" /> },
+  { id: "fees", label: "Tuition Fees", icon: <DollarSign className="h-4 w-4" /> },
   { id: "eligibility", label: "Requirements", icon: <CheckCircle className="h-4 w-4" /> },
   { id: "academic", label: "Academic", icon: <FileText className="h-4 w-4" /> },
   { id: "career", label: "Career", icon: <Target className="h-4 w-4" /> },

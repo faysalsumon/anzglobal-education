@@ -613,7 +613,7 @@ export default function PublicCourseDetail() {
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-primary" />
-                    Investment Overview
+                    Tuition Fees
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
