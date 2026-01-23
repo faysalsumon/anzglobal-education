@@ -137,7 +137,7 @@ export function AdminAiSettingsPanel() {
                     <SelectItem key={model.id} value={model.id} data-testid={`select-item-${model.id}`}>
                       <div className="flex items-center gap-2">
                         <span>{model.name}</span>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge className="text-xs bg-[#6366f1] text-white border-[#6366f1]">
                           {model.provider}
                         </Badge>
                       </div>
