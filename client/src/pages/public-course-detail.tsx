@@ -221,13 +221,11 @@ export default function PublicCourseDetail() {
           {JSON.stringify(structuredData)}
         </script>
       </Helmet>
-
       {/* Course Section Navigation - Shows when scrolling past hero */}
       <CourseSectionNav 
         visibleSections={visibleSections} 
         courseTitle={course.title}
       />
-
       {/* Modern AI-Style Hero Section */}
       <div id="course-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
@@ -330,7 +328,7 @@ export default function PublicCourseDetail() {
                   <div className="bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl p-4 border border-primary/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Tag className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">Course Tags</span>
+                      <span className="text-sm font-semibold text-foreground">Course Feature</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {courseTags.map((tag) => (
@@ -420,7 +418,6 @@ export default function PublicCourseDetail() {
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -603,7 +600,7 @@ export default function PublicCourseDetail() {
                     </div>
                   ) : course.englishRequirementsStructured && (
                     /* Legacy JSONB fallback for backward compatibility */
-                    <div className="overflow-x-auto">
+                    (<div className="overflow-x-auto">
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr className="border-b bg-muted/50">
@@ -653,7 +650,7 @@ export default function PublicCourseDetail() {
                           )}
                         </tbody>
                       </table>
-                    </div>
+                    </div>)
                   )}
                   
                   {/* Display additional notes from the text field */}
@@ -1065,7 +1062,6 @@ export default function PublicCourseDetail() {
           </div>
         </div>
       </div>
-
       {/* Campus Location Map Dialog */}
       <CampusLocationMapDialog
         location={selectedCampusLocation || ""}
