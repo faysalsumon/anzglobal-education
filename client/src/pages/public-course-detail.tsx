@@ -289,15 +289,6 @@ export default function PublicCourseDetail() {
                         </Badge>
                       </>
                     )}
-                    {course.applicationDeadline && (
-                      <>
-                        <span className="text-muted-foreground/50">•</span>
-                        <Badge className="bg-accent/15 text-accent border border-accent/30 px-3 py-1" data-testid="badge-apply-by">
-                          <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                          Apply by {course.applicationDeadline}
-                        </Badge>
-                      </>
-                    )}
                   </div>
                 </div>
 
@@ -407,6 +398,17 @@ export default function PublicCourseDetail() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Next Intake</p>
                         <p className="text-sm font-semibold" data-testid="text-next-intake">{course.startDate}</p>
+                      </div>
+                    </div>
+                  )}
+                  {course.applicationDeadline && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-accent/10 rounded-md">
+                        <Calendar className="h-3.5 w-3.5 text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Application Deadline</p>
+                        <p className="text-sm font-semibold" data-testid="text-application-deadline">{course.applicationDeadline}</p>
                       </div>
                     </div>
                   )}
