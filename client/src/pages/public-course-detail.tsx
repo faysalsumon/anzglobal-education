@@ -58,6 +58,19 @@ export default function PublicCourseDetail() {
     enabled: !!courseId,
   });
 
+  // Fetch course tags
+  interface CourseTag {
+    id: number;
+    name: string;
+    slug: string;
+    category: string;
+    color: string | null;
+  }
+  const { data: courseTags = [] } = useQuery<CourseTag[]>({
+    queryKey: ["/api/courses", courseId, "tags"],
+    enabled: !!courseId,
+  });
+
   // Check if student has already applied for this course
   const { data: applicationsData } = useQuery<{ applications: Array<{ application: Application }> }>({
     queryKey: ["/api/student/applications"],
@@ -269,6 +282,7 @@ export default function PublicCourseDetail() {
 
                 {/* Feature Badges */}
                 <div className="flex flex-wrap gap-2">
+                  {/* Scholarship Badge */}
                   {course.university && ((course.university.scholarshipPercentageMin !== null && course.university.scholarshipPercentageMin !== undefined && course.university.scholarshipPercentageMin > 0) || 
                     (course.university.scholarshipPercentageMax !== null && course.university.scholarshipPercentageMax !== undefined && course.university.scholarshipPercentageMax > 0)) && (
                     <Badge className="bg-gradient-to-r from-secondary to-secondary/80 border-0 text-white px-4 py-1.5" data-testid="badge-scholarship">
@@ -302,6 +316,45 @@ export default function PublicCourseDetail() {
                       Work Rights Eligible
                     </Badge>
                   )}
+                  {/* Course Level Badge */}
+                  {course.level && (
+                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-course-level">
+                      <GraduationCap className="h-3 w-3 mr-1" />
+                      {course.level}
+                    </Badge>
+                  )}
+                  {/* Location Badge */}
+                  {(course.location || course.country) && (
+                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-location">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {course.location || course.country}
+                    </Badge>
+                  )}
+                  {/* Discipline Badge */}
+                  {(course.subject || course.discipline) && (
+                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-discipline">
+                      <BookOpen className="h-3 w-3 mr-1" />
+                      {course.subject || course.discipline}
+                    </Badge>
+                  )}
+                  {/* Application Deadline Badge */}
+                  {course.applicationDeadline && (
+                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-application-deadline">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Apply by {course.applicationDeadline}
+                    </Badge>
+                  )}
+                  {/* Course Tags */}
+                  {courseTags.map((tag) => (
+                    <Badge 
+                      key={tag.id} 
+                      variant="secondary" 
+                      className="px-3 py-1"
+                      data-testid={`badge-tag-${tag.slug}`}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </div>
@@ -316,18 +369,6 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Course Level */}
-                  {course.level && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <GraduationCap className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Course Level</p>
-                        <p className="font-semibold" data-testid="text-course-level">{course.level}</p>
-                      </div>
-                    </div>
-                  )}
                   {course.fees && (
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="p-2 bg-primary/10 rounded-lg">
@@ -350,34 +391,6 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
-                  {/* Location with country fallback */}
-                  {(course.location || course.country) && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-accent/10 rounded-lg">
-                        <MapPin className="h-4 w-4 text-accent" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Location</p>
-                        <p className="font-semibold" data-testid="text-location">
-                          {course.location || course.country}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {/* Discipline with fallback to discipline enum */}
-                  {(course.subject || course.discipline) && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Discipline</p>
-                        <p className="font-semibold" data-testid="text-discipline">
-                          {course.subject || course.discipline}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                   {course.startDate && (
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="p-2 bg-secondary/10 rounded-lg">
@@ -386,18 +399,6 @@ export default function PublicCourseDetail() {
                       <div>
                         <p className="text-sm text-muted-foreground">Next Intake</p>
                         <p className="font-semibold" data-testid="text-next-intake">{course.startDate}</p>
-                      </div>
-                    </div>
-                  )}
-                  {/* Application Deadline */}
-                  {course.applicationDeadline && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="p-2 bg-accent/10 rounded-lg">
-                        <Calendar className="h-4 w-4 text-accent" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Application Deadline</p>
-                        <p className="font-semibold" data-testid="text-application-deadline">{course.applicationDeadline}</p>
                       </div>
                     </div>
                   )}
