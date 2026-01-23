@@ -205,7 +205,7 @@ export default function PublicCourseDetail() {
     }
     
     // Course details section (includes specialization)
-    if (course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode || course.specialization) {
+    if (course.campusLocations?.length) {
       sections.push("details");
     }
     
@@ -382,6 +382,31 @@ export default function PublicCourseDetail() {
                       </Badge>
                     )}
                   </div>
+                  {course.studyAreas && course.studyAreas.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                      {(() => {
+                        const colorPalette = [
+                          { text: "text-[#3465A5]", border: "border-[#3465A5]/30" },
+                          { text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
+                          { text: "text-[#10b981]", border: "border-[#10b981]/30" },
+                          { text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
+                          { text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
+                        ];
+                        return course.studyAreas.map((area, index) => {
+                          const color = colorPalette[index % colorPalette.length];
+                          return (
+                            <Badge 
+                              key={index} 
+                              className={`px-2.5 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold text-xs`}
+                              data-testid={`badge-study-area-${index}`}
+                            >
+                              {area}
+                            </Badge>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 {/* Feature Badges - Prominent highlights only */}
@@ -464,6 +489,17 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
+                  {course.specialization && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Specialization</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-specialization">{course.specialization}</p>
+                      </div>
+                    </div>
+                  )}
                   {course.fees && (
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-primary/10 rounded-md">
@@ -508,17 +544,6 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
-                  {course.specialization && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Specialization</p>
-                        <p className="text-sm font-semibold truncate" data-testid="text-specialization">{course.specialization}</p>
-                      </div>
-                    </div>
-                  )}
                   {course.deliveryMode && (
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-secondary/10 rounded-md">
@@ -540,28 +565,27 @@ export default function PublicCourseDetail() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground mb-1">Available Intakes</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {course.intakes.map((intake, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5" data-testid={`badge-intake-${index}`}>
-                              {intake}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {course.studyAreas && course.studyAreas.length > 0 && (
-                    <div className="flex items-start gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md mt-0.5">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">Study Areas</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {course.studyAreas.map((area, index) => (
-                            <Badge key={index} variant="outline" className="text-xs px-2 py-0.5" data-testid={`badge-study-area-${index}`}>
-                              {area}
-                            </Badge>
-                          ))}
+                          {(() => {
+                            const colorPalette = [
+                              { text: "text-[#3465A5]", border: "border-[#3465A5]/30" },
+                              { text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
+                              { text: "text-[#10b981]", border: "border-[#10b981]/30" },
+                              { text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
+                              { text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
+                            ];
+                            return course.intakes.map((intake, index) => {
+                              const color = colorPalette[index % colorPalette.length];
+                              return (
+                                <Badge 
+                                  key={index} 
+                                  className={`text-xs px-2 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold`}
+                                  data-testid={`badge-intake-${index}`}
+                                >
+                                  {intake}
+                                </Badge>
+                              );
+                            });
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -936,7 +960,7 @@ export default function PublicCourseDetail() {
             )}
 
             {/* Course Details */}
-            {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode || course.specialization) && (
+            {course.campusLocations?.length && (
               <Card id="details" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
