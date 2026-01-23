@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -349,6 +349,7 @@ const courseSchema = z.object({
   eligibilityRequirements: z.string().optional(),
   englishRequirements: z.string().optional(),
   courseCode: z.string().optional(),
+  sourceUrl: z.string().url().optional().or(z.literal("")),
   pathways: z.string().optional(),
   studyAreas: z.string().optional(),
   careerOutcomes: z.string().optional(),
@@ -394,6 +395,7 @@ interface Course {
   eligibilityRequirements?: string | null;
   englishRequirements?: string | null;
   courseCode?: string | null;
+  sourceUrl?: string | null;
   pathways?: string[] | null;
   studyAreas?: string[] | null;
   careerOutcomes?: string[] | null;
@@ -768,6 +770,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       eligibilityRequirements: course?.eligibilityRequirements || "",
       englishRequirements: course?.englishRequirements || "",
       courseCode: course?.courseCode || "",
+      sourceUrl: course?.sourceUrl || "",
       pathways: Array.isArray(course?.pathways) ? course.pathways.join(", ") : "",
       studyAreas: Array.isArray(course?.studyAreas) ? course.studyAreas.join(", ") : "",
       careerOutcomes: Array.isArray(course?.careerOutcomes) ? course.careerOutcomes.join(", ") : "",
@@ -1199,6 +1202,29 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           <FormControl>
                             <Textarea {...field} placeholder="Course description..." rows={4} data-testid="input-course-description" />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="sourceUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4" />
+                            Course Page URL
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="url"
+                              placeholder="https://institution.edu/courses/course-name" 
+                              data-testid="input-course-source-url" 
+                            />
+                          </FormControl>
+                          <FormDescription>Direct link to this course on the institution's website</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

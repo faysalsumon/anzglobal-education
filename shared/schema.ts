@@ -816,6 +816,7 @@ export const courses = pgTable("courses", {
   eligibilityRequirements: text("eligibility_requirements"),
   englishRequirements: text("english_requirements"),
   curriculumUrl: text("curriculum_url"),
+  sourceUrl: text("source_url"), // Direct link to course page on institution website
   costOfLiving: decimal("cost_of_living", { precision: 10, scale: 2 }),
   applicationFees: decimal("application_fees", { precision: 10, scale: 2 }),
   images: text("images").array(),
