@@ -10,7 +10,7 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star, Info
+  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers
 } from "lucide-react";
 import type { Course, University, Application } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -100,8 +100,23 @@ export default function PublicCourseDetail() {
       sections.push("career");
     }
     
-    // Course details section
-    if (course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) {
+    // Pathways section
+    if (course.pathways && course.pathways.length > 0) {
+      sections.push("pathways");
+    }
+    
+    // Prerequisites section
+    if (course.prerequisites) {
+      sections.push("prerequisites");
+    }
+    
+    // Internship details section
+    if (course.internshipDetails) {
+      sections.push("internship");
+    }
+    
+    // Course details section (includes specialization)
+    if (course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode || course.specialization) {
       sections.push("details");
     }
     
@@ -281,6 +296,12 @@ export default function PublicCourseDetail() {
                       Internship Available
                     </Badge>
                   )}
+                  {course.workRights && (
+                    <Badge className="bg-gradient-to-r from-green-600 to-green-500 border-0 text-white px-4 py-1.5" data-testid="badge-work-rights">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Work Rights Eligible
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -295,6 +316,18 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Course Level */}
+                  {course.level && (
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Course Level</p>
+                        <p className="font-semibold" data-testid="text-course-level">{course.level}</p>
+                      </div>
+                    </div>
+                  )}
                   {course.fees && (
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="p-2 bg-primary/10 rounded-lg">
@@ -317,25 +350,31 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
-                  {course.location && (
+                  {/* Location with country fallback */}
+                  {(course.location || course.country) && (
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="p-2 bg-accent/10 rounded-lg">
                         <MapPin className="h-4 w-4 text-accent" />
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Location</p>
-                        <p className="font-semibold" data-testid="text-location">{course.location}</p>
+                        <p className="font-semibold" data-testid="text-location">
+                          {course.location || course.country}
+                        </p>
                       </div>
                     </div>
                   )}
-                  {course.subject && (
+                  {/* Discipline with fallback to discipline enum */}
+                  {(course.subject || course.discipline) && (
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="p-2 bg-primary/10 rounded-lg">
                         <BookOpen className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Discipline</p>
-                        <p className="font-semibold" data-testid="text-discipline">{course.subject}</p>
+                        <p className="font-semibold" data-testid="text-discipline">
+                          {course.subject || course.discipline}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -347,6 +386,18 @@ export default function PublicCourseDetail() {
                       <div>
                         <p className="text-sm text-muted-foreground">Next Intake</p>
                         <p className="font-semibold" data-testid="text-next-intake">{course.startDate}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Application Deadline */}
+                  {course.applicationDeadline && (
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="p-2 bg-accent/10 rounded-lg">
+                        <Calendar className="h-4 w-4 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Application Deadline</p>
+                        <p className="font-semibold" data-testid="text-application-deadline">{course.applicationDeadline}</p>
                       </div>
                     </div>
                   )}
@@ -645,8 +696,67 @@ export default function PublicCourseDetail() {
               </Card>
             )}
 
+            {/* Pathways Section - Progression Routes */}
+            {course.pathways && course.pathways.length > 0 && (
+              <Card id="pathways" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-pathways">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-primary" />
+                    Progression Pathways
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This course can lead to further study opportunities:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {course.pathways.map((pathway, index) => (
+                      <Badge key={index} variant="outline" className="px-3 py-1.5" data-testid={`badge-pathway-${index}`}>
+                        <ArrowUpRight className="h-3 w-3 mr-1" />
+                        {pathway}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Prerequisites Section */}
+            {course.prerequisites && (
+              <Card id="prerequisites" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-prerequisites">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Prerequisites
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-prerequisites">
+                    {course.prerequisites}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Internship Details Section */}
+            {course.internshipDetails && (
+              <Card id="internship" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-internship-details">
+                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    Internship & Work Placement
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-internship-details">
+                    {course.internshipDetails}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Course Details */}
-            {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) && (
+            {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode || course.specialization) && (
               <Card id="details" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -655,6 +765,16 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-5">
+                  {/* Specialization */}
+                  {course.specialization && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Specialization</p>
+                      <Badge variant="secondary" className="px-3 py-1.5" data-testid="badge-specialization">
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        {course.specialization}
+                      </Badge>
+                    </div>
+                  )}
                   {course.deliveryMode && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Delivery Mode</p>
@@ -812,6 +932,22 @@ export default function PublicCourseDetail() {
                     <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
                       <Globe className="h-4 w-4 mr-2" />
                       Visit Official Course Page
+                    </a>
+                  </Button>
+                )}
+
+                {/* Source URL Link */}
+                {course.sourceUrl && (
+                  <Button 
+                    asChild 
+                    variant="ghost" 
+                    className="w-full text-muted-foreground" 
+                    size="sm"
+                    data-testid="button-source-url"
+                  >
+                    <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View on Institution Website
                     </a>
                   </Button>
                 )}

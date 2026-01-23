@@ -6,7 +6,9 @@ import {
   Target, 
   BookOpen,
   Globe,
-  FileText
+  FileText,
+  Layers,
+  Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,9 @@ const sections: SectionConfig[] = [
   { id: "academic", label: "Academic", icon: <FileText className="h-4 w-4" /> },
   { id: "english", label: "English", icon: <Globe className="h-4 w-4" /> },
   { id: "career", label: "Career", icon: <Target className="h-4 w-4" /> },
+  { id: "pathways", label: "Pathways", icon: <Layers className="h-4 w-4" /> },
+  { id: "prerequisites", label: "Prerequisites", icon: <FileText className="h-4 w-4" /> },
+  { id: "internship", label: "Internship", icon: <Briefcase className="h-4 w-4" /> },
   { id: "details", label: "Details", icon: <BookOpen className="h-4 w-4" /> },
 ];
 
