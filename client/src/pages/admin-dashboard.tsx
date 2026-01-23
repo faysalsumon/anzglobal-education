@@ -78,6 +78,7 @@ import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { InstitutionEditor } from "@/components/institution-editor";
 import { CourseEditor } from "@/components/course-editor";
 import { AdminTagsPanel } from "@/components/admin-tags-panel";
+import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
 
 interface User {
   id: string;
@@ -422,8 +423,9 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
+    const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     // Marketing Executive can access institutions tab along with full admins
     const marketingExecutiveTabs = ['institutions'];
@@ -475,6 +477,7 @@ export default function AdminDashboard() {
     'data-import': 'Data Import',
     'web-scraping': 'Web Scraping',
     'activity-logs': 'Activity Logs',
+    'ai-settings': 'AI Settings',
     'team': 'Team Invitations',
     'blogs': 'Blogs',
     'website-content': 'Website Content',
@@ -501,7 +504,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -3123,6 +3126,11 @@ export default function AdminDashboard() {
               limit={50}
             />
           </div>
+        )}
+
+        {/* AI Settings Tab - CTO Only */}
+        {activeTab === "ai-settings" && isCTO && (
+          <AdminAiSettingsPanel />
         )}
 
         {/* Team Management Tab */}

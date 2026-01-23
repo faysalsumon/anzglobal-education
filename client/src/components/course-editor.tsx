@@ -490,18 +490,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     qualificationCountry: string;
     minGrade: string;
     isSelected: boolean;
-    equivalencies?: Array<{
-      sourceCountry: string;
-      sourceQualification: string;
-      equivalentGrade: string;
-      isApproved: boolean;
-    }>;
   }>>([]);
   const [isGeneratingAiReqs, setIsGeneratingAiReqs] = useState(false);
   
-  // AI Equivalencies dialog state  
-  const [aiEquivalenciesDialogOpen, setAiEquivalenciesDialogOpen] = useState(false);
-  const [isGeneratingEquivalencies, setIsGeneratingEquivalencies] = useState(false);
+  // AI Equivalencies are now automatically generated when entry requirements are saved
+  // No manual dialog needed - fully automatic
   const [generateTestsForm, setGenerateTestsForm] = useState({
     baseTestType: "ielts",
     minOverallScore: "",
@@ -1657,17 +1650,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   AI Generate
                                 </Button>
                                 {selectedEntryRequirements.length > 0 && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setAiEquivalenciesDialogOpen(true)}
-                                    disabled={isGeneratingEquivalencies}
-                                    data-testid="button-generate-equivalencies"
-                                  >
-                                    <Globe className="h-4 w-4 mr-1" />
-                                    Equivalencies
-                                  </Button>
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    Auto-equivalencies
+                                  </Badge>
                                 )}
                               </>
                             )}
@@ -2815,213 +2801,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         </DialogContent>
       </Dialog>
 
-      {/* AI Equivalencies Dialog */}
-      <Dialog open={aiEquivalenciesDialogOpen} onOpenChange={setAiEquivalenciesDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-primary" />
-              Generate International Equivalencies
-            </DialogTitle>
-            <DialogDescription>
-              AI will suggest equivalent qualifications from international education systems
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4 py-4">
-            {isGeneratingEquivalencies ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Generating equivalencies for Bangladesh, India, Nepal...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="text-center py-4">
-                  <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Generate international equivalents for your {selectedEntryRequirements.length} entry requirement(s)
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    This will create mappings for Bangladesh (HSC), India (12th Standard), and Nepal (+2) students
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      setIsGeneratingEquivalencies(true);
-                      try {
-                        const response = await apiRequest("POST", "/api/ai/generate-equivalencies", {
-                          requirements: selectedEntryRequirements.map(req => {
-                            const template = entryRequirementTemplates.find(
-                              t => t.qualificationTypeId === req.qualificationTypeId
-                            );
-                            return {
-                              qualificationName: template?.qualification?.name || "",
-                              qualificationCountry: template?.qualification?.country || institutionCountry || "",
-                              minGrade: req.minGrade,
-                            };
-                          }),
-                          sourceCountries: ["Bangladesh", "India", "Nepal"],
-                        });
-                        if (response.ok) {
-                          const data = await response.json();
-                          const updated = aiGeneratedRequirements.length > 0 
-                            ? aiGeneratedRequirements 
-                            : selectedEntryRequirements.map(req => {
-                                const template = entryRequirementTemplates.find(
-                                  t => t.qualificationTypeId === req.qualificationTypeId
-                                );
-                                return {
-                                  qualificationName: template?.qualification?.name || "",
-                                  qualificationCountry: template?.qualification?.country || "",
-                                  minGrade: req.minGrade,
-                                  isSelected: true,
-                                  equivalencies: data.equivalencies?.[template?.qualification?.name || ""] || [],
-                                };
-                              });
-                          setAiGeneratedRequirements(updated);
-                        } else {
-                          const errorData = await response.json().catch(() => ({}));
-                          toast({
-                            title: "AI Generation Failed",
-                            description: errorData.message || "Failed to generate equivalencies. Please try again.",
-                            variant: "destructive",
-                          });
-                        }
-                      } catch (error) {
-                        console.error("Error generating equivalencies:", error);
-                        toast({
-                          title: "Error",
-                          description: "An unexpected error occurred while generating equivalencies.",
-                          variant: "destructive",
-                        });
-                      } finally {
-                        setIsGeneratingEquivalencies(false);
-                      }
-                    }}
-                    data-testid="button-start-equivalency-generation"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate Equivalencies
-                  </Button>
-                </div>
-
-                {aiGeneratedRequirements.some(r => r.equivalencies && r.equivalencies.length > 0) && (
-                  <div className="space-y-4">
-                    <label className="text-sm font-medium">AI Suggested Equivalencies</label>
-                    {aiGeneratedRequirements.filter(r => r.equivalencies && r.equivalencies.length > 0).map((req, reqIndex) => (
-                      <div key={reqIndex} className="border rounded-md p-3 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default">{req.qualificationName}</Badge>
-                          <span className="text-sm text-muted-foreground">({req.qualificationCountry}) - Min: {req.minGrade}</span>
-                        </div>
-                        <div className="pl-4 space-y-1">
-                          {req.equivalencies?.map((eq, eqIndex) => (
-                            <div
-                              key={eqIndex}
-                              className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
-                                eq.isApproved ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted/50"
-                              }`}
-                              onClick={() => {
-                                const updated = [...aiGeneratedRequirements];
-                                if (updated[reqIndex].equivalencies) {
-                                  updated[reqIndex].equivalencies![eqIndex].isApproved = !eq.isApproved;
-                                }
-                                setAiGeneratedRequirements(updated);
-                              }}
-                            >
-                              <div
-                                className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                                  eq.isApproved ? "bg-green-500 border-green-500" : "border-muted-foreground/30"
-                                }`}
-                              >
-                                {eq.isApproved && <Check className="h-3 w-3 text-white" />}
-                              </div>
-                              <div className="flex-1">
-                                <span className="text-sm">
-                                  {eq.sourceCountry}: {eq.sourceQualification} <span className="font-medium">{eq.equivalentGrade}</span>
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 flex-shrink-0 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setAiEquivalenciesDialogOpen(false);
-                setAiGeneratedRequirements([]);
-              }}
-              data-testid="button-cancel-equivalencies"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={!aiGeneratedRequirements.some(r => r.equivalencies?.some(eq => eq.isApproved))}
-              onClick={async () => {
-                const approvedEquivalencies = aiGeneratedRequirements
-                  .filter(r => r.equivalencies?.some(eq => eq.isApproved))
-                  .flatMap(r => r.equivalencies?.filter(eq => eq.isApproved).map(eq => ({
-                    sourceQualification: {
-                      country: eq.sourceCountry,
-                      name: eq.sourceQualification,
-                      levelCategory: "secondary",
-                    },
-                    targetQualification: {
-                      country: r.qualificationCountry,
-                      name: r.qualificationName,
-                      levelCategory: "secondary",
-                    },
-                    sourceGradeMin: eq.equivalentGrade?.split("-")[0]?.trim() || eq.equivalentGrade || "",
-                    sourceGradeMax: eq.equivalentGrade?.includes("-") ? eq.equivalentGrade.split("-")[1]?.trim() : undefined,
-                    targetEquivalent: r.minGrade || "",
-                    confidenceLevel: "standard",
-                    notes: `AI-generated equivalency for ${eq.sourceCountry} ${eq.sourceQualification}`,
-                  })) || []);
-                  
-                try {
-                  const response = await apiRequest("POST", "/api/admin/qualification-equivalencies/batch", {
-                    equivalencies: approvedEquivalencies,
-                  });
-                  if (response.ok) {
-                    const data = await response.json();
-                    toast({
-                      title: "Equivalencies Saved",
-                      description: `Successfully saved ${data.savedCount || approvedEquivalencies.length} equivalencies.`,
-                    });
-                    setAiEquivalenciesDialogOpen(false);
-                    setAiGeneratedRequirements([]);
-                  } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    toast({
-                      title: "Save Failed",
-                      description: errorData.message || "Failed to save equivalencies. Please try again.",
-                      variant: "destructive",
-                    });
-                  }
-                } catch (error) {
-                  console.error("Error saving equivalencies:", error);
-                  toast({
-                    title: "Error",
-                    description: "An unexpected error occurred while saving equivalencies.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              data-testid="button-save-equivalencies"
-            >
-              Save Approved Equivalencies
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* AI Equivalencies are now automatically generated when entry requirements are saved */}
+      {/* No manual approval dialog needed - fully automatic */}
     </div>
   );
 }

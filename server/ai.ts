@@ -1,30 +1,90 @@
 import OpenAI from "openai";
 import { promises as dns } from 'dns';
+import { storage } from "./storage";
 
 // Node.js 18+ has built-in fetch, but TypeScript needs to know about it
 declare const fetch: typeof global.fetch;
 
-// Using standard OpenAI API with user's API key
-// Will be configured in later stages of platform development
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-}) : null;
+// OpenRouter configuration for multi-model access
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
 
-// Use GPT-4o for high-quality AI generations
-const MODEL = "gpt-4o";
+// Initialize OpenAI client for OpenRouter (if OpenRouter key is available)
+// Falls back to direct OpenAI if only OPENAI_API_KEY is available
+function getAiClient(): OpenAI {
+  if (process.env.OPENROUTER_API_KEY) {
+    return new OpenAI({
+      baseURL: OPENROUTER_API_URL,
+      apiKey: process.env.OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
+        "X-Title": "StudyMatch - ANZ Global Education Platform",
+      },
+    });
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  throw new Error("No AI API key configured");
+}
+
+// Default fallback model if settings not configured
+const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+
+// Cache AI settings to avoid repeated DB queries
+let cachedModelId: string | null = null;
+let cachedTemperature: number | null = null;
+let cachedMaxTokens: number | null = null;
+let settingsCacheTimestamp = 0;
+const SETTINGS_CACHE_TTL = 60000; // 1 minute cache
+
+async function getAiSettings(): Promise<{ model: string; temperature: number; maxTokens: number }> {
+  const now = Date.now();
+  if (cachedModelId && cachedTemperature !== null && cachedMaxTokens !== null && (now - settingsCacheTimestamp) < SETTINGS_CACHE_TTL) {
+    return { model: cachedModelId, temperature: cachedTemperature, maxTokens: cachedMaxTokens };
+  }
+  
+  try {
+    const allSettings = await storage.getAllAiSettings();
+    cachedModelId = allSettings.find(s => s.settingKey === "default_model")?.modelId || DEFAULT_MODEL;
+    cachedTemperature = parseFloat(allSettings.find(s => s.settingKey === "default_model")?.temperature || "0.7");
+    cachedMaxTokens = parseInt(allSettings.find(s => s.settingKey === "default_model")?.maxTokens || "2048");
+    settingsCacheTimestamp = now;
+    return { model: cachedModelId, temperature: cachedTemperature, maxTokens: cachedMaxTokens };
+  } catch (error) {
+    console.error("Error fetching AI settings, using defaults:", error);
+    return { model: DEFAULT_MODEL, temperature: 0.7, maxTokens: 2048 };
+  }
+}
 
 function checkAIConfigured() {
-  if (!openai || !process.env.OPENAI_API_KEY) {
-    const error: any = new Error("AI features are not yet configured. OpenAI API key will be added in a later stage of platform development.");
+  if (!process.env.OPENROUTER_API_KEY && !process.env.OPENAI_API_KEY) {
+    const error: any = new Error("AI features are not configured. Please add OPENROUTER_API_KEY or OPENAI_API_KEY.");
     error.code = 'ai_not_configured';
     error.status = 503;
     throw error;
   }
 }
 
-export async function generateUniversityDescription(name: string, location: string): Promise<string> {
+// Helper to create AI completion using configured settings from database
+async function createAiCompletion(prompt: string, options?: { maxTokens?: number; temperature?: number; json?: boolean }): Promise<string> {
   checkAIConfigured();
+  const client = getAiClient();
+  const settings = await getAiSettings();
   
+  console.log(`[AI] Using model: ${settings.model}, temp: ${settings.temperature}, maxTokens: ${options?.maxTokens || settings.maxTokens}`);
+  
+  const response = await client.chat.completions.create({
+    model: settings.model,
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: options?.maxTokens || settings.maxTokens,
+    temperature: options?.temperature ?? settings.temperature,
+    ...(options?.json && { response_format: { type: "json_object" as const } }),
+  });
+  
+  return response.choices[0]?.message?.content || "";
+}
+
+export async function generateUniversityDescription(name: string, location: string): Promise<string> {
   const prompt = `Generate a compelling and professional university description for ${name} located in ${location}. 
 The description should be 2-3 paragraphs and highlight:
 - The university's academic excellence and research contributions
@@ -34,13 +94,7 @@ The description should be 2-3 paragraphs and highlight:
 
 Write in a professional, welcoming tone suitable for prospective students.`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 500,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return createAiCompletion(prompt, { maxTokens: 500 });
 }
 
 export async function generateCourseDescription(
@@ -48,8 +102,6 @@ export async function generateCourseDescription(
   subject: string,
   level: string
 ): Promise<string> {
-  checkAIConfigured();
-  
   const prompt = `Generate a detailed course description for "${title}", a ${level} level course in ${subject}.
 The description should be 2-3 paragraphs and include:
 - Course overview and learning objectives
@@ -59,17 +111,9 @@ The description should be 2-3 paragraphs and include:
 
 Write in an engaging, informative tone that attracts prospective students.`;
 
-  console.log("Generating course description with prompt:", prompt);
-
-  const response = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 500,
-  });
-
-  console.log("OpenAI response:", JSON.stringify(response, null, 2));
-  const content = response.choices[0]?.message?.content || "";
-  console.log("Extracted content:", content);
+  console.log("Generating course description with configured AI model");
+  const content = await createAiCompletion(prompt, { maxTokens: 500 });
+  console.log("Generated content length:", content.length);
 
   return content;
 }
@@ -177,19 +221,12 @@ The bio should be 1-2 paragraphs and include:
 
 Write in first person, professional yet personable tone. Make it genuine and specific based on the provided information.`;
 
-  const response = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 400,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return createAiCompletion(prompt, { maxTokens: 400 });
 }
 
 export async function generateCareerGoals(
   profileData: StudentProfileData
 ): Promise<string> {
-  checkAIConfigured();
   
   const contextParts: string[] = [];
   
@@ -239,13 +276,7 @@ The goals should be 1-2 paragraphs and include:
 
 Write in first person, ambitious yet realistic tone. Make it specific based on the provided information, especially leveraging any work experience mentioned.`;
 
-  const response = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 400,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return createAiCompletion(prompt, { maxTokens: 400 });
 }
 
 export async function generateInstitutionSmallDescription(
@@ -253,8 +284,6 @@ export async function generateInstitutionSmallDescription(
   location: string,
   providerType?: string
 ): Promise<string> {
-  checkAIConfigured();
-  
   const typeContext = providerType ? ` a ${providerType}` : " an educational institution";
   const prompt = `Generate a compelling short description (maximum 100 words) for ${name},${typeContext} located in ${location}.
 
@@ -266,13 +295,7 @@ The description should:
 
 Write in a professional, engaging tone.`;
 
-  const response = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 150,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return createAiCompletion(prompt, { maxTokens: 150 });
 }
 
 export async function generateInstitutionFullDescription(
@@ -281,8 +304,6 @@ export async function generateInstitutionFullDescription(
   providerType?: string,
   topDisciplines?: string[]
 ): Promise<string> {
-  checkAIConfigured();
-  
   const typeContext = providerType ? ` a ${providerType}` : " an educational institution";
   const disciplinesContext = topDisciplines && topDisciplines.length > 0 
     ? ` The institution specializes in ${topDisciplines.join(", ")}.` 
@@ -300,13 +321,7 @@ The description should be 4-5 paragraphs and include:
 
 Write in a professional, inspiring tone suitable for prospective students and their families.`;
 
-  const response = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    max_completion_tokens: 800,
-  });
-
-  return response.choices[0]?.message?.content || "";
+  return createAiCompletion(prompt, { maxTokens: 800 });
 }
 
 export async function generateInstitutionGalleryImages(
@@ -316,6 +331,13 @@ export async function generateInstitutionGalleryImages(
 ): Promise<string[]> {
   checkAIConfigured();
   
+  // Image generation requires direct OpenAI access (DALL-E)
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("DALL-E image generation requires OPENAI_API_KEY, skipping gallery generation");
+    return [];
+  }
+  
+  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const typeContext = providerType ? ` ${providerType}` : " educational institution";
   
   const prompts = [
@@ -328,7 +350,7 @@ export async function generateInstitutionGalleryImages(
 
   for (const prompt of prompts) {
     try {
-      const response = await openai!.images.generate({
+      const response = await openaiClient.images.generate({
         model: "dall-e-3",
         prompt,
         n: 1,
@@ -661,17 +683,10 @@ Extract the following fields and return as JSON:
   "scholarshipPercentageMax": 50
 }`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 2000,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  const content = await createAiCompletion(prompt, { maxTokens: 2000, json: true });
   
   try {
-    const extractedData = JSON.parse(content) as ExtractedInstitutionData;
+    const extractedData = JSON.parse(content || "{}") as ExtractedInstitutionData;
     return extractedData;
   } catch (error) {
     console.error("Failed to parse AI response:", error);
@@ -893,17 +908,10 @@ Extract the following fields and return as JSON:
   "minimumAge": 18
 }`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 2500,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  const content = await createAiCompletion(prompt, { maxTokens: 2500, json: true });
   
   try {
-    const extractedData = JSON.parse(content) as ExtractedCourseData;
+    const extractedData = JSON.parse(content || "{}") as ExtractedCourseData;
     return extractedData;
   } catch (error) {
     console.error("Failed to parse AI response:", error);
@@ -987,17 +995,10 @@ Discipline categories available:
 
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 500,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
   
   try {
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content || "{}");
     return {
       ...parsed,
       originalQuery: query,
@@ -1036,17 +1037,10 @@ Examples:
 
 Return ONLY a JSON object with the extracted parameters. If a parameter cannot be determined, omit it from the response.`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 500,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
   
   try {
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content || "{}");
     return {
       ...parsed,
       originalQuery: query,
@@ -1102,17 +1096,11 @@ Consider the course level when setting requirements:
 - Diploma/Certificate: High school or prior diploma
 - Foundation: Lower high school requirements`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 500,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  console.log(`[AI] Generating entry requirements using configured model`);
+  const content = await createAiCompletion(prompt, { maxTokens: 500, json: true });
   
   try {
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(content || "{}");
     return parsed.requirements || [];
   } catch (error) {
     console.error("Failed to parse AI entry requirements:", error);
@@ -1180,17 +1168,11 @@ Return ONLY a JSON object where keys are the destination qualification names:
   ]
 }`;
 
-  const response = await openai!.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 1000,
-  });
-
-  const content = response.choices[0]?.message?.content || "{}";
+  console.log(`[AI] Generating qualification equivalencies using configured model`);
+  const content = await createAiCompletion(prompt, { maxTokens: 1000, json: true });
   
   try {
-    return JSON.parse(content);
+    return JSON.parse(content || "{}");
   } catch (error) {
     console.error("Failed to parse AI equivalencies:", error);
     return {};

@@ -126,6 +126,10 @@ import {
   // Qualification system imports
   academicQualificationTypes,
   qualificationEquivalencies,
+  // AI Settings imports
+  aiSettings,
+  type AiSetting,
+  type InsertAiSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
@@ -451,6 +455,11 @@ export interface IStorage {
     confidenceLevel?: string;
     notes?: string;
   }>): Promise<number>;
+  
+  // AI Settings operations
+  getAiSetting(settingKey: string): Promise<AiSetting | undefined>;
+  getAllAiSettings(): Promise<AiSetting[]>;
+  upsertAiSetting(settingKey: string, data: Partial<InsertAiSetting>): Promise<AiSetting>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2883,6 +2892,46 @@ export class DatabaseStorage implements IStorage {
     }
     
     return savedCount;
+  }
+  
+  // AI Settings operations
+  async getAiSetting(settingKey: string): Promise<AiSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(aiSettings)
+      .where(eq(aiSettings.settingKey, settingKey));
+    return setting;
+  }
+  
+  async getAllAiSettings(): Promise<AiSetting[]> {
+    return await db.select().from(aiSettings);
+  }
+  
+  async upsertAiSetting(settingKey: string, data: Partial<InsertAiSetting>): Promise<AiSetting> {
+    const existing = await this.getAiSetting(settingKey);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(aiSettings)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(aiSettings.settingKey, settingKey))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(aiSettings)
+        .values({
+          settingKey,
+          modelId: data.modelId || 'anthropic/claude-3.5-sonnet',
+          provider: data.provider || 'openrouter',
+          ...data,
+        })
+        .returning();
+      return created;
+    }
   }
 }
 

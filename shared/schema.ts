@@ -1223,6 +1223,40 @@ export type InsertCourseEntryRequirement = z.infer<typeof insertCourseEntryRequi
 export type CourseEntryRequirement = typeof courseEntryRequirements.$inferSelect;
 
 // ============================================
+// AI SETTINGS TABLE
+// Stores AI model configuration for platform admins (CTO role)
+// ============================================
+
+export const aiSettings = pgTable("ai_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Setting key (e.g., "default_model", "equivalency_model")
+  settingKey: varchar("setting_key", { length: 100 }).notNull().unique(),
+  
+  // AI Provider and Model
+  provider: varchar("provider", { length: 50 }).notNull().default("openrouter"), // "openrouter", "openai", "anthropic"
+  modelId: varchar("model_id", { length: 200 }).notNull(), // e.g., "anthropic/claude-3.5-sonnet", "openai/gpt-4o"
+  modelDisplayName: varchar("model_display_name", { length: 200 }), // Human-friendly name
+  
+  // Configuration
+  maxTokens: integer("max_tokens").default(4096),
+  temperature: real("temperature").default(0.7),
+  
+  // Metadata
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiSettingSchema = createInsertSchema(aiSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAiSetting = z.infer<typeof insertAiSettingSchema>;
+export type AiSetting = typeof aiSettings.$inferSelect;
+
+// ============================================
 // INSTITUTION TAGS JUNCTION
 // Uses unified tags table with appliesTo='institutions' or 'both'
 // ============================================

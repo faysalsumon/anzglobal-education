@@ -34,6 +34,7 @@ import {
   MessageCircle,
   Tag,
   UserCog,
+  Bot,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -135,6 +136,7 @@ export function AdminMegaSidebar({
         { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess },
         { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess },
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
+        { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO },
       ],
     },
   ];

@@ -6223,6 +6223,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Settings routes (CTO only)
+  app.get("/api/admin/ai-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required to view AI settings" });
+      }
+
+      const settings = await storage.getAllAiSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching AI settings:", error);
+      res.status(500).json({ message: "Failed to fetch AI settings" });
+    }
+  });
+
+  app.get("/api/admin/ai-settings/:key", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+
+      const setting = await storage.getAiSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "AI setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching AI setting:", error);
+      res.status(500).json({ message: "Failed to fetch AI setting" });
+    }
+  });
+
+  app.put("/api/admin/ai-settings/:key", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required to modify AI settings" });
+      }
+
+      const { modelId, provider, modelDisplayName, maxTokens, temperature } = req.body;
+      
+      if (!modelId) {
+        return res.status(400).json({ message: "Model ID is required" });
+      }
+
+      const setting = await storage.upsertAiSetting(req.params.key, {
+        modelId,
+        provider: provider || 'openrouter',
+        modelDisplayName,
+        maxTokens,
+        temperature,
+        updatedByUserId: userId,
+      });
+
+      res.json(setting);
+    } catch (error) {
+      console.error("Error updating AI setting:", error);
+      res.status(500).json({ message: "Failed to update AI setting" });
+    }
+  });
+
+  // Get available AI models for the settings dropdown
+  app.get("/api/admin/ai-models", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId, ['cto']);
+
+      if (!access) {
+        return res.status(403).json({ message: "CTO access required" });
+      }
+
+      // Available models via OpenRouter
+      const models = [
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'openrouter', description: 'Best for complex reasoning and code' },
+        { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', provider: 'openrouter', description: 'Most capable Claude model' },
+        { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openrouter', description: 'OpenAI flagship model' },
+        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openrouter', description: 'Fast and cost-effective' },
+        { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', provider: 'openrouter', description: 'Google long-context model' },
+        { id: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', provider: 'openrouter', description: 'Fast Google model' },
+        { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', provider: 'openrouter', description: 'Open source, capable' },
+        { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', provider: 'openrouter', description: 'Open source, fast' },
+      ];
+
+      res.json(models);
+    } catch (error) {
+      console.error("Error fetching AI models:", error);
+      res.status(500).json({ message: "Failed to fetch AI models" });
+    }
+  });
+
   // Admin routes
   
   // Admin team management routes
@@ -15914,6 +16012,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   // Set entry requirements for a course (replaces all existing)
+  // AUTOMATIC: After saving, generates and saves international qualification equivalencies
   app.put("/api/admin/courses/:courseId/entry-requirements", isAuthenticated, async (req: any, res) => {
     try {
       const { courseId } = req.params;
@@ -15955,6 +16054,80 @@ Sitemap: ${baseUrl}/sitemap.xml
         )
         .where(eq(courseEntryRequirements.courseId, courseId))
         .orderBy(courseEntryRequirements.displayOrder);
+      
+      // AUTOMATIC EQUIVALENCY GENERATION
+      // Trigger AI generation of international equivalencies in the background
+      // This is fully automatic - no admin approval required
+      if (updated.length > 0) {
+        // Fire and forget - don't wait for this to complete
+        (async () => {
+          try {
+            console.log(`[Auto-Equivalency] Generating equivalencies for course ${courseId}`);
+            
+            // Format requirements for AI generation
+            const requirementsForAI = updated.map((r: any) => ({
+              qualificationName: r.qualification.name,
+              qualificationCountry: r.qualification.country,
+              minGrade: r.minGrade || "",
+            }));
+            
+            // Source countries for Bangladesh market focus
+            const sourceCountries = ["Bangladesh", "India", "Nepal"];
+            
+            // Generate equivalencies via AI
+            const equivalencies = await generateQualificationEquivalencies(
+              requirementsForAI,
+              sourceCountries
+            );
+            
+            // Transform and save equivalencies automatically
+            const equivalenciesToSave: Array<{
+              sourceQualification: { country: string; name: string; levelCategory: string };
+              targetQualification: { country: string; name: string; levelCategory: string };
+              sourceGradeMin: string;
+              sourceGradeMax?: string;
+              targetEquivalent: string;
+              confidenceLevel?: string;
+              notes?: string;
+            }> = [];
+            
+            for (const [targetQualName, sourceEquivs] of Object.entries(equivalencies)) {
+              const targetReq = updated.find((r: any) => r.qualification.name === targetQualName);
+              if (!targetReq) continue;
+              
+              for (const equiv of (sourceEquivs as any[])) {
+                equivalenciesToSave.push({
+                  sourceQualification: {
+                    country: equiv.sourceCountry,
+                    name: equiv.sourceQualification,
+                    levelCategory: (targetReq as any).qualification.levelCategory || "secondary",
+                  },
+                  targetQualification: {
+                    country: (targetReq as any).qualification.country,
+                    name: targetQualName,
+                    levelCategory: (targetReq as any).qualification.levelCategory || "secondary",
+                  },
+                  sourceGradeMin: equiv.equivalentGrade?.split("-")[0]?.trim() || equiv.equivalentGrade,
+                  sourceGradeMax: equiv.equivalentGrade?.includes("-") 
+                    ? equiv.equivalentGrade.split("-")[1]?.trim() 
+                    : undefined,
+                  targetEquivalent: targetReq.minGrade || "",
+                  confidenceLevel: "standard",
+                  notes: `Auto-generated for course ${courseId}`,
+                });
+              }
+            }
+            
+            if (equivalenciesToSave.length > 0) {
+              const savedCount = await storage.batchSaveQualificationEquivalencies(equivalenciesToSave);
+              console.log(`[Auto-Equivalency] Saved ${savedCount} equivalencies for course ${courseId}`);
+            }
+          } catch (error) {
+            console.error(`[Auto-Equivalency] Error generating equivalencies for course ${courseId}:`, error);
+            // Don't fail the main request - this is background processing
+          }
+        })();
+      }
       
       res.json(updated);
     } catch (error: any) {
