@@ -778,12 +778,28 @@ export default function PublicCourseDetail() {
                     <div>
                       <h3 className="font-semibold text-sm text-muted-foreground mb-3">Potential Career Roles</h3>
                       <div className="flex flex-wrap gap-2">
-                        {course.careerOutcomes.map((career, index) => (
-                          <Badge key={index} variant="secondary" className="px-3 py-1.5" data-testid={`badge-career-${index}`}>
-                            <Briefcase className="h-3 w-3 mr-1" />
-                            {career}
-                          </Badge>
-                        ))}
+                        {(() => {
+                          const colorPalette = [
+                            { dot: "bg-[#3465A5]", text: "text-[#3465A5]", border: "border-[#3465A5]/30" },
+                            { dot: "bg-[#FF5000]", text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
+                            { dot: "bg-[#10b981]", text: "text-[#10b981]", border: "border-[#10b981]/30" },
+                            { dot: "bg-[#8b5cf6]", text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
+                            { dot: "bg-[#f59e0b]", text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
+                          ];
+                          return course.careerOutcomes.map((career, index) => {
+                            const color = colorPalette[index % colorPalette.length];
+                            return (
+                              <Badge 
+                                key={index} 
+                                className={`px-3 py-1.5 bg-background/80 border ${color.border} ${color.text} font-semibold text-[14px]`}
+                                data-testid={`badge-career-${index}`}
+                              >
+                                <span className={`w-2 h-2 rounded-full ${color.dot} mr-2`} />
+                                {career}
+                              </Badge>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}
