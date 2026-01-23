@@ -508,6 +508,64 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
+                  {course.specialization && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Specialization</p>
+                        <p className="text-sm font-semibold truncate" data-testid="text-specialization">{course.specialization}</p>
+                      </div>
+                    </div>
+                  )}
+                  {course.deliveryMode && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md">
+                        <MonitorPlay className="h-3.5 w-3.5 text-secondary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Delivery Mode</p>
+                        <p className="text-sm font-semibold" data-testid="text-delivery-mode">
+                          {course.deliveryMode === "online" ? "Online Learning" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid (Online + On-Campus)"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {course.intakes && course.intakes.length > 0 && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md mt-0.5">
+                        <Calendar className="h-3.5 w-3.5 text-secondary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">Available Intakes</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {course.intakes.map((intake, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5" data-testid={`badge-intake-${index}`}>
+                              {intake}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {course.studyAreas && course.studyAreas.length > 0 && (
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md mt-0.5">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">Study Areas</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {course.studyAreas.map((area, index) => (
+                            <Badge key={index} variant="outline" className="text-xs px-2 py-0.5" data-testid={`badge-study-area-${index}`}>
+                              {area}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -887,50 +945,6 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-5">
-                  {/* Specialization */}
-                  {course.specialization && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Specialization</p>
-                      <Badge variant="secondary" className="px-3 py-1.5" data-testid="badge-specialization">
-                        <BookOpen className="h-3 w-3 mr-1" />
-                        {course.specialization}
-                      </Badge>
-                    </div>
-                  )}
-                  {course.deliveryMode && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Delivery Mode</p>
-                      <Badge variant="outline" className="px-3 py-1.5" data-testid="badge-delivery-mode-detail">
-                        <MonitorPlay className="h-3 w-3 mr-1" />
-                        {course.deliveryMode === "online" ? "Online Learning" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid (Online + On-Campus)"}
-                      </Badge>
-                    </div>
-                  )}
-                  {course.intakes && course.intakes.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Available Intakes</p>
-                      <div className="flex flex-wrap gap-2">
-                        {course.intakes.map((intake, index) => (
-                          <Badge key={index} variant="secondary" className="px-3 py-1" data-testid={`badge-intake-${index}`}>
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {intake}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {course.studyAreas && course.studyAreas.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Study Areas Covered</p>
-                      <div className="flex flex-wrap gap-2">
-                        {course.studyAreas.map((area, index) => (
-                          <Badge key={index} variant="outline" className="px-3 py-1" data-testid={`badge-study-area-${index}`}>
-                            {area}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   {course.campusLocations && course.campusLocations.length > 0 && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-3">Available Campuses</p>
