@@ -16,6 +16,7 @@ import {
 import type { Course, University, Application, Favorite } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
+import { CampusMapTabs } from "@/components/campus-map-tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseSectionNav } from "@/components/course-section-nav";
 import { useToast } from "@/hooks/use-toast";
@@ -1035,41 +1036,13 @@ export default function PublicCourseDetail() {
                     Available Campus Locations
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6 space-y-5">
+                <CardContent className="pt-6">
                   {course.campusLocations && course.campusLocations.length > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-3">Available Campuses</p>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Study from vibrant campuses that offer access to industry networks, experienced faculty, and support services to help you succeed.
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {course.campusLocations.map((location, index) => (
-                          <div 
-                            key={index} 
-                            className="p-4 border rounded-lg bg-muted/30 hover-elevate transition-all duration-200"
-                            data-testid={`campus-card-${index}`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
-                                <MapPin className="h-4 w-4 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm mb-1 leading-tight" data-testid={`text-campus-location-${index}`}>
-                                  {location}
-                                </p>
-                                <button
-                                  onClick={() => setSelectedCampusLocation(location)}
-                                  className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1"
-                                  data-testid={`button-view-map-${index}`}
-                                >
-                                  view on map
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <CampusMapTabs 
+                      campusLocations={course.campusLocations}
+                      institutionName={course.university?.name || undefined}
+                      institutionLogo={course.university?.logo || undefined}
+                    />
                   )}
                 </CardContent>
               </Card>
