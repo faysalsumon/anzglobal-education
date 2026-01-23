@@ -10,7 +10,7 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers
+  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag
 } from "lucide-react";
 import type { Course, University, Application } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -273,14 +273,35 @@ export default function PublicCourseDetail() {
                   <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-course-title">
                     {course.title}
                   </h1>
-                  {course.courseCode && (
-                    <p className="text-lg text-muted-foreground" data-testid="text-course-code">
-                      Course Code: {course.courseCode}
-                    </p>
-                  )}
+                  {/* Course Code with Level and Apply By */}
+                  <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+                    {course.courseCode && (
+                      <span className="text-lg" data-testid="text-course-code">
+                        Course Code: {course.courseCode}
+                      </span>
+                    )}
+                    {course.level && (
+                      <>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span className="flex items-center gap-1.5 text-base" data-testid="text-course-level">
+                          <GraduationCap className="h-4 w-4 text-primary" />
+                          {course.level}
+                        </span>
+                      </>
+                    )}
+                    {course.applicationDeadline && (
+                      <>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span className="flex items-center gap-1.5 text-base" data-testid="text-apply-by">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          Apply by {course.applicationDeadline}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                {/* Feature Badges */}
+                {/* Feature Badges - Prominent highlights only */}
                 <div className="flex flex-wrap gap-2">
                   {/* Scholarship Badge */}
                   {course.university && ((course.university.scholarshipPercentageMin !== null && course.university.scholarshipPercentageMin !== undefined && course.university.scholarshipPercentageMin > 0) || 
@@ -316,13 +337,6 @@ export default function PublicCourseDetail() {
                       Work Rights Eligible
                     </Badge>
                   )}
-                  {/* Course Level Badge */}
-                  {course.level && (
-                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-course-level">
-                      <GraduationCap className="h-3 w-3 mr-1" />
-                      {course.level}
-                    </Badge>
-                  )}
                   {/* Location Badge */}
                   {(course.location || course.country) && (
                     <Badge variant="outline" className="px-3 py-1" data-testid="badge-location">
@@ -337,25 +351,30 @@ export default function PublicCourseDetail() {
                       {course.subject || course.discipline}
                     </Badge>
                   )}
-                  {/* Application Deadline Badge */}
-                  {course.applicationDeadline && (
-                    <Badge variant="outline" className="px-3 py-1" data-testid="badge-application-deadline">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Apply by {course.applicationDeadline}
-                    </Badge>
-                  )}
-                  {/* Course Tags */}
-                  {courseTags.map((tag) => (
-                    <Badge 
-                      key={tag.id} 
-                      variant="secondary" 
-                      className="px-3 py-1"
-                      data-testid={`badge-tag-${tag.slug}`}
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))}
                 </div>
+
+                {/* Tags Ribbon Section */}
+                {courseTags.length > 0 && (
+                  <div className="bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl p-4 border border-primary/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Course Tags</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {courseTags.map((tag) => (
+                        <Badge 
+                          key={tag.id} 
+                          variant="secondary" 
+                          className="px-3 py-1.5 bg-background/80 border border-primary/20"
+                          data-testid={`badge-tag-${tag.slug}`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-primary mr-2" />
+                          {tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
