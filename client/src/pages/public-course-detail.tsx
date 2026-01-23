@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -10,12 +10,13 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star
+  Target, MonitorPlay, Plane, Star, Info
 } from "lucide-react";
 import type { Course, University, Application } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { CourseSectionNav } from "@/components/course-section-nav";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -65,6 +66,47 @@ export default function PublicCourseDetail() {
 
   const applications = applicationsData?.applications || [];
   const existingApplication = applications.find(app => app.application.courseId === courseId);
+
+  // Calculate which sections are visible based on course data (must be before early returns for React hooks rules)
+  const visibleSections = useMemo(() => {
+    if (!course) return [];
+    const sections: string[] = [];
+    
+    // About section is always visible
+    sections.push("about");
+    
+    // Fees section
+    if (course.fees || course.costOfLiving || course.applicationFees) {
+      sections.push("fees");
+    }
+    
+    // Eligibility section
+    if (course.eligibilityRequirements) {
+      sections.push("eligibility");
+    }
+    
+    // Academic requirements section
+    if (course.academicRequirements || course.minimumAge) {
+      sections.push("academic");
+    }
+    
+    // English requirements section
+    if (englishRequirements.length > 0 || course.englishRequirements) {
+      sections.push("english");
+    }
+    
+    // Career section
+    if ((course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath) {
+      sections.push("career");
+    }
+    
+    // Course details section
+    if (course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) {
+      sections.push("details");
+    }
+    
+    return sections;
+  }, [course, englishRequirements]);
 
   if (isLoading) {
     return (
@@ -152,8 +194,14 @@ export default function PublicCourseDetail() {
         </script>
       </Helmet>
 
+      {/* Course Section Navigation - Shows when scrolling past hero */}
+      <CourseSectionNav 
+        visibleSections={visibleSections} 
+        courseTitle={course.title}
+      />
+
       {/* Modern AI-Style Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
+      <div id="course-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
         <div className="container mx-auto px-4 py-12 relative">
           {/* Breadcrumb */}
@@ -316,7 +364,7 @@ export default function PublicCourseDetail() {
           {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-8">
             {/* About Course Section */}
-            <Card className="border-primary/10 hover-elevate transition-all duration-300">
+            <Card id="about" className="border-primary/10 hover-elevate transition-all duration-300">
               <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 text-primary" />
@@ -405,7 +453,7 @@ export default function PublicCourseDetail() {
 
             {/* Academic Requirements */}
             {(course.academicRequirements || course.minimumAge) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+              <Card id="academic" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
@@ -430,7 +478,7 @@ export default function PublicCourseDetail() {
 
             {/* English Language Requirements */}
             {(englishRequirements.length > 0 || course.englishRequirements) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+              <Card id="english" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <Globe className="h-5 w-5 text-primary" />
@@ -562,7 +610,7 @@ export default function PublicCourseDetail() {
 
             {/* Career Outcomes & Career Path */}
             {((course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-career-pathways">
+              <Card id="career" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-career-pathways">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-primary" />
@@ -600,7 +648,7 @@ export default function PublicCourseDetail() {
 
             {/* Course Details */}
             {(course.intakes?.length || course.studyAreas?.length || course.campusLocations?.length || course.deliveryMode) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300">
+              <Card id="details" className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5 text-primary" />
@@ -682,15 +730,27 @@ export default function PublicCourseDetail() {
             )}
           </div>
 
-          {/* Enhanced Sidebar */}
-          <div className="space-y-6">
+          {/* Enhanced Sidebar - Sticky Container */}
+          <div className="lg:sticky lg:top-28 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
             {/* Action Buttons Card */}
-            <Card className="lg:sticky lg:top-24 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardContent className="pt-6 space-y-3">
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" data-testid="cta-card">
+              <CardHeader className="pb-3">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Ready to Start Your Journey?
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Take the first step towards your future education
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Primary CTA - Apply */}
                 {existingApplication ? (
                   <Button 
                     asChild 
-                    className="w-full shadow-lg shadow-green-500/20 bg-green-600 hover:bg-green-700" 
+                    className="w-full shadow-lg shadow-green-500/20 bg-green-600" 
                     size="lg"
                     data-testid="button-already-applied"
                   >
@@ -724,42 +784,42 @@ export default function PublicCourseDetail() {
                     </a>
                   </Button>
                 )}
-                {course.curriculumUrl && (
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    className="w-full" 
-                    size="lg"
-                    data-testid="button-visit-course"
-                  >
-                    <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
-                      <Globe className="h-4 w-4 mr-2" />
-                      Visit Course Link
-                    </a>
-                  </Button>
-                )}
 
-                {/* Request More Information - Combined CTA */}
-                <div className="pt-4 border-t space-y-3">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-sm">Get More Information</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Request detailed course information and we'll get back to you shortly.
-                    </p>
-                  </div>
+                {/* Secondary CTA - Request Information */}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground text-center">
+                    or request more details first
+                  </p>
                   {course.university && (
                     <LeadFormDialog
                       courseId={course.id}
                       universityId={course.universityId}
                       courseName={course.title}
                       universityName={course.university.name}
+                      buttonVariant="outline"
                     />
                   )}
                 </div>
 
-                <div className="pt-4 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Sparkles className="h-4 w-4 text-primary" />
+                {/* Visit Course Link */}
+                {course.curriculumUrl && (
+                  <Button 
+                    asChild 
+                    variant="ghost" 
+                    className="w-full text-muted-foreground" 
+                    size="sm"
+                    data-testid="button-visit-course"
+                  >
+                    <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
+                      <Globe className="h-4 w-4 mr-2" />
+                      Visit Official Course Page
+                    </a>
+                  </Button>
+                )}
+
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Sparkles className="h-3 w-3 text-primary" />
                     <span>AI-Powered Application Assistance</span>
                   </div>
                 </div>

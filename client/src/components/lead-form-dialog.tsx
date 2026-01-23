@@ -50,6 +50,7 @@ interface LeadFormDialogProps {
   trigger?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  buttonVariant?: "default" | "outline" | "secondary" | "ghost";
 }
 
 export function LeadFormDialog({
@@ -60,6 +61,7 @@ export function LeadFormDialog({
   trigger = true,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  buttonVariant = "default",
 }: LeadFormDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -112,7 +114,7 @@ export function LeadFormDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && (
         <DialogTrigger asChild>
-          <Button size="lg" className="w-full" data-testid="button-request-info">
+          <Button size="lg" variant={buttonVariant} className="w-full" data-testid="button-request-info">
             <Info className="h-5 w-5 mr-2" />
             Request More Information
           </Button>
