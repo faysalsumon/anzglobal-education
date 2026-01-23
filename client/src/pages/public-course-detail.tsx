@@ -171,7 +171,7 @@ export default function PublicCourseDetail() {
     }
     
     // Requirements section (combines eligibility, english, prerequisites)
-    if (course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured || course.prerequisites) {
+    if (course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites) {
       sections.push("eligibility");
     }
     
@@ -664,7 +664,7 @@ export default function PublicCourseDetail() {
             )}
 
             {/* Combined Requirements Section (English, Eligibility, Prerequisites) */}
-            {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured || course.prerequisites) && (
+            {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300" id="eligibility" data-testid="card-requirements">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -673,11 +673,11 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <Tabs defaultValue={englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured ? "english" : course.eligibilityRequirements ? "eligibility" : "prerequisites"} className="w-full">
+                  <Tabs defaultValue={englishRequirements.length > 0 || course.englishRequirementsStructured ? "english" : course.eligibilityRequirements ? "eligibility" : "prerequisites"} className="w-full">
                     <TabsList className="grid w-full grid-cols-3 mb-6">
                       <TabsTrigger 
                         value="english" 
-                        disabled={!(englishRequirements.length > 0 || course.englishRequirements || course.englishRequirementsStructured)}
+                        disabled={!(englishRequirements.length > 0 || course.englishRequirementsStructured)}
                         className="flex items-center gap-2"
                         data-testid="tab-english"
                       >
@@ -808,16 +808,6 @@ export default function PublicCourseDetail() {
                               )}
                             </tbody>
                           </table>
-                        </div>
-                      )}
-                      {course.englishRequirements && (
-                        <div className="space-y-2">
-                          {(englishRequirements.length > 0 || course.englishRequirementsStructured) && (
-                            <p className="text-sm font-semibold text-muted-foreground">Additional Information:</p>
-                          )}
-                          <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-english-requirements">
-                            {course.englishRequirements}
-                          </p>
                         </div>
                       )}
                     </TabsContent>
