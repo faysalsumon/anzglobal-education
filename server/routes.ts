@@ -1640,8 +1640,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         includePrivate,
       } = req.query;
       
-      // Check if we should include private institutions (for logged-in students)
-      const shouldIncludePrivate = includePrivate === 'true';
+      // Only allow includePrivate if user is authenticated (has valid session)
+      // This prevents public users from accessing private institutions via query param
+      const isUserAuthenticated = !!(req as any).supabaseUser;
+      const shouldIncludePrivate = includePrivate === 'true' && isUserAuthenticated;
       
       // Only show published, approved, active, and (optionally) publicly visible institutions
       let institutions = allInstitutions.filter(i => 
@@ -1983,8 +1985,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
       }
-      // Only return if published, approved, active and publicly visible
-      if (institution.publishStatus !== 'published' || institution.approvalStatus !== 'approved' || !institution.isActive || institution.visibility === 'private') {
+      
+      // Check if user is authenticated (allows private access)
+      const isUserAuthenticated = !!(req as any).supabaseUser;
+      
+      // Only return if published, approved, active
+      // Private institutions are only visible to authenticated users
+      const isAccessible = institution.publishStatus === 'published' && 
+                          institution.approvalStatus === 'approved' && 
+                          institution.isActive &&
+                          (institution.visibility !== 'private' || isUserAuthenticated);
+                          
+      if (!isAccessible) {
         return res.status(404).json({ message: "Institution not found" });
       }
       res.json(institution);
@@ -2234,8 +2246,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check if we should include private institutions (for logged-in students)
-      const shouldIncludePrivate = includePrivate === 'true';
+      // Only allow includePrivate if user is authenticated (has valid session)
+      // This prevents public users from accessing private courses via query param
+      const isUserAuthenticated = !!(req as any).supabaseUser;
+      const shouldIncludePrivate = includePrivate === 'true' && isUserAuthenticated;
       
       // Filter to only show published and approved courses from published, approved, and publicly visible institutions
       let courses = allCourses.filter(course => {
@@ -2245,7 +2259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                course.approvalStatus === 'approved' && 
                course.isActive;
         // Check institution is published, approved, active
-        // If includePrivate is true, allow privately visible institutions
+        // If includePrivate is true AND user is authenticated, allow privately visible institutions
         const institutionIsPublic = university?.publishStatus === 'published' &&
                university?.approvalStatus === 'approved' &&
                university?.isActive &&
@@ -2385,12 +2399,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch the associated university
       const university = await storage.getUniversityById(course.universityId);
       
+      // Check if user is authenticated (allows private access)
+      const isUserAuthenticated = !!(req as any).supabaseUser;
+      
       // Only return if course is published, approved, and active
       if (course.publishStatus !== 'published' || course.approvalStatus !== 'approved' || !course.isActive) {
         return res.status(404).json({ message: "Course not found" });
       }
-      // Only return if institution is published, approved, active, and publicly visible
-      if (!university || university.publishStatus !== 'published' || university.approvalStatus !== 'approved' || !university.isActive || university.visibility === 'private') {
+      // Only return if institution is published, approved, active
+      // Private institutions are only visible to authenticated users
+      const institutionAccessible = university && 
+                                   university.publishStatus === 'published' && 
+                                   university.approvalStatus === 'approved' && 
+                                   university.isActive &&
+                                   (university.visibility !== 'private' || isUserAuthenticated);
+      if (!institutionAccessible) {
         return res.status(404).json({ message: "Course not found" });
       }
       
