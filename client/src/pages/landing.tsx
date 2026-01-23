@@ -861,31 +861,31 @@ export default function Landing() {
                             className="hover-elevate"
                             data-testid={`landing-review-card-${review.id}`}
                           >
-                            <CardContent className="p-5">
-                              <div className="flex gap-4">
-                                <Avatar className="h-12 w-12 flex-shrink-0">
+                            <CardContent className="p-4 sm:p-5">
+                              <div className="flex gap-3 sm:gap-4">
+                                <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                                   {review.imageUrl ? (
                                     <AvatarImage src={review.imageUrl} alt={review.studentName} />
                                   ) : null}
-                                  <AvatarFallback className="text-sm">
+                                  <AvatarFallback className="text-xs sm:text-sm">
                                     {getInitials(review.studentName)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2 mb-2">
-                                    <div>
+                                    <div className="min-w-0 flex-1">
                                       <p className="font-semibold text-sm" data-testid={`text-review-student-${review.id}`}>
                                         {review.studentName}
                                       </p>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                                         {review.location && (
-                                          <>
-                                            <MapPin className="h-3 w-3" />
-                                            <span>{review.location}</span>
-                                          </>
+                                          <span className="flex items-center gap-1">
+                                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                                            <span className="break-words">{review.location}</span>
+                                          </span>
                                         )}
                                         {review.institution && (
-                                          <span className="truncate">• {review.institution}</span>
+                                          <span className="break-words text-left">{review.institution}</span>
                                         )}
                                       </div>
                                     </div>
