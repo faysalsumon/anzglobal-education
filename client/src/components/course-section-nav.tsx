@@ -28,7 +28,7 @@ const sections: SectionConfig[] = [
   { id: "pathways", label: "Pathways", icon: <Layers className="h-4 w-4" /> },
   { id: "prerequisites", label: "Prerequisites", icon: <FileText className="h-4 w-4" /> },
   { id: "internship", label: "Internship", icon: <Briefcase className="h-4 w-4" /> },
-  { id: "details", label: "Details", icon: <BookOpen className="h-4 w-4" /> },
+  { id: "details", label: "Location", icon: <BookOpen className="h-4 w-4" /> },
 ];
 
 interface CourseSectionNavProps {
