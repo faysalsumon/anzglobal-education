@@ -350,8 +350,8 @@ export default function PublicCourseDetail() {
             </div>
 
             {/* Quick Stats Card - Compact & Responsive */}
-            <div className="lg:col-span-1">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20">
+            <div className="lg:col-span-1 flex">
+              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 flex-1">
                 <CardHeader className="pb-2 pt-4 px-4">
                   <CardTitle className="text-base flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-primary" />
