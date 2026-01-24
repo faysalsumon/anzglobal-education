@@ -1504,6 +1504,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Australian state name normalization to abbreviations
+  const normalizeAustralianState = (state: string): string => {
+    const normalized = state.trim();
+    const stateAbbreviations: Record<string, string> = {
+      'Victoria': 'VIC',
+      'New South Wales': 'NSW',
+      'Queensland': 'QLD',
+      'South Australia': 'SA',
+      'Western Australia': 'WA',
+      'Tasmania': 'TAS',
+      'Northern Territory': 'NT',
+      'Australian Capital Territory': 'ACT',
+    };
+    return stateAbbreviations[normalized] || normalized;
+  };
+
   // Filter metadata endpoint - returns available filter options with counts
   app.get("/api/institutions/filter-metadata", async (req, res) => {
     try {
@@ -1534,7 +1550,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (campusAddresses && Array.isArray(campusAddresses)) {
           for (const campus of campusAddresses) {
             const country = (campus.country || institution.country || "").trim();
-            const state = (campus.state || "").trim();
+            const rawState = (campus.state || "").trim();
+            // Normalize Australian state names to abbreviations
+            const state = country === 'Australia' ? normalizeAustralianState(rawState) : rawState;
             const city = (campus.city || "").trim();
             
             if (country && state) {
@@ -1904,9 +1922,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allInstitutions = await storage.getAllUniversities();
       
       // Only include published, approved, active, and publicly visible institutions
-      const publishedInstitutions = allInstitutions.filter(i => 
+      let filteredInstitutions = allInstitutions.filter(i => 
         i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive && i.visibility !== 'private'
       );
+
+      // Apply sidebar filters (same as /api/institutions endpoint)
+      const {
+        search,
+        countries,
+        states,
+        cities,
+        providerTypes,
+        disciplines,
+        north, south, east, west
+      } = req.query;
+
+      // Search filter
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        filteredInstitutions = filteredInstitutions.filter(i =>
+          i.name?.toLowerCase().includes(searchLower) ||
+          i.description?.toLowerCase().includes(searchLower) ||
+          i.country?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Country filter (from institution or campus addresses)
+      if (countries && typeof countries === 'string') {
+        const countryList = countries.split(',').map(c => c.trim().toLowerCase());
+        filteredInstitutions = filteredInstitutions.filter(i => {
+          // Check institution country
+          if (i.country && countryList.includes(i.country.toLowerCase())) return true;
+          // Check campus addresses
+          const addrs = i.campusAddresses as Array<{ country?: string }> | null;
+          if (addrs && Array.isArray(addrs)) {
+            return addrs.some(c => c.country && countryList.includes(c.country.toLowerCase()));
+          }
+          return false;
+        });
+      }
+
+      // State filter (from campus addresses)
+      if (states && typeof states === 'string') {
+        const stateList = states.split(',').map(s => normalizeAustralianState(s.trim()).toLowerCase());
+        filteredInstitutions = filteredInstitutions.filter(i => {
+          const addrs = i.campusAddresses as Array<{ state?: string }> | null;
+          if (addrs && Array.isArray(addrs)) {
+            return addrs.some(c => {
+              const campusState = normalizeAustralianState(c.state || '').toLowerCase();
+              return stateList.includes(campusState);
+            });
+          }
+          return false;
+        });
+      }
+
+      // City filter (from campus addresses)
+      if (cities && typeof cities === 'string') {
+        const cityList = cities.split(',').map(c => c.trim().toLowerCase());
+        filteredInstitutions = filteredInstitutions.filter(i => {
+          const addrs = i.campusAddresses as Array<{ city?: string }> | null;
+          if (addrs && Array.isArray(addrs)) {
+            return addrs.some(c => c.city && cityList.includes(c.city.toLowerCase()));
+          }
+          return false;
+        });
+      }
+
+      // Provider type filter
+      if (providerTypes && typeof providerTypes === 'string') {
+        const typeList = providerTypes.split(',').map(t => t.trim().toLowerCase());
+        filteredInstitutions = filteredInstitutions.filter(i =>
+          i.providerType && typeList.includes(i.providerType.toLowerCase())
+        );
+      }
+
+      // Discipline filter
+      if (disciplines && typeof disciplines === 'string') {
+        const disciplineList = disciplines.split(',').map(d => d.trim().toLowerCase());
+        filteredInstitutions = filteredInstitutions.filter(i => {
+          const topDisciplines = i.topDisciplines || [];
+          return topDisciplines.some(d => disciplineList.includes(d.toLowerCase()));
+        });
+      }
 
       // Extract campuses with institution data
       const campuses: Array<{
@@ -1926,7 +2024,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       // Optional bounds filtering (for "update map as it moves")
-      const { north, south, east, west } = req.query;
       const hasBounds = north && south && east && west;
       const bounds = hasBounds ? {
         north: parseFloat(north as string),
@@ -1935,44 +2032,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         west: parseFloat(west as string),
       } : null;
 
-      for (const institution of publishedInstitutions) {
+      // Additional campus-level filters for state/city
+      const stateFilterList = states && typeof states === 'string' 
+        ? states.split(',').map(s => normalizeAustralianState(s.trim()).toLowerCase()) 
+        : null;
+      const cityFilterList = cities && typeof cities === 'string' 
+        ? cities.split(',').map(c => c.trim().toLowerCase()) 
+        : null;
+
+      for (const institution of filteredInstitutions) {
         if (institution.campusAddresses && Array.isArray(institution.campusAddresses)) {
           for (const campus of institution.campusAddresses) {
-            // Skip campuses without coordinates if we have no bounds filter
-            // Include all campuses if no bounds (for initial load)
-            if (campus.latitude && campus.longitude) {
-              const lat = parseFloat(campus.latitude);
-              const lng = parseFloat(campus.longitude);
+            // Skip campuses without coordinates
+            if (!campus.latitude || !campus.longitude) continue;
 
-              // Apply bounds filter if provided
-              if (bounds) {
-                if (lat < bounds.south || lat > bounds.north) continue;
-                if (lng < bounds.west || lng > bounds.east) continue;
-              }
+            const lat = parseFloat(campus.latitude);
+            const lng = parseFloat(campus.longitude);
 
-              campuses.push({
-                institutionId: institution.id,
-                institutionName: institution.name,
-                institutionLogo: institution.logo || null,
-                providerType: institution.providerType || null,
-                name: campus.name,
-                address: campus.address,
-                street: campus.street,
-                city: campus.city,
-                state: campus.state,
-                postcode: campus.postcode,
-                country: campus.country,
-                latitude: campus.latitude,
-                longitude: campus.longitude,
-              });
+            // Apply bounds filter if provided
+            if (bounds) {
+              if (lat < bounds.south || lat > bounds.north) continue;
+              if (lng < bounds.west || lng > bounds.east) continue;
             }
+
+            // Apply state filter at campus level (show only campuses in selected state)
+            if (stateFilterList) {
+              const campusState = normalizeAustralianState(campus.state || '').toLowerCase();
+              if (!stateFilterList.includes(campusState)) continue;
+            }
+
+            // Apply city filter at campus level
+            if (cityFilterList) {
+              if (!campus.city || !cityFilterList.includes(campus.city.toLowerCase())) continue;
+            }
+
+            campuses.push({
+              institutionId: institution.id,
+              institutionName: institution.name,
+              institutionLogo: institution.logo || null,
+              providerType: institution.providerType || null,
+              name: campus.name,
+              address: campus.address,
+              street: campus.street,
+              city: campus.city,
+              state: campus.state,
+              postcode: campus.postcode,
+              country: campus.country,
+              latitude: campus.latitude,
+              longitude: campus.longitude,
+            });
           }
         }
       }
 
       res.json({
         campuses,
-        totalInstitutions: publishedInstitutions.length,
+        totalInstitutions: filteredInstitutions.length,
         campusesWithCoordinates: campuses.length,
       });
     } catch (error) {

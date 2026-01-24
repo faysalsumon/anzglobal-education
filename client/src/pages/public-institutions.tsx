@@ -291,18 +291,40 @@ export default function PublicInstitutions() {
     enabled: isAuthenticated && isStudent,
   });
 
-  // Fetch campus locations for map view
-  const boundsQueryString = mapBounds
-    ? `?north=${mapBounds.north}&south=${mapBounds.south}&east=${mapBounds.east}&west=${mapBounds.west}`
-    : "";
+  // Fetch campus locations for map view - includes sidebar filters and map bounds
+  const campusQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    
+    // Add sidebar filter parameters
+    if (filters.countries.length > 0) params.set('countries', filters.countries.join(','));
+    if (filters.states.length > 0) params.set('states', filters.states.join(','));
+    if (filters.cities.length > 0) params.set('cities', filters.cities.join(','));
+    if (filters.disciplines.length > 0) params.set('disciplines', filters.disciplines.join(','));
+    if (filters.providerTypes.length > 0) params.set('providerTypes', filters.providerTypes.join(','));
+    if (filters.search) params.set('search', filters.search);
+    
+    // Add map bounds if available
+    if (mapBounds) {
+      params.set('north', mapBounds.north.toString());
+      params.set('south', mapBounds.south.toString());
+      params.set('east', mapBounds.east.toString());
+      params.set('west', mapBounds.west.toString());
+    }
+    
+    return params.toString();
+  }, [filters, mapBounds]);
+
   const { data: campusData } = useQuery<{
     campuses: InstitutionCampus[];
     totalInstitutions: number;
     campusesWithCoordinates: number;
   }>({
-    queryKey: ["/api/institutions/campus-locations", boundsQueryString],
+    queryKey: ["/api/institutions/campus-locations", campusQueryParams],
     queryFn: async () => {
-      const response = await fetch(`/api/institutions/campus-locations${boundsQueryString}`);
+      const url = campusQueryParams 
+        ? `/api/institutions/campus-locations?${campusQueryParams}`
+        : `/api/institutions/campus-locations`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch campus locations");
       return response.json();
     },
