@@ -1727,8 +1727,8 @@ export default function PublicCourseDetail() {
         </div>
       </div>
 
-      {/* Bottom padding spacer for mobile sticky bar - accounts for safe area */}
-      <div className="md:hidden h-24 pb-safe" aria-hidden="true" />
+      {/* Bottom padding spacer for mobile sticky bars (section nav + CTA) - accounts for safe area */}
+      <div className="md:hidden h-36 pb-safe" aria-hidden="true" />
     </div>
   );
 }

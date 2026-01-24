@@ -21,9 +21,11 @@ import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogO
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { NotificationBell } from "@/components/NotificationBell";
+import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@shared/schema";
 
 interface PublicHeaderProps {
@@ -35,6 +37,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
   const { signOut } = useSupabaseAuth();
+  const { scrollDirection, isAtTop } = useScrollDirection({ threshold: 10 });
 
   const handleLogout = async () => {
     try {
@@ -137,7 +140,13 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   };
 
   return (
-    <header className="sticky top-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border/40">
+    <header 
+      className={cn(
+        "sticky top-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border/40",
+        "transform transition-transform duration-300 ease-out",
+        scrollDirection === "down" && !isAtTop ? "md:translate-y-0 -translate-y-full" : "translate-y-0"
+      )}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
