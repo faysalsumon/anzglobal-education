@@ -21,6 +21,7 @@ import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog
 import { CampusMapTabs } from "@/components/campus-map-tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { CourseSectionNav } from "@/components/course-section-nav";
+import { ResponsiveSection } from "@/components/responsive-section";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -691,30 +692,25 @@ export default function PublicCourseDetail() {
           {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-8">
             {/* About Course Section */}
-            <Card id="about" className="border-primary/10 hover-elevate transition-all duration-300">
-              <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  About This Program
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-description">
-                  {course.description || "No description available"}
-                </p>
-              </CardContent>
-            </Card>
+            <ResponsiveSection
+              id="about"
+              icon={<GraduationCap className="h-5 w-5 text-primary" />}
+              title="About This Program"
+              defaultOpen={true}
+            >
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-description">
+                {course.description || "No description available"}
+              </p>
+            </ResponsiveSection>
 
             {/* Modern Financial Breakdown - Show if pricing tiers exist OR static fees exist */}
             {(pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300" id="fees">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    Tuition Fees{pricingTiers.length > 0 && <span className="text-muted-foreground font-normal text-base ml-1">• Dynamic Pricing</span>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
+              <ResponsiveSection
+                id="fees"
+                icon={<DollarSign className="h-5 w-5 text-primary" />}
+                title={<>Tuition Fees{pricingTiers.length > 0 && <span className="text-muted-foreground font-normal text-base ml-1">• Dynamic Pricing</span>}</>}
+                defaultOpen={true}
+              >
                   {/* Dynamic Pricing Tiers - Show when available */}
                   {pricingTiers.length > 0 && (
                     <div className="space-y-4 mb-6">
@@ -841,20 +837,18 @@ export default function PublicCourseDetail() {
                       )}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+              </ResponsiveSection>
             )}
 
             {/* Combined Requirements Section (English, Eligibility, Prerequisites) */}
             {(course.eligibilityRequirements || englishRequirements.length > 0 || course.englishRequirementsStructured || course.prerequisites || entryRequirements.length > 0) && (
-              <Card className="border-primary/10 hover-elevate transition-all duration-300" id="eligibility" data-testid="card-requirements">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                    Entry Requirements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
+              <ResponsiveSection
+                id="eligibility"
+                icon={<CheckCircle className="h-5 w-5 text-primary" />}
+                title="Entry Requirements"
+                testId="card-requirements"
+                defaultOpen={true}
+              >
                   <Tabs defaultValue={(course.eligibilityRequirements || entryRequirements.length > 0 || course.prerequisites) ? "academic" : "english"} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-6">
                       <TabsTrigger 
@@ -1281,20 +1275,18 @@ export default function PublicCourseDetail() {
                       )}
                     </TabsContent>
                   </Tabs>
-                </CardContent>
-              </Card>
+              </ResponsiveSection>
             )}
 
             {/* Academic Requirements */}
             {(course.academicRequirements || course.minimumAge) && (
-              <Card id="academic" className="border-primary/10 hover-elevate transition-all duration-300">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Academic Requirements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
+              <ResponsiveSection
+                id="academic"
+                icon={<FileText className="h-5 w-5 text-primary" />}
+                title="Academic Requirements"
+                defaultOpen={false}
+              >
+                <div className="space-y-4">
                   {course.minimumAge && (
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
@@ -1306,20 +1298,20 @@ export default function PublicCourseDetail() {
                       {course.academicRequirements}
                     </p>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </ResponsiveSection>
             )}
 
             {/* Career Outcomes & Career Path */}
             {((course.careerOutcomes && course.careerOutcomes.length > 0) || course.careerPath) && (
-              <Card id="career" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-career-pathways">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-primary" />
-                    Career Outcomes & Progression
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-6">
+              <ResponsiveSection
+                id="career"
+                icon={<Target className="h-5 w-5 text-primary" />}
+                title="Career Outcomes & Progression"
+                testId="card-career-pathways"
+                defaultOpen={false}
+              >
+                <div className="space-y-6">
                   {course.careerOutcomes && course.careerOutcomes.length > 0 && (
                     <div>
                       <h3 className="font-semibold text-sm text-muted-foreground mb-3">Potential Career Roles</h3>
@@ -1360,20 +1352,20 @@ export default function PublicCourseDetail() {
                       </p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </ResponsiveSection>
             )}
 
             {/* Pathways Section - Progression Routes */}
             {course.pathways && course.pathways.length > 0 && (
-              <Card id="pathways" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-pathways">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary" />
-                    Progression Pathways
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
+              <ResponsiveSection
+                id="pathways"
+                icon={<Layers className="h-5 w-5 text-primary" />}
+                title="Progression Pathways"
+                testId="card-pathways"
+                defaultOpen={false}
+              >
+                <div>
                   <p className="text-sm text-muted-foreground mb-4">
                     This course can lead to further study opportunities:
                   </p>
@@ -1385,46 +1377,41 @@ export default function PublicCourseDetail() {
                       </Badge>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </ResponsiveSection>
             )}
 
             {/* Internship Details Section */}
             {course.internshipDetails && (
-              <Card id="internship" className="border-primary/10 hover-elevate transition-all duration-300" data-testid="card-internship-details">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-primary" />
-                    Internship & Work Placement
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-internship-details">
-                    {course.internshipDetails}
-                  </p>
-                </CardContent>
-              </Card>
+              <ResponsiveSection
+                id="internship"
+                icon={<Briefcase className="h-5 w-5 text-primary" />}
+                title="Internship & Work Placement"
+                testId="card-internship-details"
+                defaultOpen={false}
+              >
+                <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-internship-details">
+                  {course.internshipDetails}
+                </p>
+              </ResponsiveSection>
             )}
 
             {/* Course Details */}
             {course.campusLocations?.length && (
-              <Card id="details" className="border-primary/10 hover-elevate transition-all duration-300">
-                <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Available Campus Locations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {course.campusLocations && course.campusLocations.length > 0 && (
-                    <CampusMapTabs 
-                      campusLocations={course.campusLocations}
-                      institutionName={course.university?.name || undefined}
-                      institutionLogo={course.university?.logo || undefined}
-                    />
-                  )}
-                </CardContent>
-              </Card>
+              <ResponsiveSection
+                id="details"
+                icon={<MapPin className="h-5 w-5 text-primary" />}
+                title="Available Campus Locations"
+                defaultOpen={false}
+              >
+                {course.campusLocations && course.campusLocations.length > 0 && (
+                  <CampusMapTabs 
+                    campusLocations={course.campusLocations}
+                    institutionName={course.university?.name || undefined}
+                    institutionLogo={course.university?.logo || undefined}
+                  />
+                )}
+              </ResponsiveSection>
             )}
           </div>
 
