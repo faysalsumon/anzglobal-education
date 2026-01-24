@@ -1278,12 +1278,24 @@ Return ONLY a JSON object where keys are the destination qualification names:
  * AI-powered course data extraction from URL
  * Fetches webpage content and uses AI to extract structured course information
  */
+export interface ExtractedEnglishRequirement {
+  testType: string;
+  minOverallScore?: string;
+  minListeningScore?: string;
+  minReadingScore?: string;
+  minWritingScore?: string;
+  minSpeakingScore?: string;
+  notes?: string;
+}
+
 export interface ExtractedCourseData {
   title?: string;
   description?: string;
   courseCode?: string;
+  qualificationFramework?: string;
   level?: string;
   discipline?: string;
+  specialization?: string;
   duration?: string;
   durationMonths?: number;
   durationWeeks?: number;
@@ -1291,12 +1303,17 @@ export interface ExtractedCourseData {
   currency?: string;
   applicationFees?: number;
   intakes?: string[];
+  startDate?: string;
+  applicationDeadline?: string;
   prerequisites?: string;
   eligibilityRequirements?: string;
   englishRequirements?: string;
+  structuredEnglishRequirements?: ExtractedEnglishRequirement[];
   careerOutcomes?: string[];
   careerPath?: string;
   studyAreas?: string[];
+  studyModes?: string[];
+  deliveryMode?: string;
 }
 
 export async function extractCourseDataFromUrl(url: string): Promise<ExtractedCourseData> {
@@ -1400,26 +1417,40 @@ Extract the following fields if available (return null for fields not found):
 1. title - The full course name/title
 2. description - A compelling course description (2-3 paragraphs, rewrite for a student-focused platform)
 3. courseCode - Course code or CRICOS code if available
-4. level - One of: "Certificate II", "Certificate III", "Certificate IV", "Diploma", "Advanced Diploma", "Bachelor Degree", "Masters Degree", "Doctoral Degree"
-5. discipline - One of: "Accounting, Business & Finance", "Agriculture & Forestry", "Applied Sciences & Professions", "Arts, Design & Architecture", "Computer Science & IT", "Education & Training", "Engineering & Technology", "Environmental Studies & Earth Sciences", "Hospitality, Leisure & Sports", "Humanities", "Journalism & Media", "Law", "Medicine & Health", "Short Courses", "Trade"
-6. duration - Text description like "3 years" or "2 years full-time"
-7. durationMonths - Numeric duration in months
-8. durationWeeks - Numeric duration in weeks (if specified)
-9. fees - Annual tuition fees as a number (without currency symbol)
-10. currency - Currency code like "AUD", "USD", "GBP"
-11. applicationFees - Application fee as a number (0 if waived)
-12. intakes - Array of intake months like ["February", "July"]
-13. prerequisites - Academic prerequisites and prior learning requirements
-14. eligibilityRequirements - General eligibility requirements
-15. englishRequirements - English language test requirements (IELTS, TOEFL, PTE scores)
-16. careerOutcomes - Array of potential career roles/job titles
-17. careerPath - Description of career progression opportunities
-18. studyAreas - Array of main subject areas or majors
+4. qualificationFramework - The qualification framework. Must be one of: "AQF" (Australian), "NZQF" (New Zealand), "EQF" (European), "RQF" (UK), "NQF_BD" (Bangladesh), "NSQF" (India), "MQA" (Malaysia), "Other". Infer from URL domain or institution name (.edu.au = AQF, .ac.nz = NZQF, .ac.uk = RQF, etc.)
+5. level - The qualification level. For AQF use: "Certificate I", "Certificate II", "Certificate III", "Certificate IV", "Diploma", "Advanced Diploma", "Associate Degree", "Bachelor Degree", "Bachelor Honours", "Graduate Certificate", "Graduate Diploma", "Masters Degree", "Doctoral Degree". For other frameworks, use the appropriate level name.
+6. discipline - One of: "Accounting, Business & Finance", "Agriculture & Forestry", "Applied Sciences & Professions", "Arts, Design & Architecture", "Computer Science & IT", "Education & Training", "Engineering & Technology", "Environmental Studies & Earth Sciences", "Hospitality, Leisure & Sports", "Humanities", "Journalism & Media", "Law", "Medicine & Health", "Short Courses", "Trade"
+7. specialization - The specific specialization or major within the discipline (e.g., "Cyber Security" for Computer Science, "Nursing" for Medicine & Health)
+8. duration - Text description like "3 years" or "2 years full-time"
+9. durationMonths - Numeric duration in months
+10. durationWeeks - Numeric duration in weeks (if specified)
+11. fees - Annual tuition fees as a number (without currency symbol). For international students if available.
+12. currency - Currency code like "AUD", "USD", "GBP", "EUR", "NZD"
+13. applicationFees - Application fee as a number (0 if waived)
+14. intakes - Array of intake months like ["February", "July"] or semester names like ["Semester 1", "Semester 2"]
+15. startDate - Next available start date in format "Month Day, Year" (e.g., "February 24, 2025")
+16. applicationDeadline - Application deadline date in format "Month Day, Year" if available
+17. prerequisites - Academic prerequisites and prior learning requirements
+18. eligibilityRequirements - General eligibility requirements
+19. englishRequirements - Plain text summary of English language test requirements
+20. structuredEnglishRequirements - Array of structured English requirements, each with:
+    - testType: "IELTS Academic", "PTE Academic", "TOEFL iBT", "Cambridge", "OET", or "Duolingo"
+    - minOverallScore: Overall score required (e.g., "6.5", "65", "79")
+    - minListeningScore: Minimum listening band/score if specified
+    - minReadingScore: Minimum reading band/score if specified
+    - minWritingScore: Minimum writing band/score if specified
+    - minSpeakingScore: Minimum speaking band/score if specified
+    - notes: Any additional notes about this requirement
+21. careerOutcomes - Array of potential career roles/job titles
+22. careerPath - Description of career progression opportunities
+23. studyAreas - Array of main subject areas or majors covered in the course
+24. studyModes - Array of available study modes like ["Full-time", "Part-time", "Online", "On-campus", "Evening", "Weekend"]
+25. deliveryMode - Primary delivery mode: "On Campus", "Online", "Blended", or "Flexible"
 
 Return a JSON object with these fields. For the description, rewrite it to be engaging and student-focused for an education platform, not just a copy from the source.`;
 
     console.log(`[AI] Extracting course data using configured model`);
-    const content = await createAiCompletion(prompt, { maxTokens: 2000, json: true });
+    const content = await createAiCompletion(prompt, { maxTokens: 3000, json: true });
     
     try {
       const parsed = JSON.parse(content || "{}");

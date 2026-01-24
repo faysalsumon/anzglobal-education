@@ -568,8 +568,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     title?: string;
     description?: string;
     courseCode?: string;
+    qualificationFramework?: string;
     level?: string;
     discipline?: string;
+    specialization?: string;
     duration?: string;
     durationMonths?: number;
     durationWeeks?: number;
@@ -577,12 +579,25 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     currency?: string;
     applicationFees?: number;
     intakes?: string[];
+    startDate?: string;
+    applicationDeadline?: string;
     prerequisites?: string;
     eligibilityRequirements?: string;
     englishRequirements?: string;
+    structuredEnglishRequirements?: {
+      testType: string;
+      minOverallScore?: string;
+      minListeningScore?: string;
+      minReadingScore?: string;
+      minWritingScore?: string;
+      minSpeakingScore?: string;
+      notes?: string;
+    }[];
     careerOutcomes?: string[];
     careerPath?: string;
     studyAreas?: string[];
+    studyModes?: string[];
+    deliveryMode?: string;
   } | null>(null);
 
   // Pricing configuration state
@@ -1283,8 +1298,30 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     if (data.title) form.setValue("title", data.title);
     if (data.description) form.setValue("description", data.description);
     if (data.courseCode) form.setValue("courseCode", data.courseCode);
+    
+    // Apply qualification framework if extracted (normalize case)
+    if (data.qualificationFramework) {
+      const normalizedFramework = data.qualificationFramework.trim().toUpperCase();
+      const frameworkMap: Record<string, string> = {
+        "AQF": "AQF",
+        "NZQF": "NZQF",
+        "EQF": "EQF",
+        "RQF": "RQF",
+        "NQF_BD": "NQF_BD",
+        "NSQF": "NSQF",
+        "MQA": "MQA",
+        "OTHER": "Other",
+      };
+      const matchedFramework = frameworkMap[normalizedFramework];
+      if (matchedFramework) {
+        form.setValue("qualificationFramework", matchedFramework);
+        setFrameworkManuallySet(true);
+      }
+    }
+    
     if (data.level) form.setValue("level", data.level);
     if (data.discipline) form.setValue("discipline", data.discipline);
+    if (data.specialization) form.setValue("specialization", data.specialization);
     if (data.duration) form.setValue("duration", data.duration);
     if (data.durationMonths) form.setValue("durationMonths", data.durationMonths);
     if (data.durationWeeks) form.setValue("durationWeeks", data.durationWeeks);
@@ -1292,12 +1329,51 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     if (data.currency) form.setValue("currency", data.currency);
     if (data.applicationFees !== undefined) form.setValue("applicationFees", data.applicationFees);
     if (data.intakes && data.intakes.length > 0) form.setValue("intakes", data.intakes.join(", "));
+    if (data.startDate) form.setValue("startDate", data.startDate);
+    if (data.applicationDeadline) form.setValue("applicationDeadline", data.applicationDeadline);
     if (data.prerequisites) form.setValue("prerequisites", data.prerequisites);
     if (data.eligibilityRequirements) form.setValue("eligibilityRequirements", data.eligibilityRequirements);
     if (data.englishRequirements) form.setValue("englishRequirements", data.englishRequirements);
     if (data.careerOutcomes && data.careerOutcomes.length > 0) form.setValue("careerOutcomes", data.careerOutcomes.join(", "));
     if (data.careerPath) form.setValue("careerPath", data.careerPath);
     if (data.studyAreas && data.studyAreas.length > 0) form.setValue("studyAreas", data.studyAreas.join(", "));
+    
+    // Apply structured English requirements if available
+    if (data.structuredEnglishRequirements && data.structuredEnglishRequirements.length > 0 && course?.id) {
+      const mappedReqs = data.structuredEnglishRequirements.map(req => {
+        // Normalize test type (handle various AI output formats)
+        const normalizedTestType = (req.testType || "").trim().toLowerCase();
+        const testTypeMap: Record<string, string> = {
+          "ielts academic": "ielts",
+          "ielts": "ielts",
+          "pte academic": "pte",
+          "pte": "pte",
+          "toefl ibt": "toefl",
+          "toefl": "toefl",
+          "cambridge": "cambridge",
+          "oet": "oet",
+          "duolingo": "duolingo",
+        };
+        return {
+          testType: testTypeMap[normalizedTestType] || "ielts",
+          minOverallScore: req.minOverallScore?.toString().trim() || "",
+          minListeningScore: req.minListeningScore?.toString().trim() || "",
+          minReadingScore: req.minReadingScore?.toString().trim() || "",
+          minWritingScore: req.minWritingScore?.toString().trim() || "",
+          minSpeakingScore: req.minSpeakingScore?.toString().trim() || "",
+          notes: req.notes?.trim() || "",
+        };
+      });
+      
+      // Check for duplicates before adding (skip if same test type already exists)
+      const uniqueReqs = mappedReqs.filter(nr => 
+        !englishRequirements.some(er => er.testType === nr.testType)
+      );
+      
+      if (uniqueReqs.length > 0) {
+        batchCreateEnglishReqMutation.mutate(uniqueReqs);
+      }
+    }
     
     setAiExtractDialogOpen(false);
     setExtractedCourseData(null);
@@ -4136,6 +4212,12 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.courseCode}</div>
                   </div>
                 )}
+                {extractedCourseData.qualificationFramework && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Framework</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.qualificationFramework}</div>
+                  </div>
+                )}
                 {extractedCourseData.level && (
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Level</label>
@@ -4146,6 +4228,12 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Discipline</label>
                     <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.discipline}</div>
+                  </div>
+                )}
+                {extractedCourseData.specialization && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Specialization</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.specialization}</div>
                   </div>
                 )}
                 {extractedCourseData.duration && (
@@ -4168,6 +4256,30 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     <div className="p-2 bg-muted/50 rounded text-sm">
                       {extractedCourseData.applicationFees === 0 ? 'Waived' : `${extractedCourseData.currency || 'AUD'} ${extractedCourseData.applicationFees}`}
                     </div>
+                  </div>
+                )}
+                {extractedCourseData.startDate && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Start Date</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.startDate}</div>
+                  </div>
+                )}
+                {extractedCourseData.applicationDeadline && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Application Deadline</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.applicationDeadline}</div>
+                  </div>
+                )}
+                {extractedCourseData.deliveryMode && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Delivery Mode</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.deliveryMode}</div>
+                  </div>
+                )}
+                {extractedCourseData.studyModes && extractedCourseData.studyModes.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Study Modes</label>
+                    <div className="p-2 bg-muted/50 rounded text-sm">{extractedCourseData.studyModes.join(", ")}</div>
                   </div>
                 )}
               </div>
@@ -4197,6 +4309,32 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">English Requirements</label>
                   <div className="p-2 bg-muted/50 rounded text-sm whitespace-pre-wrap">{extractedCourseData.englishRequirements}</div>
+                </div>
+              )}
+              
+              {/* Structured English Requirements */}
+              {extractedCourseData.structuredEnglishRequirements && extractedCourseData.structuredEnglishRequirements.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Structured English Requirements (Auto-Apply)</label>
+                  <div className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded text-sm space-y-2">
+                    {extractedCourseData.structuredEnglishRequirements.map((req, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{req.testType}</Badge>
+                        <span className="text-xs">
+                          Overall: {req.minOverallScore}
+                          {req.minListeningScore && req.minReadingScore && req.minWritingScore && req.minSpeakingScore && (
+                            <span className="text-muted-foreground ml-1">
+                              (L{req.minListeningScore}/R{req.minReadingScore}/W{req.minWritingScore}/S{req.minSpeakingScore})
+                            </span>
+                          )}
+                        </span>
+                        {req.notes && <span className="text-xs text-muted-foreground">- {req.notes}</span>}
+                      </div>
+                    ))}
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      These will be automatically added to the course English requirements when you apply.
+                    </p>
+                  </div>
                 </div>
               )}
               
