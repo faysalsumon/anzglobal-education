@@ -656,7 +656,7 @@ export default function PublicCourseDetail() {
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-primary" />
-                    Tuition Fees
+                    Tuition Fees{pricingTiers.length > 0 && <span className="text-muted-foreground font-normal text-base ml-1">• Dynamic Pricing</span>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -708,14 +708,16 @@ export default function PublicCourseDetail() {
                               }`}
                               data-testid={`card-pricing-tier-${tier.id}`}
                             >
-                              {tier.isDefaultPrice && (
-                                <Badge className="absolute top-3 right-3 text-xs bg-primary/10 text-primary border-primary/20" variant="outline">
-                                  <Star className="h-3 w-3 mr-1 fill-primary" />
-                                  Recommended
-                                </Badge>
-                              )}
                               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                <span className="text-sm text-muted-foreground font-medium">{displayLabel}</span>
+                                <div className="flex items-center gap-2">
+                                  {tier.isDefaultPrice && (
+                                    <Badge className="text-xs bg-primary text-primary-foreground" variant="default">
+                                      <Star className="h-3 w-3 mr-1 fill-primary-foreground" />
+                                      Default
+                                    </Badge>
+                                  )}
+                                  <span className="text-sm text-muted-foreground font-medium">{displayLabel}</span>
+                                </div>
                                 <div className="p-2 bg-primary/10 rounded-lg">
                                   <GraduationCap className="h-4 w-4 text-primary" />
                                 </div>
