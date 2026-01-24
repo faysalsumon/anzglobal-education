@@ -974,108 +974,255 @@ export default function PublicCourseDetail() {
                     {/* English Language Requirements Tab */}
                     <TabsContent value="english" className="space-y-6">
                       {englishRequirements.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-sm">
-                            <thead>
-                              <tr className="border-b bg-muted/50">
-                                <th className="p-3 text-left font-semibold">Test Type</th>
-                                <th className="p-3 text-center font-semibold">Overall</th>
-                                <th className="p-3 text-center font-semibold">Listening</th>
-                                <th className="p-3 text-center font-semibold">Reading</th>
-                                <th className="p-3 text-center font-semibold">Writing</th>
-                                <th className="p-3 text-center font-semibold">Speaking</th>
-                                <th className="p-3 text-left font-semibold">Notes</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {englishRequirements.map((req) => (
-                                <tr key={req.id} className="border-b" data-testid={`row-english-req-${req.id}`}>
-                                  <td className="p-3 font-medium">
-                                    <div className="flex items-center gap-2">
+                        <>
+                          {/* Mobile: Card Layout */}
+                          <div className="md:hidden space-y-4">
+                            {englishRequirements.map((req) => (
+                              <Card 
+                                key={req.id} 
+                                data-testid={`card-english-req-${req.id}`}
+                              >
+                                <CardHeader className="pb-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-semibold text-base">
                                       {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
-                                      {req.isPreferred && (
-                                        <Badge variant="secondary" className="text-xs">
-                                          <Star className="h-3 w-3 mr-1" />
-                                          Preferred
-                                        </Badge>
-                                      )}
+                                    </span>
+                                    {req.isPreferred && (
+                                      <Badge variant="default" className="text-xs">
+                                        <Star className="h-3 w-3 mr-1" />
+                                        Preferred
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="text-center p-2 bg-primary/10 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Overall</div>
+                                      <div className="font-bold text-lg text-primary" data-testid={`mobile-${req.testType}-overall`}>
+                                        {req.minOverallScore}
+                                      </div>
                                     </div>
-                                  </td>
-                                  <td className="p-3 text-center font-semibold text-primary" data-testid={`text-${req.testType}-overall`}>
-                                    {req.minOverallScore}
-                                  </td>
-                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-listening`}>
-                                    {req.minListeningScore || "—"}
-                                  </td>
-                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-reading`}>
-                                    {req.minReadingScore || "—"}
-                                  </td>
-                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-writing`}>
-                                    {req.minWritingScore || "—"}
-                                  </td>
-                                  <td className="p-3 text-center" data-testid={`text-${req.testType}-speaking`}>
-                                    {req.minSpeakingScore || "—"}
-                                  </td>
-                                  <td className="p-3 text-sm text-muted-foreground">
-                                    {req.notes || "—"}
-                                  </td>
+                                    <div className="text-center p-2 bg-muted/50 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Listening</div>
+                                      <div className="font-semibold" data-testid={`mobile-${req.testType}-listening`}>
+                                        {req.minListeningScore || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-2 bg-muted/50 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Reading</div>
+                                      <div className="font-semibold" data-testid={`mobile-${req.testType}-reading`}>
+                                        {req.minReadingScore || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-2 bg-muted/50 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Writing</div>
+                                      <div className="font-semibold" data-testid={`mobile-${req.testType}-writing`}>
+                                        {req.minWritingScore || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-2 bg-muted/50 rounded-md col-span-2">
+                                      <div className="text-xs text-muted-foreground mb-1">Speaking</div>
+                                      <div className="font-semibold" data-testid={`mobile-${req.testType}-speaking`}>
+                                        {req.minSpeakingScore || "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {req.notes && (
+                                    <div className="mt-3 pt-3 border-t text-sm text-muted-foreground">
+                                      {req.notes}
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+
+                          {/* Desktop: Table Layout */}
+                          <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full border-collapse text-sm">
+                              <thead>
+                                <tr className="border-b bg-muted/50">
+                                  <th className="p-3 text-left font-semibold">Test Type</th>
+                                  <th className="p-3 text-center font-semibold">Overall</th>
+                                  <th className="p-3 text-center font-semibold">Listening</th>
+                                  <th className="p-3 text-center font-semibold">Reading</th>
+                                  <th className="p-3 text-center font-semibold">Writing</th>
+                                  <th className="p-3 text-center font-semibold">Speaking</th>
+                                  <th className="p-3 text-left font-semibold">Notes</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                              </thead>
+                              <tbody>
+                                {englishRequirements.map((req) => (
+                                  <tr key={req.id} className="border-b" data-testid={`row-english-req-${req.id}`}>
+                                    <td className="p-3 font-medium">
+                                      <div className="flex items-center gap-2">
+                                        {TEST_TYPE_CONFIG[req.testType]?.label || req.testType.toUpperCase()}
+                                        {req.isPreferred && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            <Star className="h-3 w-3 mr-1" />
+                                            Preferred
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="p-3 text-center font-semibold text-primary" data-testid={`text-${req.testType}-overall`}>
+                                      {req.minOverallScore}
+                                    </td>
+                                    <td className="p-3 text-center" data-testid={`text-${req.testType}-listening`}>
+                                      {req.minListeningScore || "—"}
+                                    </td>
+                                    <td className="p-3 text-center" data-testid={`text-${req.testType}-reading`}>
+                                      {req.minReadingScore || "—"}
+                                    </td>
+                                    <td className="p-3 text-center" data-testid={`text-${req.testType}-writing`}>
+                                      {req.minWritingScore || "—"}
+                                    </td>
+                                    <td className="p-3 text-center" data-testid={`text-${req.testType}-speaking`}>
+                                      {req.minSpeakingScore || "—"}
+                                    </td>
+                                    <td className="p-3 text-sm text-muted-foreground">
+                                      {req.notes || "—"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
                       ) : course.englishRequirementsStructured && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-sm">
-                            <thead>
-                              <tr className="border-b bg-muted/50">
-                                <th className="p-3 text-left font-semibold">Test Type</th>
-                                <th className="p-3 text-center font-semibold">Overall</th>
-                                <th className="p-3 text-center font-semibold">Min Each Band</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {course.englishRequirementsStructured.IELTS && (
-                                <tr className="border-b">
-                                  <td className="p-3 font-medium">IELTS</td>
-                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-ielts-overall">
-                                    {course.englishRequirementsStructured.IELTS.overall || "—"}
-                                  </td>
-                                  <td className="p-3 text-center" data-testid="text-ielts-min-band">
-                                    {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
-                                  </td>
+                        <>
+                          {/* Mobile: Card Layout for legacy structured data */}
+                          <div className="md:hidden space-y-4">
+                            {course.englishRequirementsStructured.IELTS && (
+                              <Card data-testid="card-legacy-ielts">
+                                <CardHeader className="pb-2">
+                                  <span className="font-semibold text-base">IELTS</span>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="text-center p-2 bg-primary/10 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Overall</div>
+                                      <div className="font-bold text-lg text-primary" data-testid="mobile-ielts-overall">
+                                        {course.englishRequirementsStructured.IELTS.overall || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="text-center p-2 bg-muted/50 rounded-md">
+                                      <div className="text-xs text-muted-foreground mb-1">Min Each Band</div>
+                                      <div className="font-semibold" data-testid="mobile-ielts-min-band">
+                                        {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                            {course.englishRequirementsStructured.TOEFL && (
+                              <Card data-testid="card-legacy-toefl">
+                                <CardHeader className="pb-2">
+                                  <span className="font-semibold text-base">TOEFL</span>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="text-center p-2 bg-primary/10 rounded-md col-span-2">
+                                      <div className="text-xs text-muted-foreground mb-1">Overall</div>
+                                      <div className="font-bold text-lg text-primary" data-testid="mobile-toefl-overall">
+                                        {course.englishRequirementsStructured.TOEFL.overall || "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                            {course.englishRequirementsStructured.PTE && (
+                              <Card data-testid="card-legacy-pte">
+                                <CardHeader className="pb-2">
+                                  <span className="font-semibold text-base">PTE</span>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="text-center p-2 bg-primary/10 rounded-md col-span-2">
+                                      <div className="text-xs text-muted-foreground mb-1">Overall</div>
+                                      <div className="font-bold text-lg text-primary" data-testid="mobile-pte-overall">
+                                        {course.englishRequirementsStructured.PTE.overall || "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                            {course.englishRequirementsStructured.Duolingo && (
+                              <Card data-testid="card-legacy-duolingo">
+                                <CardHeader className="pb-2">
+                                  <span className="font-semibold text-base">Duolingo</span>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="text-center p-2 bg-primary/10 rounded-md col-span-2">
+                                      <div className="text-xs text-muted-foreground mb-1">Overall</div>
+                                      <div className="font-bold text-lg text-primary" data-testid="mobile-duolingo-overall">
+                                        {course.englishRequirementsStructured.Duolingo.overall || "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+
+                          {/* Desktop: Table Layout for legacy structured data */}
+                          <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full border-collapse text-sm">
+                              <thead>
+                                <tr className="border-b bg-muted/50">
+                                  <th className="p-3 text-left font-semibold">Test Type</th>
+                                  <th className="p-3 text-center font-semibold">Overall</th>
+                                  <th className="p-3 text-center font-semibold">Min Each Band</th>
                                 </tr>
-                              )}
-                              {course.englishRequirementsStructured.TOEFL && (
-                                <tr className="border-b">
-                                  <td className="p-3 font-medium">TOEFL</td>
-                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-toefl-overall">
-                                    {course.englishRequirementsStructured.TOEFL.overall || "—"}
-                                  </td>
-                                  <td className="p-3 text-center">—</td>
-                                </tr>
-                              )}
-                              {course.englishRequirementsStructured.PTE && (
-                                <tr className="border-b">
-                                  <td className="p-3 font-medium">PTE</td>
-                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-pte-overall">
-                                    {course.englishRequirementsStructured.PTE.overall || "—"}
-                                  </td>
-                                  <td className="p-3 text-center">—</td>
-                                </tr>
-                              )}
-                              {course.englishRequirementsStructured.Duolingo && (
-                                <tr className="border-b">
-                                  <td className="p-3 font-medium">Duolingo</td>
-                                  <td className="p-3 text-center font-semibold text-primary" data-testid="text-duolingo-overall">
-                                    {course.englishRequirementsStructured.Duolingo.overall || "—"}
-                                  </td>
-                                  <td className="p-3 text-center">—</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                              </thead>
+                              <tbody>
+                                {course.englishRequirementsStructured.IELTS && (
+                                  <tr className="border-b">
+                                    <td className="p-3 font-medium">IELTS</td>
+                                    <td className="p-3 text-center font-semibold text-primary" data-testid="text-ielts-overall">
+                                      {course.englishRequirementsStructured.IELTS.overall || "—"}
+                                    </td>
+                                    <td className="p-3 text-center" data-testid="text-ielts-min-band">
+                                      {course.englishRequirementsStructured.IELTS.min_each_band || "—"}
+                                    </td>
+                                  </tr>
+                                )}
+                                {course.englishRequirementsStructured.TOEFL && (
+                                  <tr className="border-b">
+                                    <td className="p-3 font-medium">TOEFL</td>
+                                    <td className="p-3 text-center font-semibold text-primary" data-testid="text-toefl-overall">
+                                      {course.englishRequirementsStructured.TOEFL.overall || "—"}
+                                    </td>
+                                    <td className="p-3 text-center">—</td>
+                                  </tr>
+                                )}
+                                {course.englishRequirementsStructured.PTE && (
+                                  <tr className="border-b">
+                                    <td className="p-3 font-medium">PTE</td>
+                                    <td className="p-3 text-center font-semibold text-primary" data-testid="text-pte-overall">
+                                      {course.englishRequirementsStructured.PTE.overall || "—"}
+                                    </td>
+                                    <td className="p-3 text-center">—</td>
+                                  </tr>
+                                )}
+                                {course.englishRequirementsStructured.Duolingo && (
+                                  <tr className="border-b">
+                                    <td className="p-3 font-medium">Duolingo</td>
+                                    <td className="p-3 text-center font-semibold text-primary" data-testid="text-duolingo-overall">
+                                      {course.englishRequirementsStructured.Duolingo.overall || "—"}
+                                    </td>
+                                    <td className="p-3 text-center">—</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
                       )}
                     </TabsContent>
                   </Tabs>
