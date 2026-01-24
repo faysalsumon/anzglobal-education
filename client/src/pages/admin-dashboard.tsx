@@ -80,6 +80,7 @@ import { CourseEditor } from "@/components/course-editor";
 import { AdminTagsPanel } from "@/components/admin-tags-panel";
 import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
 import { AdminQualificationTypesPanel } from "@/components/admin-qualification-types";
+import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 
 interface User {
   id: string;
@@ -2618,6 +2619,11 @@ export default function AdminDashboard() {
         {/* Qualification Types Tab */}
         {activeTab === "qualification-types" && hasFullAdminAccess && (
           <AdminQualificationTypesPanel />
+        )}
+
+        {/* Entry Requirement Templates Tab */}
+        {activeTab === "entry-requirement-templates" && hasFullAdminAccess && (
+          <AdminCourseLevelRequirementsPanel />
         )}
 
         {/* Courses Tab */}

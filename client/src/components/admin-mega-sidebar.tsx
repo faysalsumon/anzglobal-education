@@ -36,6 +36,7 @@ import {
   UserCog,
   Bot,
   GraduationCap,
+  FileCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -109,6 +110,7 @@ export function AdminMegaSidebar({
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
         { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess },
+        { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
         { icon: Tag, label: "Tag Manager", value: "tags", show: hasFullAdminAccess || isMarketingExecutive },

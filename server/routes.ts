@@ -16702,6 +16702,130 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Get ALL requirement templates (for admin panel)
+  app.get("/api/admin/course-level-requirements/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const templates = await db
+        .select({
+          id: courseLevelRequirementTemplates.id,
+          courseLevel: courseLevelRequirementTemplates.courseLevel,
+          institutionCountry: courseLevelRequirementTemplates.institutionCountry,
+          qualificationTypeId: courseLevelRequirementTemplates.qualificationTypeId,
+          minGrade: courseLevelRequirementTemplates.minGrade,
+          displayLabel: courseLevelRequirementTemplates.displayLabel,
+          displayOrder: courseLevelRequirementTemplates.displayOrder,
+          isDefault: courseLevelRequirementTemplates.isDefault,
+          isActive: courseLevelRequirementTemplates.isActive,
+          qualification: academicQualificationTypes,
+        })
+        .from(courseLevelRequirementTemplates)
+        .innerJoin(
+          academicQualificationTypes,
+          eq(courseLevelRequirementTemplates.qualificationTypeId, academicQualificationTypes.id)
+        )
+        .orderBy(courseLevelRequirementTemplates.courseLevel, courseLevelRequirementTemplates.displayOrder);
+      
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching all requirement templates:", error);
+      res.status(500).json({ message: "Failed to fetch requirement templates" });
+    }
+  });
+
+  // AI Suggest requirement templates based on course level and institution country
+  app.post("/api/admin/course-level-requirements/suggest", isAuthenticated, async (req: any, res) => {
+    try {
+      const { institutionCountry, courseLevel } = req.body;
+      
+      if (!institutionCountry || !courseLevel) {
+        return res.status(400).json({ message: "institutionCountry and courseLevel are required" });
+      }
+      
+      // Get all qualification types
+      const qualifications = await db
+        .select()
+        .from(academicQualificationTypes)
+        .where(eq(academicQualificationTypes.isActive, true));
+      
+      // Get existing templates for this level/country to avoid duplicates
+      const existingTemplates = await db
+        .select()
+        .from(courseLevelRequirementTemplates)
+        .where(
+          and(
+            eq(courseLevelRequirementTemplates.courseLevel, courseLevel),
+            eq(courseLevelRequirementTemplates.institutionCountry, institutionCountry)
+          )
+        );
+      
+      const existingQualIds = new Set(existingTemplates.map(t => t.qualificationTypeId));
+      
+      // Define suggested mappings based on course level
+      const suggestions: Array<{
+        courseLevel: string;
+        institutionCountry: string;
+        qualificationTypeId: string;
+        minGrade: string;
+        displayLabel: string;
+        displayOrder: number;
+        isDefault: boolean;
+      }> = [];
+      
+      // Map qualification levels to course levels
+      const levelMappings: Record<string, string[]> = {
+        "Bachelor Degree": ["secondary", "higher_secondary", "foundation", "diploma"],
+        "Bachelor Honours": ["secondary", "higher_secondary", "foundation", "diploma"],
+        "Masters Degree": ["bachelors", "honours"],
+        "Doctoral Degree": ["masters", "honours"],
+        "Diploma": ["secondary", "higher_secondary"],
+        "Certificate III": ["secondary"],
+        "Certificate IV": ["secondary"],
+        "Advanced Diploma": ["secondary", "higher_secondary"],
+        "Graduate Certificate": ["bachelors"],
+        "Graduate Diploma": ["bachelors"],
+        "Foundation": ["secondary"],
+        "Pathway Program": ["secondary"],
+      };
+      
+      const relevantCategories = levelMappings[courseLevel] || ["secondary", "higher_secondary"];
+      
+      // Default grade suggestions by level category
+      const gradeSuggestions: Record<string, string> = {
+        "secondary": "Pass",
+        "higher_secondary": "Pass",
+        "foundation": "GPA 2.0",
+        "diploma": "Pass",
+        "bachelors": "GPA 2.5",
+        "honours": "First Class Honours",
+        "masters": "GPA 3.0",
+      };
+      
+      let order = 0;
+      for (const qual of qualifications) {
+        // Skip if already exists
+        if (existingQualIds.has(qual.id)) continue;
+        
+        // Check if qualification category matches
+        if (relevantCategories.includes(qual.levelCategory || "")) {
+          suggestions.push({
+            courseLevel,
+            institutionCountry,
+            qualificationTypeId: qual.id,
+            minGrade: gradeSuggestions[qual.levelCategory || "secondary"] || "Pass",
+            displayLabel: `${qual.name} from ${qual.country}`,
+            displayOrder: order++,
+            isDefault: qual.country === institutionCountry,
+          });
+        }
+      }
+      
+      res.json({ suggestions });
+    } catch (error: any) {
+      console.error("Error generating requirement suggestions:", error);
+      res.status(500).json({ message: "Failed to generate suggestions" });
+    }
+  });
+
   // Get entry requirements for a specific course
   app.get("/api/courses/:courseId/entry-requirements", async (req, res) => {
     try {
