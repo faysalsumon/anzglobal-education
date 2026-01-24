@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart
+  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus
 } from "lucide-react";
 import type { Course, University, Application, Favorite } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -49,6 +50,7 @@ export default function PublicCourseDetail() {
   const [, params] = useRoute("/courses/:id");
   const courseId = params?.id;
   const [selectedCampusLocation, setSelectedCampusLocation] = useState<string | null>(null);
+  const [selectedEntryCountry, setSelectedEntryCountry] = useState<string | null>(null);
   const { user, isStudent } = useAuth();
 
   const { data: course, isLoading } = useQuery<CourseWithUniversity>({
@@ -836,18 +838,18 @@ export default function PublicCourseDetail() {
 
                     {/* Eligibility Requirements Tab */}
                     <TabsContent value="eligibility" className="space-y-6">
-                      {/* AI-Generated Academic Entry Requirements - Grouped by Country */}
+                      {/* AI-Generated Academic Entry Requirements - Country Selector */}
                       {entryRequirements.length > 0 && (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                           <div className="flex items-center gap-2">
                             <GraduationCap className="h-5 w-5 text-primary" />
                             <h4 className="font-semibold">International Year 12 Equivalent Qualification Table</h4>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Please find below the qualifications we consider equivalent to Australian Year 12, and the minimum results required for admission to this course.
+                            Please select the country of your qualification to see if we consider it to be equivalent to an Australian Year 12, and the minimum results for admission to this course.
                           </p>
                           
-                          {/* Group requirements by country */}
+                          {/* Country Dropdown Selector */}
                           {(() => {
                             const groupedByCountry = entryRequirements.reduce((acc, req) => {
                               const country = req.qualification.country || 'Other';
@@ -856,66 +858,100 @@ export default function PublicCourseDetail() {
                               return acc;
                             }, {} as Record<string, typeof entryRequirements>);
                             
-                            return Object.entries(groupedByCountry).map(([country, reqs]) => (
-                              <div key={country} className="border rounded-lg overflow-hidden" data-testid={`entry-reqs-${country.toLowerCase().replace(/\s+/g, '-')}`}>
-                                <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center gap-2">
-                                  <Globe className="h-4 w-4" />
-                                  <h5 className="font-semibold">{country}</h5>
-                                  <Badge variant="secondary" className="ml-auto text-xs">
-                                    {reqs.length} qualification{reqs.length !== 1 ? 's' : ''}
-                                  </Badge>
-                                </div>
-                                <table className="w-full">
-                                  <thead>
-                                    <tr className="border-b bg-muted/50">
-                                      <th className="p-3 text-left font-semibold text-sm">Qualifications</th>
-                                      <th className="p-3 text-left font-semibold text-sm">Standard Entry Requirements</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {reqs.map((req, idx) => (
-                                      <tr 
-                                        key={req.id} 
-                                        className={idx !== reqs.length - 1 ? "border-b" : ""}
-                                        data-testid={`entry-req-${req.id}`}
+                            const availableCountries = Object.keys(groupedByCountry).sort((a, b) => {
+                              if (a === 'Australia') return -1;
+                              if (b === 'Australia') return 1;
+                              if (a === 'Bangladesh') return -1;
+                              if (b === 'Bangladesh') return 1;
+                              return a.localeCompare(b);
+                            });
+                            
+                            const currentCountry = selectedEntryCountry || availableCountries[0] || 'Australia';
+                            const currentReqs = groupedByCountry[currentCountry] || [];
+                            
+                            return (
+                              <div className="space-y-4">
+                                <Select 
+                                  value={currentCountry} 
+                                  onValueChange={setSelectedEntryCountry}
+                                >
+                                  <SelectTrigger 
+                                    className="w-full max-w-xs" 
+                                    data-testid="select-entry-country"
+                                  >
+                                    <SelectValue placeholder="Select your country" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableCountries.map((country) => (
+                                      <SelectItem 
+                                        key={country} 
+                                        value={country}
+                                        data-testid={`option-country-${country.toLowerCase().replace(/\s+/g, '-')}`}
                                       >
-                                        <td className="p-3 align-top">
-                                          <span className="font-medium text-sm" data-testid={`entry-req-name-${req.id}`}>
-                                            {req.qualification.name}
-                                          </span>
-                                        </td>
-                                        <td className="p-3 align-top">
-                                          <div className="space-y-1">
-                                            {req.minGrade && (
-                                              <div className="flex items-center gap-2">
-                                                <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                                <span className="text-sm" data-testid={`entry-req-grade-${req.id}`}>
-                                                  Minimum grade/score: <strong className="text-primary">{req.minGrade}</strong>
-                                                </span>
-                                              </div>
-                                            )}
-                                            {req.customNotes && (
-                                              <p className="text-sm text-muted-foreground pl-6">
-                                                {req.customNotes}
-                                              </p>
-                                            )}
-                                            {!req.minGrade && !req.customNotes && (
-                                              <span className="text-sm text-muted-foreground">
-                                                Successful completion required
-                                              </span>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
+                                        {country}
+                                      </SelectItem>
                                     ))}
-                                  </tbody>
-                                </table>
+                                  </SelectContent>
+                                </Select>
+                                
+                                {currentReqs.length > 0 && (
+                                  <div className="border rounded-lg overflow-hidden" data-testid={`entry-reqs-${currentCountry.toLowerCase().replace(/\s+/g, '-')}`}>
+                                    <table className="w-full">
+                                      <thead>
+                                        <tr className="bg-primary text-primary-foreground">
+                                          <th className="p-3 text-left font-semibold text-sm">Qualifications</th>
+                                          <th className="p-3 text-left font-semibold text-sm">Standard Entry</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {currentReqs.map((req, idx) => (
+                                          <tr 
+                                            key={req.id} 
+                                            className={idx !== currentReqs.length - 1 ? "border-b" : ""}
+                                            data-testid={`entry-req-${req.id}`}
+                                          >
+                                            <td className="p-3 align-top border-r bg-muted/30">
+                                              <span className="font-medium text-sm" data-testid={`entry-req-name-${req.id}`}>
+                                                {req.qualification.name}
+                                              </span>
+                                            </td>
+                                            <td className="p-3 align-top" data-testid={`entry-req-details-${req.id}`}>
+                                              <div className="space-y-1">
+                                                {req.customNotes ? (
+                                                  <ul className="text-sm space-y-2">
+                                                    {req.customNotes.split(/[;]/).filter(Boolean).map((note, i, arr) => (
+                                                      <li key={i} className="flex items-start gap-2" data-testid={`entry-req-note-${req.id}-${i}`}>
+                                                        <Minus className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
+                                                        <span>{note.trim()}{i < arr.length - 1 ? ', or' : ''}</span>
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                ) : req.minGrade ? (
+                                                  <div className="flex items-start gap-2">
+                                                    <Minus className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
+                                                    <span className="text-sm" data-testid={`entry-req-grade-${req.id}`}>
+                                                      Minimum grade/score: <strong className="text-primary">{req.minGrade}</strong>
+                                                    </span>
+                                                  </div>
+                                                ) : (
+                                                  <span className="text-sm text-muted-foreground" data-testid={`entry-req-default-${req.id}`}>
+                                                    Successful completion required
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
                               </div>
-                            ));
+                            );
                           })()}
                           
-                          <p className="text-xs text-muted-foreground italic">
-                            If you can't find your qualification in this list, please submit your application and our admissions team will assess your eligibility.
+                          <p className="text-xs text-muted-foreground italic bg-muted/50 p-3 rounded-lg" data-testid="text-entry-requirements-note">
+                            <strong>Please note:</strong> If you can't find your qualification in this list, simply submit your application and our International Admissions team will assess them for you.
                           </p>
                         </div>
                       )}
