@@ -79,6 +79,7 @@ import { InstitutionEditor } from "@/components/institution-editor";
 import { CourseEditor } from "@/components/course-editor";
 import { AdminTagsPanel } from "@/components/admin-tags-panel";
 import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
+import { AdminQualificationTypesPanel } from "@/components/admin-qualification-types";
 
 interface User {
   id: string;
@@ -2612,6 +2613,11 @@ export default function AdminDashboard() {
           </Card>
         </div>
         )
+        )}
+
+        {/* Qualification Types Tab */}
+        {activeTab === "qualification-types" && hasFullAdminAccess && (
+          <AdminQualificationTypesPanel />
         )}
 
         {/* Courses Tab */}

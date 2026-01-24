@@ -16465,6 +16465,145 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // AI Generate qualification types for a country
+  app.post("/api/admin/academic-qualifications/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { country } = req.body;
+      
+      if (!country) {
+        return res.status(400).json({ message: "Country is required" });
+      }
+
+      // Country-specific qualification templates
+      const countryQualifications: Record<string, any[]> = {
+        "Bangladesh": [
+          { name: "SSC", fullName: "Secondary School Certificate", levelCategory: "lower_secondary", gradingType: "gpa", gradingScale: "5.0", minGrade: "1.0" },
+          { name: "HSC", fullName: "Higher Secondary Certificate", levelCategory: "upper_secondary", gradingType: "gpa", gradingScale: "5.0", minGrade: "1.0" },
+          { name: "O-Levels", fullName: "GCE Ordinary Level (Cambridge)", levelCategory: "lower_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "A-Levels", fullName: "GCE Advanced Level (Cambridge)", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Honours Degree", fullName: "Bachelor's with Honours (4 years)", levelCategory: "bachelor", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (1-2 years)", levelCategory: "masters", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "India": [
+          { name: "CBSE Class 10", fullName: "Central Board of Secondary Education Class 10", levelCategory: "lower_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "CBSE Class 12", fullName: "Central Board of Secondary Education Class 12", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "ISC Class 12", fullName: "Indian School Certificate Class 12", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "State Board Class 12", fullName: "State Board Higher Secondary", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3-4 years)", levelCategory: "bachelor", gradingType: "cgpa", gradingScale: "10.0", minGrade: "4.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (2 years)", levelCategory: "masters", gradingType: "cgpa", gradingScale: "10.0", minGrade: "5.0" },
+        ],
+        "United Kingdom": [
+          { name: "GCSE", fullName: "General Certificate of Secondary Education", levelCategory: "lower_secondary", gradingType: "grades", gradingScale: "9-1", minGrade: "1" },
+          { name: "A-Levels", fullName: "GCE Advanced Level", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "IB Diploma", fullName: "International Baccalaureate Diploma", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "45", minGrade: "24" },
+          { name: "Foundation Year", fullName: "Foundation Year Programme", levelCategory: "foundation", gradingType: "percentage", gradingScale: "100", minGrade: "40" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree with Honours", levelCategory: "bachelor", gradingType: "grades", gradingScale: "First-Third", minGrade: "Third Class" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "grades", gradingScale: "Distinction-Pass", minGrade: "Pass" },
+        ],
+        "Australia": [
+          { name: "Year 12 / ATAR", fullName: "Australian Tertiary Admission Rank", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "99.95", minGrade: "30" },
+          { name: "IB Diploma", fullName: "International Baccalaureate Diploma", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "45", minGrade: "24" },
+          { name: "Foundation Year", fullName: "Foundation Studies", levelCategory: "foundation", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Diploma", fullName: "Diploma qualification", levelCategory: "diploma", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3-4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Canada": [
+          { name: "High School Diploma", fullName: "Secondary School Diploma", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "50" },
+          { name: "IB Diploma", fullName: "International Baccalaureate Diploma", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "45", minGrade: "24" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "3.0" },
+        ],
+        "New Zealand": [
+          { name: "NCEA Level 3", fullName: "National Certificate of Educational Achievement Level 3", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "Excellence", minGrade: "Achieved" },
+          { name: "IB Diploma", fullName: "International Baccalaureate Diploma", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "45", minGrade: "24" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "9.0", minGrade: "3.0" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "gpa", gradingScale: "9.0", minGrade: "5.0" },
+        ],
+        "Nepal": [
+          { name: "SLC", fullName: "School Leaving Certificate", levelCategory: "lower_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "32" },
+          { name: "+2 / HSC", fullName: "Higher Secondary Education Certificate", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "32" },
+          { name: "A-Levels", fullName: "Cambridge A-Levels", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3-4 years)", levelCategory: "bachelor", gradingType: "percentage", gradingScale: "100", minGrade: "40" },
+          { name: "Master's Degree", fullName: "Master's Degree (2 years)", levelCategory: "masters", gradingType: "percentage", gradingScale: "100", minGrade: "45" },
+        ],
+        "Sri Lanka": [
+          { name: "O-Levels", fullName: "GCE Ordinary Level", levelCategory: "lower_secondary", gradingType: "grades", gradingScale: "A-F", minGrade: "S" },
+          { name: "A-Levels", fullName: "GCE Advanced Level", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A-F", minGrade: "S" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Pakistan": [
+          { name: "Matric", fullName: "Matriculation Certificate", levelCategory: "lower_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "Intermediate / FSc", fullName: "Higher Secondary School Certificate", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "33" },
+          { name: "O-Levels", fullName: "Cambridge O-Levels", levelCategory: "lower_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "A-Levels", fullName: "Cambridge A-Levels", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (2 years)", levelCategory: "masters", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "China": [
+          { name: "Zhongkao", fullName: "Senior High School Entrance Examination", levelCategory: "lower_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "60" },
+          { name: "Gaokao", fullName: "National College Entrance Examination", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "750", minGrade: "300" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (2-3 years)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Vietnam": [
+          { name: "High School Diploma", fullName: "Bang Tot Nghiep THPT", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "10", minGrade: "5.0" },
+          { name: "Bachelor's Degree", fullName: "Cu Nhan (Bachelor's)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Thac Si (Master's)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Philippines": [
+          { name: "High School Diploma", fullName: "Senior High School Diploma", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "75" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (2 years)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Malaysia": [
+          { name: "SPM", fullName: "Sijil Pelajaran Malaysia", levelCategory: "lower_secondary", gradingType: "grades", gradingScale: "A+-G", minGrade: "G" },
+          { name: "STPM", fullName: "Sijil Tinggi Persekolahan Malaysia", levelCategory: "upper_secondary", gradingType: "cgpa", gradingScale: "4.0", minGrade: "1.0" },
+          { name: "A-Levels", fullName: "Cambridge A-Levels", levelCategory: "upper_secondary", gradingType: "grades", gradingScale: "A*-E", minGrade: "E" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3-4 years)", levelCategory: "bachelor", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree", levelCategory: "masters", gradingType: "cgpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Indonesia": [
+          { name: "SMA", fullName: "Sekolah Menengah Atas (High School)", levelCategory: "upper_secondary", gradingType: "points", gradingScale: "100", minGrade: "55" },
+          { name: "Bachelor's Degree", fullName: "Sarjana (S1)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Magister (S2)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+        "Thailand": [
+          { name: "Mathayom 6", fullName: "Upper Secondary Education Certificate", levelCategory: "upper_secondary", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (2 years)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ],
+      };
+
+      // Get qualifications for the selected country or use AI fallback
+      let qualifications = countryQualifications[country];
+      
+      if (!qualifications) {
+        // Default template for countries not in the list
+        qualifications = [
+          { name: "Secondary Certificate", fullName: "Secondary Education Certificate", levelCategory: "lower_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "40" },
+          { name: "High School Diploma", fullName: "Upper Secondary/High School Diploma", levelCategory: "upper_secondary", gradingType: "percentage", gradingScale: "100", minGrade: "40" },
+          { name: "Bachelor's Degree", fullName: "Bachelor's Degree (3-4 years)", levelCategory: "bachelor", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.0" },
+          { name: "Master's Degree", fullName: "Master's Degree (1-2 years)", levelCategory: "masters", gradingType: "gpa", gradingScale: "4.0", minGrade: "2.5" },
+        ];
+      }
+
+      // Add country to each qualification
+      const qualificationsWithCountry = qualifications.map((q, index) => ({
+        ...q,
+        country,
+        displayOrder: index,
+      }));
+
+      res.json({ qualifications: qualificationsWithCountry });
+    } catch (error: any) {
+      console.error("Error generating qualifications:", error);
+      res.status(500).json({ message: "Failed to generate qualifications" });
+    }
+  });
+
   // Get requirement templates by course level and institution country
   app.get("/api/course-level-requirements", async (req, res) => {
     try {
