@@ -38,22 +38,104 @@ export const disciplineEnum = pgEnum('discipline', [
   'Trade',
 ]);
 
-// Course level enum for standardized qualification levels
+// Qualification Framework enum for country-specific qualification systems
+export const qualificationFrameworkEnum = pgEnum('qualification_framework', [
+  'AQF',       // Australian Qualifications Framework (Australia)
+  'Non-AQF',   // Non-AQF courses like ELICOS, Professional Year (Australia)
+  'RQF',       // Regulated Qualifications Framework (UK)
+  'EQF',       // European Qualifications Framework (Europe)
+  'NZQF',      // New Zealand Qualifications and Credentials Framework
+  'MQF',       // Malaysian Qualifications Framework
+  'US',        // United States Degree System
+  'Canadian',  // Canadian Qualification System
+  'Other',     // Custom/Other frameworks
+]);
+
+// Course level enum for standardized qualification levels (supports all frameworks)
 export const courseLevelEnum = pgEnum('course_level', [
+  // AQF Levels (Australia)
   'VCE (11-12)',
+  'Certificate I',
   'Certificate II',
   'Certificate III',
   'Certificate IV',
   'Diploma',
   'Advanced Diploma',
+  'Associate Degree',
   'Graduate Certificate',
   'Graduate Diploma',
   'Bachelor Degree',
-  'Professional Year',
+  'Bachelor Honours',
   'Masters Degree',
   'Doctoral Degree',
   'Higher Doctoral Degree',
-  'ELICOS',
+  // Non-AQF (Australia)
+  'ELICOS - General English',
+  'ELICOS - EAP',
+  'ELICOS - Exam Prep',
+  'Professional Year - Accounting',
+  'Professional Year - IT',
+  'Professional Year - Engineering',
+  'Foundation',
+  'Pathway Program',
+  'Short Course',
+  // RQF Levels (UK)
+  'RQF Entry Level',
+  'RQF Level 1',
+  'RQF Level 2',
+  'RQF Level 3',
+  'RQF Level 4',
+  'RQF Level 5',
+  'RQF Level 6',
+  'RQF Level 7',
+  'RQF Level 8',
+  // NZQF Levels (New Zealand)
+  'NZQF Level 1',
+  'NZQF Level 2',
+  'NZQF Level 3',
+  'NZQF Level 4',
+  'NZQF Level 5',
+  'NZQF Level 6',
+  'NZQF Level 7',
+  'NZQF Level 8',
+  'NZQF Level 9',
+  'NZQF Level 10',
+  // MQF Levels (Malaysia)
+  'MQF Level 1',
+  'MQF Level 2',
+  'MQF Level 3',
+  'MQF Foundation',
+  'MQF Level 4',
+  'MQF Level 5',
+  'MQF Level 6',
+  'MQF Level 7',
+  'MQF Level 8',
+  // US Degrees
+  'US Associate Degree',
+  'US Bachelor Degree',
+  'US Master Degree',
+  'US Doctoral Degree',
+  'US Professional Doctorate',
+  // Canadian Qualifications
+  'Canadian Certificate',
+  'Canadian Diploma',
+  'Canadian Advanced Diploma',
+  'Canadian Associate Degree',
+  'Canadian Bachelor Degree',
+  'Canadian Master Degree',
+  'Canadian Doctoral Degree',
+  'Canadian CEGEP',
+  // EQF Levels (Europe)
+  'EQF Level 1',
+  'EQF Level 2',
+  'EQF Level 3',
+  'EQF Level 4',
+  'EQF Level 5',
+  'EQF Level 6',
+  'EQF Level 7',
+  'EQF Level 8',
+  // Other/Custom
+  'Other',
 ]);
 
 // Provider type enum for institution categorization
@@ -798,7 +880,9 @@ export const courses = pgTable("courses", {
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
   subDisciplineId: varchar("sub_discipline_id").references(() => subDisciplines.id, { onDelete: "set null" }), // Optional sub-category within main discipline
   specialization: text("specialization"), // Tier 3: Free text specialization with autocomplete (e.g., "Civil Engineering")
+  qualificationFramework: qualificationFrameworkEnum("qualification_framework").default('AQF'), // Qualification framework (AQF, Non-AQF, RQF, etc.)
   level: courseLevelEnum("level").notNull(), // Course qualification level (enforced by database enum)
+  customLevel: text("custom_level"), // Free-text level for "Other" framework
   duration: text("duration"), // e.g., "2 years", "6 months"
   durationMonths: integer("duration_months"), // For filtering
   durationWeeks: integer("duration_weeks"), // For precise duration tracking
@@ -2972,23 +3056,44 @@ const baseCourseSchema = createInsertSchema(courses).omit({
     'Trade',
   ]).optional(),
   
-  // Validate course level - enforce enum values
+  // Validate qualification framework - country-specific qualification systems
+  qualificationFramework: z.enum([
+    'AQF', 'Non-AQF', 'RQF', 'EQF', 'NZQF', 'MQF', 'US', 'Canadian', 'Other'
+  ]).optional().default('AQF'),
+  
+  // Validate course level - enforce enum values (supports all frameworks)
   level: z.enum([
-    'VCE (11-12)',
-    'Certificate II',
-    'Certificate III',
-    'Certificate IV',
-    'Diploma',
-    'Advanced Diploma',
-    'Graduate Certificate',
-    'Graduate Diploma',
-    'Bachelor Degree',
-    'Professional Year',
-    'Masters Degree',
-    'Doctoral Degree',
-    'Higher Doctoral Degree',
-    'ELICOS',
+    // AQF Levels (Australia)
+    'VCE (11-12)', 'Certificate I', 'Certificate II', 'Certificate III', 'Certificate IV',
+    'Diploma', 'Advanced Diploma', 'Associate Degree', 'Graduate Certificate', 'Graduate Diploma',
+    'Bachelor Degree', 'Bachelor Honours', 'Masters Degree', 'Doctoral Degree', 'Higher Doctoral Degree',
+    // Non-AQF (Australia)
+    'ELICOS - General English', 'ELICOS - EAP', 'ELICOS - Exam Prep',
+    'Professional Year - Accounting', 'Professional Year - IT', 'Professional Year - Engineering',
+    'Foundation', 'Pathway Program', 'Short Course',
+    // RQF Levels (UK)
+    'RQF Entry Level', 'RQF Level 1', 'RQF Level 2', 'RQF Level 3', 'RQF Level 4',
+    'RQF Level 5', 'RQF Level 6', 'RQF Level 7', 'RQF Level 8',
+    // NZQF Levels (New Zealand)
+    'NZQF Level 1', 'NZQF Level 2', 'NZQF Level 3', 'NZQF Level 4', 'NZQF Level 5',
+    'NZQF Level 6', 'NZQF Level 7', 'NZQF Level 8', 'NZQF Level 9', 'NZQF Level 10',
+    // MQF Levels (Malaysia)
+    'MQF Level 1', 'MQF Level 2', 'MQF Level 3', 'MQF Foundation', 'MQF Level 4',
+    'MQF Level 5', 'MQF Level 6', 'MQF Level 7', 'MQF Level 8',
+    // US Degrees
+    'US Associate Degree', 'US Bachelor Degree', 'US Master Degree', 'US Doctoral Degree', 'US Professional Doctorate',
+    // Canadian Qualifications
+    'Canadian Certificate', 'Canadian Diploma', 'Canadian Advanced Diploma', 'Canadian Associate Degree',
+    'Canadian Bachelor Degree', 'Canadian Master Degree', 'Canadian Doctoral Degree', 'Canadian CEGEP',
+    // EQF Levels (Europe)
+    'EQF Level 1', 'EQF Level 2', 'EQF Level 3', 'EQF Level 4', 'EQF Level 5',
+    'EQF Level 6', 'EQF Level 7', 'EQF Level 8',
+    // Other/Custom
+    'Other',
   ]),
+  
+  // Custom level text for "Other" framework
+  customLevel: z.string().optional(),
   
   // Validate array fields - ensure they're arrays and contain valid data
   intakes: z.array(z.string()).optional().default([]),

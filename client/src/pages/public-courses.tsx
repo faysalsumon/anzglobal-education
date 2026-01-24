@@ -185,6 +185,7 @@ export default function PublicCourses() {
   const [subject, setSubject] = useState<string>("");
   const [discipline, setDiscipline] = useState<string>("");
   const [subDiscipline, setSubDiscipline] = useState<string>("");
+  const [framework, setFramework] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [campusState, setCampusState] = useState<string>("");
@@ -413,6 +414,7 @@ export default function PublicCourses() {
   const availableFilters = useMemo(() => {
     const subjects = new Set<string>();
     const disciplines = new Set<string>();
+    const frameworks = new Set<string>();
     const levels = new Set<string>();
     const countries = new Set<string>();
     const universities = new Map<string, string>();
@@ -426,6 +428,7 @@ export default function PublicCourses() {
     courses.forEach((course) => {
       if (course.subject) subjects.add(course.subject);
       if (course.discipline) disciplines.add(course.discipline);
+      if ((course as any).qualificationFramework) frameworks.add((course as any).qualificationFramework);
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
       if (course.currency) currencies.add(course.currency);
@@ -485,6 +488,7 @@ export default function PublicCourses() {
     return {
       subjects: Array.from(subjects).sort(),
       disciplines: Array.from(disciplines).sort(),
+      frameworks: Array.from(frameworks).sort(),
       levels: Array.from(levels).sort(),
       countries: Array.from(countries).sort(),
       currencies: Array.from(currencies).sort(),
@@ -503,6 +507,7 @@ export default function PublicCourses() {
     if (subject) count++;
     if (discipline) count++;
     if (subDiscipline) count++;
+    if (framework) count++;
     if (level) count++;
     if (country) count++;
     if (campusState) count++;
@@ -510,7 +515,7 @@ export default function PublicCourses() {
     if (feeCurrency) count++;
     if (minFees !== null || maxFees !== null) count++;
     return count;
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, campusCity, feeCurrency, minFees, maxFees]);
+  }, [searchTerm, subject, discipline, subDiscipline, framework, level, country, campusState, campusCity, feeCurrency, minFees, maxFees]);
 
   // Toggle collapsible section
   const toggleSection = (section: string, open?: boolean) => {
@@ -523,6 +528,7 @@ export default function PublicCourses() {
     setSubject("");
     setDiscipline("");
     setSubDiscipline("");
+    setFramework("");
     setLevel("");
     setCountry("");
     setCampusState("");
@@ -719,6 +725,9 @@ export default function PublicCourses() {
       }
     }
     
+    // Framework filtering
+    if (framework && (course as any).qualificationFramework !== framework) return false;
+    
     if (level && course.level !== level) return false;
     if (country && course.country !== country) return false;
     if (universityFilter && course.universityId !== universityFilter) return false;
@@ -765,7 +774,7 @@ export default function PublicCourses() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, subject, discipline, subDiscipline, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency]);
+  }, [searchTerm, subject, discipline, subDiscipline, framework, level, country, campusState, universityFilter, campusCity, minFees, maxFees, feeCurrency]);
 
   // Sort filtered courses
   const sortedCourses = useMemo(() => {
@@ -1067,6 +1076,32 @@ export default function PublicCourses() {
                           )}
                         </CollapsibleContent>
                       </Collapsible>
+
+                      {/* Framework (only show if multiple frameworks available) */}
+                      {availableFilters.frameworks.length > 1 && (
+                        <Collapsible open={openSections.framework} onOpenChange={(open) => toggleSection('framework', open)}>
+                          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+                            <div className="flex items-center gap-2 font-medium text-sm">
+                              <Layers className="h-4 w-4 text-primary" />
+                              Framework
+                            </div>
+                            <ChevronDown className={`h-4 w-4 transition-transform ${openSections.framework ? 'rotate-180' : ''}`} />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pt-2">
+                            <Select value={framework || "all"} onValueChange={(val) => { setFramework(val === "all" ? "" : val); setLevel(""); }}>
+                              <SelectTrigger data-testid="select-framework-mobile">
+                                <SelectValue placeholder="All Frameworks" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Frameworks</SelectItem>
+                                {availableFilters.frameworks.map((fw) => (
+                                  <SelectItem key={fw} value={fw}>{fw}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
 
                       {/* Level */}
                       <Collapsible open={openSections.level} onOpenChange={(open) => toggleSection('level', open)}>
@@ -1401,6 +1436,33 @@ export default function PublicCourses() {
                           )}
                         </CollapsibleContent>
                       </Collapsible>
+
+                      {/* Framework (only show if multiple frameworks available) */}
+                      {availableFilters.frameworks.length > 1 && (
+                        <Collapsible open={openSections.framework} onOpenChange={(open) => toggleSection('framework', open)}>
+                          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2 transition-colors">
+                            <div className="flex items-center gap-2 font-medium text-sm">
+                              <BookOpen className="h-4 w-4 text-primary" />
+                              Framework
+                              {framework && <span className="w-2 h-2 rounded-full bg-primary" />}
+                            </div>
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.framework ? 'rotate-180' : ''}`} />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pt-2 pb-3 px-1">
+                            <Select value={framework || "all"} onValueChange={(val) => { setFramework(val === "all" ? "" : val); setLevel(""); }}>
+                              <SelectTrigger data-testid="select-framework" className="h-9">
+                                <SelectValue placeholder="All Frameworks" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Frameworks</SelectItem>
+                                {availableFilters.frameworks.map((fw) => (
+                                  <SelectItem key={fw} value={fw}>{fw}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
 
                       {/* Level */}
                       <Collapsible open={openSections.level} onOpenChange={(open) => toggleSection('level', open)}>

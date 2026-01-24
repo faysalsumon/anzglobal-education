@@ -2820,6 +2820,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only course managers and admins can create courses" });
       }
 
+      // Validate "Other" framework requires customLevel
+      if (req.body.qualificationFramework === "Other" && !req.body.customLevel?.trim()) {
+        return res.status(400).json({ message: "Custom level description is required when using 'Other' framework" });
+      }
+      
+      // Clear customLevel if not using "Other" framework
+      if (req.body.qualificationFramework !== "Other") {
+        req.body.customLevel = null;
+      }
+
       const data = insertCourseSchema.parse({
         ...req.body,
         universityId: access.university.id,
@@ -2851,6 +2861,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const course = await storage.getCourseById(req.params.id);
       if (!course || course.universityId !== access.university.id) {
         return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Validate "Other" framework requires customLevel
+      if (req.body.qualificationFramework === "Other" && !req.body.customLevel?.trim()) {
+        return res.status(400).json({ message: "Custom level description is required when using 'Other' framework" });
+      }
+      
+      // Clear customLevel if not using "Other" framework
+      if (req.body.qualificationFramework !== "Other") {
+        req.body.customLevel = null;
       }
 
       const data = insertCourseSchema.parse({
@@ -9234,6 +9254,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
+      // Validate "Other" framework requires customLevel
+      if (req.body.qualificationFramework === "Other" && !req.body.customLevel?.trim()) {
+        return res.status(400).json({ message: "Custom level description is required when using 'Other' framework" });
+      }
+      
+      // Clear customLevel if not using "Other" framework
+      if (req.body.qualificationFramework !== "Other") {
+        req.body.customLevel = null;
+      }
+
       // Validate and normalize course data (converts empty strings to undefined for numeric fields)
       const validationResult = insertCourseSchema.safeParse(req.body);
       
@@ -9322,6 +9352,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (field in updateData && updateData[field] === '') {
           updateData[field] = null;
         }
+      }
+      
+      // Validate "Other" framework requires customLevel
+      if (updateData.qualificationFramework === "Other" && !updateData.customLevel?.trim()) {
+        return res.status(400).json({ message: "Custom level description is required when using 'Other' framework" });
+      }
+      
+      // Clear customLevel if not using "Other" framework
+      if (updateData.qualificationFramework && updateData.qualificationFramework !== "Other") {
+        updateData.customLevel = null;
       }
 
       // If universityId is being updated, verify the institution exists

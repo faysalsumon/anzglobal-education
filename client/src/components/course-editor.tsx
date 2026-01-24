@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2 } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen } from "lucide-react";
+import { 
+  FRAMEWORK_CONFIGS, 
+  ALL_FRAMEWORKS, 
+  getFrameworksForCountry, 
+  getDefaultFramework,
+  type QualificationFramework 
+} from "@shared/qualification-frameworks";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -330,7 +337,9 @@ const courseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   subject: z.string().optional(),
+  qualificationFramework: z.string().optional(),
   level: z.string().optional(),
+  customLevel: z.string().optional(),
   discipline: z.string().optional(),
   subDisciplineId: z.string().optional(),
   specialization: z.string().optional(),
@@ -378,7 +387,9 @@ interface Course {
   description: string | null;
   duration: string | null;
   fees: number | null;
+  qualificationFramework: string | null;
   level: string | null;
+  customLevel: string | null;
   subject: string;
   discipline?: string | null;
   subDisciplineId?: string | null;
@@ -769,6 +780,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     }
   }, [courseScholarships]);
 
+  // Get institution country for default framework selection
+  const initialInstitutionCountry = course?.university?.campusAddresses?.[0]?.country || "";
+  
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -776,7 +790,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       title: course?.title || "",
       description: course?.description || "",
       subject: course?.subject || "",
+      qualificationFramework: course?.qualificationFramework || (initialInstitutionCountry ? getDefaultFramework(initialInstitutionCountry) : "AQF"),
       level: course?.level || "",
+      customLevel: course?.customLevel || "",
       discipline: course?.discipline || "",
       subDisciplineId: course?.subDisciplineId || "",
       specialization: course?.specialization || "",
@@ -810,6 +826,20 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   // Entry requirement templates query (based on course level and institution country)
   // Get country from first campus address
   const institutionCountry = selectedInstitution?.campusAddresses?.[0]?.country;
+  
+  // Auto-update framework when institution changes (only for new courses or if no framework set)
+  useEffect(() => {
+    if (institutionCountry && !course?.qualificationFramework) {
+      const defaultFramework = getDefaultFramework(institutionCountry);
+      const currentFramework = form.getValues("qualificationFramework");
+      // Only update if current framework is the generic default
+      if (currentFramework === "AQF" && defaultFramework !== "AQF") {
+        form.setValue("qualificationFramework", defaultFramework);
+        // Reset level when framework changes
+        form.setValue("level", "");
+      }
+    }
+  }, [institutionCountry, course?.qualificationFramework, form]);
   const templateQueryUrl = currentCourseLevel && institutionCountry 
     ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(institutionCountry)}`
     : null;
@@ -1384,30 +1414,98 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       />
                       <FormField
                         control={form.control}
+                        name="qualificationFramework"
+                        render={({ field }) => {
+                          // Get available frameworks based on institution country
+                          const availableFrameworks = getFrameworksForCountry(institutionCountry);
+                          const filteredFrameworks = ALL_FRAMEWORKS.filter(f => 
+                            availableFrameworks.includes(f.value) || f.value === 'Other'
+                          );
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-1.5">
+                                <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                                Framework
+                              </FormLabel>
+                              <Select 
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  // Reset level when framework changes
+                                  form.setValue("level", "");
+                                  form.setValue("customLevel", "");
+                                }} 
+                                value={field.value || "AQF"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-qualification-framework">
+                                    <SelectValue placeholder="Select framework" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent position="popper" className="max-h-[250px] overflow-y-auto">
+                                  {filteredFrameworks.map(f => (
+                                    <SelectItem key={f.value} value={f.value}>
+                                      <span className="font-medium">{f.label}</span>
+                                      <span className="text-xs text-muted-foreground ml-1.5">({f.fullName})</span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                      <FormField
+                        control={form.control}
                         name="level"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Level</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-course-level">
-                                  <SelectValue placeholder="Select level" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent position="popper" className="max-h-[200px] overflow-y-auto">
-                                <SelectItem value="Certificate II">Certificate II</SelectItem>
-                                <SelectItem value="Certificate III">Certificate III</SelectItem>
-                                <SelectItem value="Certificate IV">Certificate IV</SelectItem>
-                                <SelectItem value="Diploma">Diploma</SelectItem>
-                                <SelectItem value="Advanced Diploma">Advanced Diploma</SelectItem>
-                                <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
-                                <SelectItem value="Masters Degree">Masters Degree</SelectItem>
-                                <SelectItem value="Doctoral Degree">Doctoral Degree</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const currentFramework = (form.watch("qualificationFramework") || "AQF") as QualificationFramework;
+                          const frameworkConfig = FRAMEWORK_CONFIGS[currentFramework];
+                          const levels = frameworkConfig?.levels || [];
+                          const isOtherFramework = currentFramework === "Other";
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel>Level</FormLabel>
+                              {isOtherFramework ? (
+                                <FormControl>
+                                  <Input 
+                                    {...field}
+                                    placeholder="Enter custom qualification level"
+                                    data-testid="input-custom-level"
+                                    onChange={(e) => {
+                                      field.onChange("Other");
+                                      form.setValue("customLevel", e.target.value);
+                                    }}
+                                    value={form.watch("customLevel") || ""}
+                                  />
+                                </FormControl>
+                              ) : (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-course-level">
+                                      <SelectValue placeholder="Select level" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent position="popper" className="max-h-[280px] overflow-y-auto">
+                                    {levels.map(level => (
+                                      <SelectItem key={level.value} value={level.value}>
+                                        <div className="flex flex-col">
+                                          <span>{level.label}</span>
+                                          {level.description && (
+                                            <span className="text-xs text-muted-foreground">{level.description}</span>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
                       <FormField
                         control={form.control}
