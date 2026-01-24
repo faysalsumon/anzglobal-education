@@ -98,6 +98,25 @@ export default function PublicCourseDetail() {
     enabled: !!courseId,
   });
 
+  // Fetch dynamic pricing tiers for the course
+  interface PricingTier {
+    id: string;
+    courseId: string;
+    paymentOption: 'upfront' | 'payment_plan' | 'per_term' | 'per_unit';
+    studyMode: 'full_time' | 'part_time' | 'weekend' | 'evening' | 'online' | 'all';
+    locationType: 'all' | 'domestic' | 'international' | 'country';
+    country: string | null;
+    isDefaultPrice: boolean;
+    amount: string;
+    currency: string;
+    label: string | null;
+    description: string | null;
+  }
+  const { data: pricingTiers = [] } = useQuery<PricingTier[]>({
+    queryKey: ["/api/courses", courseId, "pricing-tiers"],
+    enabled: !!courseId,
+  });
+
   // Check if student has already applied for this course
   const { data: applicationsData } = useQuery<{ applications: Array<{ application: Application }> }>({
     queryKey: ["/api/student/applications"],
@@ -189,8 +208,8 @@ export default function PublicCourseDetail() {
     // About section is always visible
     sections.push("about");
     
-    // Fees section
-    if (course.fees || course.costOfLiving || course.applicationFees) {
+    // Fees section - include dynamic pricing tiers
+    if (pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees) {
       sections.push("fees");
     }
     
@@ -225,7 +244,7 @@ export default function PublicCourseDetail() {
     }
     
     return sections;
-  }, [course, englishRequirements, entryRequirements]);
+  }, [course, englishRequirements, entryRequirements, pricingTiers]);
 
   if (isLoading) {
     return (
@@ -631,8 +650,8 @@ export default function PublicCourseDetail() {
               </CardContent>
             </Card>
 
-            {/* Modern Financial Breakdown */}
-            {(course.fees || course.costOfLiving || course.applicationFees) && (
+            {/* Modern Financial Breakdown - Show if pricing tiers exist OR static fees exist */}
+            {(pricingTiers.length > 0 || course.fees || course.costOfLiving || course.applicationFees) && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300" id="fees">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -641,48 +660,130 @@ export default function PublicCourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {course.fees && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-annual-tuition">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Annual Tuition</span>
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <GraduationCap className="h-4 w-4 text-primary" />
-                          </div>
-                        </div>
-                        <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Per year</p>
+                  {/* Dynamic Pricing Tiers - Show when available */}
+                  {pricingTiers.length > 0 && (
+                    <div className="space-y-4 mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {pricingTiers.map((tier) => {
+                          // Format study mode label
+                          const studyModeLabels: Record<string, string> = {
+                            'full_time': 'Full-Time',
+                            'part_time': 'Part-Time',
+                            'weekend': 'Weekend',
+                            'evening': 'Evening',
+                            'online': 'Online',
+                            'all': '',
+                          };
+                          // Format payment option label
+                          const paymentLabels: Record<string, string> = {
+                            'upfront': 'Upfront',
+                            'payment_plan': 'Payment Plan',
+                            'per_term': 'Per Term',
+                            'per_unit': 'Per Unit',
+                          };
+                          // Format location label
+                          const locationLabels: Record<string, string> = {
+                            'all': '',
+                            'domestic': 'Domestic',
+                            'international': 'International',
+                            'country': tier.country || '',
+                          };
+                          
+                          // Build display label from tier data or use custom label
+                          const displayParts = [
+                            studyModeLabels[tier.studyMode],
+                            paymentLabels[tier.paymentOption],
+                            locationLabels[tier.locationType],
+                          ].filter(Boolean);
+                          
+                          const displayLabel = tier.label || displayParts.join(' • ') || 'Tuition';
+                          
+                          return (
+                            <div 
+                              key={tier.id} 
+                              className={`relative overflow-hidden rounded-xl border p-6 ${
+                                tier.isDefaultPrice 
+                                  ? 'bg-gradient-to-br from-primary/10 to-transparent border-primary/30' 
+                                  : 'bg-gradient-to-br from-muted/30 to-transparent'
+                              }`}
+                              data-testid={`card-pricing-tier-${tier.id}`}
+                            >
+                              {tier.isDefaultPrice && (
+                                <Badge className="absolute top-3 right-3 text-xs" variant="secondary">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Default
+                                </Badge>
+                              )}
+                              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                <span className="text-sm text-muted-foreground font-medium">{displayLabel}</span>
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                  <GraduationCap className="h-4 w-4 text-primary" />
+                                </div>
+                              </div>
+                              <p className="text-3xl font-bold text-primary" data-testid={`text-tier-amount-${tier.id}`}>
+                                {tier.currency} {Number(tier.amount).toLocaleString()}
+                              </p>
+                              {tier.description && (
+                                <p className="text-xs text-muted-foreground mt-2">{tier.description}</p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                    {course.costOfLiving && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Living Costs</span>
-                          <div className="p-2 bg-secondary/10 rounded-lg">
-                            <Home className="h-4 w-4 text-secondary" />
+                    </div>
+                  )}
+                  
+                  {/* Static Fees - Show only when NO dynamic pricing exists */}
+                  {pricingTiers.length === 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {course.fees && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-annual-tuition">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Annual Tuition</span>
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <GraduationCap className="h-4 w-4 text-primary" />
+                            </div>
                           </div>
+                          <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Per year</p>
                         </div>
-                        <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
-                      </div>
-                    )}
-                    {course.applicationFees !== null && course.applicationFees !== undefined && (
-                      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee">
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <span className="text-sm text-muted-foreground">Application Fee</span>
-                          <div className="p-2 bg-accent/10 rounded-lg">
-                            <CheckCircle className="h-4 w-4 text-accent" />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Living Costs and Application Fee - Only show if at least one is available */}
+                  {(course.costOfLiving || (course.applicationFees !== null && course.applicationFees !== undefined)) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      {course.costOfLiving && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-secondary/5 to-transparent p-6" data-testid="card-living-costs">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Living Costs</span>
+                            <div className="p-2 bg-secondary/10 rounded-lg">
+                              <Home className="h-4 w-4 text-secondary" />
+                            </div>
                           </div>
+                          <p className="text-3xl font-bold" data-testid="text-living-cost-amount">{course.currency} {Number(course.costOfLiving).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Estimated yearly</p>
                         </div>
-                        <p className="text-3xl font-bold" data-testid="text-application-fee-amount">
-                          {Number(course.applicationFees) > 0 
-                            ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
-                            : "Waived"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">One-time</p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      {course.applicationFees !== null && course.applicationFees !== undefined && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-accent/5 to-transparent p-6" data-testid="card-application-fee">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">Application Fee</span>
+                            <div className="p-2 bg-accent/10 rounded-lg">
+                              <CheckCircle className="h-4 w-4 text-accent" />
+                            </div>
+                          </div>
+                          <p className="text-3xl font-bold" data-testid="text-application-fee-amount">
+                            {Number(course.applicationFees) > 0 
+                              ? `${course.currency} ${Number(course.applicationFees).toLocaleString()}`
+                              : "Waived"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">One-time</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
