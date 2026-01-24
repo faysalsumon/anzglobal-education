@@ -709,9 +709,9 @@ export default function PublicCourseDetail() {
                               data-testid={`card-pricing-tier-${tier.id}`}
                             >
                               {tier.isDefaultPrice && (
-                                <Badge className="absolute top-3 right-3 text-xs" variant="secondary">
-                                  <Star className="h-3 w-3 mr-1" />
-                                  Default
+                                <Badge className="absolute top-3 right-3 text-xs bg-primary/10 text-primary border-primary/20" variant="outline">
+                                  <Star className="h-3 w-3 mr-1 fill-primary" />
+                                  Recommended
                                 </Badge>
                               )}
                               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
