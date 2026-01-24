@@ -3193,8 +3193,8 @@ const baseCourseSchema = createInsertSchema(courses).omit({
     'Other',
   ]),
   
-  // Custom level text for "Other" framework
-  customLevel: z.string().optional(),
+  // Custom level text for "Other" framework (nullable when not using "Other" framework)
+  customLevel: z.string().nullable().optional(),
   
   // Validate array fields - ensure they're arrays and contain valid data
   intakes: z.array(z.string()).optional().default([]),
