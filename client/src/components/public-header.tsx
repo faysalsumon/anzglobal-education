@@ -142,7 +142,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   return (
     <header 
       className={cn(
-        "sticky top-0 z-[9999] bg-background/95 backdrop-blur-md border-b border-border/40",
+        "sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/40",
         "transform transition-transform duration-300 ease-out",
         scrollDirection === "down" && !isAtTop ? "md:translate-y-0 -translate-y-full" : "translate-y-0"
       )}
