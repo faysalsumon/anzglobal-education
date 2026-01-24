@@ -12,7 +12,8 @@ import {
   MapPin, Clock, DollarSign, Calendar, GraduationCap, ArrowLeft, 
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
-  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus
+  Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
+  Share2, MoreHorizontal, MessageCircle
 } from "lucide-react";
 import type { Course, University, Application, Favorite } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -51,6 +52,7 @@ export default function PublicCourseDetail() {
   const courseId = params?.id;
   const [selectedCampusLocation, setSelectedCampusLocation] = useState<string | null>(null);
   const [selectedEntryCountry, setSelectedEntryCountry] = useState<string | null>(null);
+  const [mobileLeadFormOpen, setMobileLeadFormOpen] = useState(false);
   const { user, isStudent } = useAuth();
 
   const { data: course, isLoading } = useQuery<CourseWithUniversity>({
@@ -371,6 +373,59 @@ export default function PublicCourseDetail() {
                 {isFavorited ? "Saved" : "Save"}
               </Button>
             )}
+          </div>
+
+          {/* Mobile Quick Stats Strip - Horizontally scrollable on mobile only */}
+          <div className="md:hidden overflow-x-auto -mx-4 px-4 py-3" data-testid="container-mobile-quick-stats">
+            <div className="flex gap-3 min-w-max">
+              {course.duration && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-duration">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Duration</span>
+                    <span className="text-sm font-semibold">{course.duration}</span>
+                  </div>
+                </div>
+              )}
+              {course.fees && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-fees">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Tuition/Year</span>
+                    <span className="text-sm font-semibold">{course.currency} {Number(course.fees).toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+              {course.deliveryMode && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-mode">
+                  <MonitorPlay className="h-4 w-4 text-accent" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Mode</span>
+                    <span className="text-sm font-semibold">
+                      {course.deliveryMode === "online" ? "Online" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid"}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {course.startDate && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-start-date">
+                  <Calendar className="h-4 w-4 text-secondary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Next Intake</span>
+                    <span className="text-sm font-semibold">{course.startDate}</span>
+                  </div>
+                </div>
+              )}
+              {(course.location || course.country) && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-location">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Location</span>
+                    <span className="text-sm font-semibold">{course.location || course.country}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1582,6 +1637,98 @@ export default function PublicCourseDetail() {
         isOpen={!!selectedCampusLocation}
         onClose={() => setSelectedCampusLocation(null)}
       />
+
+      {/* Mobile Sticky Bottom CTA Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50 safe-area-bottom" data-testid="mobile-sticky-cta">
+        <div className="flex items-center justify-between gap-2 p-3">
+          {/* Save/Favorite Button */}
+          {isStudent ? (
+            <Button
+              variant={isFavorited ? "destructive" : "outline"}
+              onClick={handleFavoriteToggle}
+              disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+              className={`flex-1 ${!isFavorited ? "text-destructive border-destructive" : ""}`}
+              data-testid="mobile-button-favorite"
+            >
+              <Heart className={`h-4 w-4 mr-1.5 ${isFavorited ? "fill-current" : ""}`} />
+              {isFavorited ? "Saved" : "Save"}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = "/auth"}
+              className="flex-1 text-destructive border-destructive"
+              data-testid="mobile-button-save-login"
+            >
+              <Heart className="h-4 w-4 mr-1.5" />
+              Save
+            </Button>
+          )}
+
+          {/* Main CTA - Apply */}
+          {isStudent && existingApplication ? (
+            <Button
+              className="flex-[2]"
+              asChild
+              data-testid="mobile-button-view-application"
+            >
+              <Link href={`/student/applications/${existingApplication.application.id}`}>
+                <FileText className="h-4 w-4 mr-1.5" />
+                View Application
+              </Link>
+            </Button>
+          ) : user ? (
+            <Button
+              className="flex-[2]"
+              asChild
+              data-testid="mobile-button-apply"
+            >
+              <Link href={`/student/applications/new?courseId=${courseId}`}>
+                <ArrowUpRight className="h-4 w-4 mr-1.5" />
+                Apply Now
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              className="flex-[2]"
+              asChild
+              data-testid="mobile-button-login-apply"
+            >
+              <a href="/auth">
+                <LogIn className="h-4 w-4 mr-1.5" />
+                Login to Apply
+              </a>
+            </Button>
+          )}
+
+          {/* More Actions Button - Request Info */}
+          {course?.university && courseId && (
+            <>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setMobileLeadFormOpen(true)}
+                aria-label="Request more information"
+                data-testid="mobile-button-more"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+              <LeadFormDialog
+                courseId={course.id}
+                universityId={course.universityId}
+                courseName={course.title}
+                universityName={course.university.name}
+                trigger={false}
+                open={mobileLeadFormOpen}
+                onOpenChange={setMobileLeadFormOpen}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom padding spacer for mobile sticky bar - accounts for safe area */}
+      <div className="md:hidden h-24 pb-safe" aria-hidden="true" />
     </div>
   );
 }
