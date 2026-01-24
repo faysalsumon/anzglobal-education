@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -824,22 +824,45 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const currentCourseLevel = form.watch("level");
 
   // Entry requirement templates query (based on course level and institution country)
-  // Get country from first campus address
-  const institutionCountry = selectedInstitution?.campusAddresses?.[0]?.country;
+  // Get country from first campus address - normalize by trimming whitespace
+  const rawInstitutionCountry = selectedInstitution?.campusAddresses?.[0]?.country;
+  const institutionCountry = rawInstitutionCountry?.trim() || undefined;
   
-  // Auto-update framework when institution changes (only for new courses or if no framework set)
+  // Track last auto-applied institution+country combo to detect actual changes
+  const lastAutoAppliedRef = useRef<{ institutionId?: string; country?: string }>({});
+  // Track if user has manually changed the framework
+  const [frameworkManuallySet, setFrameworkManuallySet] = useState(false);
+  
+  // Auto-update framework when institution or its country changes (only for new courses)
   useEffect(() => {
-    if (institutionCountry && !course?.qualificationFramework) {
-      const defaultFramework = getDefaultFramework(institutionCountry);
-      const currentFramework = form.getValues("qualificationFramework");
-      // Only update if current framework is the generic default
-      if (currentFramework === "AQF" && defaultFramework !== "AQF") {
-        form.setValue("qualificationFramework", defaultFramework);
-        // Reset level when framework changes
-        form.setValue("level", "");
-      }
+    const currentInstitutionId = selectedInstitution?.id;
+    
+    // Only auto-update framework for new courses (not editing existing ones)
+    if (course?.id) return;
+    
+    // Check if institution has changed since last auto-apply
+    const hasInstitutionChanged = currentInstitutionId !== lastAutoAppliedRef.current.institutionId;
+    const hasCountryChanged = institutionCountry !== lastAutoAppliedRef.current.country;
+    
+    // Reset frameworkManuallySet when institution changes (allow new auto-selection)
+    if (hasInstitutionChanged && currentInstitutionId) {
+      setFrameworkManuallySet(false);
     }
-  }, [institutionCountry, course?.qualificationFramework, form]);
+    
+    // Skip auto-update if user has manually changed the framework for current institution
+    if (frameworkManuallySet) return;
+    
+    // Apply auto-update if we have a country and something has changed
+    if (institutionCountry && (hasInstitutionChanged || hasCountryChanged)) {
+      const defaultFramework = getDefaultFramework(institutionCountry);
+      form.setValue("qualificationFramework", defaultFramework);
+      // Reset level when framework changes
+      form.setValue("level", "");
+      
+      // Update tracking ref
+      lastAutoAppliedRef.current = { institutionId: currentInstitutionId, country: institutionCountry };
+    }
+  }, [selectedInstitution?.id, institutionCountry, course?.id, frameworkManuallySet, form]);
   const templateQueryUrl = currentCourseLevel && institutionCountry 
     ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(institutionCountry)}`
     : null;
@@ -1434,6 +1457,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   // Reset level when framework changes
                                   form.setValue("level", "");
                                   form.setValue("customLevel", "");
+                                  // Mark framework as manually set to prevent auto-updates
+                                  setFrameworkManuallySet(true);
                                 }} 
                                 value={field.value || "AQF"}
                               >
