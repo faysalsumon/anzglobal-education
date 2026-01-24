@@ -513,6 +513,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   }>>([]);
   const [isGeneratingAiReqs, setIsGeneratingAiReqs] = useState(false);
   
+  // Country filter for entry requirements
+  const [selectedCountryFilter, setSelectedCountryFilter] = useState<string>("all");
+  
   // Platform recommendations state
   const [platformRecommendations, setPlatformRecommendations] = useState<{
     entryRequirements: Array<{
@@ -2666,11 +2669,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
                     {/* Entry Requirements Section - Academic Qualifications */}
                     {selectedInstitutionId && currentCourseLevel && (
-                      <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
+                      <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <FormLabel className="flex items-center gap-2">
                             <FileCheck className="h-4 w-4" />
-                            Entry Requirements (Academic Qualifications)
+                            Academic Entry Requirements
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
@@ -2678,10 +2681,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                               <TooltipContent className="max-w-sm">
                                 <div className="space-y-2 text-sm">
                                   <p className="font-semibold">Country-Specific Qualifications</p>
-                                  <p>Select the academic qualifications accepted for entry. These are shown to international students grouped by their country.</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Tip: Use "AI Generate" to automatically add qualifications based on similar courses in the platform.
-                                  </p>
+                                  <p>Select the academic qualifications accepted for entry. Students will see requirements for their country.</p>
                                 </div>
                               </TooltipContent>
                             </Tooltip>
@@ -2689,7 +2689,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                           <div className="flex items-center gap-2">
                             {selectedEntryRequirements.length > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                {selectedEntryRequirements.length} requirements
+                                {selectedEntryRequirements.length} qualifications
                               </Badge>
                             )}
                             {course?.id && (
@@ -2719,12 +2719,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                             description: "Use AI Generate to create new requirements.",
                                           });
                                         }
-                                      } else {
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to fetch recommendations.",
-                                          variant: "destructive",
-                                        });
                                       }
                                     } catch (error) {
                                       console.error("Error fetching recommendations:", error);
@@ -2740,7 +2734,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   ) : (
                                     <Target className="h-4 w-4 mr-1" />
                                   )}
-                                  Get Recommendations
+                                  Recommendations
                                 </Button>
                                 <Button
                                   type="button"
@@ -2753,12 +2747,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   <Sparkles className="h-4 w-4 mr-1" />
                                   AI Generate
                                 </Button>
-                                {selectedEntryRequirements.length > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <Sparkles className="h-3 w-3 mr-1" />
-                                    Auto-equivalencies
-                                  </Badge>
-                                )}
                               </>
                             )}
                           </div>
@@ -2766,222 +2754,192 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         
                         {/* Loading state */}
                         {(templatesLoading || entryReqLoading) && (
-                          <p className="text-sm text-muted-foreground py-2">
-                            Loading requirements...
-                          </p>
+                          <p className="text-sm text-muted-foreground py-2">Loading qualifications...</p>
                         )}
 
-                        {/* Recommended Requirements from Templates */}
-                        {!templatesLoading && entryRequirementTemplates.length > 0 && (
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">
-                              Recommended Requirements (click to add/remove)
-                            </label>
-                            <div className={`flex flex-wrap gap-1.5 ${saveEntryRequirementsMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}>
-                              {entryRequirementTemplates.map((template) => {
-                                const isSelected = selectedEntryRequirements.some(
-                                  r => r.qualificationTypeId === template.qualificationTypeId
-                                );
-                                return (
-                                  <Badge
-                                    key={template.id}
-                                    variant={isSelected ? "default" : "outline"}
-                                    className="cursor-pointer"
-                                    onClick={() => handleEntryRequirementToggle(template)}
-                                    data-testid={`entry-req-template-${template.qualificationTypeId}`}
-                                  >
-                                    {template.displayLabel || `${template.qualification.name} (${template.qualification.country})`}
-                                    {template.minGrade && ` - Min: ${template.minGrade}`}
-                                    {isSelected && <Check className="h-3 w-3 ml-1" />}
-                                  </Badge>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {!templatesLoading && entryRequirementTemplates.length === 0 && institutionCountry && (
-                          <p className="text-sm text-muted-foreground py-2">
-                            No requirement templates configured for {currentCourseLevel} courses in {institutionCountry}. 
-                            Contact system admin to add templates.
-                          </p>
-                        )}
-
-                        {/* Platform Recommendations Display */}
-                        {platformRecommendations && platformRecommendations.entryRequirements && platformRecommendations.entryRequirements.length > 0 && (
-                          <div className="space-y-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <Target className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                                  Platform Recommendations
-                                </span>
+                        {/* Country Filter Tabs */}
+                        {!templatesLoading && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <label className="text-xs font-medium text-muted-foreground">Filter by country:</label>
+                              <div className="flex gap-1 flex-wrap">
+                                <Badge
+                                  variant={selectedCountryFilter === "all" ? "default" : "outline"}
+                                  className="cursor-pointer text-xs"
+                                  onClick={() => setSelectedCountryFilter("all")}
+                                  data-testid="country-filter-all"
+                                >
+                                  All Countries
+                                </Badge>
+                                {(() => {
+                                  const countries = Array.from(new Set(entryRequirementTemplates.map(t => t.qualification.country))).sort((a, b) => {
+                                    if (a === 'Australia') return -1;
+                                    if (b === 'Australia') return 1;
+                                    if (a === 'Bangladesh') return -1;
+                                    if (b === 'Bangladesh') return 1;
+                                    return a.localeCompare(b);
+                                  });
+                                  return countries.map(country => {
+                                    const countInCountry = entryRequirementTemplates.filter(t => t.qualification.country === country).length;
+                                    const selectedInCountry = selectedEntryRequirements.filter(r => {
+                                      const template = entryRequirementTemplates.find(t => t.qualificationTypeId === r.qualificationTypeId);
+                                      return template?.qualification?.country === country;
+                                    }).length;
+                                    return (
+                                      <Badge
+                                        key={country}
+                                        variant={selectedCountryFilter === country ? "default" : "outline"}
+                                        className="cursor-pointer text-xs"
+                                        onClick={() => setSelectedCountryFilter(country)}
+                                        data-testid={`country-filter-${country.toLowerCase().replace(/\s+/g, '-')}`}
+                                      >
+                                        {country}
+                                        {selectedInCountry > 0 && (
+                                          <span className="ml-1 bg-primary-foreground/20 px-1 rounded">{selectedInCountry}/{countInCountry}</span>
+                                        )}
+                                      </Badge>
+                                    );
+                                  });
+                                })()}
                               </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setPlatformRecommendations(null)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
                             </div>
-                            {recommendationsMessage && (
-                              <p className="text-xs text-green-700 dark:text-green-300">
-                                {recommendationsMessage}
+
+                            {/* Qualifications for Selected Country */}
+                            {entryRequirementTemplates.length > 0 && (
+                              <div className="rounded-md border overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-muted/50">
+                                      <TableHead className="w-10"></TableHead>
+                                      <TableHead>Qualification</TableHead>
+                                      <TableHead>Country</TableHead>
+                                      <TableHead className="w-32">Min Grade</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {entryRequirementTemplates
+                                      .filter(template => selectedCountryFilter === "all" || template.qualification.country === selectedCountryFilter)
+                                      .map((template) => {
+                                        const isSelected = selectedEntryRequirements.some(
+                                          r => r.qualificationTypeId === template.qualificationTypeId
+                                        );
+                                        const selectedReq = selectedEntryRequirements.find(
+                                          r => r.qualificationTypeId === template.qualificationTypeId
+                                        );
+                                        return (
+                                          <TableRow 
+                                            key={template.id}
+                                            className={isSelected ? "bg-primary/5" : ""}
+                                            data-testid={`entry-req-row-${template.qualificationTypeId}`}
+                                          >
+                                            <TableCell className="text-center">
+                                              <div
+                                                onClick={() => handleEntryRequirementToggle(template)}
+                                                className={`h-5 w-5 rounded border cursor-pointer flex items-center justify-center transition-colors mx-auto ${
+                                                  isSelected 
+                                                    ? 'bg-primary border-primary' 
+                                                    : 'border-muted-foreground/30 hover:border-primary/50'
+                                                }`}
+                                                data-testid={`entry-req-checkbox-${template.qualificationTypeId}`}
+                                              >
+                                                {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-medium text-sm">{template.qualification.name}</span>
+                                              {template.displayLabel && template.displayLabel !== template.qualification.name && (
+                                                <p className="text-xs text-muted-foreground">{template.displayLabel}</p>
+                                              )}
+                                            </TableCell>
+                                            <TableCell>
+                                              <Badge variant="outline" className="text-xs">{template.qualification.country}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                              {isSelected ? (
+                                                <Input
+                                                  type="text"
+                                                  placeholder={template.minGrade || "Min grade"}
+                                                  value={selectedReq?.minGrade || ""}
+                                                  onChange={(e) => handleUpdateEntryRequirementGrade(template.qualificationTypeId, e.target.value)}
+                                                  className="h-8 text-sm"
+                                                  disabled={saveEntryRequirementsMutation.isPending}
+                                                  data-testid={`entry-req-grade-${template.qualificationTypeId}`}
+                                                />
+                                              ) : (
+                                                <span className="text-xs text-muted-foreground">
+                                                  {template.minGrade || "-"}
+                                                </span>
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            )}
+
+                            {entryRequirementTemplates.length === 0 && institutionCountry && (
+                              <p className="text-sm text-muted-foreground py-2">
+                                No qualification templates configured for {currentCourseLevel} courses in {institutionCountry}.
                               </p>
                             )}
-                            <div className="space-y-2">
-                              {platformRecommendations.entryRequirements.map((rec) => {
-                                const isAlreadySelected = selectedEntryRequirements.some(
-                                  r => r.qualificationTypeId === rec.qualificationTypeId
-                                );
-                                return (
-                                  <div 
-                                    key={rec.qualificationTypeId}
-                                    className={`flex items-center justify-between gap-2 p-2 rounded-md border ${
-                                      isAlreadySelected 
-                                        ? "bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700" 
-                                        : "bg-white dark:bg-background border-green-200 dark:border-green-800"
-                                    }`}
+
+                            {/* Platform Recommendations Panel */}
+                            {platformRecommendations && platformRecommendations.entryRequirements && platformRecommendations.entryRequirements.length > 0 && (
+                              <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                      Based on Similar Courses
+                                    </span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setPlatformRecommendations(null)}
+                                    className="h-6 w-6 p-0"
+                                    data-testid="button-close-recommendations"
                                   >
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-medium">{rec.qualification.name}</span>
-                                        <Badge variant="outline" className="text-xs">{rec.qualification.country}</Badge>
-                                        <Badge 
-                                          variant={rec.confidence >= 70 ? "default" : "secondary"} 
-                                          className="text-xs"
-                                        >
-                                          {rec.confidence}% match
-                                        </Badge>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground mt-0.5">
-                                        Used in {rec.usedInCourses} of {rec.totalSimilarCourses} similar courses
-                                        {rec.suggestedMinGrade && ` • Suggested min: ${rec.suggestedMinGrade}`}
-                                      </p>
-                                    </div>
-                                    {!isAlreadySelected ? (
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                {recommendationsMessage && (
+                                  <p className="text-xs text-green-700 dark:text-green-300 mb-2">{recommendationsMessage}</p>
+                                )}
+                                <div className="flex flex-wrap gap-1">
+                                  {platformRecommendations.entryRequirements.map((rec) => {
+                                    const isAlreadySelected = selectedEntryRequirements.some(
+                                      r => r.qualificationTypeId === rec.qualificationTypeId
+                                    );
+                                    return (
+                                      <Badge
+                                        key={rec.qualificationTypeId}
+                                        variant={isAlreadySelected ? "secondary" : "outline"}
+                                        className={`cursor-pointer text-xs ${isAlreadySelected ? 'bg-green-100 dark:bg-green-900' : ''}`}
                                         onClick={() => {
-                                          // Add this recommendation to selected requirements
-                                          setSelectedEntryRequirements(prev => [
-                                            ...prev,
-                                            {
-                                              qualificationTypeId: rec.qualificationTypeId,
-                                              minGrade: rec.suggestedMinGrade || "",
-                                            }
-                                          ]);
+                                          if (!isAlreadySelected) {
+                                            setSelectedEntryRequirements(prev => [
+                                              ...prev,
+                                              {
+                                                qualificationTypeId: rec.qualificationTypeId,
+                                                minGrade: rec.suggestedMinGrade || "",
+                                              }
+                                            ]);
+                                          }
                                         }}
                                         data-testid={`add-recommendation-${rec.qualificationTypeId}`}
                                       >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Add
-                                      </Button>
-                                    ) : (
-                                      <Badge variant="secondary" className="text-xs">
-                                        <Check className="h-3 w-3 mr-1" />
-                                        Added
-                                      </Badge>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="default"
-                              className="w-full"
-                              onClick={() => {
-                                // Add all recommendations that aren't already selected
-                                const newReqs = platformRecommendations.entryRequirements
-                                  .filter(rec => !selectedEntryRequirements.some(r => r.qualificationTypeId === rec.qualificationTypeId))
-                                  .map(rec => ({
-                                    qualificationTypeId: rec.qualificationTypeId,
-                                    minGrade: rec.suggestedMinGrade || "",
-                                  }));
-                                setSelectedEntryRequirements(prev => [...prev, ...newReqs]);
-                                toast({
-                                  title: "Recommendations Applied",
-                                  description: `Added ${newReqs.length} entry requirements from platform recommendations.`,
-                                });
-                              }}
-                              data-testid="button-apply-all-entry-recommendations"
-                            >
-                              <Check className="h-4 w-4 mr-2" />
-                              Apply All Entry Requirements
-                            </Button>
-
-                            {/* English Requirements Recommendations */}
-                            {platformRecommendations.englishRequirements && platformRecommendations.englishRequirements.length > 0 && (
-                              <div className="mt-4 pt-3 border-t border-green-200 dark:border-green-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Languages className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                  <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                                    English Test Recommendations
-                                  </span>
-                                </div>
-                                <div className="space-y-2">
-                                  {platformRecommendations.englishRequirements.map((rec) => {
-                                    const isAlreadyAdded = englishRequirements.some(
-                                      r => r.testType === rec.testType
-                                    );
-                                    return (
-                                      <div 
-                                        key={rec.testType}
-                                        className={`flex items-center justify-between gap-2 p-2 rounded-md border ${
-                                          isAlreadyAdded 
-                                            ? "bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700" 
-                                            : "bg-white dark:bg-background border-green-200 dark:border-green-800"
-                                        }`}
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="text-sm font-medium">{rec.testType}</span>
-                                            <Badge 
-                                              variant={rec.confidence >= 70 ? "default" : "secondary"} 
-                                              className="text-xs"
-                                            >
-                                              {rec.confidence}% match
-                                            </Badge>
-                                          </div>
-                                          <p className="text-xs text-muted-foreground mt-0.5">
-                                            Used in {rec.usedInCourses} of {rec.totalSimilarCourses} similar courses
-                                            {rec.suggestedOverallScore && ` • Suggested overall: ${rec.suggestedOverallScore}`}
-                                          </p>
-                                        </div>
-                                        {!isAlreadyAdded ? (
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => {
-                                              batchCreateEnglishReqMutation.mutate([{
-                                                testType: rec.testType,
-                                                minOverallScore: rec.suggestedOverallScore || "",
-                                                minListeningScore: rec.suggestedListening || undefined,
-                                                minReadingScore: rec.suggestedReading || undefined,
-                                                minWritingScore: rec.suggestedWriting || undefined,
-                                                minSpeakingScore: rec.suggestedSpeaking || undefined,
-                                              }]);
-                                            }}
-                                            data-testid={`add-english-recommendation-${rec.testType}`}
-                                          >
-                                            <Plus className="h-3 w-3 mr-1" />
-                                            Add
-                                          </Button>
+                                        {rec.qualification.name} ({rec.qualification.country})
+                                        {rec.suggestedMinGrade && `: ${rec.suggestedMinGrade}`}
+                                        {isAlreadySelected ? (
+                                          <Check className="h-3 w-3 ml-1" />
                                         ) : (
-                                          <Badge variant="secondary" className="text-xs">
-                                            <Check className="h-3 w-3 mr-1" />
-                                            Added
-                                          </Badge>
+                                          <Plus className="h-3 w-3 ml-1" />
                                         )}
-                                      </div>
+                                      </Badge>
                                     );
                                   })}
                                 </div>
@@ -2989,85 +2947,79 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="w-full mt-2"
+                                  className="w-full mt-2 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
                                   onClick={() => {
-                                    const newReqs = platformRecommendations.englishRequirements
-                                      .filter(rec => !englishRequirements.some(r => r.testType === rec.testType))
+                                    const newReqs = platformRecommendations.entryRequirements
+                                      .filter(rec => !selectedEntryRequirements.some(r => r.qualificationTypeId === rec.qualificationTypeId))
                                       .map(rec => ({
-                                        testType: rec.testType,
-                                        minOverallScore: rec.suggestedOverallScore || "",
-                                        minListeningScore: rec.suggestedListening || undefined,
-                                        minReadingScore: rec.suggestedReading || undefined,
-                                        minWritingScore: rec.suggestedWriting || undefined,
-                                        minSpeakingScore: rec.suggestedSpeaking || undefined,
+                                        qualificationTypeId: rec.qualificationTypeId,
+                                        minGrade: rec.suggestedMinGrade || "",
                                       }));
-                                    if (newReqs.length > 0) {
-                                      batchCreateEnglishReqMutation.mutate(newReqs);
-                                    }
+                                    setSelectedEntryRequirements(prev => [...prev, ...newReqs]);
+                                    toast({
+                                      title: "Recommendations Applied",
+                                      description: `Added ${newReqs.length} qualifications.`,
+                                    });
                                   }}
-                                  data-testid="button-apply-all-english-recommendations"
+                                  data-testid="button-apply-all-entry-recommendations"
                                 >
                                   <Check className="h-4 w-4 mr-2" />
-                                  Apply All English Requirements
+                                  Apply All ({platformRecommendations.entryRequirements.filter(
+                                    rec => !selectedEntryRequirements.some(r => r.qualificationTypeId === rec.qualificationTypeId)
+                                  ).length} remaining)
                                 </Button>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* Selected Requirements with Editable Grades */}
+                        {/* Summary of Selected Requirements */}
                         {selectedEntryRequirements.length > 0 && (
-                          <div className={`space-y-2 pt-2 border-t ${saveEntryRequirementsMutation.isPending ? 'opacity-50' : ''}`}>
-                            <label className="text-xs font-medium text-muted-foreground">
-                              Selected Entry Requirements
-                            </label>
-                            <div className="space-y-2">
+                          <div className="pt-3 border-t">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-xs font-medium text-muted-foreground">
+                                Selected: {selectedEntryRequirements.length} qualifications from {
+                                  Array.from(new Set(selectedEntryRequirements.map(r => {
+                                    const template = entryRequirementTemplates.find(t => t.qualificationTypeId === r.qualificationTypeId);
+                                    const existingReq = courseEntryRequirements.find(er => er.qualificationTypeId === r.qualificationTypeId);
+                                    return template?.qualification?.country || existingReq?.qualification?.country || 'Unknown';
+                                  }))).filter(c => c !== 'Unknown').length || 1
+                                } countries
+                              </label>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setSelectedEntryRequirements([])}
+                                className="text-xs h-6"
+                                data-testid="button-clear-all-entry-reqs"
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
                               {selectedEntryRequirements.map((req) => {
-                                const template = entryRequirementTemplates.find(
-                                  t => t.qualificationTypeId === req.qualificationTypeId
-                                );
-                                const existingReq = courseEntryRequirements.find(
-                                  r => r.qualificationTypeId === req.qualificationTypeId
-                                );
+                                const template = entryRequirementTemplates.find(t => t.qualificationTypeId === req.qualificationTypeId);
+                                const existingReq = courseEntryRequirements.find(r => r.qualificationTypeId === req.qualificationTypeId);
                                 const qualName = template?.qualification?.name || existingReq?.qualification?.name || 'Unknown';
                                 const qualCountry = template?.qualification?.country || existingReq?.qualification?.country || '';
-                                
                                 return (
-                                  <div 
+                                  <Badge
                                     key={req.qualificationTypeId}
-                                    className="flex items-center gap-2 p-2 rounded-md bg-muted/50"
-                                    data-testid={`selected-entry-req-${req.qualificationTypeId}`}
+                                    variant="secondary"
+                                    className="text-xs pr-1"
+                                    data-testid={`selected-entry-badge-${req.qualificationTypeId}`}
                                   >
-                                    <div className="flex-1 min-w-0">
-                                      <span className="text-sm font-medium">
-                                        {qualName}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground ml-2">
-                                        ({qualCountry})
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <Input
-                                        type="text"
-                                        placeholder="Min grade"
-                                        value={req.minGrade}
-                                        onChange={(e) => handleUpdateEntryRequirementGrade(req.qualificationTypeId, e.target.value)}
-                                        className="w-24 text-sm"
-                                        disabled={saveEntryRequirementsMutation.isPending}
-                                        data-testid={`entry-req-grade-${req.qualificationTypeId}`}
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleRemoveEntryRequirement(req.qualificationTypeId)}
-                                        disabled={saveEntryRequirementsMutation.isPending}
-                                        data-testid={`remove-entry-req-${req.qualificationTypeId}`}
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
+                                    {qualName} ({qualCountry})
+                                    {req.minGrade && `: ${req.minGrade}`}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveEntryRequirement(req.qualificationTypeId)}
+                                      className="ml-1 hover:bg-white/20 rounded-full p-0.5"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </Badge>
                                 );
                               })}
                             </div>
