@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen } from "lucide-react";
@@ -551,6 +552,41 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     careerPath?: string;
     studyAreas?: string[];
   } | null>(null);
+
+  // Pricing configuration state
+  const [pricingConfig, setPricingConfig] = useState<{
+    pricingModel: 'fixed' | 'dynamic';
+    enablePaymentOptions: boolean;
+    enableStudyModes: boolean;
+    enableLocationPricing: boolean;
+    installmentCount: number;
+    firstPaymentAmount: string;
+    installmentFee: string;
+    admissionFeeIncluded: string;
+  }>({
+    pricingModel: 'fixed',
+    enablePaymentOptions: false,
+    enableStudyModes: false,
+    enableLocationPricing: false,
+    installmentCount: 6,
+    firstPaymentAmount: '',
+    installmentFee: '0',
+    admissionFeeIncluded: '0',
+  });
+
+  // Pricing tiers state
+  const [pricingTiers, setPricingTiers] = useState<Array<{
+    id?: string;
+    paymentOption: 'upfront' | 'installment';
+    studyMode: 'all' | 'weekday' | 'weekend' | 'online' | 'evening' | 'full_time' | 'part_time';
+    locationType: 'all' | 'onshore' | 'offshore' | 'country';
+    country?: string;
+    isDefaultPrice: boolean;
+    amount: string;
+    currency: string;
+    label?: string;
+    description?: string;
+  }>>([]);
 
   const { data: selectedInstitution, isLoading: institutionDetailsLoading } = useQuery<Institution>({
     queryKey: ["/api/super-admin/institutions", selectedInstitutionId],
@@ -1631,10 +1667,10 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Duration & Fees</CardTitle>
-                    <CardDescription>Costs and time commitment</CardDescription>
+                    <CardTitle>Duration</CardTitle>
+                    <CardDescription>Course time commitment and study period</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
@@ -1677,17 +1713,26 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         )}
                       />
                     </div>
+                  </CardContent>
+                </Card>
 
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Fees & Pricing</CardTitle>
+                    <CardDescription>Course costs and pricing configuration</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="fees"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tuition Fees</FormLabel>
+                            <FormLabel>Base Tuition Fee</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" placeholder="30000" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-fees" />
                             </FormControl>
+                            <FormDescription>Default/base price for the course</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1723,14 +1768,339 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         name="applicationFees"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Application Fees</FormLabel>
+                            <FormLabel>Application Fee</FormLabel>
                             <FormControl>
                               <Input {...field} type="number" placeholder="100" onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : "")} data-testid="input-course-applicationFees" />
                             </FormControl>
+                            <FormDescription>One-time application processing fee</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                    </div>
+
+                    {/* Pricing Model Configuration */}
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-medium">Advanced Pricing</h4>
+                          <p className="text-xs text-muted-foreground">Enable dynamic pricing with multiple options</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">{pricingConfig.pricingModel === 'fixed' ? 'Fixed' : 'Dynamic'}</span>
+                          <Switch
+                            data-testid="switch-pricing-model"
+                            checked={pricingConfig.pricingModel === 'dynamic'}
+                            onCheckedChange={(checked) => {
+                              setPricingConfig(prev => ({
+                                ...prev,
+                                pricingModel: checked ? 'dynamic' : 'fixed'
+                              }));
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {pricingConfig.pricingModel === 'dynamic' && (
+                        <div className="space-y-4 pl-4 border-l-2 border-muted">
+                          {/* Pricing Dimension Toggles */}
+                          <div className="space-y-3">
+                            <h5 className="text-sm font-medium">Pricing Dimensions</h5>
+                            <p className="text-xs text-muted-foreground mb-2">Select which dimensions affect pricing</p>
+
+                            <div className="flex items-center justify-between py-2">
+                              <div>
+                                <span className="text-sm">Payment Options</span>
+                                <p className="text-xs text-muted-foreground">Upfront vs Installment pricing</p>
+                              </div>
+                              <Switch
+                                data-testid="switch-enable-payment-options"
+                                checked={pricingConfig.enablePaymentOptions}
+                                onCheckedChange={(checked) => {
+                                  setPricingConfig(prev => ({
+                                    ...prev,
+                                    enablePaymentOptions: checked
+                                  }));
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between py-2">
+                              <div>
+                                <span className="text-sm">Study Modes</span>
+                                <p className="text-xs text-muted-foreground">Weekday, Weekend, Online, etc.</p>
+                              </div>
+                              <Switch
+                                data-testid="switch-enable-study-modes"
+                                checked={pricingConfig.enableStudyModes}
+                                onCheckedChange={(checked) => {
+                                  setPricingConfig(prev => ({
+                                    ...prev,
+                                    enableStudyModes: checked
+                                  }));
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between py-2">
+                              <div>
+                                <span className="text-sm">Location-Based Pricing</span>
+                                <p className="text-xs text-muted-foreground">Onshore, Offshore, or Country-specific</p>
+                              </div>
+                              <Switch
+                                data-testid="switch-enable-location-pricing"
+                                checked={pricingConfig.enableLocationPricing}
+                                onCheckedChange={(checked) => {
+                                  setPricingConfig(prev => ({
+                                    ...prev,
+                                    enableLocationPricing: checked
+                                  }));
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Installment Configuration (shown when payment options enabled) */}
+                          {pricingConfig.enablePaymentOptions && (
+                            <div className="space-y-3 pt-3 border-t">
+                              <h5 className="text-sm font-medium">Installment Configuration</h5>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium">Number of Installments</label>
+                                  <Input
+                                    type="number"
+                                    value={pricingConfig.installmentCount}
+                                    onChange={(e) => setPricingConfig(prev => ({
+                                      ...prev,
+                                      installmentCount: parseInt(e.target.value) || 6
+                                    }))}
+                                    placeholder="6"
+                                    data-testid="input-installment-count"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium">First Payment Amount</label>
+                                  <Input
+                                    type="number"
+                                    value={pricingConfig.firstPaymentAmount}
+                                    onChange={(e) => setPricingConfig(prev => ({
+                                      ...prev,
+                                      firstPaymentAmount: e.target.value
+                                    }))}
+                                    placeholder="e.g., 2000"
+                                    data-testid="input-first-payment"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium">Per-Installment Fee</label>
+                                  <Input
+                                    type="number"
+                                    value={pricingConfig.installmentFee}
+                                    onChange={(e) => setPricingConfig(prev => ({
+                                      ...prev,
+                                      installmentFee: e.target.value
+                                    }))}
+                                    placeholder="e.g., 50"
+                                    data-testid="input-installment-fee"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">Admin fee per installment</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium">Admission Fee (in First Payment)</label>
+                                  <Input
+                                    type="number"
+                                    value={pricingConfig.admissionFeeIncluded}
+                                    onChange={(e) => setPricingConfig(prev => ({
+                                      ...prev,
+                                      admissionFeeIncluded: e.target.value
+                                    }))}
+                                    placeholder="e.g., 500"
+                                    data-testid="input-admission-fee"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">One-time fee included in first payment</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Pricing Tiers Table */}
+                          <div className="space-y-3 pt-3 border-t">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h5 className="text-sm font-medium">Pricing Tiers</h5>
+                                <p className="text-xs text-muted-foreground">Configure prices for each combination</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newTier = {
+                                    paymentOption: 'upfront' as const,
+                                    studyMode: 'all' as const,
+                                    locationType: 'all' as const,
+                                    isDefaultPrice: pricingTiers.length === 0,
+                                    amount: '',
+                                    currency: form.getValues('currency') || 'AUD',
+                                  };
+                                  setPricingTiers(prev => [...prev, newTier]);
+                                }}
+                                data-testid="button-add-pricing-tier"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Tier
+                              </Button>
+                            </div>
+
+                            {pricingTiers.length === 0 ? (
+                              <div className="p-4 border rounded-md bg-muted/30 text-center">
+                                <p className="text-sm text-muted-foreground">No pricing tiers configured</p>
+                                <p className="text-xs text-muted-foreground mt-1">Add tiers to define different prices based on your enabled dimensions</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {pricingTiers.map((tier, index) => (
+                                  <div key={index} className="p-3 border rounded-md space-y-3 bg-background">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        {tier.isDefaultPrice && (
+                                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                                        )}
+                                        <span className="text-sm font-medium">Tier {index + 1}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setPricingTiers(prev => prev.map((t, i) => ({
+                                              ...t,
+                                              isDefaultPrice: i === index
+                                            })));
+                                          }}
+                                          data-testid={`button-set-default-tier-${index}`}
+                                        >
+                                          <Star className={`h-4 w-4 ${tier.isDefaultPrice ? 'fill-primary text-primary' : ''}`} />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setPricingTiers(prev => prev.filter((_, i) => i !== index));
+                                          }}
+                                          data-testid={`button-delete-tier-${index}`}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                      {pricingConfig.enablePaymentOptions && (
+                                        <div>
+                                          <label className="text-xs text-muted-foreground">Payment</label>
+                                          <Select
+                                            value={tier.paymentOption}
+                                            onValueChange={(value: 'upfront' | 'installment') => {
+                                              setPricingTiers(prev => prev.map((t, i) => i === index ? { ...t, paymentOption: value } : t));
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-8" data-testid={`select-tier-payment-${index}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="upfront">Upfront</SelectItem>
+                                              <SelectItem value="installment">Installment</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+
+                                      {pricingConfig.enableStudyModes && (
+                                        <div>
+                                          <label className="text-xs text-muted-foreground">Study Mode</label>
+                                          <Select
+                                            value={tier.studyMode}
+                                            onValueChange={(value: typeof tier.studyMode) => {
+                                              setPricingTiers(prev => prev.map((t, i) => i === index ? { ...t, studyMode: value } : t));
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-8" data-testid={`select-tier-study-mode-${index}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="all">All Modes</SelectItem>
+                                              <SelectItem value="weekday">Weekday</SelectItem>
+                                              <SelectItem value="weekend">Weekend</SelectItem>
+                                              <SelectItem value="online">Online</SelectItem>
+                                              <SelectItem value="evening">Evening</SelectItem>
+                                              <SelectItem value="full_time">Full-Time</SelectItem>
+                                              <SelectItem value="part_time">Part-Time</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+
+                                      {pricingConfig.enableLocationPricing && (
+                                        <div>
+                                          <label className="text-xs text-muted-foreground">Location</label>
+                                          <Select
+                                            value={tier.locationType}
+                                            onValueChange={(value: typeof tier.locationType) => {
+                                              setPricingTiers(prev => prev.map((t, i) => i === index ? { ...t, locationType: value } : t));
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-8" data-testid={`select-tier-location-${index}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="all">All Locations</SelectItem>
+                                              <SelectItem value="onshore">Onshore</SelectItem>
+                                              <SelectItem value="offshore">Offshore</SelectItem>
+                                              <SelectItem value="country">Specific Country</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+
+                                      <div>
+                                        <label className="text-xs text-muted-foreground">Amount ({tier.currency})</label>
+                                        <Input
+                                          type="number"
+                                          className="h-8"
+                                          value={tier.amount}
+                                          onChange={(e) => {
+                                            setPricingTiers(prev => prev.map((t, i) => i === index ? { ...t, amount: e.target.value } : t));
+                                          }}
+                                          placeholder="Price"
+                                          data-testid={`input-tier-amount-${index}`}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {tier.locationType === 'country' && pricingConfig.enableLocationPricing && (
+                                      <div className="pt-2">
+                                        <label className="text-xs text-muted-foreground">Country</label>
+                                        <Input
+                                          className="h-8"
+                                          value={tier.country || ''}
+                                          onChange={(e) => {
+                                            setPricingTiers(prev => prev.map((t, i) => i === index ? { ...t, country: e.target.value } : t));
+                                          }}
+                                          placeholder="e.g., Bangladesh, India"
+                                          data-testid={`input-tier-country-${index}`}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
