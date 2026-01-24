@@ -1055,6 +1055,107 @@ export const courseEnglishRequirements = pgTable("course_english_requirements", 
 }));
 
 // ============================================
+// COURSE PRICING TIERS SYSTEM
+// Flexible pricing model supporting:
+// - Fixed pricing (single price for all)
+// - Dynamic pricing with dimensions:
+//   - Payment options (upfront vs installment)
+//   - Study modes (weekday, weekend, online, etc.)
+//   - Location-based (onshore, offshore, regional/country)
+// ============================================
+
+// Pricing model enum
+export const pricingModelEnum = pgEnum('pricing_model', [
+  'fixed',     // Single price for all students
+  'dynamic',   // Variable pricing based on dimensions
+]);
+
+// Payment option enum
+export const paymentOptionEnum = pgEnum('payment_option', [
+  'upfront',     // Full payment upfront (often discounted)
+  'installment', // Payment in installments (may include fees)
+]);
+
+// Study mode enum
+export const studyModeEnum = pgEnum('study_mode', [
+  'all',       // Applies to all study modes
+  'weekday',   // Weekday classes
+  'weekend',   // Weekend classes
+  'online',    // Online/distance learning
+  'evening',   // Evening classes
+  'full_time', // Full-time study
+  'part_time', // Part-time study
+]);
+
+// Location type enum for pricing
+export const pricingLocationTypeEnum = pgEnum('pricing_location_type', [
+  'all',       // Same price for all locations
+  'onshore',   // Students studying in-country
+  'offshore',  // Students studying from overseas
+  'country',   // Country-specific pricing
+]);
+
+// Course pricing configuration - stores the pricing model for each course
+export const coursePricingConfig = pgTable("course_pricing_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  pricingModel: pricingModelEnum("pricing_model").notNull().default('fixed'),
+  // Dimension toggles for dynamic pricing
+  enablePaymentOptions: boolean("enable_payment_options").default(false), // Upfront vs Installment
+  enableStudyModes: boolean("enable_study_modes").default(false),        // Weekday/Weekend/Online
+  enableLocationPricing: boolean("enable_location_pricing").default(false), // Onshore/Offshore/Regional
+  // Installment configuration (applies when enablePaymentOptions is true)
+  installmentCount: integer("installment_count").default(6),
+  firstPaymentAmount: decimal("first_payment_amount", { precision: 10, scale: 2 }),
+  installmentFee: decimal("installment_fee", { precision: 10, scale: 2 }).default("0"),
+  admissionFeeIncluded: decimal("admission_fee_included", { precision: 10, scale: 2 }).default("0"), // Fee included in first payment
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseIdx: index("course_pricing_config_course_idx").on(table.courseId),
+  // Unique constraint - one config per course
+  uniqueCourse: unique("course_pricing_config_unique_course").on(table.courseId),
+}));
+
+// Course pricing tiers - individual price entries
+export const coursePricingTiers = pgTable("course_pricing_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  // Pricing dimensions
+  paymentOption: paymentOptionEnum("payment_option").notNull().default('upfront'),
+  studyMode: studyModeEnum("study_mode").notNull().default('all'),
+  locationType: pricingLocationTypeEnum("location_type").notNull().default('all'),
+  country: varchar("country", { length: 100 }), // For country-specific pricing (when locationType = 'country')
+  isDefaultPrice: boolean("is_default_price").default(false), // Default price when no specific tier matches
+  // Pricing details
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("AUD"),
+  // Display info
+  label: text("label"), // Optional display label like "Weekday - Upfront"
+  description: text("description"), // Additional description
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseIdx: index("course_pricing_tiers_course_idx").on(table.courseId),
+  paymentIdx: index("course_pricing_tiers_payment_idx").on(table.paymentOption),
+  studyModeIdx: index("course_pricing_tiers_study_mode_idx").on(table.studyMode),
+  locationIdx: index("course_pricing_tiers_location_idx").on(table.locationType, table.country),
+  // Composite index for lookups
+  coursePaymentStudyLocationIdx: index("course_pricing_tiers_composite_idx").on(
+    table.courseId, table.paymentOption, table.studyMode, table.locationType, table.country
+  ),
+}));
+
+// Export insert and select types
+export const insertCoursePricingConfigSchema = createInsertSchema(coursePricingConfig).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCoursePricingConfig = z.infer<typeof insertCoursePricingConfigSchema>;
+export type CoursePricingConfig = typeof coursePricingConfig.$inferSelect;
+
+export const insertCoursePricingTierSchema = createInsertSchema(coursePricingTiers).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCoursePricingTier = z.infer<typeof insertCoursePricingTierSchema>;
+export type CoursePricingTier = typeof coursePricingTiers.$inferSelect;
+
+// ============================================
 // INSTITUTION SCHOLARSHIPS SYSTEM
 // Institution-wide scholarships that can be linked to courses
 // Similar pattern to campus locations
