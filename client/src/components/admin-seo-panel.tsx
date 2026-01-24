@@ -477,7 +477,7 @@ export function AdminSeoPanel() {
               <CardContent>
                 <div className="space-y-1">
                   <p className="text-blue-600 text-lg hover:underline cursor-pointer">{editingMetaTitle || 'No title'}</p>
-                  <p className="text-green-700 text-sm">anzglobaleducation.com › courses</p>
+                  <p className="text-green-700 text-sm">anzglobal.com.au › courses</p>
                   <p className="text-sm text-muted-foreground">{editingMetaDescription || 'No description'}</p>
                 </div>
               </CardContent>
