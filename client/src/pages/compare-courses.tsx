@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   X, DollarSign, Clock, MapPin, BookOpen, Award, Globe, GitCompare, 
   Search, Building2, GraduationCap, Mail, Plus, Heart, Check, 
@@ -406,15 +407,23 @@ export default function CompareCourses() {
                         availableCourses.map((course) => (
                           <div 
                             key={course.id}
-                            className="flex items-center justify-between p-3 rounded-lg border hover-elevate cursor-pointer"
+                            className="flex items-center gap-3 p-3 rounded-lg border hover-elevate cursor-pointer"
                             onClick={() => addCourse(course.id)}
                             data-testid={`course-option-${course.id}`}
                           >
+                            {/* Institution Avatar */}
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                              <AvatarImage src={course.university?.logo || ''} alt={course.university?.name || ''} />
+                              <AvatarFallback className="text-xs bg-primary/10">
+                                {course.university?.name?.slice(0, 2).toUpperCase() || 'UN'}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{course.title}</p>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {course.university?.name} • {course.level}
+                              <p className="font-medium truncate text-sm">{course.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {course.university?.name}
                               </p>
+                              <Badge variant="outline" className="text-xs mt-1">{course.level}</Badge>
                             </div>
                             <Button size="icon" variant="ghost">
                               <Plus className="h-4 w-4" />
@@ -431,32 +440,36 @@ export default function CompareCourses() {
 
           {/* Comparison Table */}
           <div className="overflow-x-auto rounded-xl border bg-card">
-            <table className="w-full border-collapse" data-testid="table-comparison">
+            <table 
+              className="w-full border-collapse" 
+              style={{ tableLayout: 'fixed', minWidth: courses.length <= 2 ? '100%' : `${160 + courses.length * 240}px` }}
+              data-testid="table-comparison"
+            >
+              <colgroup>
+                <col style={{ width: '160px' }} />
+                {courses.map((course) => (
+                  <col key={course.id} style={{ width: courses.length <= 2 ? `calc((100% - 160px) / ${courses.length})` : '240px' }} />
+                ))}
+              </colgroup>
               {/* Sticky Course Headers */}
               <thead>
                 <tr className="bg-muted/50">
-                  <th className="sticky left-0 z-10 bg-muted/50 p-4 text-left font-semibold border-r min-w-[180px]">
-                    <span className="text-muted-foreground">Attribute</span>
+                  <th className="sticky left-0 z-10 bg-muted/50 p-3 text-left font-semibold border-r">
+                    <span className="text-muted-foreground text-sm">Attribute</span>
                   </th>
                   {courses.map((course, index) => (
                     <th 
                       key={course.id} 
-                      className={`p-4 text-left min-w-[280px] ${index < courses.length - 1 ? 'border-r' : ''}`}
+                      className={`p-3 text-left align-top ${index < courses.length - 1 ? 'border-r' : ''}`}
                       style={{ backgroundColor: index % 2 === 0 ? 'hsl(var(--primary) / 0.05)' : 'hsl(var(--secondary) / 0.05)' }}
                     >
-                      <div className="space-y-3">
-                        {/* Course Title & Actions */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              <Badge className="bg-primary/10 text-primary text-xs">{course.level}</Badge>
-                              {course.discipline && <Badge variant="outline" className="text-xs">{course.discipline}</Badge>}
-                            </div>
-                            <h3 className="font-semibold text-base leading-tight line-clamp-2" data-testid={`course-title-${course.id}`}>
-                              {course.title}
-                            </h3>
+                      <div className="space-y-2">
+                        {/* Actions Row */}
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex flex-wrap gap-1">
+                            <Badge className="bg-primary/10 text-primary text-xs">{course.level}</Badge>
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
                             <Button
                               size="icon"
                               variant={favorites.includes(course.id) ? 'default' : 'ghost'}
@@ -477,13 +490,23 @@ export default function CompareCourses() {
                           </div>
                         </div>
                         
-                        {/* Institution Link */}
+                        {/* Course Title */}
+                        <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`course-title-${course.id}`}>
+                          {course.title}
+                        </h3>
+                        
+                        {/* Institution Link with Avatar */}
                         {course.university && (
                           <Link 
                             href={`/institutions/${course.universityId}`}
-                            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"
                           >
-                            <Building2 className="h-3.5 w-3.5" />
+                            <Avatar className="h-5 w-5 flex-shrink-0">
+                              <AvatarImage src={course.university.logo || ''} alt={course.university.name} />
+                              <AvatarFallback className="text-[8px] bg-primary/10">
+                                {course.university.name?.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                             <span className="truncate">{course.university.name}</span>
                           </Link>
                         )}
@@ -505,9 +528,9 @@ export default function CompareCourses() {
                       <tr className="bg-muted/30">
                         <td 
                           colSpan={courses.length + 1} 
-                          className="px-4 py-2 font-semibold text-sm"
+                          className="px-3 py-1.5 font-semibold text-xs"
                         >
-                          <div className="flex items-center gap-2 text-primary">
+                          <div className="flex items-center gap-1.5 text-primary">
                             {category.icon}
                             {category.label}
                           </div>
@@ -520,16 +543,16 @@ export default function CompareCourses() {
                           key={attr.key} 
                           className={`${attrIndex % 2 === 0 ? 'bg-background' : 'bg-muted/10'} hover:bg-muted/20 transition-colors`}
                         >
-                          <td className="sticky left-0 z-10 p-4 border-r font-medium text-sm bg-inherit">
-                            <div className="flex items-center gap-2">
+                          <td className="sticky left-0 z-10 px-3 py-2 border-r font-medium text-xs bg-inherit">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-muted-foreground">{attr.icon}</span>
-                              {attr.label}
+                              <span className="truncate">{attr.label}</span>
                             </div>
                           </td>
                           {courses.map((course, courseIndex) => (
                             <td 
                               key={course.id} 
-                              className={`p-4 text-sm ${courseIndex < courses.length - 1 ? 'border-r' : ''}`}
+                              className={`px-3 py-2 text-xs ${courseIndex < courses.length - 1 ? 'border-r' : ''}`}
                               data-testid={`cell-${attr.key}-${course.id}`}
                             >
                               {attr.getValue(course)}
@@ -543,24 +566,24 @@ export default function CompareCourses() {
                 
                 {/* Action Buttons Row */}
                 <tr className="bg-muted/30">
-                  <td className="sticky left-0 z-10 p-4 border-r bg-muted/30 font-medium text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      Actions
+                  <td className="sticky left-0 z-10 px-3 py-2 border-r bg-muted/30 font-medium text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Actions</span>
                     </div>
                   </td>
                   {courses.map((course, index) => (
-                    <td key={course.id} className={`p-4 ${index < courses.length - 1 ? 'border-r' : ''}`}>
-                      <div className="flex flex-col gap-2">
-                        <Button asChild size="sm" className="w-full">
+                    <td key={course.id} className={`px-3 py-2 ${index < courses.length - 1 ? 'border-r' : ''}`}>
+                      <div className="flex flex-col gap-1.5">
+                        <Button asChild size="sm" className="w-full text-xs">
                           <Link href={`/courses/${course.id}`} data-testid={`button-view-${course.id}`}>
-                            <GraduationCap className="mr-2 h-4 w-4" />
+                            <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
                             View Details
                           </Link>
                         </Button>
-                        <Button asChild variant="outline" size="sm" className="w-full">
+                        <Button asChild variant="outline" size="sm" className="w-full text-xs">
                           <Link href={`/courses/${course.id}#apply`} data-testid={`button-apply-${course.id}`}>
-                            <Mail className="mr-2 h-4 w-4" />
+                            <Mail className="mr-1.5 h-3.5 w-3.5" />
                             Request Info
                           </Link>
                         </Button>
