@@ -21,7 +21,22 @@ export interface ActivityMetadata {
 
 // Extract user info from authenticated request
 function getUserInfoFromRequest(req: Request) {
-  const user = req.user as any;
+  // Check Supabase auth first (new auth system)
+  const supabaseUser = (req as any).supabaseUser;
+  if (supabaseUser) {
+    const firstName = supabaseUser.firstName;
+    const lastName = supabaseUser.lastName;
+    return {
+      userId: supabaseUser.id || null,
+      userEmail: supabaseUser.email || "Unknown",
+      userName: firstName && lastName ? `${firstName} ${lastName}` : (firstName || supabaseUser.email || "Unknown User"),
+      userProfilePicture: supabaseUser.profileImageUrl || null,
+      userType: supabaseUser.userType || null,
+    };
+  }
+
+  // Fall back to legacy req.user (for backward compatibility)
+  const user = (req as any).user;
   
   if (!user) {
     return {
@@ -33,7 +48,7 @@ function getUserInfoFromRequest(req: Request) {
     };
   }
 
-  // Handle both OIDC and email/password authentication
+  // Handle legacy OIDC and email/password authentication
   const userId = user.id || user.claims?.sub;
   const email = user.email || user.claims?.email;
   const firstName = user.firstName || user.claims?.first_name;

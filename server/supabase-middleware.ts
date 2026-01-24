@@ -10,6 +10,7 @@ export interface SupabaseUser {
   userType?: string;
   role?: string;
   isActive?: boolean;
+  profileImageUrl?: string | null;
   authProvider: "supabase";
 }
 
@@ -80,6 +81,7 @@ export async function supabaseAuthMiddleware(
         userType,
         role,
         isActive: true,
+        profileImageUrl: metadata.avatar_url || null,
         authProvider: "supabase",
       };
     } else {
@@ -91,6 +93,7 @@ export async function supabaseAuthMiddleware(
         userType: dbUser.userType || undefined,
         role: dbUser.role || undefined,
         isActive: dbUser.isActive ?? true,
+        profileImageUrl: dbUser.profileImageUrl || null,
         authProvider: "supabase",
       };
     }
