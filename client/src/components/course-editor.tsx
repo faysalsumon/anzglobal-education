@@ -18,6 +18,10 @@ import {
   getDefaultFramework,
   type QualificationFramework 
 } from "@shared/qualification-frameworks";
+import { 
+  detectDisciplineRules, 
+  type DisciplineRule 
+} from "@shared/discipline-rules";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -1008,6 +1012,13 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const templateQueryUrl = currentCourseLevel && institutionCountry 
     ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(institutionCountry)}`
     : null;
+
+  // Detect discipline-specific regulatory requirements
+  const watchedTitle = form.watch("title");
+  const watchedDiscipline = form.watch("discipline");
+  const detectedDisciplineRules = useMemo(() => {
+    return detectDisciplineRules(watchedTitle || "", watchedDiscipline, institutionCountry);
+  }, [watchedTitle, watchedDiscipline, institutionCountry]);
 
   const { data: entryRequirementTemplates = [], isLoading: templatesLoading } = useQuery<Array<{
     id: string;
@@ -2503,6 +2514,156 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </FormItem>
                       )}
                     />
+                    {/* Discipline-Specific Regulatory Warnings */}
+                    {detectedDisciplineRules.length > 0 && (
+                      <div className="space-y-3">
+                        {detectedDisciplineRules.map((rule) => (
+                          <div 
+                            key={rule.id}
+                            className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                          >
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 space-y-3">
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-amber-900 dark:text-amber-100">
+                                      {rule.regulatoryBodyAbbr} Regulated Course
+                                    </span>
+                                    <Badge variant="outline" className="text-xs bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700">
+                                      {rule.name}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                                    {rule.description}
+                                  </p>
+                                </div>
+
+                                {rule.warnings.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100">Important:</p>
+                                    <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-0.5 list-disc list-inside">
+                                      {rule.warnings.map((warning, idx) => (
+                                        <li key={idx}>{warning}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {rule.qualificationRequirements && rule.qualificationRequirements.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100">Qualification Requirements:</p>
+                                    <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                                      {rule.qualificationRequirements.map((qr, idx) => (
+                                        <li key={idx} className="flex items-start gap-1">
+                                          <span className="text-amber-600 dark:text-amber-400">•</span>
+                                          <span>
+                                            {qr.description}
+                                            {qr.link && (
+                                              <a
+                                                href={qr.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="ml-1 text-amber-700 dark:text-amber-300 hover:underline inline-flex items-center gap-0.5"
+                                              >
+                                                <ExternalLink className="h-2.5 w-2.5" />
+                                              </a>
+                                            )}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {rule.englishRequirements && rule.englishRequirements.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                                      {rule.regulatoryBodyAbbr} English Requirements:
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {rule.englishRequirements.slice(0, 3).map((req, idx) => {
+                                        const allSame = req.minListening === req.minReading && 
+                                                       req.minReading === req.minWriting && 
+                                                       req.minWriting === req.minSpeaking;
+                                        return (
+                                          <Badge 
+                                            key={idx} 
+                                            variant="secondary" 
+                                            className="text-xs bg-amber-100 dark:bg-amber-900/50"
+                                          >
+                                            {req.testType}: {req.minOverall} overall
+                                            {allSame 
+                                              ? ` (min ${req.minListening} per band)` 
+                                              : ` (L${req.minListening}/R${req.minReading}/W${req.minWriting}/S${req.minSpeaking})`
+                                            }
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="mt-1"
+                                      onClick={() => {
+                                        const newReqs = rule.englishRequirements?.map(req => ({
+                                          testType: req.testType.includes("IELTS") ? "ielts" : 
+                                                   req.testType.includes("PTE") ? "pte" :
+                                                   req.testType.includes("TOEFL") ? "toefl" :
+                                                   req.testType.includes("OET") ? "oet" : "ielts",
+                                          minOverallScore: req.minOverall,
+                                          minListeningScore: req.minListening,
+                                          minReadingScore: req.minReading,
+                                          minWritingScore: req.minWriting,
+                                          minSpeakingScore: req.minSpeaking,
+                                          notes: req.notes,
+                                        })) || [];
+                                        
+                                        const uniqueReqs = newReqs.filter(nr => 
+                                          !englishRequirements.some(er => er.testType === nr.testType)
+                                        );
+                                        
+                                        if (uniqueReqs.length > 0) {
+                                          batchCreateEnglishReqMutation.mutate(uniqueReqs);
+                                        } else {
+                                          toast({
+                                            title: "Already Added",
+                                            description: "These English requirements are already configured.",
+                                          });
+                                        }
+                                      }}
+                                      data-testid={`apply-regulatory-english-${rule.id}`}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Apply {rule.regulatoryBodyAbbr} English Requirements
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {rule.links.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 pt-1">
+                                    {rule.links.map((link, idx) => (
+                                      <a
+                                        key={idx}
+                                        href={link.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1"
+                                      >
+                                        <ExternalLink className="h-3 w-3" />
+                                        {link.label}
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Entry Requirements Section - Academic Qualifications */}
                     {selectedInstitutionId && currentCourseLevel && (
                       <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
@@ -2800,17 +2961,14 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                             size="sm"
                                             variant="outline"
                                             onClick={() => {
-                                              setEnglishRequirements(prev => [
-                                                ...prev,
-                                                {
-                                                  testType: rec.testType,
-                                                  overallScore: rec.suggestedOverallScore || "",
-                                                  listening: rec.suggestedListening || "",
-                                                  reading: rec.suggestedReading || "",
-                                                  writing: rec.suggestedWriting || "",
-                                                  speaking: rec.suggestedSpeaking || "",
-                                                }
-                                              ]);
+                                              batchCreateEnglishReqMutation.mutate([{
+                                                testType: rec.testType,
+                                                minOverallScore: rec.suggestedOverallScore || "",
+                                                minListeningScore: rec.suggestedListening || undefined,
+                                                minReadingScore: rec.suggestedReading || undefined,
+                                                minWritingScore: rec.suggestedWriting || undefined,
+                                                minSpeakingScore: rec.suggestedSpeaking || undefined,
+                                              }]);
                                             }}
                                             data-testid={`add-english-recommendation-${rec.testType}`}
                                           >
@@ -2837,17 +2995,15 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                                       .filter(rec => !englishRequirements.some(r => r.testType === rec.testType))
                                       .map(rec => ({
                                         testType: rec.testType,
-                                        overallScore: rec.suggestedOverallScore || "",
-                                        listening: rec.suggestedListening || "",
-                                        reading: rec.suggestedReading || "",
-                                        writing: rec.suggestedWriting || "",
-                                        speaking: rec.suggestedSpeaking || "",
+                                        minOverallScore: rec.suggestedOverallScore || "",
+                                        minListeningScore: rec.suggestedListening || undefined,
+                                        minReadingScore: rec.suggestedReading || undefined,
+                                        minWritingScore: rec.suggestedWriting || undefined,
+                                        minSpeakingScore: rec.suggestedSpeaking || undefined,
                                       }));
-                                    setEnglishRequirements(prev => [...prev, ...newReqs]);
-                                    toast({
-                                      title: "English Requirements Applied",
-                                      description: `Added ${newReqs.length} English test requirements from platform recommendations.`,
-                                    });
+                                    if (newReqs.length > 0) {
+                                      batchCreateEnglishReqMutation.mutate(newReqs);
+                                    }
                                   }}
                                   data-testid="button-apply-all-english-recommendations"
                                 >
