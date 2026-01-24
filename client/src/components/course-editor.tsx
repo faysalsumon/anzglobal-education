@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages } from "lucide-react";
 import { 
   FRAMEWORK_CONFIGS, 
   ALL_FRAMEWORKS, 
@@ -508,6 +508,31 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     isSelected: boolean;
   }>>([]);
   const [isGeneratingAiReqs, setIsGeneratingAiReqs] = useState(false);
+  
+  // Platform recommendations state
+  const [platformRecommendations, setPlatformRecommendations] = useState<{
+    entryRequirements: Array<{
+      qualificationTypeId: string;
+      qualification: { id: string; name: string; country: string; };
+      suggestedMinGrade: string | null;
+      confidence: number;
+      usedInCourses: number;
+      totalSimilarCourses: number;
+    }>;
+    englishRequirements: Array<{
+      testType: string;
+      suggestedOverallScore: string | null;
+      suggestedListening: string | null;
+      suggestedReading: string | null;
+      suggestedWriting: string | null;
+      suggestedSpeaking: string | null;
+      confidence: number;
+      usedInCourses: number;
+      totalSimilarCourses: number;
+    }>;
+  } | null>(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationsMessage, setRecommendationsMessage] = useState<string>("");
   
   // AI Equivalencies are now automatically generated when entry requirements are saved
   // No manual dialog needed - fully automatic
@@ -2367,30 +2392,138 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Requirements</CardTitle>
-                    <CardDescription>Entry and eligibility requirements</CardDescription>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          Requirements
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-sm">
+                              <div className="space-y-2 text-sm">
+                                <p className="font-semibold">Entry Requirements Guide</p>
+                                <p>This section defines who can apply for this course. It's critical for international students to understand their eligibility.</p>
+                                <ul className="list-disc pl-4 space-y-1">
+                                  <li><strong>Prerequisites:</strong> Subject/skill requirements before enrollment</li>
+                                  <li><strong>Entry Requirements:</strong> Academic qualifications accepted (e.g., HSC, A-Levels)</li>
+                                  <li><strong>English Requirements:</strong> Language test scores (IELTS, PTE, etc.)</li>
+                                </ul>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </CardTitle>
+                        <CardDescription>Entry and eligibility requirements for this course</CardDescription>
+                      </div>
+                      {/* Requirements Completeness Indicator */}
+                      {(() => {
+                        const hasPrerequisites = !!form.watch("prerequisites");
+                        const hasEntryReqs = selectedEntryRequirements.length > 0;
+                        const hasEnglishReqs = englishRequirements.length > 0;
+                        const completedCount = [hasPrerequisites, hasEntryReqs, hasEnglishReqs].filter(Boolean).length;
+                        const isComplete = completedCount >= 2;
+                        
+                        return (
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant={isComplete ? "default" : "secondary"} className="text-xs">
+                              {completedCount}/3 sections
+                            </Badge>
+                            {!isComplete && (
+                              <span className="text-xs text-muted-foreground">
+                                {!hasEntryReqs && !hasEnglishReqs ? "Add entry & English requirements" : 
+                                 !hasEntryReqs ? "Add entry requirements" : 
+                                 !hasEnglishReqs ? "Add English requirements" : "Add prerequisites"}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-6">
+                    {/* Help Banner for Requirements Section */}
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm space-y-2">
+                          <p className="font-medium text-blue-900 dark:text-blue-200">Why Entry Requirements Matter</p>
+                          <p className="text-blue-800 dark:text-blue-300">
+                            Entry requirements help international students determine if they qualify for this course. 
+                            Similar courses (e.g., all Nursing programs) typically share similar requirements across institutions.
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Badge variant="outline" className="text-xs bg-white dark:bg-transparent">
+                              <GraduationCap className="h-3 w-3 mr-1" />
+                              Academic qualifications
+                            </Badge>
+                            <Badge variant="outline" className="text-xs bg-white dark:bg-transparent">
+                              <Globe className="h-3 w-3 mr-1" />
+                              English proficiency
+                            </Badge>
+                            <Badge variant="outline" className="text-xs bg-white dark:bg-transparent">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Prerequisites
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="prerequisites"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Prerequisites</FormLabel>
+                          <FormLabel className="flex items-center gap-2">
+                            Prerequisites
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-sm">
+                                  List any subjects, skills, or prior knowledge students need before enrolling. 
+                                  Examples: "Biology and Chemistry at Year 12 level", "Portfolio of creative work"
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="High school diploma or equivalent..." rows={3} data-testid="input-course-prerequisites" />
+                            <Textarea 
+                              {...field} 
+                              placeholder="e.g., High school diploma with Biology and Chemistry at Year 12 level, or equivalent foundation studies..." 
+                              rows={3} 
+                              data-testid="input-course-prerequisites" 
+                            />
                           </FormControl>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Describe subject requirements, prior study, or other prerequisites for enrollment
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     {/* Entry Requirements Section - Academic Qualifications */}
                     {selectedInstitutionId && currentCourseLevel && (
-                      <div className="space-y-3">
+                      <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <FormLabel className="flex items-center gap-2">
                             <FileCheck className="h-4 w-4" />
-                            Entry Requirements
+                            Entry Requirements (Academic Qualifications)
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm">
+                                <div className="space-y-2 text-sm">
+                                  <p className="font-semibold">Country-Specific Qualifications</p>
+                                  <p>Select the academic qualifications accepted for entry. These are shown to international students grouped by their country.</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Tip: Use "AI Generate" to automatically add qualifications based on similar courses in the platform.
+                                  </p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </FormLabel>
                           <div className="flex items-center gap-2">
                             {selectedEntryRequirements.length > 0 && (
@@ -2400,6 +2533,54 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             )}
                             {course?.id && (
                               <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    setIsLoadingRecommendations(true);
+                                    setPlatformRecommendations(null);
+                                    try {
+                                      const response = await apiRequest("POST", "/api/ai/recommend-entry-requirements", {
+                                        courseLevel: currentCourseLevel,
+                                        institutionCountry: institutionCountry,
+                                        courseName: form.getValues("title"),
+                                        discipline: form.getValues("discipline"),
+                                        excludeCourseId: course?.id,
+                                      });
+                                      if (response.ok) {
+                                        const data = await response.json();
+                                        setPlatformRecommendations(data.recommendations);
+                                        setRecommendationsMessage(data.message || "");
+                                        if (data.similarCoursesCount === 0) {
+                                          toast({
+                                            title: "No Similar Courses Found",
+                                            description: "Use AI Generate to create new requirements.",
+                                          });
+                                        }
+                                      } else {
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to fetch recommendations.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error("Error fetching recommendations:", error);
+                                    } finally {
+                                      setIsLoadingRecommendations(false);
+                                    }
+                                  }}
+                                  disabled={isLoadingRecommendations}
+                                  data-testid="button-get-recommendations"
+                                >
+                                  {isLoadingRecommendations ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-1" />
+                                  ) : (
+                                    <Target className="h-4 w-4 mr-1" />
+                                  )}
+                                  Get Recommendations
+                                </Button>
                                 <Button
                                   type="button"
                                   size="sm"
@@ -2463,6 +2644,219 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             No requirement templates configured for {currentCourseLevel} courses in {institutionCountry}. 
                             Contact system admin to add templates.
                           </p>
+                        )}
+
+                        {/* Platform Recommendations Display */}
+                        {platformRecommendations && platformRecommendations.entryRequirements && platformRecommendations.entryRequirements.length > 0 && (
+                          <div className="space-y-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Target className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                  Platform Recommendations
+                                </span>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setPlatformRecommendations(null)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {recommendationsMessage && (
+                              <p className="text-xs text-green-700 dark:text-green-300">
+                                {recommendationsMessage}
+                              </p>
+                            )}
+                            <div className="space-y-2">
+                              {platformRecommendations.entryRequirements.map((rec) => {
+                                const isAlreadySelected = selectedEntryRequirements.some(
+                                  r => r.qualificationTypeId === rec.qualificationTypeId
+                                );
+                                return (
+                                  <div 
+                                    key={rec.qualificationTypeId}
+                                    className={`flex items-center justify-between gap-2 p-2 rounded-md border ${
+                                      isAlreadySelected 
+                                        ? "bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700" 
+                                        : "bg-white dark:bg-background border-green-200 dark:border-green-800"
+                                    }`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm font-medium">{rec.qualification.name}</span>
+                                        <Badge variant="outline" className="text-xs">{rec.qualification.country}</Badge>
+                                        <Badge 
+                                          variant={rec.confidence >= 70 ? "default" : "secondary"} 
+                                          className="text-xs"
+                                        >
+                                          {rec.confidence}% match
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        Used in {rec.usedInCourses} of {rec.totalSimilarCourses} similar courses
+                                        {rec.suggestedMinGrade && ` • Suggested min: ${rec.suggestedMinGrade}`}
+                                      </p>
+                                    </div>
+                                    {!isAlreadySelected ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          // Add this recommendation to selected requirements
+                                          setSelectedEntryRequirements(prev => [
+                                            ...prev,
+                                            {
+                                              qualificationTypeId: rec.qualificationTypeId,
+                                              minGrade: rec.suggestedMinGrade || "",
+                                            }
+                                          ]);
+                                        }}
+                                        data-testid={`add-recommendation-${rec.qualificationTypeId}`}
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add
+                                      </Button>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Added
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="default"
+                              className="w-full"
+                              onClick={() => {
+                                // Add all recommendations that aren't already selected
+                                const newReqs = platformRecommendations.entryRequirements
+                                  .filter(rec => !selectedEntryRequirements.some(r => r.qualificationTypeId === rec.qualificationTypeId))
+                                  .map(rec => ({
+                                    qualificationTypeId: rec.qualificationTypeId,
+                                    minGrade: rec.suggestedMinGrade || "",
+                                  }));
+                                setSelectedEntryRequirements(prev => [...prev, ...newReqs]);
+                                toast({
+                                  title: "Recommendations Applied",
+                                  description: `Added ${newReqs.length} entry requirements from platform recommendations.`,
+                                });
+                              }}
+                              data-testid="button-apply-all-entry-recommendations"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Apply All Entry Requirements
+                            </Button>
+
+                            {/* English Requirements Recommendations */}
+                            {platformRecommendations.englishRequirements && platformRecommendations.englishRequirements.length > 0 && (
+                              <div className="mt-4 pt-3 border-t border-green-200 dark:border-green-800">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Languages className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                  <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                    English Test Recommendations
+                                  </span>
+                                </div>
+                                <div className="space-y-2">
+                                  {platformRecommendations.englishRequirements.map((rec) => {
+                                    const isAlreadyAdded = englishRequirements.some(
+                                      r => r.testType === rec.testType
+                                    );
+                                    return (
+                                      <div 
+                                        key={rec.testType}
+                                        className={`flex items-center justify-between gap-2 p-2 rounded-md border ${
+                                          isAlreadyAdded 
+                                            ? "bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700" 
+                                            : "bg-white dark:bg-background border-green-200 dark:border-green-800"
+                                        }`}
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm font-medium">{rec.testType}</span>
+                                            <Badge 
+                                              variant={rec.confidence >= 70 ? "default" : "secondary"} 
+                                              className="text-xs"
+                                            >
+                                              {rec.confidence}% match
+                                            </Badge>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mt-0.5">
+                                            Used in {rec.usedInCourses} of {rec.totalSimilarCourses} similar courses
+                                            {rec.suggestedOverallScore && ` • Suggested overall: ${rec.suggestedOverallScore}`}
+                                          </p>
+                                        </div>
+                                        {!isAlreadyAdded ? (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                              setEnglishRequirements(prev => [
+                                                ...prev,
+                                                {
+                                                  testType: rec.testType,
+                                                  overallScore: rec.suggestedOverallScore || "",
+                                                  listening: rec.suggestedListening || "",
+                                                  reading: rec.suggestedReading || "",
+                                                  writing: rec.suggestedWriting || "",
+                                                  speaking: rec.suggestedSpeaking || "",
+                                                }
+                                              ]);
+                                            }}
+                                            data-testid={`add-english-recommendation-${rec.testType}`}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Add
+                                          </Button>
+                                        ) : (
+                                          <Badge variant="secondary" className="text-xs">
+                                            <Check className="h-3 w-3 mr-1" />
+                                            Added
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full mt-2"
+                                  onClick={() => {
+                                    const newReqs = platformRecommendations.englishRequirements
+                                      .filter(rec => !englishRequirements.some(r => r.testType === rec.testType))
+                                      .map(rec => ({
+                                        testType: rec.testType,
+                                        overallScore: rec.suggestedOverallScore || "",
+                                        listening: rec.suggestedListening || "",
+                                        reading: rec.suggestedReading || "",
+                                        writing: rec.suggestedWriting || "",
+                                        speaking: rec.suggestedSpeaking || "",
+                                      }));
+                                    setEnglishRequirements(prev => [...prev, ...newReqs]);
+                                    toast({
+                                      title: "English Requirements Applied",
+                                      description: `Added ${newReqs.length} English test requirements from platform recommendations.`,
+                                    });
+                                  }}
+                                  data-testid="button-apply-all-english-recommendations"
+                                >
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Apply All English Requirements
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         )}
 
                         {/* Selected Requirements with Editable Grades */}
@@ -2540,9 +2934,29 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     )}
 
                     {/* Structured English Requirements Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <FormLabel>English Language Requirements</FormLabel>
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <FormLabel className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          English Language Requirements
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <div className="space-y-2 text-sm">
+                                <p className="font-semibold">English Proficiency Tests</p>
+                                <p>Define the minimum scores required for each test type. Include band scores (Listening, Reading, Writing, Speaking) where applicable.</p>
+                                <div className="text-xs text-muted-foreground space-y-1 pt-1">
+                                  <p><strong>Common requirements:</strong></p>
+                                  <p>• Nursing: IELTS 7.0 (NMBA regulated)</p>
+                                  <p>• Engineering: IELTS 6.0-6.5</p>
+                                  <p>• Masters: IELTS 6.5 typically</p>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </FormLabel>
                         {course?.id && (
                           <div className="flex items-center gap-2">
                             <Button
@@ -2573,15 +2987,22 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       </div>
                       
                       {!course?.id && (
-                        <p className="text-sm text-muted-foreground">
-                          Save the course first to add structured English requirements.
-                        </p>
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                          <p className="text-sm text-amber-800 dark:text-amber-300">
+                            Save the course first to add English language requirements.
+                          </p>
+                        </div>
                       )}
                       
                       {course?.id && englishRequirements.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          No English requirements added yet. Click "Generate All Tests" to quickly add all test types with equivalent scores, or "Add Test" to add individual tests.
-                        </p>
+                        <div className="p-4 border-2 border-dashed rounded-lg text-center">
+                          <Globe className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium">No English requirements added yet</p>
+                          <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                            Click "Generate All Tests" to automatically add IELTS, PTE, TOEFL, and Duolingo with equivalent scores based on your course level, or "Add Test" to add individual tests manually.
+                          </p>
+                        </div>
                       )}
                       
                       {course?.id && englishRequirements.length > 0 && (

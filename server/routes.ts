@@ -94,7 +94,7 @@ import {
   coursePricingConfig,
   coursePricingTiers,
 } from "@shared/schema";
-import { eq, and, or, desc, not, inArray, sql as dsql, isNull } from "drizzle-orm";
+import { eq, and, or, desc, not, inArray, sql as dsql, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
@@ -6424,6 +6424,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to generate entry requirements. Please try again." });
     }
   });
+
+  // Platform-based entry requirements recommendations (pattern matching from similar courses)
+  const recommendEntryRequirementsSchema = z.object({
+    courseLevel: z.string().min(1, "Course level is required"),
+    institutionCountry: z.string().min(1, "Institution country is required"),
+    courseName: z.string().optional(),
+    discipline: z.string().optional(),
+    excludeCourseId: z.string().optional(),
+  });
+
+  app.post("/api/ai/recommend-entry-requirements", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      // Validate request body with Zod
+      const parseResult = recommendEntryRequirementsSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      const { courseLevel, institutionCountry, courseName, discipline, excludeCourseId } = parseResult.data;
+      
+      // Get all courses with entry requirements, then filter by similarity
+      const allCoursesWithReqs = await db.query.courses.findMany({
+        where: and(
+          eq(courses.level, courseLevel),
+          eq(courses.status, 'published'),
+          excludeCourseId ? ne(courses.id, excludeCourseId) : undefined
+        ),
+        with: {
+          university: true,
+        },
+        limit: 100,
+      });
+
+      // Filter by country matching
+      const similarCourses = allCoursesWithReqs.filter(course => {
+        // Check institution country
+        const instCountry = course.university?.country || '';
+        if (instCountry.toLowerCase() !== institutionCountry.toLowerCase()) {
+          return false;
+        }
+        
+        // Check discipline/name similarity
+        if (discipline) {
+          const courseNameLower = (course.name || '').toLowerCase();
+          const disciplineLower = discipline.toLowerCase();
+          // Check if course name contains discipline keywords
+          const keywords = disciplineLower.split(/\s+/).filter((w: string) => w.length > 3);
+          return keywords.some((kw: string) => courseNameLower.includes(kw));
+        }
+        
+        if (courseName) {
+          const courseNameLower = (course.name || '').toLowerCase();
+          const searchNameLower = courseName.toLowerCase();
+          // Extract key words from course name for matching
+          const keywords = searchNameLower.split(/\s+/).filter((w: string) => w.length > 3);
+          return keywords.some((kw: string) => courseNameLower.includes(kw));
+        }
+        
+        return true;
+      });
+
+      if (similarCourses.length === 0) {
+        return res.json({
+          recommendations: [],
+          similarCoursesCount: 0,
+          message: "No similar courses found in the platform. Use AI Generate for new requirements."
+        });
+      }
+
+      // Get entry requirements from similar courses
+      const courseIds = similarCourses.map(c => c.id);
+      const entryReqs = await db.query.courseEntryRequirements.findMany({
+        where: inArray(courseEntryRequirements.courseId, courseIds),
+        with: {
+          qualification: true,
+        },
+      });
+
+      // Get English requirements from similar courses
+      const englishReqs = await db.query.courseEnglishRequirements.findMany({
+        where: inArray(courseEnglishRequirements.courseId, courseIds),
+      });
+
+      // Aggregate entry requirements by qualification type with frequency count
+      const qualificationCounts: Record<string, {
+        qualificationTypeId: string;
+        qualification: any;
+        minGrades: string[];
+        count: number;
+        courses: string[];
+      }> = {};
+
+      for (const req of entryReqs) {
+        const key = req.qualificationTypeId;
+        if (!qualificationCounts[key]) {
+          qualificationCounts[key] = {
+            qualificationTypeId: key,
+            qualification: req.qualification,
+            minGrades: [],
+            count: 0,
+            courses: [],
+          };
+        }
+        qualificationCounts[key].count++;
+        if (req.minGrade) {
+          qualificationCounts[key].minGrades.push(req.minGrade);
+        }
+        qualificationCounts[key].courses.push(req.courseId);
+      }
+
+      // Convert to recommendations sorted by frequency
+      const entryRecommendations = Object.values(qualificationCounts)
+        .sort((a, b) => b.count - a.count)
+        .map(item => ({
+          qualificationTypeId: item.qualificationTypeId,
+          qualification: item.qualification,
+          suggestedMinGrade: item.minGrades.length > 0 
+            ? getMostCommonValue(item.minGrades) 
+            : null,
+          confidence: Math.min(100, Math.round((item.count / similarCourses.length) * 100)),
+          usedInCourses: item.count,
+          totalSimilarCourses: similarCourses.length,
+        }));
+
+      // Aggregate English requirements by test type with most common scores
+      const englishCounts: Record<string, {
+        testType: string;
+        overallScores: string[];
+        listeningScores: string[];
+        readingScores: string[];
+        writingScores: string[];
+        speakingScores: string[];
+        count: number;
+      }> = {};
+
+      for (const req of englishReqs) {
+        const key = req.testType;
+        if (!englishCounts[key]) {
+          englishCounts[key] = {
+            testType: key,
+            overallScores: [],
+            listeningScores: [],
+            readingScores: [],
+            writingScores: [],
+            speakingScores: [],
+            count: 0,
+          };
+        }
+        englishCounts[key].count++;
+        if (req.minOverallScore) {
+          englishCounts[key].overallScores.push(req.minOverallScore);
+        }
+        if (req.minListeningScore) {
+          englishCounts[key].listeningScores.push(req.minListeningScore);
+        }
+        if (req.minReadingScore) {
+          englishCounts[key].readingScores.push(req.minReadingScore);
+        }
+        if (req.minWritingScore) {
+          englishCounts[key].writingScores.push(req.minWritingScore);
+        }
+        if (req.minSpeakingScore) {
+          englishCounts[key].speakingScores.push(req.minSpeakingScore);
+        }
+      }
+
+      const englishRecommendations = Object.values(englishCounts)
+        .sort((a, b) => b.count - a.count)
+        .map(item => ({
+          testType: item.testType,
+          suggestedOverallScore: item.overallScores.length > 0 
+            ? getMostCommonValue(item.overallScores) 
+            : null,
+          suggestedListening: item.listeningScores.length > 0 
+            ? getMostCommonValue(item.listeningScores) 
+            : null,
+          suggestedReading: item.readingScores.length > 0 
+            ? getMostCommonValue(item.readingScores) 
+            : null,
+          suggestedWriting: item.writingScores.length > 0 
+            ? getMostCommonValue(item.writingScores) 
+            : null,
+          suggestedSpeaking: item.speakingScores.length > 0 
+            ? getMostCommonValue(item.speakingScores) 
+            : null,
+          confidence: Math.min(100, Math.round((item.count / similarCourses.length) * 100)),
+          usedInCourses: item.count,
+          totalSimilarCourses: similarCourses.length,
+        }));
+
+      res.json({
+        recommendations: {
+          entryRequirements: entryRecommendations,
+          englishRequirements: englishRecommendations,
+        },
+        similarCoursesCount: similarCourses.length,
+        similarCourseNames: similarCourses.slice(0, 5).map(c => c.name),
+        message: `Based on ${similarCourses.length} similar ${courseLevel} courses in ${institutionCountry}`
+      });
+    } catch (error: any) {
+      console.error("Error getting entry requirement recommendations:", error);
+      res.status(500).json({ message: "Failed to get recommendations. Please try again." });
+    }
+  });
+
+  // Helper function to get most common value from array
+  function getMostCommonValue(arr: string[]): string {
+    const counts: Record<string, number> = {};
+    let maxCount = 0;
+    let mostCommon = arr[0];
+    
+    for (const item of arr) {
+      counts[item] = (counts[item] || 0) + 1;
+      if (counts[item] > maxCount) {
+        maxCount = counts[item];
+        mostCommon = item;
+      }
+    }
+    
+    return mostCommon;
+  }
 
   // AI-powered qualification equivalency generation
   app.post("/api/ai/generate-equivalencies", isAuthenticated, async (req: any, res) => {

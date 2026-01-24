@@ -836,46 +836,87 @@ export default function PublicCourseDetail() {
 
                     {/* Eligibility Requirements Tab */}
                     <TabsContent value="eligibility" className="space-y-6">
-                      {/* AI-Generated Academic Entry Requirements */}
+                      {/* AI-Generated Academic Entry Requirements - Grouped by Country */}
                       {entryRequirements.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <GraduationCap className="h-4 w-4 text-primary" />
-                            <h4 className="font-semibold text-sm">Academic Qualifications Accepted</h4>
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="h-5 w-5 text-primary" />
+                            <h4 className="font-semibold">International Year 12 Equivalent Qualification Table</h4>
                           </div>
-                          <div className="grid gap-3">
-                            {entryRequirements.map((req) => (
-                              <div 
-                                key={req.id} 
-                                className="flex items-center justify-between p-4 rounded-lg border bg-muted/30"
-                                data-testid={`entry-req-${req.id}`}
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium" data-testid={`entry-req-name-${req.id}`}>
-                                      {req.qualification.name}
-                                    </span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {req.qualification.country}
-                                    </Badge>
-                                  </div>
-                                  {req.customNotes && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {req.customNotes}
-                                    </p>
-                                  )}
+                          <p className="text-sm text-muted-foreground">
+                            Please find below the qualifications we consider equivalent to Australian Year 12, and the minimum results required for admission to this course.
+                          </p>
+                          
+                          {/* Group requirements by country */}
+                          {(() => {
+                            const groupedByCountry = entryRequirements.reduce((acc, req) => {
+                              const country = req.qualification.country || 'Other';
+                              if (!acc[country]) acc[country] = [];
+                              acc[country].push(req);
+                              return acc;
+                            }, {} as Record<string, typeof entryRequirements>);
+                            
+                            return Object.entries(groupedByCountry).map(([country, reqs]) => (
+                              <div key={country} className="border rounded-lg overflow-hidden" data-testid={`entry-reqs-${country.toLowerCase().replace(/\s+/g, '-')}`}>
+                                <div className="bg-primary text-primary-foreground px-4 py-3 flex items-center gap-2">
+                                  <Globe className="h-4 w-4" />
+                                  <h5 className="font-semibold">{country}</h5>
+                                  <Badge variant="secondary" className="ml-auto text-xs">
+                                    {reqs.length} qualification{reqs.length !== 1 ? 's' : ''}
+                                  </Badge>
                                 </div>
-                                {req.minGrade && (
-                                  <div className="text-right">
-                                    <p className="text-xs text-muted-foreground">Minimum</p>
-                                    <p className="font-bold text-primary" data-testid={`entry-req-grade-${req.id}`}>
-                                      {req.minGrade}
-                                    </p>
-                                  </div>
-                                )}
+                                <table className="w-full">
+                                  <thead>
+                                    <tr className="border-b bg-muted/50">
+                                      <th className="p-3 text-left font-semibold text-sm">Qualifications</th>
+                                      <th className="p-3 text-left font-semibold text-sm">Standard Entry Requirements</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {reqs.map((req, idx) => (
+                                      <tr 
+                                        key={req.id} 
+                                        className={idx !== reqs.length - 1 ? "border-b" : ""}
+                                        data-testid={`entry-req-${req.id}`}
+                                      >
+                                        <td className="p-3 align-top">
+                                          <span className="font-medium text-sm" data-testid={`entry-req-name-${req.id}`}>
+                                            {req.qualification.name}
+                                          </span>
+                                        </td>
+                                        <td className="p-3 align-top">
+                                          <div className="space-y-1">
+                                            {req.minGrade && (
+                                              <div className="flex items-center gap-2">
+                                                <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                                <span className="text-sm" data-testid={`entry-req-grade-${req.id}`}>
+                                                  Minimum grade/score: <strong className="text-primary">{req.minGrade}</strong>
+                                                </span>
+                                              </div>
+                                            )}
+                                            {req.customNotes && (
+                                              <p className="text-sm text-muted-foreground pl-6">
+                                                {req.customNotes}
+                                              </p>
+                                            )}
+                                            {!req.minGrade && !req.customNotes && (
+                                              <span className="text-sm text-muted-foreground">
+                                                Successful completion required
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
-                            ))}
-                          </div>
+                            ));
+                          })()}
+                          
+                          <p className="text-xs text-muted-foreground italic">
+                            If you can't find your qualification in this list, please submit your application and our admissions team will assess your eligibility.
+                          </p>
                         </div>
                       )}
                       
