@@ -275,6 +275,32 @@ export default function PublicInstitutionDetail() {
     "foundingDate": institution.establishedYear ? `${institution.establishedYear}-01-01` : undefined
   };
 
+  // Create JSON-LD Breadcrumb structured data for rich snippets
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Institutions",
+        "item": `${siteUrl}/institutions`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": institution.name,
+        "item": institutionUrl
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -302,6 +328,9 @@ export default function PublicInstitutionDetail() {
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbData)}
         </script>
       </Helmet>
 

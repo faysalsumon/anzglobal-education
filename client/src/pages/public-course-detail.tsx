@@ -305,6 +305,32 @@ export default function PublicCourseDetail() {
     } : undefined
   };
 
+  // Create JSON-LD Breadcrumb structured data for rich snippets
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Courses",
+        "item": `${siteUrl}/courses`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": course.title,
+        "item": courseUrl
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -332,6 +358,9 @@ export default function PublicCourseDetail() {
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbData)}
         </script>
       </Helmet>
       {/* Course Section Navigation - Shows when scrolling past hero */}
