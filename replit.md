@@ -32,6 +32,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions across 13 categories.
 - **AI Qualification Equivalency System**: AI-powered academic qualification matching and cross-country equivalency generation with admin approval workflow.
 - **Multi-Country Qualification Framework System**: Comprehensive course level management supporting 8 international frameworks with country-based auto-suggestion.
+- **Flexible Pricing System**: Dynamic course pricing supporting fixed and tiered models with multiple dimensions (payment options, study modes, location-based pricing), installment configuration, and per-tier pricing management.
 
 ### Feature Specifications
 - **Institution Portal**: Course, application, and team management with AI-powered content generation and DALL-E integration.
