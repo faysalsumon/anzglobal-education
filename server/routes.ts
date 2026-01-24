@@ -68,6 +68,9 @@ import {
   updateSiteSettingSchema,
   insertContentSnippetSchema,
   updateContentSnippetSchema,
+  // SEO metadata
+  seoMetadata,
+  insertSeoMetadataSchema,
   // Tags imports (unified for courses and institutions)
   tags,
   courseTags,
@@ -12642,6 +12645,427 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
     } catch (error) {
       console.error("Error seeding blogs:", error);
       res.status(500).json({ message: "Failed to seed blogs", error: String(error) });
+    }
+  });
+
+  // ========================================
+  // ADMIN SEO METADATA MANAGEMENT ROUTES
+  // ========================================
+
+  // Get all SEO metadata entries
+  app.get("/api/admin/seo", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { entityType, status } = req.query;
+      
+      let query = db.select().from(seoMetadata);
+      
+      const conditions = [];
+      if (entityType && ['course', 'institution', 'blog'].includes(entityType as string)) {
+        conditions.push(eq(seoMetadata.entityType, entityType as 'course' | 'institution' | 'blog'));
+      }
+      if (status && ['pending', 'approved', 'rejected'].includes(status as string)) {
+        conditions.push(eq(seoMetadata.status, status as string));
+      }
+      
+      const results = conditions.length > 0 
+        ? await db.select().from(seoMetadata).where(and(...conditions)).orderBy(desc(seoMetadata.createdAt))
+        : await db.select().from(seoMetadata).orderBy(desc(seoMetadata.createdAt));
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching SEO metadata:", error);
+      res.status(500).json({ message: "Failed to fetch SEO metadata" });
+    }
+  });
+
+  // Get SEO metadata for a specific entity
+  app.get("/api/admin/seo/:entityType/:entityId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { entityType, entityId } = req.params;
+      
+      if (!['course', 'institution', 'blog'].includes(entityType)) {
+        return res.status(400).json({ message: "Invalid entity type" });
+      }
+
+      const result = await db.select().from(seoMetadata)
+        .where(and(
+          eq(seoMetadata.entityType, entityType as 'course' | 'institution' | 'blog'),
+          eq(seoMetadata.entityId, entityId)
+        ))
+        .limit(1);
+      
+      if (result.length === 0) {
+        return res.status(404).json({ message: "SEO metadata not found" });
+      }
+      
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching SEO metadata:", error);
+      res.status(500).json({ message: "Failed to fetch SEO metadata" });
+    }
+  });
+
+  // Create/Update SEO metadata
+  app.post("/api/admin/seo", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      // Validate request body using Zod schema
+      const seoCreateSchema = z.object({
+        entityType: z.enum(['course', 'institution', 'blog']),
+        entityId: z.string().min(1),
+        metaTitle: z.string().min(10).max(60),
+        metaDescription: z.string().min(50).max(160),
+        ogTitle: z.string().max(100).optional(),
+        ogDescription: z.string().optional(),
+        focusKeywords: z.array(z.string()).optional(),
+        isAiGenerated: z.boolean().optional(),
+        aiModel: z.string().optional(),
+        aiPrompt: z.string().optional(),
+      });
+
+      const parseResult = seoCreateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+
+      const { entityType, entityId, metaTitle, metaDescription, ogTitle, ogDescription, focusKeywords, isAiGenerated, aiModel, aiPrompt } = parseResult.data;
+
+      // Upsert - check if record exists
+      const existing = await db.select().from(seoMetadata)
+        .where(and(
+          eq(seoMetadata.entityType, entityType),
+          eq(seoMetadata.entityId, entityId)
+        ))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing
+        const updated = await db.update(seoMetadata)
+          .set({
+            metaTitle,
+            metaDescription,
+            ogTitle: ogTitle || metaTitle,
+            ogDescription: ogDescription || metaDescription,
+            focusKeywords: focusKeywords || [],
+            isAiGenerated: isAiGenerated || false,
+            aiModel: aiModel || null,
+            aiPrompt: aiPrompt || null,
+            generatedAt: isAiGenerated ? new Date() : null,
+            updatedById: userId,
+            updatedAt: new Date(),
+          })
+          .where(eq(seoMetadata.id, existing[0].id))
+          .returning();
+        
+        return res.json(updated[0]);
+      } else {
+        // Create new
+        const created = await db.insert(seoMetadata)
+          .values({
+            entityType,
+            entityId,
+            metaTitle,
+            metaDescription,
+            ogTitle: ogTitle || metaTitle,
+            ogDescription: ogDescription || metaDescription,
+            focusKeywords: focusKeywords || [],
+            isAiGenerated: isAiGenerated || false,
+            aiModel: aiModel || null,
+            aiPrompt: aiPrompt || null,
+            generatedAt: isAiGenerated ? new Date() : null,
+            status: 'pending',
+            createdById: userId,
+            updatedById: userId,
+          })
+          .returning();
+        
+        return res.status(201).json(created[0]);
+      }
+    } catch (error) {
+      console.error("Error saving SEO metadata:", error);
+      res.status(500).json({ message: "Failed to save SEO metadata" });
+    }
+  });
+
+  // Approve SEO metadata
+  app.post("/api/admin/seo/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const updated = await db.update(seoMetadata)
+        .set({
+          status: 'approved',
+          approvedBy: userId,
+          approvedAt: new Date(),
+          updatedById: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(seoMetadata.id, req.params.id))
+        .returning();
+      
+      if (updated.length === 0) {
+        return res.status(404).json({ message: "SEO metadata not found" });
+      }
+      
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error approving SEO metadata:", error);
+      res.status(500).json({ message: "Failed to approve SEO metadata" });
+    }
+  });
+
+  // Reject SEO metadata
+  app.post("/api/admin/seo/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const updated = await db.update(seoMetadata)
+        .set({
+          status: 'rejected',
+          updatedById: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(seoMetadata.id, req.params.id))
+        .returning();
+      
+      if (updated.length === 0) {
+        return res.status(404).json({ message: "SEO metadata not found" });
+      }
+      
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error rejecting SEO metadata:", error);
+      res.status(500).json({ message: "Failed to reject SEO metadata" });
+    }
+  });
+
+  // Delete SEO metadata
+  app.delete("/api/admin/seo/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      await db.delete(seoMetadata).where(eq(seoMetadata.id, req.params.id));
+      res.json({ message: "SEO metadata deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting SEO metadata:", error);
+      res.status(500).json({ message: "Failed to delete SEO metadata" });
+    }
+  });
+
+  // AI-powered SEO metadata generation
+  app.post("/api/admin/seo/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { entityType, entityId } = req.body;
+      
+      if (!entityType || !entityId) {
+        return res.status(400).json({ message: "Missing entityType or entityId" });
+      }
+
+      // Get entity details based on type
+      let entityData: any = null;
+      
+      if (entityType === 'course') {
+        const courseResult = await db.select().from(courses)
+          .leftJoin(universities, eq(courses.universityId, universities.id))
+          .where(eq(courses.id, entityId))
+          .limit(1);
+        
+        if (courseResult.length === 0) {
+          return res.status(404).json({ message: "Course not found" });
+        }
+        entityData = {
+          title: courseResult[0].courses.title,
+          description: courseResult[0].courses.description,
+          subject: courseResult[0].courses.subject,
+          level: courseResult[0].courses.level,
+          duration: courseResult[0].courses.duration,
+          country: courseResult[0].courses.country,
+          universityName: courseResult[0].universities?.name,
+        };
+      } else if (entityType === 'institution') {
+        const instResult = await db.select().from(universities)
+          .where(eq(universities.id, entityId))
+          .limit(1);
+        
+        if (instResult.length === 0) {
+          return res.status(404).json({ message: "Institution not found" });
+        }
+        entityData = {
+          name: instResult[0].name,
+          description: instResult[0].description,
+          country: instResult[0].country,
+          providerType: instResult[0].providerType,
+          establishedYear: instResult[0].establishedYear,
+        };
+      } else {
+        return res.status(400).json({ message: "Invalid entity type" });
+      }
+
+      // Generate SEO content using AI
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI();
+      
+      const systemPrompt = `You are an expert SEO copywriter for ANZ Global Education, an international education platform. 
+Generate optimized meta title and description for better search engine rankings and click-through rates.
+
+Rules:
+- Meta title: 50-60 characters, include primary keyword, brand name at end
+- Meta description: 150-160 characters, compelling, include call-to-action
+- Focus on international students studying in Australia
+- Use action words and benefits
+- Include relevant keywords naturally`;
+
+      const userPrompt = entityType === 'course' 
+        ? `Generate SEO metadata for this course:
+Title: ${entityData.title}
+Subject: ${entityData.subject}
+Level: ${entityData.level || 'Not specified'}
+Duration: ${entityData.duration || 'Not specified'}
+University: ${entityData.universityName || 'Not specified'}
+Country: ${entityData.country || 'Australia'}
+Description: ${entityData.description || 'No description available'}
+
+Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeywords": ["keyword1", "keyword2", "keyword3"]}`
+        : `Generate SEO metadata for this institution:
+Name: ${entityData.name}
+Type: ${entityData.providerType || 'University'}
+Country: ${entityData.country || 'Australia'}
+Established: ${entityData.establishedYear || 'Not specified'}
+Description: ${entityData.description || 'No description available'}
+
+Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeywords": ["keyword1", "keyword2", "keyword3"]}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const generatedContent = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      res.json({
+        entityType,
+        entityId,
+        metaTitle: generatedContent.metaTitle || '',
+        metaDescription: generatedContent.metaDescription || '',
+        focusKeywords: generatedContent.focusKeywords || [],
+        isAiGenerated: true,
+        aiModel: 'gpt-4o-mini',
+        aiPrompt: userPrompt,
+      });
+    } catch (error) {
+      console.error("Error generating SEO metadata:", error);
+      res.status(500).json({ message: "Failed to generate SEO metadata" });
+    }
+  });
+
+  // Bulk generate SEO for multiple entities
+  app.post("/api/admin/seo/bulk-generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Allow support_staff (includes marketing_executive) for SEO management
+      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
+      
+      if (!access) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { entityType, limit = 10 } = req.body;
+      
+      if (!entityType || !['course', 'institution'].includes(entityType)) {
+        return res.status(400).json({ message: "Invalid entity type" });
+      }
+
+      // Get entities that don't have SEO metadata yet
+      let entitiesWithoutSeo: string[] = [];
+      
+      if (entityType === 'course') {
+        const allCourses = await db.select({ id: courses.id }).from(courses)
+          .where(and(eq(courses.isActive, true), eq(courses.approvalStatus, 'approved')))
+          .limit(limit * 2);
+        
+        const existingSeo = await db.select({ entityId: seoMetadata.entityId }).from(seoMetadata)
+          .where(eq(seoMetadata.entityType, 'course'));
+        
+        const existingIds = new Set(existingSeo.map(s => s.entityId));
+        entitiesWithoutSeo = allCourses.filter(c => !existingIds.has(c.id)).map(c => c.id).slice(0, limit);
+      } else {
+        const allInsts = await db.select({ id: universities.id }).from(universities)
+          .where(eq(universities.isApproved, true))
+          .limit(limit * 2);
+        
+        const existingSeo = await db.select({ entityId: seoMetadata.entityId }).from(seoMetadata)
+          .where(eq(seoMetadata.entityType, 'institution'));
+        
+        const existingIds = new Set(existingSeo.map(s => s.entityId));
+        entitiesWithoutSeo = allInsts.filter(i => !existingIds.has(i.id)).map(i => i.id).slice(0, limit);
+      }
+
+      res.json({
+        entityType,
+        entitiesToProcess: entitiesWithoutSeo.length,
+        entityIds: entitiesWithoutSeo,
+        message: `Found ${entitiesWithoutSeo.length} ${entityType}s without SEO metadata`,
+      });
+    } catch (error) {
+      console.error("Error preparing bulk SEO generation:", error);
+      res.status(500).json({ message: "Failed to prepare bulk generation" });
     }
   });
 

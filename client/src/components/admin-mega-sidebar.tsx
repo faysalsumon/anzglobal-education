@@ -37,6 +37,7 @@ import {
   Bot,
   GraduationCap,
   FileCheck,
+  Search,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -113,6 +114,7 @@ export function AdminMegaSidebar({
         { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
+        { icon: Search, label: "SEO Management", value: "seo-metadata", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: Tag, label: "Tag Manager", value: "tags", show: hasFullAdminAccess || isMarketingExecutive },
       ],
     },

@@ -3756,6 +3756,58 @@ export const contentSnippets = pgTable("content_snippets", {
   pageIdx: index("content_snippets_page_idx").on(table.pageLocation),
 }));
 
+// SEO Metadata table - AI-generated SEO content for courses and institutions
+export const seoMetadataEntityTypeEnum = pgEnum("seo_metadata_entity_type", ["course", "institution", "blog"]);
+
+export const seoMetadata = pgTable("seo_metadata", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: seoMetadataEntityTypeEnum("entity_type").notNull(), // 'course', 'institution', 'blog'
+  entityId: varchar("entity_id", { length: 255 }).notNull(), // References the course/institution/blog ID
+  
+  // SEO fields
+  metaTitle: varchar("meta_title", { length: 60 }).notNull(), // Optimal 50-60 chars
+  metaDescription: text("meta_description").notNull(), // Optimal 150-160 chars
+  ogTitle: varchar("og_title", { length: 100 }), // Open Graph title
+  ogDescription: text("og_description"), // Open Graph description
+  ogImageUrl: text("og_image_url"), // Open Graph image
+  canonicalUrl: text("canonical_url"), // Canonical URL override
+  focusKeywords: text("focus_keywords").array(), // Target keywords
+  
+  // AI generation tracking
+  isAiGenerated: boolean("is_ai_generated").default(false),
+  aiModel: varchar("ai_model", { length: 100 }), // e.g., 'gpt-4o', 'gpt-4o-mini'
+  aiPrompt: text("ai_prompt"), // The prompt used for generation
+  generatedAt: timestamp("generated_at"),
+  
+  // Approval workflow
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'approved', 'rejected'
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: "set null" }),
+  approvedAt: timestamp("approved_at"),
+  
+  // Audit fields
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  updatedById: varchar("updated_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  entityTypeIdIdx: uniqueIndex("seo_metadata_entity_type_id_idx").on(table.entityType, table.entityId),
+  statusIdx: index("seo_metadata_status_idx").on(table.status),
+  focusKeywordsIdx: index("seo_metadata_focus_keywords_gin_idx").using("gin", table.focusKeywords),
+}));
+
+export const insertSeoMetadataSchema = createInsertSchema(seoMetadata).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  metaTitle: z.string().min(10).max(60),
+  metaDescription: z.string().min(50).max(160),
+  focusKeywords: z.array(z.string()).optional(),
+});
+
+export type SeoMetadata = typeof seoMetadata.$inferSelect;
+export type InsertSeoMetadata = z.infer<typeof insertSeoMetadataSchema>;
+
 // Insert schemas for CMS tables
 export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   id: true,

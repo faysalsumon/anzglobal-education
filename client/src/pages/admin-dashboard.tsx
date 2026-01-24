@@ -66,6 +66,7 @@ import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
 import { CrmLeadsPanel } from "@/components/crm-leads-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
+import { AdminSeoPanel } from "@/components/admin-seo-panel";
 import { AdminAffiliatesPanel } from "@/components/admin-affiliates-panel";
 import { AdminRegionsPanel } from "@/components/admin-regions-panel";
 import { AdminRoleManagementPanel } from "@/components/admin-role-management-panel";
@@ -483,6 +484,7 @@ export default function AdminDashboard() {
     'team': 'Team Invitations',
     'blogs': 'Blogs',
     'website-content': 'Website Content',
+    'seo-metadata': 'SEO Management',
     'regions': 'Regions',
     'branches': 'Branches',
     'affiliates': 'Affiliates',
@@ -3083,6 +3085,12 @@ export default function AdminDashboard() {
         {activeTab === "website-content" && (
           <div className="space-y-4">
             <AdminCmsPanel />
+          </div>
+        )}
+
+        {activeTab === "seo-metadata" && (hasFullAdminAccess || adminRole === "marketing_executive") && (
+          <div className="space-y-4">
+            <AdminSeoPanel />
           </div>
         )}
 

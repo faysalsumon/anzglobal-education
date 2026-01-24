@@ -50,6 +50,12 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval and AI-powered course detection.
 - **Activity Logging**: CRM-style audit trail tracking admin actions.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
+- **AI-Driven SEO Management**: Comprehensive SEO infrastructure with:
+  - BreadcrumbList JSON-LD structured data on course and institution detail pages for rich search snippets
+  - `seo_metadata` database table with entity type (course/institution/blog), meta fields, AI generation tracking, and approval workflow (pending/approved/rejected)
+  - Admin SEO Panel with AI-powered meta generation using GPT-4o-mini, Google search preview, and bulk generation capabilities
+  - All SEO routes authorized for marketing_executive role (via support_staff mapping)
+  - Zod validation on POST /api/admin/seo with meta title (10-60 chars), meta description (50-160 chars) constraints
 - **Workflows**: Institution/Course approval workflow; comprehensive 11-stage student application workflow with visual progress tracking and notifications.
 - **Draft/Publish Workflow**: Collaborative content creation for institutions and courses with content approval system.
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes (List/Kanban), drag-and-drop stage transitions, and bulk actions.
