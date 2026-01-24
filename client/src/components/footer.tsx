@@ -1,11 +1,36 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database } from "lucide-react";
+import { SiOpenai } from "react-icons/si";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+// AI Technology partners configuration
+const aiTechnologies = [
+  {
+    name: "OpenAI",
+    icon: SiOpenai,
+    description: "Advanced language models",
+  },
+  {
+    name: "Anthropic",
+    icon: Brain,
+    description: "Claude AI assistant",
+  },
+  {
+    name: "OpenRouter",
+    icon: Zap,
+    description: "Multi-model gateway",
+  },
+  {
+    name: "Pinecone",
+    icon: Database,
+    description: "Vector database",
+  },
+];
 
 // Footer configuration
 interface FooterLink {
@@ -166,6 +191,29 @@ export function Footer() {
               </a>
             </div>
           </div>
+          
+          {/* Powered by AI Section - Desktop */}
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                {aiTechnologies.map((tech) => (
+                  <div
+                    key={tech.name}
+                    className="flex items-center gap-2 text-muted-foreground/60"
+                    title={tech.description}
+                    data-testid={`ai-tech-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <tech.icon className="h-5 w-5" />
+                    <span className="text-sm font-medium">{tech.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -262,6 +310,29 @@ export function Footer() {
               >
                 <Twitter className="h-5 w-5" />
               </a>
+            </div>
+          </div>
+          
+          {/* Powered by AI Section - Mobile */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {aiTechnologies.map((tech) => (
+                  <div
+                    key={tech.name}
+                    className="flex items-center gap-2 text-muted-foreground/60"
+                    title={tech.description}
+                    data-testid={`ai-tech-mobile-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <tech.icon className="h-4 w-4" />
+                    <span className="text-xs font-medium">{tech.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
