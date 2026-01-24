@@ -98,6 +98,38 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-background" data-testid="footer">
+      {/* AI Technology Section - Dark Blue Banner at Top */}
+      <div className="bg-primary py-10 md:py-12" data-testid="ai-technology-section">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="flex flex-col items-center text-center gap-6">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-6 w-6 text-primary-foreground" />
+              <h3 className="text-xl md:text-2xl font-bold text-primary-foreground">
+                Built on World-Class AI Technology
+              </h3>
+            </div>
+            <p className="text-primary-foreground/80 text-sm md:text-base max-w-2xl">
+              Our platform leverages enterprise-grade artificial intelligence to deliver personalized recommendations and intelligent assistance
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 mt-2">
+              {aiTechnologies.map((tech) => (
+                <div
+                  key={tech.name}
+                  className="flex flex-col items-center gap-2"
+                  title={tech.description}
+                  data-testid={`ai-tech-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary-foreground/10 flex items-center justify-center">
+                    <tech.icon className="h-6 w-6 md:h-7 md:w-7 text-primary-foreground" />
+                  </div>
+                  <span className="text-sm font-medium text-primary-foreground">{tech.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Desktop Footer - Grid Layout */}
       <div className="hidden md:block">
         <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
@@ -189,29 +221,6 @@ export function Footer() {
               >
                 <Twitter className="h-5 w-5" />
               </a>
-            </div>
-          </div>
-          
-          {/* Powered by AI Section - Desktop */}
-          <div className="mt-8 pt-8 border-t border-border">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {aiTechnologies.map((tech) => (
-                  <div
-                    key={tech.name}
-                    className="flex items-center gap-2 text-muted-foreground/60"
-                    title={tech.description}
-                    data-testid={`ai-tech-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <tech.icon className="h-5 w-5" />
-                    <span className="text-sm font-medium">{tech.name}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -310,29 +319,6 @@ export function Footer() {
               >
                 <Twitter className="h-5 w-5" />
               </a>
-            </div>
-          </div>
-          
-          {/* Powered by AI Section - Mobile */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {aiTechnologies.map((tech) => (
-                  <div
-                    key={tech.name}
-                    className="flex items-center gap-2 text-muted-foreground/60"
-                    title={tech.description}
-                    data-testid={`ai-tech-mobile-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <tech.icon className="h-4 w-4" />
-                    <span className="text-xs font-medium">{tech.name}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
