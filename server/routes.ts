@@ -1540,6 +1540,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTags = Array.from(new Set(approvedInstitutions.flatMap(i => i.tags || []).filter(Boolean)));
       const allDisciplines = Array.from(new Set(approvedInstitutions.flatMap(i => i.topDisciplines || []).filter(Boolean)));
 
+      // Get structured tags assigned to institutions, grouped by category
+      const institutionIds = approvedInstitutions.map(i => i.id);
+      const institutionTagsData = await db
+        .select({
+          tagId: institutionTags.tagId,
+          tagName: tags.name,
+          category: tags.category,
+          color: tags.color,
+        })
+        .from(institutionTags)
+        .innerJoin(tags, eq(institutionTags.tagId, tags.id))
+        .where(inArray(institutionTags.institutionId, institutionIds));
+      
+      // Group tags by category with counts
+      const tagsByCategory: Record<string, Array<{ id: string; name: string; color: string | null; count: number }>> = {};
+      const tagCounts: Record<string, number> = {};
+      
+      for (const row of institutionTagsData) {
+        if (!tagsByCategory[row.category]) {
+          tagsByCategory[row.category] = [];
+        }
+        tagCounts[row.tagId] = (tagCounts[row.tagId] || 0) + 1;
+      }
+      
+      // Create unique tags per category with counts
+      const seenTags = new Set<string>();
+      for (const row of institutionTagsData) {
+        if (!seenTags.has(row.tagId)) {
+          seenTags.add(row.tagId);
+          if (!tagsByCategory[row.category]) {
+            tagsByCategory[row.category] = [];
+          }
+          tagsByCategory[row.category].push({
+            id: row.tagId,
+            name: row.tagName,
+            color: row.color,
+            count: tagCounts[row.tagId],
+          });
+        }
+      }
+      
+      // Sort tags by count within each category
+      for (const category of Object.keys(tagsByCategory)) {
+        tagsByCategory[category].sort((a, b) => b.count - a.count);
+      }
+
       // Extract states and cities from campusAddresses grouped by country
       type CampusAddr = { country?: string; state?: string; city?: string };
       const statesByCountrySet: Record<string, Set<string>> = {};
@@ -1599,6 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rankingBands: rankingBands.sort(),
         tags: allTags.sort(),
         disciplines: allDisciplines.sort(),
+        tagsByCategory,
         scholarshipRange: {
           min: scholarshipRanges.length > 0 ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
           max: scholarshipRanges.length > 0 ? Math.max(...scholarshipRanges.map(r => r.max || 0)) : 100,
@@ -1769,11 +1816,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Tags filter (array overlap)
+      // Tags filter (array overlap) - checks both legacy tags array and structured institution_tags
       if (filterTags) {
         const tagList = Array.isArray(filterTags) ? filterTags : [filterTags];
+        
+        // Get institution IDs that have any of the selected structured tags (by tag name)
+        const structuredTagMatches = await db
+          .select({ institutionId: institutionTags.institutionId })
+          .from(institutionTags)
+          .innerJoin(tags, eq(institutionTags.tagId, tags.id))
+          .where(inArray(tags.name, tagList));
+        const structuredTagInstitutionIds = new Set(structuredTagMatches.map(m => m.institutionId));
+        
         institutions = institutions.filter(i => 
-          i.tags && i.tags.some(tag => tagList.includes(tag as string))
+          // Check legacy tags array OR structured tags
+          (i.tags && i.tags.some(tag => tagList.includes(tag as string))) ||
+          structuredTagInstitutionIds.has(i.id)
         );
       }
 
