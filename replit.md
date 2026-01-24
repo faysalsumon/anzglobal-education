@@ -13,6 +13,12 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Branding**: Adherence to ANZ Global Education's brand identity with a specific color palette and typography.
 - **Accessibility**: WCAG AA standards, dual navigation, 3-column admin dashboard with dark mode.
 - **AI Chat Agent**: Floating human avatar ("Zan from ANZ Global Education") with a sales-focused personality, guiding users towards registration and course search, employing topic guardrails and a RAG-powered knowledge base.
+- **Mobile UI Patterns**: Modern mobile-first patterns including:
+  - **Sticky Bottom CTA Bar**: Always visible on mobile (z-50) with Save, Apply, and action buttons.
+  - **Mobile Bottom Tab Navigation**: Icon-only section navigation bar (z-40) above CTA bar with smooth scroll-to-section.
+  - **Collapsing Header**: Header hides on scroll down, reappears on scroll up using `useScrollDirection` hook.
+  - **Responsive Sections**: `ResponsiveSection` component shows Cards on desktop, collapsible Accordions on mobile.
+  - **Quick Stats Strip**: Horizontally scrollable key course stats visible at top on mobile.
 
 ### Technical Implementations
 - **Frontend**: React, TypeScript, Vite, Shadcn/ui, Radix UI, Tailwind CSS, Wouter, TanStack Query, React Hook Form, Zod.
