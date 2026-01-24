@@ -190,9 +190,16 @@ export default function CompareCourses() {
     },
     {
       key: 'location',
-      label: 'Location',
+      label: 'Campus Locations',
       icon: <MapPin className="h-4 w-4" />,
-      getValue: (course) => course.location || '—',
+      getValue: (course) => {
+        const locations = course.campusLocations || [];
+        if (locations.length === 0) return '—';
+        if (locations.length <= 2) {
+          return locations.join(', ');
+        }
+        return locations.slice(0, 2).join(', ') + ` +${locations.length - 2} more`;
+      },
       category: 'overview'
     },
     {
@@ -281,11 +288,11 @@ export default function CompareCourses() {
         const outcomes = course.careerOutcomes || [];
         if (outcomes.length === 0) return '—';
         return (
-          <div className="flex flex-wrap gap-1">
-            {outcomes.slice(0, 3).map((outcome, i) => (
-              <Badge key={i} variant="outline" className="text-xs">{outcome}</Badge>
+          <div className="flex flex-wrap gap-1 max-w-full overflow-hidden">
+            {outcomes.slice(0, 2).map((outcome, i) => (
+              <Badge key={i} variant="outline" className="text-xs whitespace-nowrap max-w-[120px] truncate">{outcome}</Badge>
             ))}
-            {outcomes.length > 3 && <span className="text-xs text-muted-foreground">+{outcomes.length - 3} more</span>}
+            {outcomes.length > 2 && <span className="text-xs text-muted-foreground whitespace-nowrap">+{outcomes.length - 2} more</span>}
           </div>
         );
       },
@@ -543,7 +550,7 @@ export default function CompareCourses() {
                           key={attr.key} 
                           className={`${attrIndex % 2 === 0 ? 'bg-background' : 'bg-muted/10'} hover:bg-muted/20 transition-colors`}
                         >
-                          <td className="sticky left-0 z-10 px-3 py-2 border-r font-medium text-xs bg-inherit">
+                          <td className="sticky left-0 z-10 px-3 py-2 border-r font-semibold text-xs bg-muted/50">
                             <div className="flex items-center gap-1.5">
                               <span className="text-muted-foreground">{attr.icon}</span>
                               <span className="truncate">{attr.label}</span>
