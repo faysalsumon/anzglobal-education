@@ -9,7 +9,7 @@ import {
   Search, MapPin, Home, Heart, Map as MapIcon, List, 
   Building2, GraduationCap, Award, BookOpen, Sparkles,
   ChevronDown, ChevronRight, RotateCcw, Filter, X, ArrowUpDown,
-  Globe, Navigation
+  Globe, Navigation, Tag
 } from "lucide-react";
 import { InstitutionMapSearch } from "@/components/institution-map-search";
 import type { InstitutionCampus } from "@/components/institution-map-search";
@@ -110,6 +110,13 @@ type University = {
   structuredTags?: StructuredTag[];
 };
 
+type TagInfo = {
+  id: string;
+  name: string;
+  color: string | null;
+  count: number;
+};
+
 type FilterMetadata = {
   countries: string[];
   statesByCountry: Record<string, string[]>;
@@ -122,6 +129,7 @@ type FilterMetadata = {
   rankingBands: string[];
   tags: string[];
   disciplines: string[];
+  tagsByCategory?: Record<string, TagInfo[]>;
   scholarshipRange: { min: number; max: number };
   tuitionRange: { min: number; max: number };
   totalCount: number;
@@ -150,6 +158,9 @@ export default function PublicInstitutions() {
     discipline: true,
     providerType: true,
     ranking: true,
+    tagType: true,
+    tagLocation: true,
+    tagSpecialization: true,
   });
   
   const { user, isAuthenticated, isStudent } = useAuth();
@@ -182,6 +193,9 @@ export default function PublicInstitutions() {
         discipline: true,
         providerType: true,
         ranking: true,
+        tagType: true,
+        tagLocation: true,
+        tagSpecialization: true,
       });
     }
   };
@@ -422,6 +436,7 @@ export default function PublicInstitutions() {
     filters.cities.length +
     filters.disciplines.length + 
     filters.providerTypes.length +
+    filters.tags.length +
     (filters.scholarshipMin !== undefined || filters.scholarshipMax !== undefined ? 1 : 0) +
     (searchInput ? 1 : 0);
 
@@ -720,6 +735,118 @@ export default function PublicInstitutions() {
                   data-testid={`checkbox-ranking-${band.toLowerCase().replace(/\s+/g, '-')}`}
                 />
                 <span className="text-sm">{band}</span>
+              </label>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Tag Filters by Category */}
+      {/* Type Tags (Public/Private) */}
+      {filterMetadata?.tagsByCategory?.type && filterMetadata.tagsByCategory.type.length > 0 && (
+        <Collapsible open={openSections.tagType} onOpenChange={(open) => toggleSection('tagType', open)}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+            <div className="flex items-center gap-2 font-medium text-sm">
+              <Tag className="h-4 w-4 text-primary" />
+              Ownership Type
+              {filters.tags.some(t => filterMetadata.tagsByCategory?.type?.some(tag => tag.name === t)) && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+            {openSections.tagType ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-1">
+            {filterMetadata.tagsByCategory.type.map((tag) => (
+              <label key={tag.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                <Checkbox
+                  checked={filters.tags.includes(tag.name)}
+                  onCheckedChange={() => toggleMultiSelect('tags', tag.name)}
+                  data-testid={`checkbox-tag-type-${tag.name.toLowerCase().replace(/\s+/g, '-')}`}
+                />
+                <span className="text-sm flex items-center gap-1.5">
+                  {tag.color && (
+                    <span 
+                      className="h-2 w-2 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: tag.color }} 
+                    />
+                  )}
+                  {tag.name}
+                  <span className="text-muted-foreground text-xs">({tag.count})</span>
+                </span>
+              </label>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Location Tags (Multi Campus, Regional Study) */}
+      {filterMetadata?.tagsByCategory?.location && filterMetadata.tagsByCategory.location.length > 0 && (
+        <Collapsible open={openSections.tagLocation} onOpenChange={(open) => toggleSection('tagLocation', open)}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+            <div className="flex items-center gap-2 font-medium text-sm">
+              <Tag className="h-4 w-4 text-primary" />
+              Campus Options
+              {filters.tags.some(t => filterMetadata.tagsByCategory?.location?.some(tag => tag.name === t)) && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+            {openSections.tagLocation ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-1">
+            {filterMetadata.tagsByCategory.location.map((tag) => (
+              <label key={tag.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                <Checkbox
+                  checked={filters.tags.includes(tag.name)}
+                  onCheckedChange={() => toggleMultiSelect('tags', tag.name)}
+                  data-testid={`checkbox-tag-location-${tag.name.toLowerCase().replace(/\s+/g, '-')}`}
+                />
+                <span className="text-sm flex items-center gap-1.5">
+                  {tag.color && (
+                    <span 
+                      className="h-2 w-2 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: tag.color }} 
+                    />
+                  )}
+                  {tag.name}
+                  <span className="text-muted-foreground text-xs">({tag.count})</span>
+                </span>
+              </label>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Specialization Tags (Professional Year) */}
+      {filterMetadata?.tagsByCategory?.specialization && filterMetadata.tagsByCategory.specialization.length > 0 && (
+        <Collapsible open={openSections.tagSpecialization} onOpenChange={(open) => toggleSection('tagSpecialization', open)}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
+            <div className="flex items-center gap-2 font-medium text-sm">
+              <Tag className="h-4 w-4 text-primary" />
+              Specializations
+              {filters.tags.some(t => filterMetadata.tagsByCategory?.specialization?.some(tag => tag.name === t)) && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+            {openSections.tagSpecialization ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2 space-y-1">
+            {filterMetadata.tagsByCategory.specialization.map((tag) => (
+              <label key={tag.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
+                <Checkbox
+                  checked={filters.tags.includes(tag.name)}
+                  onCheckedChange={() => toggleMultiSelect('tags', tag.name)}
+                  data-testid={`checkbox-tag-specialization-${tag.name.toLowerCase().replace(/\s+/g, '-')}`}
+                />
+                <span className="text-sm flex items-center gap-1.5">
+                  {tag.color && (
+                    <span 
+                      className="h-2 w-2 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: tag.color }} 
+                    />
+                  )}
+                  {tag.name}
+                  <span className="text-muted-foreground text-xs">({tag.count})</span>
+                </span>
               </label>
             ))}
           </CollapsibleContent>
