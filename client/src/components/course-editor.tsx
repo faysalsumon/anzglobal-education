@@ -620,6 +620,87 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     enabled: !!course?.id,
   });
 
+  // Pricing config query
+  const { data: fetchedPricingConfig } = useQuery<{
+    pricingModel: 'fixed' | 'dynamic';
+    enablePaymentOptions: boolean;
+    enableStudyModes: boolean;
+    enableLocationPricing: boolean;
+    installmentCount: number;
+    firstPaymentAmount: string | null;
+    installmentFee: string;
+    admissionFeeIncluded: string;
+  } | null>({
+    queryKey: ["/api/courses", course?.id, "pricing-config"],
+    enabled: !!course?.id,
+  });
+
+  // Pricing tiers query
+  const { data: fetchedPricingTiers = [] } = useQuery<Array<{
+    id: string;
+    paymentOption: 'upfront' | 'installment';
+    studyMode: 'all' | 'weekday' | 'weekend' | 'online' | 'evening' | 'full_time' | 'part_time';
+    locationType: 'all' | 'onshore' | 'offshore' | 'country';
+    country: string | null;
+    isDefaultPrice: boolean;
+    amount: string;
+    currency: string;
+    label: string | null;
+    description: string | null;
+  }>>({
+    queryKey: ["/api/courses", course?.id, "pricing-tiers"],
+    enabled: !!course?.id,
+  });
+
+  // Update local pricing state when data is fetched
+  useEffect(() => {
+    if (fetchedPricingConfig) {
+      setPricingConfig({
+        pricingModel: fetchedPricingConfig.pricingModel || 'fixed',
+        enablePaymentOptions: fetchedPricingConfig.enablePaymentOptions || false,
+        enableStudyModes: fetchedPricingConfig.enableStudyModes || false,
+        enableLocationPricing: fetchedPricingConfig.enableLocationPricing || false,
+        installmentCount: fetchedPricingConfig.installmentCount || 6,
+        firstPaymentAmount: fetchedPricingConfig.firstPaymentAmount || '',
+        installmentFee: fetchedPricingConfig.installmentFee || '0',
+        admissionFeeIncluded: fetchedPricingConfig.admissionFeeIncluded || '0',
+      });
+    }
+  }, [fetchedPricingConfig]);
+
+  useEffect(() => {
+    if (fetchedPricingTiers && fetchedPricingTiers.length > 0) {
+      setPricingTiers(fetchedPricingTiers.map(tier => ({
+        id: tier.id,
+        paymentOption: tier.paymentOption,
+        studyMode: tier.studyMode,
+        locationType: tier.locationType,
+        country: tier.country || undefined,
+        isDefaultPrice: tier.isDefaultPrice,
+        amount: tier.amount,
+        currency: tier.currency,
+        label: tier.label || undefined,
+        description: tier.description || undefined,
+      })));
+    }
+  }, [fetchedPricingTiers]);
+
+  // Pricing config mutation
+  const savePricingConfigMutation = useMutation({
+    mutationFn: async (data: { courseId: string; config: typeof pricingConfig; tiers: typeof pricingTiers }) => {
+      // Save config
+      await apiRequest("PUT", `/api/courses/${data.courseId}/pricing-config`, data.config);
+      // Save tiers
+      await apiRequest("POST", `/api/courses/${data.courseId}/pricing-tiers`, { tiers: data.tiers });
+    },
+    onSuccess: () => {
+      if (course?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "pricing-config"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "pricing-tiers"] });
+      }
+    },
+  });
+
   // English requirements mutations
   const createEnglishReqMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1011,6 +1092,12 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         await saveScholarshipsMutation.mutateAsync({ courseId: newCourse.id, scholarshipIds: selectedScholarshipIds });
         // Save entry requirements
         await saveEntryRequirementsMutation.mutateAsync({ courseId: newCourse.id, requirements: selectedEntryRequirements });
+        // Save pricing configuration
+        await savePricingConfigMutation.mutateAsync({ 
+          courseId: newCourse.id, 
+          config: pricingConfig, 
+          tiers: pricingTiers 
+        });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course created successfully" });
@@ -1032,9 +1119,17 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         await saveTagsMutation.mutateAsync({ courseId: result.id, tagIds: selectedTagIds });
         await saveScholarshipsMutation.mutateAsync({ courseId: result.id, scholarshipIds: selectedScholarshipIds });
         await saveEntryRequirementsMutation.mutateAsync({ courseId: result.id, requirements: selectedEntryRequirements });
+        // Save pricing configuration
+        await savePricingConfigMutation.mutateAsync({ 
+          courseId: result.id, 
+          config: pricingConfig, 
+          tiers: pricingTiers 
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "scholarships"] });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "entry-requirements"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "pricing-config"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "pricing-tiers"] });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course updated successfully" });

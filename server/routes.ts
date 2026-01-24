@@ -90,6 +90,9 @@ import {
   insertAcademicQualificationTypeSchema,
   insertCourseLevelRequirementTemplateSchema,
   insertCourseEntryRequirementSchema,
+  // Course pricing imports
+  coursePricingConfig,
+  coursePricingTiers,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -3675,6 +3678,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error batch creating English requirements:", error);
       res.status(400).json({ message: error.message || "Failed to create English requirements" });
+    }
+  });
+
+  // ============================================
+  // COURSE PRICING CONFIGURATION ROUTES
+  // ============================================
+
+  // Get pricing config for a course
+  app.get("/api/courses/:courseId/pricing-config", async (req, res) => {
+    try {
+      const config = await db.query.coursePricingConfig.findFirst({
+        where: eq(coursePricingConfig.courseId, req.params.courseId),
+      });
+      res.json(config || null);
+    } catch (error: any) {
+      console.error("Error fetching pricing config:", error);
+      res.status(500).json({ message: "Failed to fetch pricing configuration" });
+    }
+  });
+
+  // Create or update pricing config for a course
+  app.put("/api/courses/:courseId/pricing-config", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { pricingModel, enablePaymentOptions, enableStudyModes, enableLocationPricing, 
+              installmentCount, firstPaymentAmount, installmentFee, admissionFeeIncluded } = req.body;
+
+      // Check if config already exists
+      const existingConfig = await db.query.coursePricingConfig.findFirst({
+        where: eq(coursePricingConfig.courseId, req.params.courseId),
+      });
+
+      let result;
+      if (existingConfig) {
+        // Update existing
+        [result] = await db.update(coursePricingConfig)
+          .set({
+            pricingModel: pricingModel || 'fixed',
+            enablePaymentOptions: enablePaymentOptions ?? false,
+            enableStudyModes: enableStudyModes ?? false,
+            enableLocationPricing: enableLocationPricing ?? false,
+            installmentCount: installmentCount || 6,
+            firstPaymentAmount: firstPaymentAmount || null,
+            installmentFee: installmentFee || '0',
+            admissionFeeIncluded: admissionFeeIncluded || '0',
+            updatedAt: new Date(),
+          })
+          .where(eq(coursePricingConfig.id, existingConfig.id))
+          .returning();
+      } else {
+        // Create new
+        [result] = await db.insert(coursePricingConfig)
+          .values({
+            courseId: req.params.courseId,
+            pricingModel: pricingModel || 'fixed',
+            enablePaymentOptions: enablePaymentOptions ?? false,
+            enableStudyModes: enableStudyModes ?? false,
+            enableLocationPricing: enableLocationPricing ?? false,
+            installmentCount: installmentCount || 6,
+            firstPaymentAmount: firstPaymentAmount || null,
+            installmentFee: installmentFee || '0',
+            admissionFeeIncluded: admissionFeeIncluded || '0',
+          })
+          .returning();
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error saving pricing config:", error);
+      res.status(400).json({ message: error.message || "Failed to save pricing configuration" });
+    }
+  });
+
+  // Get pricing tiers for a course
+  app.get("/api/courses/:courseId/pricing-tiers", async (req, res) => {
+    try {
+      const tiers = await db.query.coursePricingTiers.findMany({
+        where: eq(coursePricingTiers.courseId, req.params.courseId),
+        orderBy: [coursePricingTiers.createdAt],
+      });
+      res.json(tiers);
+    } catch (error: any) {
+      console.error("Error fetching pricing tiers:", error);
+      res.status(500).json({ message: "Failed to fetch pricing tiers" });
+    }
+  });
+
+  // Bulk save pricing tiers (delete existing and insert new)
+  app.post("/api/courses/:courseId/pricing-tiers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { tiers } = req.body;
+      if (!Array.isArray(tiers)) {
+        return res.status(400).json({ message: "Tiers array is required" });
+      }
+
+      // Delete existing tiers for this course
+      await db.delete(coursePricingTiers)
+        .where(eq(coursePricingTiers.courseId, req.params.courseId));
+
+      // Insert new tiers if any
+      if (tiers.length > 0) {
+        const tiersToInsert = tiers.map(tier => ({
+          courseId: req.params.courseId,
+          paymentOption: tier.paymentOption || 'upfront',
+          studyMode: tier.studyMode || 'all',
+          locationType: tier.locationType || 'all',
+          country: tier.country || null,
+          isDefaultPrice: tier.isDefaultPrice ?? false,
+          amount: tier.amount?.toString() || '0',
+          currency: tier.currency || 'AUD',
+          label: tier.label || null,
+          description: tier.description || null,
+        }));
+
+        await db.insert(coursePricingTiers).values(tiersToInsert);
+      }
+
+      // Fetch and return the new tiers
+      const savedTiers = await db.query.coursePricingTiers.findMany({
+        where: eq(coursePricingTiers.courseId, req.params.courseId),
+        orderBy: [coursePricingTiers.createdAt],
+      });
+
+      res.json({ tiers: savedTiers, message: `Saved ${savedTiers.length} pricing tiers` });
+    } catch (error: any) {
+      console.error("Error saving pricing tiers:", error);
+      res.status(400).json({ message: error.message || "Failed to save pricing tiers" });
     }
   });
 
