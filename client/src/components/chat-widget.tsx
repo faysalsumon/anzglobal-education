@@ -195,7 +195,7 @@ export function ChatWidget() {
   if (!isOpen) {
     return (
       <div 
-        className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-40"
+        className="fixed bottom-36 right-3 md:bottom-8 md:right-4 z-40"
         data-testid="chat-widget-trigger"
         onMouseEnter={() => setIsCollapsed(false)}
         onMouseLeave={() => setIsCollapsed(true)}
@@ -268,7 +268,7 @@ export function ChatWidget() {
 
   // Chat window
   return (
-    <div className="fixed bottom-6 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
+    <div className="fixed bottom-36 right-3 md:bottom-8 md:right-4 z-50 flex flex-col bg-card border border-border rounded-xl shadow-2xl w-[calc(100vw-1.5rem)] max-w-[340px] md:max-w-[380px]"
       style={{ 
         height: isMinimized ? "60px" : "min(500px, calc(100vh - 120px))",
       }}
