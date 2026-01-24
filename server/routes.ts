@@ -2024,7 +2024,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       // Optional bounds filtering (for "update map as it moves")
-      const hasBounds = north && south && east && west;
+      // Only apply bounds filter when NO location filters (country/state/city) are set
+      // This prevents conflicts when user selects a state but map is zoomed elsewhere
+      const hasLocationFilters = countries || states || cities;
+      const hasBounds = north && south && east && west && !hasLocationFilters;
       const bounds = hasBounds ? {
         north: parseFloat(north as string),
         south: parseFloat(south as string),
@@ -2049,7 +2052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const lat = parseFloat(campus.latitude);
             const lng = parseFloat(campus.longitude);
 
-            // Apply bounds filter if provided
+            // Apply bounds filter if provided (only when no location filters)
             if (bounds) {
               if (lat < bounds.south || lat > bounds.north) continue;
               if (lng < bounds.west || lng > bounds.east) continue;

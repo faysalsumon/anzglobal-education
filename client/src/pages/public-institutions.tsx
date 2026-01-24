@@ -428,6 +428,10 @@ export default function PublicInstitutions() {
   const clearAllFilters = () => {
     clearFilters();
     setSearchInput("");
+    // Reset map bounds to trigger full data refetch
+    setMapBounds(null);
+    // Invalidate campus locations cache to force refetch
+    queryClient.invalidateQueries({ queryKey: ["/api/institutions/campus-locations"] });
   };
 
   // SEO data
