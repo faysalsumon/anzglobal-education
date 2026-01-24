@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLocation } from "wouter";
@@ -48,6 +49,7 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
   // Custom markdown components for CTA buttons
   const markdownComponents: Components = useMemo(() => ({
@@ -372,9 +374,12 @@ export function ChatWidget() {
                       )}
                     </div>
                     {msg.role === "user" && (
-                      <Avatar className="h-8 w-8 flex-shrink-0">
+                      <Avatar className="h-8 w-8 flex-shrink-0 border border-border">
+                        {isAuthenticated && user?.profileImageUrl && (
+                          <AvatarImage src={user.profileImageUrl} alt={user.firstName || "User"} />
+                        )}
                         <AvatarFallback className="bg-accent text-accent-foreground text-xs">
-                          U
+                          {isAuthenticated && user?.firstName ? user.firstName.charAt(0).toUpperCase() : "U"}
                         </AvatarFallback>
                       </Avatar>
                     )}
