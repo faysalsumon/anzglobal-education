@@ -17,10 +17,25 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Helper to get user ID from either auth system
+function getAuthenticatedUserId(req: Request): string | null {
+  const supabaseUser = (req as any).supabaseUser;
+  const legacyUser = (req as any).user;
+  return supabaseUser?.id || legacyUser?.id || null;
+}
+
+// Helper to get user's first name from either auth system
+function getAuthenticatedUserFirstName(req: Request): string | null {
+  const supabaseUser = (req as any).supabaseUser;
+  const legacyUser = (req as any).user;
+  return supabaseUser?.firstName || legacyUser?.firstName || legacyUser?.first_name || null;
+}
+
 // Helper to ensure anonymous users have a persisted session
 async function ensureAnonymousSession(req: Request): Promise<void> {
-  // Only needed for anonymous users
-  if (req.user) return;
+  // Only needed for anonymous users - check both auth systems
+  const userId = getAuthenticatedUserId(req);
+  if (userId) return;
   
   // Generate or retrieve stable anonymous identifier
   if (!req.session.chatAnonId) {
@@ -99,7 +114,7 @@ async function verifyConversationOwnership(
 ): Promise<void> {
   try {
     const { id } = req.params;
-    const userId = (req.user as any)?.id || null;
+    const userId = getAuthenticatedUserId(req);
     const sessionId = req.sessionID;
 
     // Build ownership conditions - only include defined predicates
@@ -146,7 +161,7 @@ export function registerChatRoutes(app: Express) {
       // Ensure anonymous users have persisted session
       await ensureAnonymousSession(req);
       
-      const userId = (req.user as any)?.id || null;
+      const userId = getAuthenticatedUserId(req);
       const sessionId = userId ? null : req.sessionID;
 
       // Check if conversation exists for user or session
@@ -224,6 +239,11 @@ export function registerChatRoutes(app: Express) {
 
       const { content } = validation.data;
 
+      // Get user info for personalization using consistent helpers
+      const userId = getAuthenticatedUserId(req);
+      const userFirstName = getAuthenticatedUserFirstName(req);
+      const isLoggedIn = !!userId;
+
       // Save user message
       const [userMessage] = await db
         .insert(chatMessages)
@@ -251,11 +271,25 @@ export function registerChatRoutes(app: Express) {
       // Exclude the just-added user message (last one)
       const previousMessages = allPreviousMessages.slice(0, -1).slice(-10);
 
+      // Build personalized system prompt
+      let systemPromptWithContext = SYSTEM_PROMPT;
+      
+      // Add user personalization if logged in
+      if (isLoggedIn && userFirstName) {
+        systemPromptWithContext += `\n\nUSER PERSONALIZATION:
+- The user is logged in and their first name is "${userFirstName}"
+- Address them by their first name to create a personalized experience
+- For greetings, say "Hi ${userFirstName}!" instead of generic greetings
+- Remember to be warm and personal since you know who they are`;
+      }
+      
+      systemPromptWithContext += `\n\nCONTEXT FROM KNOWLEDGE BASE:\n${context}`;
+
       // Build messages array for OpenAI
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         {
           role: "system",
-          content: `${SYSTEM_PROMPT}\n\nCONTEXT FROM KNOWLEDGE BASE:\n${context}`,
+          content: systemPromptWithContext,
         },
       ];
 
