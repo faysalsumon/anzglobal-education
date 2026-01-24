@@ -3698,6 +3698,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pricing config validation schema (with coercion for numeric fields from form inputs)
+  const pricingConfigSchema = z.object({
+    pricingModel: z.enum(['fixed', 'dynamic']).default('fixed'),
+    enablePaymentOptions: z.boolean().optional().default(false),
+    enableStudyModes: z.boolean().optional().default(false),
+    enableLocationPricing: z.boolean().optional().default(false),
+    installmentCount: z.coerce.number().int().positive().optional().default(6),
+    firstPaymentAmount: z.string().nullable().optional(),
+    installmentFee: z.string().optional().default('0'),
+    admissionFeeIncluded: z.string().optional().default('0'),
+  });
+
+  // Pricing tier validation schema
+  const pricingTierSchema = z.object({
+    paymentOption: z.enum(['upfront', 'installment']).default('upfront'),
+    studyMode: z.enum(['all', 'weekday', 'weekend', 'online', 'evening', 'full_time', 'part_time']).default('all'),
+    locationType: z.enum(['all', 'onshore', 'offshore', 'country']).default('all'),
+    country: z.string().nullable().optional(),
+    isDefaultPrice: z.boolean().optional().default(false),
+    amount: z.string(),
+    currency: z.string().max(3).default('AUD'),
+    label: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+  });
+
   // Create or update pricing config for a course
   app.put("/api/courses/:courseId/pricing-config", isAuthenticated, async (req: any, res) => {
     try {
@@ -3710,8 +3735,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized - Admin access required" });
       }
 
+      // Validate request body with Zod schema
+      const validatedData = pricingConfigSchema.parse(req.body);
       const { pricingModel, enablePaymentOptions, enableStudyModes, enableLocationPricing, 
-              installmentCount, firstPaymentAmount, installmentFee, admissionFeeIncluded } = req.body;
+              installmentCount, firstPaymentAmount, installmentFee, admissionFeeIncluded } = validatedData;
 
       // Check if config already exists
       const existingConfig = await db.query.coursePricingConfig.findFirst({
@@ -3790,27 +3817,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Tiers array is required" });
       }
 
-      // Delete existing tiers for this course
-      await db.delete(coursePricingTiers)
-        .where(eq(coursePricingTiers.courseId, req.params.courseId));
+      // Validate each tier with Zod schema
+      const validatedTiers = tiers.map(tier => pricingTierSchema.parse(tier));
 
-      // Insert new tiers if any
-      if (tiers.length > 0) {
-        const tiersToInsert = tiers.map(tier => ({
-          courseId: req.params.courseId,
-          paymentOption: tier.paymentOption || 'upfront',
-          studyMode: tier.studyMode || 'all',
-          locationType: tier.locationType || 'all',
-          country: tier.country || null,
-          isDefaultPrice: tier.isDefaultPrice ?? false,
-          amount: tier.amount?.toString() || '0',
-          currency: tier.currency || 'AUD',
-          label: tier.label || null,
-          description: tier.description || null,
-        }));
+      // Use a transaction for atomicity - prevents data loss if insert fails after delete
+      await db.transaction(async (tx) => {
+        // Delete existing tiers for this course
+        await tx.delete(coursePricingTiers)
+          .where(eq(coursePricingTiers.courseId, req.params.courseId));
 
-        await db.insert(coursePricingTiers).values(tiersToInsert);
-      }
+        // Insert new tiers if any
+        if (validatedTiers.length > 0) {
+          const tiersToInsert = validatedTiers.map(tier => ({
+            courseId: req.params.courseId,
+            paymentOption: tier.paymentOption,
+            studyMode: tier.studyMode,
+            locationType: tier.locationType,
+            country: tier.country || null,
+            isDefaultPrice: tier.isDefaultPrice,
+            amount: tier.amount,
+            currency: tier.currency,
+            label: tier.label || null,
+            description: tier.description || null,
+          }));
+
+          await tx.insert(coursePricingTiers).values(tiersToInsert);
+        }
+      });
 
       // Fetch and return the new tiers
       const savedTiers = await db.query.coursePricingTiers.findMany({

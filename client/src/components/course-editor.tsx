@@ -1092,12 +1092,17 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         await saveScholarshipsMutation.mutateAsync({ courseId: newCourse.id, scholarshipIds: selectedScholarshipIds });
         // Save entry requirements
         await saveEntryRequirementsMutation.mutateAsync({ courseId: newCourse.id, requirements: selectedEntryRequirements });
-        // Save pricing configuration
-        await savePricingConfigMutation.mutateAsync({ 
-          courseId: newCourse.id, 
-          config: pricingConfig, 
-          tiers: pricingTiers 
-        });
+        // Save pricing configuration (continue even on failure, but show warning)
+        try {
+          await savePricingConfigMutation.mutateAsync({ 
+            courseId: newCourse.id, 
+            config: pricingConfig, 
+            tiers: pricingTiers 
+          });
+        } catch (pricingError: any) {
+          console.error("Pricing save error:", pricingError);
+          toast({ title: "Warning", description: "Course saved but pricing configuration failed. Please edit the course to retry.", variant: "destructive" });
+        }
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course created successfully" });
@@ -1119,12 +1124,17 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
         await saveTagsMutation.mutateAsync({ courseId: result.id, tagIds: selectedTagIds });
         await saveScholarshipsMutation.mutateAsync({ courseId: result.id, scholarshipIds: selectedScholarshipIds });
         await saveEntryRequirementsMutation.mutateAsync({ courseId: result.id, requirements: selectedEntryRequirements });
-        // Save pricing configuration
-        await savePricingConfigMutation.mutateAsync({ 
-          courseId: result.id, 
-          config: pricingConfig, 
-          tiers: pricingTiers 
-        });
+        // Save pricing configuration (continue even on failure, but show warning)
+        try {
+          await savePricingConfigMutation.mutateAsync({ 
+            courseId: result.id, 
+            config: pricingConfig, 
+            tiers: pricingTiers 
+          });
+        } catch (pricingError: any) {
+          console.error("Pricing save error:", pricingError);
+          toast({ title: "Warning", description: "Course saved but pricing configuration failed. Please edit the course to retry.", variant: "destructive" });
+        }
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "tags"] });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "scholarships"] });
         queryClient.invalidateQueries({ queryKey: ["/api/courses", result.id, "entry-requirements"] });
