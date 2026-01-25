@@ -2343,14 +2343,14 @@ export default function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-10 py-2">
+                      <TableHead className="w-10 min-w-[40px] py-2 sticky left-0 z-20 bg-background">
                         <Checkbox
                           checked={filteredInstitutions && filteredInstitutions.length > 0 && selectedInstitutions.size === filteredInstitutions.length}
                           onCheckedChange={() => filteredInstitutions && toggleSelectAllInstitutions(filteredInstitutions)}
                           data-testid="checkbox-select-all-institutions"
                         />
                       </TableHead>
-                      <TableHead className="py-2 text-xs font-semibold">Name</TableHead>
+                      <TableHead className="py-2 text-xs font-semibold sticky left-10 z-20 bg-background min-w-[200px] border-r border-border">Name</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Location</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Assigned To</TableHead>
                       <TableHead className="py-2 text-xs font-semibold">Approval</TableHead>
@@ -2366,15 +2366,15 @@ export default function AdminDashboard() {
                       </TableRow>
                     ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
                       filteredInstitutions.map((institution) => (
-                        <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`} className="hover:bg-muted/50">
-                          <TableCell className="py-2">
+                        <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`} className="hover:bg-muted/50 group">
+                          <TableCell className="py-2 sticky left-0 z-10 bg-background group-hover:bg-muted/50 min-w-[40px]">
                             <Checkbox
                               checked={selectedInstitutions.has(institution.id)}
                               onCheckedChange={() => toggleSelectInstitution(institution.id)}
                               data-testid={`checkbox-institution-${institution.id}`}
                             />
                           </TableCell>
-                          <TableCell className="py-2">
+                          <TableCell className="py-2 sticky left-10 z-10 bg-background group-hover:bg-muted/50 min-w-[200px] border-r border-border">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8" data-testid={`img-institution-logo-${institution.id}`}>
                                 <AvatarImage src={institution.logo || undefined} alt={institution.name} />
