@@ -2394,23 +2394,36 @@ export default function AdminDashboard() {
                                   variant="ghost"
                                   data-testid={`button-assign-institution-${institution.id}`}
                                 >
-                                  {institution.assignedToName ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">{institution.assignedToName}</span>
-                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  ) : institution.createdByName ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">{institution.createdByName}</span>
-                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <UserPlus className="h-4 w-4" />
-                                      <span>Assign</span>
-                                      <ChevronsUpDown className="h-3 w-3" />
-                                    </div>
-                                  )}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center gap-2">
+                                        {institution.assignedToName ? (
+                                          <>
+                                            <Avatar>
+                                              <AvatarFallback className="bg-primary/10 text-primary">{institution.assignedToName?.[0]?.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        ) : institution.createdByName ? (
+                                          <>
+                                            <Avatar>
+                                              <AvatarFallback className="bg-muted">{institution.createdByName?.[0]?.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        ) : (
+                                          <>
+                                            <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-muted-foreground">Assign</span>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{institution.assignedToName || institution.createdByName || 'Click to assign'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-[250px] p-0" align="start">
