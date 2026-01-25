@@ -9482,6 +9482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: users.lastName,
         email: users.email,
         roleId: users.roleId,
+        profileImageUrl: users.profileImageUrl,
       }).from(users).where(
         and(
           or(
@@ -9516,6 +9517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
         email: u.email,
         roleName: u.roleId && roleMap.has(u.roleId) ? roleMap.get(u.roleId) : null,
+        profileImageUrl: u.profileImageUrl,
       }));
 
       res.json(enrichedAdminUsers);

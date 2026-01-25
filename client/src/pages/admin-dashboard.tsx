@@ -1041,7 +1041,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch admin users for transfer dropdown and inline assignment (used for institution and course transfers)
-  const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null }>>({
+  const { data: adminUsers } = useQuery<Array<{ id: string; name: string; email: string; roleName: string | null; profileImageUrl: string | null }>>({
     queryKey: ["/api/super-admin/admin-users"],
     enabled: !!transferringInstitution || !!transferringCourse || !!assigningInstitutionId || !!assigningCourseId || activeTab === 'institutions' || activeTab === 'courses',
   });
@@ -2480,7 +2480,7 @@ export default function AdminDashboard() {
                                   </Tooltip>
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[250px] p-0" align="start">
+                              <PopoverContent className="w-[280px] max-w-[90vw] p-0" align="start">
                                 <Command>
                                   <CommandInput placeholder="Search team members..." />
                                   <CommandList>
@@ -2496,10 +2496,10 @@ export default function AdminDashboard() {
                                             className="cursor-pointer"
                                           >
                                             <div className="flex items-center gap-2">
-                                              <User className="h-4 w-4 text-muted-foreground" />
+                                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                               <span>Unassigned</span>
                                             </div>
-                                            {!institution.assignedToUserId && <Check className="ml-auto h-4 w-4" />}
+                                            {!institution.assignedToUserId && <Check className="ml-auto h-4 w-4 flex-shrink-0" />}
                                           </CommandItem>
                                           {adminUsers.map((adminUser) => (
                                             <CommandItem
@@ -2508,16 +2508,19 @@ export default function AdminDashboard() {
                                               onSelect={() => assignInstitutionMutation.mutate({ id: institution.id, assignedToUserId: adminUser.id })}
                                               className="cursor-pointer"
                                             >
-                                              <div className="flex items-center gap-2">
-                                                <Avatar className="h-6 w-6">
+                                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                <Avatar className="h-6 w-6 flex-shrink-0">
+                                                  {adminUser.profileImageUrl && (
+                                                    <AvatarImage src={adminUser.profileImageUrl} alt={adminUser.name} />
+                                                  )}
                                                   <AvatarFallback>{adminUser.name?.[0]?.toUpperCase()}</AvatarFallback>
                                                 </Avatar>
-                                                <div className="flex flex-col">
-                                                  <span className="text-sm">{adminUser.name}</span>
-                                                  <span className="text-xs text-muted-foreground">{adminUser.email}</span>
+                                                <div className="flex flex-col min-w-0 flex-1">
+                                                  <span className="text-sm truncate">{adminUser.name}</span>
+                                                  <span className="text-xs text-muted-foreground truncate">{adminUser.email}</span>
                                                 </div>
                                               </div>
-                                              {institution.assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4" />}
+                                              {institution.assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4 flex-shrink-0" />}
                                             </CommandItem>
                                           ))}
                                         </>
@@ -2908,7 +2911,7 @@ export default function AdminDashboard() {
                                   )}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[250px] p-0" align="start">
+                              <PopoverContent className="w-[280px] max-w-[90vw] p-0" align="start">
                                 <Command>
                                   <CommandInput placeholder="Search team members..." />
                                   <CommandList>
@@ -2924,10 +2927,10 @@ export default function AdminDashboard() {
                                             className="cursor-pointer"
                                           >
                                             <div className="flex items-center gap-2">
-                                              <User className="h-4 w-4 text-muted-foreground" />
+                                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                               <span>Unassigned</span>
                                             </div>
-                                            {!(course as any).assignedToUserId && <Check className="ml-auto h-4 w-4" />}
+                                            {!(course as any).assignedToUserId && <Check className="ml-auto h-4 w-4 flex-shrink-0" />}
                                           </CommandItem>
                                           {adminUsers.map((adminUser) => (
                                             <CommandItem
@@ -2936,16 +2939,19 @@ export default function AdminDashboard() {
                                               onSelect={() => assignCourseMutation.mutate({ id: course.id, assignedToUserId: adminUser.id })}
                                               className="cursor-pointer"
                                             >
-                                              <div className="flex items-center gap-2">
-                                                <Avatar className="h-6 w-6">
+                                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                <Avatar className="h-6 w-6 flex-shrink-0">
+                                                  {adminUser.profileImageUrl && (
+                                                    <AvatarImage src={adminUser.profileImageUrl} alt={adminUser.name} />
+                                                  )}
                                                   <AvatarFallback>{adminUser.name?.[0]?.toUpperCase()}</AvatarFallback>
                                                 </Avatar>
-                                                <div className="flex flex-col">
-                                                  <span className="text-sm">{adminUser.name}</span>
-                                                  <span className="text-xs text-muted-foreground">{adminUser.email}</span>
+                                                <div className="flex flex-col min-w-0 flex-1">
+                                                  <span className="text-sm truncate">{adminUser.name}</span>
+                                                  <span className="text-xs text-muted-foreground truncate">{adminUser.email}</span>
                                                 </div>
                                               </div>
-                                              {(course as any).assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4" />}
+                                              {(course as any).assignedToUserId === adminUser.id && <Check className="ml-auto h-4 w-4 flex-shrink-0" />}
                                             </CommandItem>
                                           ))}
                                         </>
