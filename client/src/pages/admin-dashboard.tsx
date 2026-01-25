@@ -83,6 +83,49 @@ import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
 import { AdminQualificationTypesPanel } from "@/components/admin-qualification-types";
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 
+// Helper function to get ISO 2-letter country code for flag-icons library
+const getCountryIsoCode = (country: string | null | undefined): string | null => {
+  if (!country) return null;
+  const countryMap: Record<string, string> = {
+    'Australia': 'au',
+    'Bangladesh': 'bd',
+    'United States': 'us',
+    'USA': 'us',
+    'United Kingdom': 'gb',
+    'UK': 'gb',
+    'Canada': 'ca',
+    'New Zealand': 'nz',
+    'India': 'in',
+    'China': 'cn',
+    'Japan': 'jp',
+    'Germany': 'de',
+    'France': 'fr',
+    'Singapore': 'sg',
+    'Malaysia': 'my',
+    'Indonesia': 'id',
+    'Philippines': 'ph',
+    'Vietnam': 'vn',
+    'Thailand': 'th',
+    'South Korea': 'kr',
+    'Pakistan': 'pk',
+    'Nepal': 'np',
+    'Sri Lanka': 'lk',
+    'UAE': 'ae',
+    'United Arab Emirates': 'ae',
+    'Saudi Arabia': 'sa',
+    'Ireland': 'ie',
+    'Netherlands': 'nl',
+    'Sweden': 'se',
+    'Switzerland': 'ch',
+    'Italy': 'it',
+    'Spain': 'es',
+    'Brazil': 'br',
+    'Mexico': 'mx',
+    'South Africa': 'za',
+  };
+  return countryMap[country] || null;
+};
+
 interface User {
   id: string;
   email: string | null;
@@ -2385,7 +2428,14 @@ export default function AdminDashboard() {
                               <span className="font-medium text-sm" data-testid={`text-institution-name-${institution.id}`}>{institution.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 text-sm text-muted-foreground">{institution.country}</TableCell>
+                          <TableCell className="py-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              {getCountryIsoCode(institution.country) && (
+                                <span className={`fi fi-${getCountryIsoCode(institution.country)} rounded-sm`} />
+                              )}
+                              <span>{institution.country}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="py-2 text-sm">
                             <Popover 
                               open={assigningInstitutionId === institution.id} 
