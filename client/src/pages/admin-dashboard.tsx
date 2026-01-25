@@ -159,6 +159,8 @@ interface Institution {
   createdByName: string | null;
   updatedByName: string | null;
   assignedToName: string | null;
+  createdByProfileImage: string | null;
+  assignedToProfileImage: string | null;
 }
 
 interface Course {
@@ -2400,6 +2402,7 @@ export default function AdminDashboard() {
                                         {institution.assignedToName ? (
                                           <>
                                             <Avatar>
+                                              <AvatarImage src={institution.assignedToProfileImage || undefined} alt={institution.assignedToName} />
                                               <AvatarFallback className="bg-primary/10 text-primary">{institution.assignedToName?.[0]?.toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                             <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
@@ -2407,6 +2410,7 @@ export default function AdminDashboard() {
                                         ) : institution.createdByName ? (
                                           <>
                                             <Avatar>
+                                              <AvatarImage src={institution.createdByProfileImage || undefined} alt={institution.createdByName} />
                                               <AvatarFallback className="bg-muted">{institution.createdByName?.[0]?.toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                             <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />

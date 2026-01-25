@@ -8880,31 +8880,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (inst.assignedToUserId) userIds.add(inst.assignedToUserId);
       });
 
-      const userMap = new Map<string, { firstName: string; lastName: string }>();
+      const userMap = new Map<string, { firstName: string; lastName: string; profileImageUrl: string | null }>();
       if (userIds.size > 0) {
         const userIdArray = Array.from(userIds);
         const usersData = await db.select({
           id: users.id,
           firstName: users.firstName,
           lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
         }).from(users).where(inArray(users.id, userIdArray));
         
         usersData.forEach(u => {
-          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '' });
+          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '', profileImageUrl: u.profileImageUrl });
         });
       }
 
-      // Enrich institutions with user names
+      // Enrich institutions with user names and profile images
       const enrichedInstitutions = allInstitutions.map(inst => ({
         ...inst,
         createdByName: inst.createdByUserId && userMap.has(inst.createdByUserId) 
           ? `${userMap.get(inst.createdByUserId)!.firstName} ${userMap.get(inst.createdByUserId)!.lastName}`.trim()
+          : null,
+        createdByProfileImage: inst.createdByUserId && userMap.has(inst.createdByUserId)
+          ? userMap.get(inst.createdByUserId)!.profileImageUrl
           : null,
         updatedByName: inst.updatedByUserId && userMap.has(inst.updatedByUserId)
           ? `${userMap.get(inst.updatedByUserId)!.firstName} ${userMap.get(inst.updatedByUserId)!.lastName}`.trim()
           : null,
         assignedToName: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
           ? `${userMap.get(inst.assignedToUserId)!.firstName} ${userMap.get(inst.assignedToUserId)!.lastName}`.trim()
+          : null,
+        assignedToProfileImage: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
+          ? userMap.get(inst.assignedToUserId)!.profileImageUrl
           : null,
       }));
 
@@ -9013,31 +9020,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (inst.assignedToUserId) userIds.add(inst.assignedToUserId);
       });
 
-      const userMap = new Map<string, { firstName: string; lastName: string }>();
+      const userMap = new Map<string, { firstName: string; lastName: string; profileImageUrl: string | null }>();
       if (userIds.size > 0) {
         const userIdArray = Array.from(userIds);
         const usersData = await db.select({
           id: users.id,
           firstName: users.firstName,
           lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
         }).from(users).where(inArray(users.id, userIdArray));
         
         usersData.forEach(u => {
-          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '' });
+          userMap.set(u.id, { firstName: u.firstName || '', lastName: u.lastName || '', profileImageUrl: u.profileImageUrl });
         });
       }
 
-      // Enrich institutions with user names
+      // Enrich institutions with user names and profile images
       const enrichedInstitutions = myInstitutions.map(inst => ({
         ...inst,
         createdByName: inst.createdByUserId && userMap.has(inst.createdByUserId) 
           ? `${userMap.get(inst.createdByUserId)!.firstName} ${userMap.get(inst.createdByUserId)!.lastName}`.trim()
+          : null,
+        createdByProfileImage: inst.createdByUserId && userMap.has(inst.createdByUserId)
+          ? userMap.get(inst.createdByUserId)!.profileImageUrl
           : null,
         updatedByName: inst.updatedByUserId && userMap.has(inst.updatedByUserId)
           ? `${userMap.get(inst.updatedByUserId)!.firstName} ${userMap.get(inst.updatedByUserId)!.lastName}`.trim()
           : null,
         assignedToName: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
           ? `${userMap.get(inst.assignedToUserId)!.firstName} ${userMap.get(inst.assignedToUserId)!.lastName}`.trim()
+          : null,
+        assignedToProfileImage: inst.assignedToUserId && userMap.has(inst.assignedToUserId)
+          ? userMap.get(inst.assignedToUserId)!.profileImageUrl
           : null,
       }));
 
