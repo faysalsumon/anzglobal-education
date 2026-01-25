@@ -2577,18 +2577,6 @@ export default function AdminDashboard() {
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               )}
-                              {/* Transfer button (for admins to reassign institutions) */}
-                              {(hasFullAdminAccess || isMarketingExecutive) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setTransferringInstitution(institution)}
-                                  title="Transfer to another user"
-                                  data-testid={`button-transfer-institution-${institution.id}`}
-                                >
-                                  <UserPlus className="h-4 w-4 text-primary" />
-                                </Button>
-                              )}
                               {/* Delete button (only for full admins) */}
                               {hasFullAdminAccess && (
                                 <Button
