@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageSquare,
   LayoutDashboard,
+  Link2,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -148,10 +149,10 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     {
       id: "affiliate",
       label: "Affiliate",
-      icon: Users,
+      icon: Link2,
       color: "text-pink-600 bg-pink-50 dark:bg-pink-950 dark:text-pink-400",
       routes: [
-        { icon: Users, label: "Affiliate Program", path: "/affiliate" },
+        { icon: Link2, label: "Affiliate Program", path: "/affiliate" },
       ],
     },
   ];
