@@ -130,7 +130,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/student/courses" component={StudentCourses} />
       <Route path="/student/courses/:id" component={CourseDetail} />
       <Route path="/student/profile" component={StudentProfilePage} />
-      <Route path="/student/study-profile" component={StudentProfilePage} />
       <Route path="/student/applications" component={StudentApplications} />
       <Route path="/student/documents" component={StudentDocuments} />
       <Route path="/student/favorites" component={StudentFavorites} />
