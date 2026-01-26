@@ -604,6 +604,8 @@ export default function AdminDashboard() {
   const [transferringCourse, setTransferringCourse] = useState<Course | null>(null);
   const [selectedTransferCourseUserId, setSelectedTransferCourseUserId] = useState<string>("");
   const [assigningCourseId, setAssigningCourseId] = useState<string | null>(null);
+  const [coursePage, setCoursePage] = useState(1);
+  const [coursePageSize, setCoursePageSize] = useState(20);
   
   // Admin approval state
   const [approvingUser, setApprovingUser] = useState<User | null>(null);
@@ -1591,6 +1593,17 @@ export default function AdminDashboard() {
 
     return matchesSearch && matchesStatus && matchesPublishFilter;
   });
+
+  // Paginate courses
+  const paginatedCourses = filteredCourses?.slice(
+    (coursePage - 1) * coursePageSize,
+    coursePage * coursePageSize
+  );
+
+  // Reset course page when filters change
+  useEffect(() => {
+    setCoursePage(1);
+  }, [courseSearchQuery, courseStatusFilter, coursePublishFilter]);
 
   // User stats
   const userStats = {
@@ -2886,8 +2899,8 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableCell colSpan={11} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
-                    ) : filteredCourses && filteredCourses.length > 0 ? (
-                      filteredCourses.map((course) => (
+                    ) : paginatedCourses && paginatedCourses.length > 0 ? (
+                      paginatedCourses.map((course) => (
                         <TableRow key={course.id} data-testid={`row-course-${course.id}`} className="hover:bg-muted/50">
                           <TableCell className="py-2">
                             <Checkbox
@@ -3152,6 +3165,21 @@ export default function AdminDashboard() {
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Pagination */}
+              {filteredCourses && filteredCourses.length > 0 && (
+                <ListPagination
+                  currentPage={coursePage}
+                  totalItems={filteredCourses.length}
+                  pageSize={coursePageSize}
+                  onPageChange={setCoursePage}
+                  onPageSizeChange={(size) => {
+                    setCoursePageSize(size);
+                    setCoursePage(1);
+                  }}
+                  itemLabel="courses"
+                />
+              )}
             </CardContent>
           </Card>
         </div>
