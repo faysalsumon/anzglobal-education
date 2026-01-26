@@ -342,6 +342,78 @@ export const roleScopeEnum = pgEnum('role_scope', [
   'self',     // Can only see their own data (Data Entry agents)
 ]);
 
+// Australian visa type enum for students in Australia
+export const australianVisaTypeEnum = pgEnum('australian_visa_type', [
+  'student_500',           // Student Visa (Subclass 500)
+  'graduate_485',          // Temporary Graduate Visa (Subclass 485)
+  'skilled_482',           // Temporary Skill Shortage Visa (Subclass 482)
+  'working_holiday_417',   // Working Holiday Visa (Subclass 417)
+  'working_holiday_462',   // Work and Holiday Visa (Subclass 462)
+  'bridging_visa',         // Various bridging visas
+  'visitor_600',           // Visitor Visa (Subclass 600)
+  'partner_820_801',       // Partner Visa
+  'permanent_resident',    // PR holder
+  'citizen',               // Australian Citizen
+  'other',                 // Other visa types
+]);
+
+// English test type enum
+export const englishTestTypeEnum = pgEnum('english_test_type', [
+  'ielts_academic',
+  'ielts_general',
+  'pte_academic',
+  'toefl_ibt',
+  'duolingo',
+  'cambridge',
+  'oet',
+  'native_speaker',
+  'none',
+]);
+
+// English proficiency status enum
+export const englishProficiencyStatusEnum = pgEnum('english_proficiency_status', [
+  'have_score',       // Has taken a test and has scores
+  'native_speaker',   // Native English speaker (exempt)
+  'planning_test',    // Planning to take a test
+  'not_required',     // Not required for their course level
+]);
+
+// Student's English test scores interface (JSONB field)
+export interface StudentEnglishTestScores {
+  testType?: string;
+  testDate?: string;
+  expiryDate?: string;
+  // IELTS scores (0-9 bands)
+  ieltsOverall?: number;
+  ieltsListening?: number;
+  ieltsReading?: number;
+  ieltsWriting?: number;
+  ieltsSpeaking?: number;
+  // PTE scores (10-90)
+  pteOverall?: number;
+  pteListening?: number;
+  pteReading?: number;
+  pteWriting?: number;
+  pteSpeaking?: number;
+  // TOEFL iBT (0-120)
+  toeflOverall?: number;
+  toeflListening?: number;
+  toeflReading?: number;
+  toeflWriting?: number;
+  toeflSpeaking?: number;
+  // Duolingo (10-160)
+  duolingoOverall?: number;
+  // Cambridge (A-C, 160-230)
+  cambridgeScore?: number;
+  cambridgeGrade?: string;
+  // OET (A-E grades)
+  oetOverall?: string;
+  oetListening?: string;
+  oetReading?: string;
+  oetWriting?: string;
+  oetSpeaking?: string;
+}
+
 // Shared TypeScript interfaces for JSONB fields
 export interface EnglishRequirementsStructured {
   IELTS?: {
@@ -1771,6 +1843,51 @@ export const studentProfiles = pgTable("student_profiles", {
   fieldOfStudy: text("field_of_study"),
   careerGoals: text("career_goals"),
   previousEducation: text("previous_education"),
+  
+  // Current location and visa details (for students in Australia)
+  currentCountry: text("current_country"),
+  isInAustralia: boolean("is_in_australia").default(false),
+  australianVisaType: australianVisaTypeEnum("australian_visa_type"),
+  visaExpiryDate: date("visa_expiry_date"),
+  visaConditions: text("visa_conditions"),
+  
+  // Destination study preference
+  destinationCountry: text("destination_country"),
+  
+  // Highest qualification details (links to academic qualification types for matching)
+  highestQualificationTypeId: varchar("highest_qualification_type_id").references(() => academicQualificationTypes.id, { onDelete: "set null" }),
+  qualificationGrade: text("qualification_grade"),
+  qualificationGradingType: text("qualification_grading_type"),
+  graduationYear: integer("graduation_year"),
+  qualificationInstitution: text("qualification_institution"),
+  qualificationCountry: text("qualification_country"),
+  
+  // English proficiency
+  englishProficiencyStatus: englishProficiencyStatusEnum("english_proficiency_status"),
+  englishTestScores: jsonb("english_test_scores").$type<StudentEnglishTestScores>(),
+  
+  // Study preferences (for course recommendations)
+  preferredDiscipline: disciplineEnum("preferred_discipline"),
+  preferredCourseLevel: courseLevelEnum("preferred_course_level"),
+  preferredStudyMode: studyModeEnum("preferred_study_mode"),
+  preferredIntakes: text("preferred_intakes").array(),
+  
+  // Budget range (for matching with course fees)
+  budgetMin: decimal("budget_min", { precision: 10, scale: 2 }),
+  budgetMax: decimal("budget_max", { precision: 10, scale: 2 }),
+  budgetCurrency: varchar("budget_currency", { length: 3 }).default("AUD"),
+  
+  // PR pathway interest
+  prPathwayInterest: boolean("pr_pathway_interest").default(false),
+  
+  // Work experience
+  hasWorkExperience: boolean("has_work_experience").default(false),
+  workExperienceYears: integer("work_experience_years"),
+  workExperienceIndustry: text("work_experience_industry"),
+  
+  // Profile wizard state (for auto-save)
+  profileWizardStep: integer("profile_wizard_step").default(1),
+  profileCompletionPercentage: integer("profile_completion_percentage").default(0),
   
   referralCode: varchar("referral_code", { length: 10 }).unique(),
   referredByCode: varchar("referred_by_code", { length: 10 }),
