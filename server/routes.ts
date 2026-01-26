@@ -5219,13 +5219,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the file from object storage
-      const objectStorageClient = storage.getObjectStorageClient();
-      if (!objectStorageClient) {
-        return res.status(500).json({ message: "Object storage not configured" });
-      }
+      const { Client } = await import("@replit/object-storage");
+      const objectStorageClient = new Client();
 
       // Download the file
-      const downloadResult = await objectStorageClient.downloadAsBytes(document.fileUrl);
+      const downloadResult = await objectStorageClient.downloadAsBytes(document.filePath);
       if (!downloadResult.ok) {
         return res.status(500).json({ message: "Failed to download document file" });
       }
