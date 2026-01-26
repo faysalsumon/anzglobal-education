@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone, FileText } from "lucide-react";
 import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
@@ -66,6 +66,13 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   isInAustralia: z.boolean().optional().default(false),
   australianVisaType: z.string().optional().nullable(),
   visaExpiryDate: z.string().optional().nullable(),
+});
+
+const passportFormSchema = z.object({
+  passportNumber: z.string().optional().nullable(),
+  passportCountry: z.string().optional().nullable(),
+  passportIssuedDate: z.string().optional().nullable(),
+  passportExpiryDate: z.string().optional().nullable(),
 });
 
 const VISA_TYPES = [
@@ -414,6 +421,16 @@ function StudentProfileContent() {
     },
   });
 
+  const passportForm = useForm<z.infer<typeof passportFormSchema>>({
+    resolver: zodResolver(passportFormSchema),
+    defaultValues: {
+      passportNumber: "",
+      passportCountry: "",
+      passportIssuedDate: "",
+      passportExpiryDate: "",
+    },
+  });
+
   const bioForm = useForm<z.infer<typeof bioSchema>>({
     resolver: zodResolver(bioSchema),
     defaultValues: {
@@ -551,6 +568,12 @@ function StudentProfileContent() {
         emergencyContactMobile: profile.emergencyContactMobile || "",
         emergencyContactRelationship: profile.emergencyContactRelationship || "",
         emergencyContactAddress: profile.emergencyContactAddress || "",
+      });
+      passportForm.reset({
+        passportNumber: profile.passportNumber || "",
+        passportCountry: profile.passportCountry || "",
+        passportIssuedDate: profile.passportIssuedDate || "",
+        passportExpiryDate: profile.passportExpiryDate || "",
       });
       preferencesForm.reset({
         preferredDiscipline: profile.preferredDiscipline || "",
@@ -1091,6 +1114,10 @@ function StudentProfileContent() {
     createOrUpdateMutation.mutate(data);
   });
 
+  const handlePassportSubmit = passportForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate(data);
+  });
+
   const handlePreferencesSubmit = preferencesForm.handleSubmit((data) => {
     createOrUpdateMutation.mutate({
       ...data,
@@ -1175,10 +1202,14 @@ function StudentProfileContent() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7" data-testid="tabs-profile-sections">
+        <TabsList className="grid w-full grid-cols-8" data-testid="tabs-profile-sections">
           <TabsTrigger value="personal" data-testid="tab-personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
+          </TabsTrigger>
+          <TabsTrigger value="passport" data-testid="tab-passport" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Passport</span>
           </TabsTrigger>
           <TabsTrigger value="education" data-testid="tab-education" className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4" />
@@ -1700,6 +1731,140 @@ function StudentProfileContent() {
                     </>
                   ) : (
                     "Save Personal Details"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </TabsContent>
+
+        <TabsContent value="passport">
+          <Form {...passportForm}>
+            <form onSubmit={handlePassportSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Passport Details
+                  </CardTitle>
+                  <CardDescription>Enter your passport information for visa and application purposes</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={passportForm.control}
+                      name="passportNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Passport Number</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder="e.g., AB1234567" data-testid="input-passport-number" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={passportForm.control}
+                      name="passportCountry"
+                      render={({ field }) => {
+                        const selectedCountry = getCountryByName(field.value || "");
+                        return (
+                          <FormItem>
+                            <FormLabel>Country of Issue</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={selectedCountry?.name || field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-passport-country">
+                                  <SelectValue placeholder="Select country">
+                                    {selectedCountry ? (
+                                      <span className="flex items-center gap-2">
+                                        <img 
+                                          src={getFlagUrl(selectedCountry.code)} 
+                                          alt={selectedCountry.name} 
+                                          className="w-5 h-auto"
+                                        />
+                                        {selectedCountry.name}
+                                      </span>
+                                    ) : field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : null}
+                                  </SelectValue>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[300px]">
+                                {COUNTRIES.map((country) => (
+                                  <SelectItem key={`passport-${country.code}`} value={country.name}>
+                                    <span className="flex items-center gap-2">
+                                      <img 
+                                        src={getFlagUrl(country.code)} 
+                                        alt={country.name}
+                                        className="w-5 h-auto"
+                                      />
+                                      {country.name}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={passportForm.control}
+                      name="passportIssuedDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Issue Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={field.value || ""} data-testid="input-passport-issued-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={passportForm.control}
+                      name="passportExpiryDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Expiry Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={field.value || ""} data-testid="input-passport-expiry-date" />
+                          </FormControl>
+                          <FormDescription>
+                            Ensure your passport is valid for at least 6 months beyond your intended travel dates
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end">
+                <Button 
+                  type="submit" 
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-passport"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Passport Details"
                   )}
                 </Button>
               </div>
