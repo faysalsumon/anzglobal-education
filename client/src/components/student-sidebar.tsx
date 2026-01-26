@@ -165,6 +165,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
     routes: [
       { icon: User, label: "My Profile", path: "/student/profile" },
+      { icon: FileText, label: "Application Profile", path: "/student/application-profile" },
     ],
   };
 
