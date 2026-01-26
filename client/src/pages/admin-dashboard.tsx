@@ -1059,10 +1059,12 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-institutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       setAssigningInstitutionId(null);
       toast({
         title: "Assignment updated",
-        description: "Institution has been reassigned",
+        description: "Institution and all its courses have been reassigned",
       });
     },
     onError: (error: any) => {
@@ -2901,15 +2903,15 @@ export default function AdminDashboard() {
                       </TableRow>
                     ) : paginatedCourses && paginatedCourses.length > 0 ? (
                       paginatedCourses.map((course) => (
-                        <TableRow key={course.id} data-testid={`row-course-${course.id}`} className="hover:bg-muted/50">
-                          <TableCell className="py-2">
+                        <TableRow key={course.id} data-testid={`row-course-${course.id}`} className="hover:bg-muted/50 group">
+                          <TableCell className="py-2 sticky left-0 z-10 bg-background group-hover:bg-muted/50 min-w-[40px]">
                             <Checkbox
                               checked={selectedCourses.has(course.id)}
                               onCheckedChange={() => toggleSelectCourse(course.id)}
                               data-testid={`checkbox-course-${course.id}`}
                             />
                           </TableCell>
-                          <TableCell className="py-2 min-w-[200px]">
+                          <TableCell className="py-2 sticky left-10 z-10 bg-background group-hover:bg-muted/50 min-w-[200px] border-r border-border">
                             <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8" data-testid={`img-course-institution-logo-${course.id}`}>
                                 <AvatarImage src={course.institutionLogo || undefined} alt={course.institutionName || 'Institution'} />
@@ -3147,15 +3149,29 @@ export default function AdminDashboard() {
                               )}
                               {/* Transfer button (for admins to reassign courses) */}
                               {(hasFullAdminAccess || isMarketingExecutive) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setTransferringCourse(course)}
-                                  title="Transfer to another user"
-                                  data-testid={`button-transfer-course-${course.id}`}
-                                >
-                                  <UserPlus className="h-4 w-4 text-primary" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setTransferringCourse(course)}
+                                      title="Transfer to another user"
+                                      data-testid={`button-transfer-course-${course.id}`}
+                                    >
+                                      {(course as any).assignedToProfileImage ? (
+                                        <Avatar className="h-6 w-6">
+                                          <AvatarImage src={(course as any).assignedToProfileImage} alt={(course as any).assignedToName || 'Assigned'} />
+                                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{(course as any).assignedToName?.[0]?.toUpperCase() || 'A'}</AvatarFallback>
+                                        </Avatar>
+                                      ) : (
+                                        <UserPlus className="h-4 w-4 text-primary" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{(course as any).assignedToName ? `Assigned to ${(course as any).assignedToName}` : 'Transfer to another user'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
                               {/* Delete button (only for full admins) */}
                               {hasFullAdminAccess && (

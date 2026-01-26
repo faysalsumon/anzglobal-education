@@ -9541,26 +9541,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const institutionId = req.params.id;
       const { assignedToUserId } = req.body;
 
-      if (!assignedToUserId) {
-        return res.status(400).json({ message: "assignedToUserId is required" });
-      }
-
       // Check if institution exists
       const institution = await storage.getUniversityById(institutionId);
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
       }
 
-      // Verify the target user exists, is an admin type, and is active
-      const targetUser = await storage.getUser(assignedToUserId);
-      if (!targetUser) {
-        return res.status(400).json({ message: "Specified user does not exist" });
-      }
-      if (targetUser.userType !== 'admin' && targetUser.userType !== 'platform_admin') {
-        return res.status(400).json({ message: "User must be an admin to be assigned institutions" });
-      }
-      if (targetUser.isActive === false) {
-        return res.status(400).json({ message: "Cannot assign institutions to inactive users" });
+      // If assignedToUserId is provided (not null), verify the target user exists, is an admin type, and is active
+      let targetUser = null;
+      if (assignedToUserId) {
+        targetUser = await storage.getUser(assignedToUserId);
+        if (!targetUser) {
+          return res.status(400).json({ message: "Specified user does not exist" });
+        }
+        if (targetUser.userType !== 'admin' && targetUser.userType !== 'platform_admin') {
+          return res.status(400).json({ message: "User must be an admin to be assigned institutions" });
+        }
+        if (targetUser.isActive === false) {
+          return res.status(400).json({ message: "Cannot assign institutions to inactive users" });
+        }
       }
 
       // Use transaction for atomic update of institution and all its courses
@@ -9608,48 +9607,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the assigner's and assignee's names for the response
       const assigner = await storage.getUser(userId);
       const assignerName = assigner ? `${assigner.firstName || ''} ${assigner.lastName || ''}`.trim() : 'Unknown';
-      const assigneeName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim();
+      const assigneeName = targetUser ? `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() : null;
 
-      // Create notification for the new assignee about institution
-      await createNotification({
-        userId: assignedToUserId,
-        type: 'institution_assigned',
-        title: 'Institution Assigned to You',
-        message: `${institution.name} has been assigned to you by ${assignerName}`,
-        link: `/admin/dashboard#institutions`,
-        metadata: {
-          institutionId: institution.id,
-          institutionName: institution.name,
-          assignedBy: userId,
-          assignedByName: assignerName
-        }
-      });
-
-      // Create additional notification about cascaded course transfers if any
-      if (transferredCoursesCount > 0) {
+      // Only create notifications if assigning to a user (not unassigning)
+      if (assignedToUserId && targetUser) {
+        // Create notification for the new assignee about institution
         await createNotification({
           userId: assignedToUserId,
-          type: 'course_assigned',
-          title: 'Courses Also Transferred',
-          message: `${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} from ${institution.name} have also been assigned to you`,
-          link: `/admin/dashboard#courses`,
+          type: 'institution_assigned',
+          title: 'Institution Assigned to You',
+          message: `${institution.name} has been assigned to you by ${assignerName}`,
+          link: `/admin/dashboard#institutions`,
           metadata: {
             institutionId: institution.id,
             institutionName: institution.name,
-            coursesCount: transferredCoursesCount,
             assignedBy: userId,
             assignedByName: assignerName
           }
         });
+
+        // Create additional notification about cascaded course transfers if any
+        if (transferredCoursesCount > 0) {
+          await createNotification({
+            userId: assignedToUserId,
+            type: 'course_assigned',
+            title: 'Courses Also Transferred',
+            message: `${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} from ${institution.name} have also been assigned to you`,
+            link: `/admin/dashboard#courses`,
+            metadata: {
+              institutionId: institution.id,
+              institutionName: institution.name,
+              coursesCount: transferredCoursesCount,
+              assignedBy: userId,
+              assignedByName: assignerName
+            }
+          });
+        }
       }
 
       res.json({
         ...updatedInstitution,
         assignedToName: assigneeName,
         transferredCoursesCount,
-        message: transferredCoursesCount > 0 
-          ? `Institution and ${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} transferred to ${assigneeName}`
-          : `Institution transferred to ${assigneeName}`,
+        message: assigneeName 
+          ? (transferredCoursesCount > 0 
+            ? `Institution and ${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} transferred to ${assigneeName}`
+            : `Institution transferred to ${assigneeName}`)
+          : (transferredCoursesCount > 0
+            ? `Institution and ${transferredCoursesCount} course${transferredCoursesCount > 1 ? 's' : ''} unassigned`
+            : `Institution unassigned`),
       });
     } catch (error: any) {
       console.error("Error transferring institution:", error);
