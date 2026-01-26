@@ -644,6 +644,18 @@ function StudentProfileContent() {
     },
   });
 
+  // Helper function to normalize date to YYYY-MM-DD format for HTML date inputs
+  const normalizeDate = (dateStr: string | null): string | null => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString().split('T')[0];
+    } catch {
+      return null;
+    }
+  };
+
   // Passport extraction mutation
   const extractPassportMutation = useMutation({
     mutationFn: async (documentId: string) => {
@@ -653,29 +665,51 @@ function StudentProfileContent() {
     onSuccess: (result: { success: boolean; data: any; message: string }) => {
       if (result.success && result.data) {
         const data = result.data;
+        const fieldsExtracted: string[] = [];
+        
         // Auto-fill the passport form with extracted data
         if (data.passportNumber) {
           passportForm.setValue("passportNumber", data.passportNumber);
+          fieldsExtracted.push("passport number");
         }
         if (data.passportCountry) {
           passportForm.setValue("passportCountry", data.passportCountry);
-        }
-        if (data.passportIssuedDate) {
-          passportForm.setValue("passportIssuedDate", data.passportIssuedDate);
-        }
-        if (data.passportExpiryDate) {
-          passportForm.setValue("passportExpiryDate", data.passportExpiryDate);
+          fieldsExtracted.push("country");
         }
         
-        toast({
-          title: "Passport Data Extracted",
-          description: result.message + (data.confidence < 0.7 ? " Please verify the extracted information." : ""),
-          variant: data.confidence >= 0.7 ? "default" : "destructive",
-        });
+        const normalizedIssuedDate = normalizeDate(data.passportIssuedDate);
+        if (normalizedIssuedDate) {
+          passportForm.setValue("passportIssuedDate", normalizedIssuedDate);
+          fieldsExtracted.push("issue date");
+        }
+        
+        const normalizedExpiryDate = normalizeDate(data.passportExpiryDate);
+        if (normalizedExpiryDate) {
+          passportForm.setValue("passportExpiryDate", normalizedExpiryDate);
+          fieldsExtracted.push("expiry date");
+        }
+        
+        if (fieldsExtracted.length > 0) {
+          const confidence = data.confidence || 0;
+          const needsReview = confidence < 0.7;
+          
+          toast({
+            title: needsReview ? "Review Required" : "Data Extracted Successfully",
+            description: `Extracted: ${fieldsExtracted.join(", ")}. ${needsReview ? "Some fields may be inaccurate - please verify before saving." : "Please review and save."}`,
+          });
+        } else {
+          toast({
+            title: "No Data Extracted",
+            description: data.errors?.length > 0 
+              ? data.errors.join(". ") 
+              : "Could not read passport details. Please ensure the image is clear and try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Extraction Failed",
-          description: result.data?.errors?.join(", ") || "Could not extract passport data",
+          description: result.data?.errors?.join(". ") || result.message || "Could not extract passport data",
           variant: "destructive",
         });
       }
@@ -683,27 +717,25 @@ function StudentProfileContent() {
     onError: (error: Error) => {
       toast({
         title: "Extraction Failed",
-        description: error.message,
+        description: error.message || "An error occurred while extracting passport data",
         variant: "destructive",
       });
     },
   });
 
-  // Fetch passport documents for extraction
-  const { data: passportDocuments } = useQuery<{ id: string; name: string; mimeType: string }[]>({
-    queryKey: ["/api/student/profile/documents", "passport"],
-    queryFn: async () => {
-      const res = await fetch("/api/student/profile/documents?type=passport", { credentials: "include" });
-      if (!res.ok) return [];
-      const docs = await res.json();
-      // Filter to only image documents (AI can only process images)
-      return docs.filter((d: any) => d.mimeType?.startsWith("image/"));
-    },
+  // Fetch all student documents
+  const { data: allDocuments } = useQuery<{ id: string; name: string; mimeType: string; type: string; createdAt: string }[]>({
+    queryKey: ["/api/student/documents"],
     enabled: !!profile?.id,
   });
 
+  // Filter to get passport documents that are images (sorted by creation date, newest first)
+  const passportDocuments = allDocuments
+    ?.filter((d) => d.type === "passport" && d.mimeType?.startsWith("image/"))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
+
   const handleExtractPassport = () => {
-    if (!passportDocuments || passportDocuments.length === 0) {
+    if (passportDocuments.length === 0) {
       toast({
         title: "No Passport Image Found",
         description: "Please upload a passport image (JPEG, PNG, or WebP) in the Documents section first.",
