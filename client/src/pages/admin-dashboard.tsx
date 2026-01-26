@@ -82,6 +82,7 @@ import { AdminTagsPanel } from "@/components/admin-tags-panel";
 import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
 import { AdminQualificationTypesPanel } from "@/components/admin-qualification-types";
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
+import { ListPagination } from "@/components/list-pagination";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -584,6 +585,8 @@ export default function AdminDashboard() {
   const [transferringInstitution, setTransferringInstitution] = useState<Institution | null>(null);
   const [selectedTransferUserId, setSelectedTransferUserId] = useState<string>("");
   const [assigningInstitutionId, setAssigningInstitutionId] = useState<string | null>(null);
+  const [institutionPage, setInstitutionPage] = useState(1);
+  const [institutionPageSize, setInstitutionPageSize] = useState(20);
 
   // Course state
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
@@ -1558,6 +1561,17 @@ export default function AdminDashboard() {
     return matchesSearch && matchesPublishFilter;
   });
 
+  // Paginate institutions
+  const paginatedInstitutions = filteredInstitutions?.slice(
+    (institutionPage - 1) * institutionPageSize,
+    institutionPage * institutionPageSize
+  );
+
+  // Reset institution page when filters change
+  useEffect(() => {
+    setInstitutionPage(1);
+  }, [institutionSearchQuery, institutionPublishFilter]);
+
   // Filter courses
   const filteredCourses = courses?.filter(course => {
     const matchesSearch =
@@ -2409,8 +2423,8 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-3 text-sm">Loading...</TableCell>
                       </TableRow>
-                    ) : filteredInstitutions && filteredInstitutions.length > 0 ? (
-                      filteredInstitutions.map((institution) => (
+                    ) : paginatedInstitutions && paginatedInstitutions.length > 0 ? (
+                      paginatedInstitutions.map((institution) => (
                         <TableRow key={institution.id} data-testid={`row-institution-${institution.id}`} className="hover:bg-muted/50 group">
                           <TableCell className="py-2 sticky left-0 z-10 bg-background group-hover:bg-muted/50 min-w-[40px]">
                             <Checkbox
@@ -2670,6 +2684,21 @@ export default function AdminDashboard() {
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Pagination */}
+              {filteredInstitutions && filteredInstitutions.length > 0 && (
+                <ListPagination
+                  currentPage={institutionPage}
+                  totalItems={filteredInstitutions.length}
+                  pageSize={institutionPageSize}
+                  onPageChange={setInstitutionPage}
+                  onPageSizeChange={(size) => {
+                    setInstitutionPageSize(size);
+                    setInstitutionPage(1);
+                  }}
+                  itemLabel="institutions"
+                />
+              )}
             </CardContent>
           </Card>
         </div>
