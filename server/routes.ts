@@ -9827,18 +9827,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const [allCourses, allInstitutions] = await Promise.all([
+      const [allCourses, allInstitutions, allUsers] = await Promise.all([
         db.select().from(courses),
-        storage.getAllUniversities()
+        storage.getAllUniversities(),
+        db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl
+        }).from(users)
       ]);
 
-      // Add institution name and logo to each course
+      // Create user lookup map
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
+
+      // Add institution name and logo to each course, plus assignee info
       const coursesWithInstitution = allCourses.map(course => {
         const institution = allInstitutions.find(i => i.id === course.universityId);
         return {
           ...course,
           institutionName: institution?.name || 'Unknown',
-          institutionLogo: institution?.logo || null
+          institutionLogo: institution?.logo || null,
+          createdByName: course.createdByUserId && userMap.has(course.createdByUserId)
+            ? `${userMap.get(course.createdByUserId)?.firstName || ''} ${userMap.get(course.createdByUserId)?.lastName || ''}`.trim()
+            : null,
+          createdByProfileImage: course.createdByUserId && userMap.has(course.createdByUserId)
+            ? userMap.get(course.createdByUserId)?.profileImageUrl
+            : null,
+          assignedToName: course.assignedToUserId && userMap.has(course.assignedToUserId)
+            ? `${userMap.get(course.assignedToUserId)?.firstName || ''} ${userMap.get(course.assignedToUserId)?.lastName || ''}`.trim()
+            : null,
+          assignedToProfileImage: course.assignedToUserId && userMap.has(course.assignedToUserId)
+            ? userMap.get(course.assignedToUserId)?.profileImageUrl
+            : null
         };
       });
 

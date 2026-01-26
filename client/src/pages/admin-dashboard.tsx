@@ -2934,23 +2934,38 @@ export default function AdminDashboard() {
                                   variant="ghost"
                                   data-testid={`button-assign-course-${course.id}`}
                                 >
-                                  {(course as any).assignedToName ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">{(course as any).assignedToName}</span>
-                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  ) : (course as any).createdByName ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground">{(course as any).createdByName}</span>
-                                      <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <UserPlus className="h-4 w-4" />
-                                      <span>Assign</span>
-                                      <ChevronsUpDown className="h-3 w-3" />
-                                    </div>
-                                  )}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center gap-2">
+                                        {(course as any).assignedToName ? (
+                                          <>
+                                            <Avatar>
+                                              <AvatarImage src={(course as any).assignedToProfileImage || undefined} alt={(course as any).assignedToName} />
+                                              <AvatarFallback className="bg-primary/10 text-primary">{(course as any).assignedToName?.[0]?.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        ) : (course as any).createdByName ? (
+                                          <>
+                                            <Avatar>
+                                              <AvatarImage src={(course as any).createdByProfileImage || undefined} alt={(course as any).createdByName} />
+                                              <AvatarFallback className="bg-muted">{(course as any).createdByName?.[0]?.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        ) : (
+                                          <>
+                                            <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-muted-foreground">Assign</span>
+                                            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                                          </>
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{(course as any).assignedToName || (course as any).createdByName || 'Click to assign'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-[280px] max-w-[90vw] p-0" align="start">
