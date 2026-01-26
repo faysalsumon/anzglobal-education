@@ -23,10 +23,12 @@ import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudent
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
-import { ProfileWizard } from "@/components/profile-wizard";
-import { Wand2 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { FormDescription } from "@/components/ui/form";
+import { Target } from "lucide-react";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -61,6 +63,83 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),
   postcode: z.string().optional().nullable(),
+  isInAustralia: z.boolean().optional().default(false),
+  australianVisaType: z.string().optional().nullable(),
+  visaExpiryDate: z.string().optional().nullable(),
+});
+
+const VISA_TYPES = [
+  { value: "student_500", label: "Student Visa (Subclass 500)" },
+  { value: "graduate_485", label: "Temporary Graduate (Subclass 485)" },
+  { value: "skilled_482", label: "Temporary Skill Shortage (Subclass 482)" },
+  { value: "working_holiday_417", label: "Working Holiday (Subclass 417)" },
+  { value: "working_holiday_462", label: "Work and Holiday (Subclass 462)" },
+  { value: "bridging_visa", label: "Bridging Visa" },
+  { value: "visitor_600", label: "Visitor Visa (Subclass 600)" },
+  { value: "partner_820_801", label: "Partner Visa" },
+  { value: "permanent_resident", label: "Permanent Resident" },
+  { value: "citizen", label: "Australian Citizen" },
+  { value: "other", label: "Other" },
+];
+
+const DISCIPLINES = [
+  "Accounting, Business & Finance",
+  "Agriculture & Forestry",
+  "Applied Sciences & Professions",
+  "Arts, Design & Architecture",
+  "Computer Science & IT",
+  "Education & Training",
+  "Engineering & Technology",
+  "Environmental Studies & Earth Sciences",
+  "Hospitality, Leisure & Sports",
+  "Humanities",
+  "Journalism & Media",
+  "Law",
+  "Medicine & Health",
+  "Short Courses",
+  "Trade",
+];
+
+const COURSE_LEVELS = [
+  "Certificate I",
+  "Certificate II",
+  "Certificate III",
+  "Certificate IV",
+  "Diploma",
+  "Advanced Diploma",
+  "Associate Degree",
+  "Bachelor Degree",
+  "Bachelor Honours Degree",
+  "Graduate Certificate",
+  "Graduate Diploma",
+  "Master Degree (Coursework)",
+  "Master Degree (Research)",
+  "Doctoral Degree",
+];
+
+const STUDY_MODES = [
+  { value: "full_time", label: "Full-time" },
+  { value: "part_time", label: "Part-time" },
+  { value: "online", label: "Online" },
+  { value: "weekday", label: "Weekday Classes" },
+  { value: "weekend", label: "Weekend Classes" },
+  { value: "evening", label: "Evening Classes" },
+];
+
+const INTAKE_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const preferencesSchema = z.object({
+  preferredDiscipline: z.string().optional().nullable(),
+  preferredCourseLevel: z.string().optional().nullable(),
+  preferredStudyMode: z.string().optional().nullable(),
+  preferredIntakes: z.array(z.string()).optional().default([]),
+  budgetMin: z.number().optional().nullable(),
+  budgetMax: z.number().optional().nullable(),
+  prPathwayInterest: z.boolean().optional().default(false),
+  destinationCountry: z.string().optional().nullable(),
 });
 
 const bioSchema = z.object({
@@ -285,7 +364,6 @@ function StudentProfileContent() {
   const [editingLanguageScore, setEditingLanguageScore] = useState<StudentLanguageScore | null>(null);
   const [employmentDialogOpen, setEmploymentDialogOpen] = useState(false);
   const [editingEmployment, setEditingEmployment] = useState<StudentEmployment | null>(null);
-  const [wizardDialogOpen, setWizardDialogOpen] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -317,7 +395,7 @@ function StudentProfileContent() {
       firstName: "",
       lastName: "",
       preferredName: "",
-      gender: "",
+      gender: undefined,
       phone: "",
       whatsapp: "",
       dateOfBirth: "",
@@ -330,6 +408,9 @@ function StudentProfileContent() {
       city: "",
       state: "",
       postcode: "",
+      isInAustralia: false,
+      australianVisaType: "",
+      visaExpiryDate: "",
     },
   });
 
@@ -400,13 +481,48 @@ function StudentProfileContent() {
     },
   });
 
+  const preferencesForm = useForm<z.infer<typeof preferencesSchema>>({
+    resolver: zodResolver(preferencesSchema),
+    defaultValues: {
+      preferredDiscipline: "",
+      preferredCourseLevel: "",
+      preferredStudyMode: "",
+      preferredIntakes: [],
+      budgetMin: 5000,
+      budgetMax: 50000,
+      prPathwayInterest: false,
+      destinationCountry: "Australia",
+    },
+  });
+
+  const [budgetRange, setBudgetRange] = useState<[number, number]>([5000, 50000]);
+  const [selectedIntakes, setSelectedIntakes] = useState<string[]>([]);
+
+  const toggleIntake = (month: string) => {
+    setSelectedIntakes(prev => 
+      prev.includes(month) 
+        ? prev.filter(m => m !== month)
+        : [...prev, month]
+    );
+  };
+
+  const isInAustralia = personalForm.watch("isInAustralia");
+
+  // Clear visa fields when user toggles isInAustralia OFF to avoid stale data
+  useEffect(() => {
+    if (isInAustralia === false) {
+      personalForm.setValue("australianVisaType", "");
+      personalForm.setValue("visaExpiryDate", "");
+    }
+  }, [isInAustralia, personalForm]);
+
   useEffect(() => {
     if (profile) {
       personalForm.reset({
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
         preferredName: profile.preferredName || "",
-        gender: profile.gender || "",
+        gender: profile.gender || undefined,
         phone: profile.phone || "",
         whatsapp: profile.whatsapp || "",
         dateOfBirth: profile.dateOfBirth || "",
@@ -419,6 +535,9 @@ function StudentProfileContent() {
         city: profile.city || "",
         state: profile.state || "",
         postcode: profile.postcode || "",
+        isInAustralia: profile.isInAustralia || false,
+        australianVisaType: profile.australianVisaType || "",
+        visaExpiryDate: profile.visaExpiryDate || "",
       });
       bioForm.reset({
         bio: profile.bio || "",
@@ -433,11 +552,35 @@ function StudentProfileContent() {
         emergencyContactRelationship: profile.emergencyContactRelationship || "",
         emergencyContactAddress: profile.emergencyContactAddress || "",
       });
+      preferencesForm.reset({
+        preferredDiscipline: profile.preferredDiscipline || "",
+        preferredCourseLevel: profile.preferredCourseLevel || "",
+        preferredStudyMode: profile.preferredStudyMode || "",
+        preferredIntakes: profile.preferredIntakes || [],
+        budgetMin: profile.budgetMin ? parseFloat(profile.budgetMin) : 5000,
+        budgetMax: profile.budgetMax ? parseFloat(profile.budgetMax) : 50000,
+        prPathwayInterest: profile.prPathwayInterest || false,
+        destinationCountry: profile.destinationCountry || "Australia",
+      });
+      setBudgetRange([
+        profile.budgetMin ? parseFloat(profile.budgetMin) : 5000,
+        profile.budgetMax ? parseFloat(profile.budgetMax) : 50000,
+      ]);
+      setSelectedIntakes(profile.preferredIntakes || []);
     }
   }, [profile]);
 
+  // Helper type for form data that uses strings for enum fields
+  // The form uses string values from selects, which match the enum values at runtime
+  type ProfileFormData = Omit<Partial<StudentProfile>, 'australianVisaType' | 'preferredDiscipline' | 'preferredCourseLevel' | 'preferredStudyMode'> & {
+    australianVisaType?: string | null;
+    preferredDiscipline?: string | null;
+    preferredCourseLevel?: string | null;
+    preferredStudyMode?: string | null;
+  };
+
   const createOrUpdateMutation = useMutation({
-    mutationFn: async (data: Partial<StudentProfile>) => {
+    mutationFn: async (data: ProfileFormData) => {
       // Check if profile exists AND has an id (backend returns fallback object with id: null for new profiles)
       if (profile && profile.id) {
         return await apiRequest("PUT", "/api/student/profile", data);
@@ -948,6 +1091,15 @@ function StudentProfileContent() {
     createOrUpdateMutation.mutate(data);
   });
 
+  const handlePreferencesSubmit = preferencesForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate({
+      ...data,
+      preferredIntakes: selectedIntakes,
+      budgetMin: budgetRange[0].toString(),
+      budgetMax: budgetRange[1].toString(),
+    });
+  });
+
   const isLoading = profileLoading || completionLoading;
 
   return (
@@ -965,14 +1117,6 @@ function StudentProfileContent() {
               : "You must complete 100% of your profile before applying to courses"}
           </p>
         </div>
-        <Button
-          onClick={() => setWizardDialogOpen(true)}
-          variant={completion?.isComplete ? "outline" : "default"}
-          data-testid="button-open-wizard"
-        >
-          <Wand2 className="h-4 w-4 mr-2" />
-          {completion?.isComplete ? "Update with Wizard" : "Use Profile Wizard"}
-        </Button>
       </div>
 
       {!isLoading && completion && (
@@ -1029,27 +1173,9 @@ function StudentProfileContent() {
         </Card>
       )}
 
-      {/* Profile Wizard Dialog */}
-      <Dialog open={wizardDialogOpen} onOpenChange={setWizardDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <ProfileWizard 
-            profile={profile || null} 
-            onComplete={() => {
-              setWizardDialogOpen(false);
-              queryClient.invalidateQueries({ queryKey: ["/api/student/profile"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
-              toast({
-                title: "Profile Updated",
-                description: "Your profile has been updated successfully",
-              });
-            }}
-            onClose={() => setWizardDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6" data-testid="tabs-profile-sections">
+        <TabsList className="grid w-full grid-cols-7" data-testid="tabs-profile-sections">
           <TabsTrigger value="personal" data-testid="tab-personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Personal</span>
@@ -1061,6 +1187,10 @@ function StudentProfileContent() {
           <TabsTrigger value="language" data-testid="tab-language" className="flex items-center gap-2">
             <Languages className="h-4 w-4" />
             <span className="hidden sm:inline">Language</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences" data-testid="tab-preferences" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            <span className="hidden sm:inline">Preferences</span>
           </TabsTrigger>
           <TabsTrigger value="employment" data-testid="tab-employment" className="flex items-center gap-2">
             <Briefcase className="h-4 w-4" />
@@ -1329,6 +1459,82 @@ function StudentProfileContent() {
                         );
                       }}
                     />
+                  </div>
+
+                  {/* Visa Status Section */}
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Visa Status
+                    </h4>
+                    
+                    <FormField
+                      control={personalForm.control}
+                      name="isInAustralia"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Are you currently in Australia?</FormLabel>
+                            <FormDescription>
+                              This helps us understand your visa requirements
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-in-australia"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {isInAustralia && (
+                      <div className="space-y-4 mt-4 p-4 bg-muted/50 rounded-lg">
+                        <FormField
+                          control={personalForm.control}
+                          name="australianVisaType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What visa are you currently on?</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || undefined}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-visa-type">
+                                    <SelectValue placeholder="Select your visa type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {VISA_TYPES.map((visa) => (
+                                    <SelectItem key={visa.value} value={visa.value}>
+                                      {visa.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={personalForm.control}
+                          name="visaExpiryDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Visa Expiry Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} value={field.value || ""} data-testid="input-visa-expiry" />
+                              </FormControl>
+                              <FormDescription>
+                                Helps us recommend courses that fit your timeline
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t">
@@ -2131,6 +2337,229 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences">
+          <Form {...preferencesForm}>
+            <form onSubmit={handlePreferencesSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Study Preferences</CardTitle>
+                  <CardDescription>Help us recommend the best courses for you</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={preferencesForm.control}
+                      name="preferredDiscipline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Field of Study</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-pref-discipline">
+                                <SelectValue placeholder="What do you want to study?" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DISCIPLINES.map((disc) => (
+                                <SelectItem key={disc} value={disc}>
+                                  {disc}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={preferencesForm.control}
+                      name="preferredCourseLevel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Course Level</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-pref-level">
+                                <SelectValue placeholder="What level of study?" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {COURSE_LEVELS.map((level) => (
+                                <SelectItem key={level} value={level}>
+                                  {level}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={preferencesForm.control}
+                      name="preferredStudyMode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preferred Study Mode</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-study-mode">
+                                <SelectValue placeholder="How do you want to study?" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {STUDY_MODES.map((mode) => (
+                                <SelectItem key={mode.value} value={mode.value}>
+                                  {mode.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={preferencesForm.control}
+                      name="destinationCountry"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Where do you want to study?</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || "Australia"}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-destination">
+                                <SelectValue placeholder="Select destination country" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Australia">
+                                <span className="flex items-center gap-2">
+                                  <img src={getFlagUrl("AU")} alt="AU" className="w-4 h-3 object-cover rounded-sm" />
+                                  Australia
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="United Kingdom">
+                                <span className="flex items-center gap-2">
+                                  <img src={getFlagUrl("GB")} alt="GB" className="w-4 h-3 object-cover rounded-sm" />
+                                  United Kingdom
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="United States">
+                                <span className="flex items-center gap-2">
+                                  <img src={getFlagUrl("US")} alt="US" className="w-4 h-3 object-cover rounded-sm" />
+                                  United States
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="Canada">
+                                <span className="flex items-center gap-2">
+                                  <img src={getFlagUrl("CA")} alt="CA" className="w-4 h-3 object-cover rounded-sm" />
+                                  Canada
+                                </span>
+                              </SelectItem>
+                              <SelectItem value="New Zealand">
+                                <span className="flex items-center gap-2">
+                                  <img src={getFlagUrl("NZ")} alt="NZ" className="w-4 h-3 object-cover rounded-sm" />
+                                  New Zealand
+                                </span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <FormLabel className="mb-3 block">Preferred Intake Months</FormLabel>
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                      {INTAKE_MONTHS.map((month) => (
+                        <Button
+                          key={month}
+                          type="button"
+                          variant={selectedIntakes.includes(month) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => toggleIntake(month)}
+                          className="w-full"
+                          data-testid={`btn-intake-${month.toLowerCase()}`}
+                        >
+                          {month.substring(0, 3)}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Select all months you can start
+                    </p>
+                  </div>
+
+                  <div>
+                    <FormLabel className="mb-3 block">
+                      Annual Tuition Budget: ${budgetRange[0].toLocaleString()} - ${budgetRange[1].toLocaleString()} AUD
+                    </FormLabel>
+                    <Slider
+                      value={budgetRange}
+                      onValueChange={(value) => setBudgetRange(value as [number, number])}
+                      min={5000}
+                      max={100000}
+                      step={1000}
+                      className="w-full"
+                      data-testid="slider-budget"
+                    />
+                    <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                      <span>$5,000</span>
+                      <span>$100,000</span>
+                    </div>
+                  </div>
+
+                  <FormField
+                    control={preferencesForm.control}
+                    name="prPathwayInterest"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Interested in PR Pathway?</FormLabel>
+                          <FormDescription>
+                            Show courses that may lead to permanent residency
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-pr-interest"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="submit"
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-preferences"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Preferences"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </TabsContent>
 
         <TabsContent value="employment">

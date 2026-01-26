@@ -43,7 +43,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 ### Feature Specifications
 - **Institution Portal**: Course, application, and team management with AI-powered content generation and DALL-E integration.
 - **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
-- **Profile Wizard**: 6-step guided profile completion wizard (Personal Info, Location/Visa, Education, English Proficiency, Study Preferences, Review) accessible from student profile page, with conditional form sections and auto-save per step.
+- **Student Profile**: Tab-based profile management (Personal, Education, Language, Preferences, Employment, Emergency, Bio) with visa status fields (conditional on Australia location), study preferences with budget slider and intake month selection, and PR pathway interest toggle.
 - **Public Pages**: Landing page, "Study in Australia" page, course/institution detail pages, lead generation forms.
 - **Dashboards**: CTO, Student, University, and Platform Admin dashboards with consistent UI/UX and overview statistics.
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
