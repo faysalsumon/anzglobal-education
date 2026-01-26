@@ -729,16 +729,16 @@ function StudentProfileContent() {
     enabled: !!profile?.id,
   });
 
-  // Filter to get passport documents that are images (sorted by creation date, newest first)
+  // Filter to get passport documents that are images or PDFs (sorted by creation date, newest first)
   const passportDocuments = allDocuments
-    ?.filter((d) => d.type === "passport" && d.mimeType?.startsWith("image/"))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
+    ?.filter((d) => d.type === "passport" && (d.mimeType?.startsWith("image/") || d.mimeType === "application/pdf"))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()) || [];
 
   const handleExtractPassport = () => {
     if (passportDocuments.length === 0) {
       toast({
-        title: "No Passport Image Found",
-        description: "Please upload a passport image (JPEG, PNG, or WebP) in the Documents section first.",
+        title: "No Passport Document Found",
+        description: "Please upload a passport image (JPEG, PNG, WebP) or PDF in the Documents section first.",
         variant: "destructive",
       });
       return;
