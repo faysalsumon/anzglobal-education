@@ -644,6 +644,78 @@ function StudentProfileContent() {
     },
   });
 
+  // Passport extraction mutation
+  const extractPassportMutation = useMutation({
+    mutationFn: async (documentId: string) => {
+      const response = await apiRequest("POST", "/api/student/documents/extract-passport", { documentId });
+      return response.json();
+    },
+    onSuccess: (result: { success: boolean; data: any; message: string }) => {
+      if (result.success && result.data) {
+        const data = result.data;
+        // Auto-fill the passport form with extracted data
+        if (data.passportNumber) {
+          passportForm.setValue("passportNumber", data.passportNumber);
+        }
+        if (data.passportCountry) {
+          passportForm.setValue("passportCountry", data.passportCountry);
+        }
+        if (data.passportIssuedDate) {
+          passportForm.setValue("passportIssuedDate", data.passportIssuedDate);
+        }
+        if (data.passportExpiryDate) {
+          passportForm.setValue("passportExpiryDate", data.passportExpiryDate);
+        }
+        
+        toast({
+          title: "Passport Data Extracted",
+          description: result.message + (data.confidence < 0.7 ? " Please verify the extracted information." : ""),
+          variant: data.confidence >= 0.7 ? "default" : "destructive",
+        });
+      } else {
+        toast({
+          title: "Extraction Failed",
+          description: result.data?.errors?.join(", ") || "Could not extract passport data",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Extraction Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch passport documents for extraction
+  const { data: passportDocuments } = useQuery<{ id: string; name: string; mimeType: string }[]>({
+    queryKey: ["/api/student/profile/documents", "passport"],
+    queryFn: async () => {
+      const res = await fetch("/api/student/profile/documents?type=passport", { credentials: "include" });
+      if (!res.ok) return [];
+      const docs = await res.json();
+      // Filter to only image documents (AI can only process images)
+      return docs.filter((d: any) => d.mimeType?.startsWith("image/"));
+    },
+    enabled: !!profile?.id,
+  });
+
+  const handleExtractPassport = () => {
+    if (!passportDocuments || passportDocuments.length === 0) {
+      toast({
+        title: "No Passport Image Found",
+        description: "Please upload a passport image (JPEG, PNG, or WebP) in the Documents section first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Use the most recently uploaded passport document
+    const latestDoc = passportDocuments[0];
+    extractPassportMutation.mutate(latestDoc.id);
+  };
+
   const createEducationMutation = useMutation({
     mutationFn: async (data: z.infer<typeof educationFormSchema>) => {
       // Transform form data to match backend schema
@@ -1743,11 +1815,35 @@ function StudentProfileContent() {
             <form onSubmit={handlePassportSubmit} className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Passport Details
-                  </CardTitle>
-                  <CardDescription>Enter your passport information for visa and application purposes</CardDescription>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        Passport Details
+                      </CardTitle>
+                      <CardDescription className="mt-1">Enter your passport information for visa and application purposes</CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExtractPassport}
+                      disabled={extractPassportMutation.isPending}
+                      data-testid="button-extract-passport"
+                    >
+                      {extractPassportMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Extracting...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Extract from Passport
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
