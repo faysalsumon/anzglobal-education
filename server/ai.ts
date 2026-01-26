@@ -1468,3 +1468,107 @@ Return a JSON object with these fields. For the description, rewrite it to be en
     throw fetchError;
   }
 }
+
+export interface ExtractedPassportData {
+  passportNumber: string | null;
+  passportCountry: string | null;
+  passportIssuedDate: string | null;
+  passportExpiryDate: string | null;
+  fullName: string | null;
+  dateOfBirth: string | null;
+  nationality: string | null;
+  gender: string | null;
+  confidence: number;
+  errors?: string[];
+}
+
+export async function extractPassportFromImage(imageBase64: string, mimeType: string): Promise<ExtractedPassportData> {
+  checkAIConfigured();
+  
+  const client = getAiClient();
+  
+  const prompt = `Analyze this passport image and extract the following information. Return a JSON object with these fields:
+
+1. passportNumber - The passport number/document number
+2. passportCountry - The full country name of the issuing country (e.g., "Australia", "Bangladesh", "India")
+3. passportIssuedDate - Issue date in YYYY-MM-DD format
+4. passportExpiryDate - Expiry date in YYYY-MM-DD format
+5. fullName - Full name as shown on passport (given names + surname)
+6. dateOfBirth - Date of birth in YYYY-MM-DD format
+7. nationality - Nationality as shown on passport
+8. gender - "male" or "female"
+9. confidence - A number between 0 and 1 indicating how confident you are in the extraction (1 = very confident, 0 = unable to read)
+10. errors - Array of any issues encountered (e.g., "Could not read passport number", "Image quality too low")
+
+Important notes:
+- For dates, convert to YYYY-MM-DD format (e.g., "1990-05-15")
+- For country names, use the full English country name
+- If a field cannot be read clearly, set it to null and add an error message
+- Only extract data you can clearly see - do not guess or hallucinate
+
+Return ONLY a valid JSON object with these fields.`;
+
+  try {
+    console.log(`[AI] Extracting passport data from image using GPT-4o vision`);
+    
+    const response = await client.chat.completions.create({
+      model: "openai/gpt-4o", // Use GPT-4o for vision capabilities
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${imageBase64}`,
+                detail: "high"
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.1, // Low temperature for more accurate extraction
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    
+    // Try to extract JSON from the response
+    let jsonContent = content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+    
+    const parsed = JSON.parse(jsonContent);
+    console.log(`[AI] Successfully extracted passport data with confidence: ${parsed.confidence}`);
+    
+    return {
+      passportNumber: parsed.passportNumber || null,
+      passportCountry: parsed.passportCountry || null,
+      passportIssuedDate: parsed.passportIssuedDate || null,
+      passportExpiryDate: parsed.passportExpiryDate || null,
+      fullName: parsed.fullName || null,
+      dateOfBirth: parsed.dateOfBirth || null,
+      nationality: parsed.nationality || null,
+      gender: parsed.gender || null,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+      errors: Array.isArray(parsed.errors) ? parsed.errors : [],
+    };
+  } catch (error: any) {
+    console.error("[AI] Passport extraction failed:", error);
+    return {
+      passportNumber: null,
+      passportCountry: null,
+      passportIssuedDate: null,
+      passportExpiryDate: null,
+      fullName: null,
+      dateOfBirth: null,
+      nationality: null,
+      gender: null,
+      confidence: 0,
+      errors: [error.message || "Failed to extract passport data"],
+    };
+  }
+}

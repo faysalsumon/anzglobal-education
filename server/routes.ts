@@ -123,6 +123,7 @@ import {
   generateEntryRequirements,
   generateQualificationEquivalencies,
   extractCourseDataFromUrl,
+  extractPassportFromImage,
 } from "./ai";
 import { buildKnowledgeBase } from "./knowledge-base";
 import multer from "multer";
@@ -5176,6 +5177,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting document:", error);
       res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Extract passport data from uploaded passport document using AI
+  app.post("/api/student/documents/extract-passport", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const { documentId } = req.body;
+      
+      if (!documentId) {
+        return res.status(400).json({ message: "Document ID is required" });
+      }
+
+      // Get the document
+      const document = await storage.getDocumentById(documentId);
+      if (!document || document.studentProfileId !== profile.id) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Check if document type is passport
+      if (document.type !== "passport") {
+        return res.status(400).json({ message: "Document must be a passport type" });
+      }
+
+      // Check if file is an image
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!document.mimeType || !allowedMimeTypes.includes(document.mimeType)) {
+        return res.status(400).json({ 
+          message: "Passport document must be an image file (JPEG, PNG, or WebP). PDFs are not supported for AI extraction." 
+        });
+      }
+
+      // Get the file from object storage
+      const objectStorageClient = storage.getObjectStorageClient();
+      if (!objectStorageClient) {
+        return res.status(500).json({ message: "Object storage not configured" });
+      }
+
+      // Download the file
+      const downloadResult = await objectStorageClient.downloadAsBytes(document.fileUrl);
+      if (!downloadResult.ok) {
+        return res.status(500).json({ message: "Failed to download document file" });
+      }
+
+      // Convert to base64
+      const imageBase64 = Buffer.from(downloadResult.value).toString('base64');
+
+      // Call AI to extract passport data
+      const extractedData = await extractPassportFromImage(imageBase64, document.mimeType);
+
+      res.json({
+        success: true,
+        data: extractedData,
+        message: extractedData.confidence > 0.7 
+          ? "Passport data extracted successfully" 
+          : "Some fields could not be read clearly. Please review and correct if needed."
+      });
+    } catch (error: any) {
+      console.error("Error extracting passport data:", error);
+      res.status(500).json({ 
+        message: error.code === 'ai_not_configured' 
+          ? "AI features are not configured" 
+          : "Failed to extract passport data" 
+      });
     }
   });
 
