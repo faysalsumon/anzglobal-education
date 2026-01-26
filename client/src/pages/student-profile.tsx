@@ -23,6 +23,8 @@ import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudent
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
 import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCountryByNationality } from "@/lib/countries";
+import { ProfileWizard } from "@/components/profile-wizard";
+import { Wand2 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 
@@ -47,7 +49,7 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   preferredName: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
+  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional().nullable(),
   phone: z.string().min(1, "Phone number is required"),
   whatsapp: z.string().optional().nullable(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
@@ -283,6 +285,7 @@ function StudentProfileContent() {
   const [editingLanguageScore, setEditingLanguageScore] = useState<StudentLanguageScore | null>(null);
   const [employmentDialogOpen, setEmploymentDialogOpen] = useState(false);
   const [editingEmployment, setEditingEmployment] = useState<StudentEmployment | null>(null);
+  const [wizardDialogOpen, setWizardDialogOpen] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<StudentProfile>({
     queryKey: ["/api/student/profile"],
@@ -708,9 +711,9 @@ function StudentProfileContent() {
       firstName: profile?.firstName || personalForm.getValues("firstName"),
       lastName: profile?.lastName || personalForm.getValues("lastName"),
       nationality: profile?.nationality || personalForm.getValues("nationality"),
-      countryOfResidence: profile?.countryOfResidence || personalForm.getValues("countryOfResidence"),
-      preferredStudyDestination: profile?.preferredStudyDestination || personalForm.getValues("preferredStudyDestination"),
-      intakePreference: profile?.intakePreference || personalForm.getValues("intakePreference"),
+      countryOfResidence: profile?.currentCountry || profile?.country,
+      preferredStudyDestination: profile?.destinationCountry,
+      intakePreference: profile?.preferredIntakes?.[0],
     };
 
     // Get education history from fetched data
@@ -949,17 +952,27 @@ function StudentProfileContent() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">
-          {completion?.isComplete ? "Your Profile" : "Complete Your Profile"}
-        </h1>
-        <p className={cn(
-          completion?.isComplete ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-        )}>
-          {completion?.isComplete 
-            ? "Congratulations! Your profile is 100% complete. You're ready to apply for courses."
-            : "You must complete 100% of your profile before applying to courses"}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">
+            {completion?.isComplete ? "Your Profile" : "Complete Your Profile"}
+          </h1>
+          <p className={cn(
+            completion?.isComplete ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+          )}>
+            {completion?.isComplete 
+              ? "Congratulations! Your profile is 100% complete. You're ready to apply for courses."
+              : "You must complete 100% of your profile before applying to courses"}
+          </p>
+        </div>
+        <Button
+          onClick={() => setWizardDialogOpen(true)}
+          variant={completion?.isComplete ? "outline" : "default"}
+          data-testid="button-open-wizard"
+        >
+          <Wand2 className="h-4 w-4 mr-2" />
+          {completion?.isComplete ? "Update with Wizard" : "Use Profile Wizard"}
+        </Button>
       </div>
 
       {!isLoading && completion && (
@@ -1015,6 +1028,25 @@ function StudentProfileContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Profile Wizard Dialog */}
+      <Dialog open={wizardDialogOpen} onOpenChange={setWizardDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <ProfileWizard 
+            profile={profile || null} 
+            onComplete={() => {
+              setWizardDialogOpen(false);
+              queryClient.invalidateQueries({ queryKey: ["/api/student/profile"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/student/profile/completion"] });
+              toast({
+                title: "Profile Updated",
+                description: "Your profile has been updated successfully",
+              });
+            }}
+            onClose={() => setWizardDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-6" data-testid="tabs-profile-sections">

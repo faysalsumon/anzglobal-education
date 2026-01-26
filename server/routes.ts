@@ -3182,6 +3182,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PUT /api/student/profile/wizard - Save profile wizard data with auto-save support
+  app.put("/api/student/profile/wizard", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      let profile = await storage.getStudentProfileByUserId(userId);
+
+      // Sanitize - remove protected fields
+      const { userId: _, id, ...rawBody } = req.body;
+      
+      // Handle budget values - convert to strings for decimal columns
+      if (rawBody.budgetMin !== undefined) {
+        rawBody.budgetMin = rawBody.budgetMin?.toString();
+      }
+      if (rawBody.budgetMax !== undefined) {
+        rawBody.budgetMax = rawBody.budgetMax?.toString();
+      }
+
+      // Validate using partial schema (allows partial updates)
+      const data = insertStudentProfileSchema.partial().parse(rawBody);
+
+      if (!profile) {
+        // Create new profile - fetch user for defaults
+        const user = await storage.getUser(userId);
+        const newProfileData = {
+          userId,
+          firstName: data.firstName || user?.firstName || "",
+          lastName: data.lastName || user?.lastName || "",
+          ...data,
+        };
+        profile = await storage.createStudentProfile(newProfileData);
+      } else {
+        // Update existing profile
+        profile = await storage.updateStudentProfile(profile.id, data);
+      }
+
+      res.json(profile);
+    } catch (error: any) {
+      console.error("Error saving wizard profile:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(400).json({ message: error.message || "Failed to save profile" });
+    }
+  });
+
+  // GET /api/qualification-types - Get academic qualification types optionally filtered by country
+  app.get("/api/qualification-types", async (req: any, res) => {
+    try {
+      const { nationality, country } = req.query;
+      
+      // Get all qualification types - frontend can filter by country
+      const qualTypes = await db.select()
+        .from(academicQualificationTypes)
+        .where(eq(academicQualificationTypes.isActive, true))
+        .orderBy(academicQualificationTypes.displayOrder, academicQualificationTypes.name);
+      
+      res.json(qualTypes);
+    } catch (error: any) {
+      console.error("Error fetching qualification types:", error);
+      res.status(500).json({ message: "Failed to fetch qualification types" });
+    }
+  });
+
   // POST /api/student/upload-profile-photo - Upload profile photo
   app.post("/api/student/upload-profile-photo", isAuthenticated, upload.single('photo'), async (req: any, res) => {
     try {
