@@ -114,7 +114,7 @@ export default function PublicBlogDetail() {
   const metaDescription = blog.metaDescription || blog.excerpt || blog.content.substring(0, 160);
   const ogImage = blog.ogImageUrl || blog.featuredImageUrl || `${siteUrl}/og-image.png`;
 
-  // Create JSON-LD structured data for Article
+  // Create JSON-LD structured data for Article (Enhanced for AI/GEO)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -126,10 +126,12 @@ export default function PublicBlogDetail() {
     "author": {
       "@type": "Organization",
       "name": "ANZ Global Education",
+      "url": siteUrl
     },
     "publisher": {
       "@type": "Organization",
       "name": "ANZ Global Education",
+      "url": siteUrl,
       "logo": {
         "@type": "ImageObject",
         "url": `${siteUrl}/logo.png`
@@ -138,7 +140,42 @@ export default function PublicBlogDetail() {
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": blogUrl
-    }
+    },
+    "articleSection": blog.category || undefined,
+    "keywords": blog.tags?.join(', ') || undefined,
+    "inLanguage": "en"
+  };
+
+  // Breadcrumb schema for blog articles
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": siteUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": `${siteUrl}/blog`
+      },
+      ...(blog.category ? [{
+        "@type": "ListItem",
+        "position": 3,
+        "name": blog.category,
+        "item": `${siteUrl}/blog?category=${encodeURIComponent(blog.category)}`
+      }] : []),
+      {
+        "@type": "ListItem",
+        "position": blog.category ? 4 : 3,
+        "name": blog.title,
+        "item": blogUrl
+      }
+    ]
   };
 
   return (
@@ -178,6 +215,9 @@ export default function PublicBlogDetail() {
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbData)}
         </script>
       </Helmet>
 

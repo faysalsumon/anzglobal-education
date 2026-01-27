@@ -254,7 +254,7 @@ export default function PublicInstitutionDetail() {
     : `Discover ${institution.name}, ${institution.providerType || 'a leading institution'} in ${institution.country || 'international education'}. ${institution.establishedYear ? `Established ${institution.establishedYear}.` : ''} ${institution.scholarshipPercentageMin !== null || institution.scholarshipPercentageMax !== null ? 'Scholarships available.' : ''}`;
   const ogImage = institution.logo || `${siteUrl}/og-image.png`;
 
-  // Create JSON-LD structured data for Organization
+  // Create JSON-LD structured data for Organization (Enhanced for AI/GEO)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
@@ -266,14 +266,58 @@ export default function PublicInstitutionDetail() {
       "@type": "PostalAddress",
       "addressCountry": institution.country
     } : undefined,
-    "contactPoint": {
+    "contactPoint": (institution.contactPhone || institution.contactEmail) ? {
       "@type": "ContactPoint",
-      "telephone": institution.contactPhone,
-      "email": institution.contactEmail,
+      "telephone": institution.contactPhone || undefined,
+      "email": institution.contactEmail || undefined,
       "contactType": "Admissions"
-    },
-    "foundingDate": institution.establishedYear ? `${institution.establishedYear}-01-01` : undefined
+    } : undefined,
+    "foundingDate": institution.establishedYear ? `${institution.establishedYear}-01-01` : undefined,
+    "areaServed": "International",
+    "knowsLanguage": "en"
   };
+
+  // Generate FAQ schema for institution (AI extraction friendly)
+  const institutionFaqItems = [];
+  
+  if (institution.establishedYear) {
+    institutionFaqItems.push({
+      "@type": "Question",
+      "name": `When was ${institution.name} established?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `${institution.name} was established in ${institution.establishedYear}.`
+      }
+    });
+  }
+  
+  if (institution.country) {
+    institutionFaqItems.push({
+      "@type": "Question",
+      "name": `Where is ${institution.name} located?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `${institution.name} is located in ${institution.country}.`
+      }
+    });
+  }
+  
+  if (institution.contactEmail || institution.contactPhone) {
+    institutionFaqItems.push({
+      "@type": "Question",
+      "name": `How do I contact ${institution.name}?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `You can contact ${institution.name} ${institution.contactEmail ? `by email at ${institution.contactEmail}` : ''}${institution.contactEmail && institution.contactPhone ? ' or ' : ''}${institution.contactPhone ? `by phone at ${institution.contactPhone}` : ''}.`
+      }
+    });
+  }
+
+  const institutionFaqSchema = institutionFaqItems.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": institutionFaqItems
+  } : null;
 
   // Create JSON-LD Breadcrumb structured data for rich snippets
   const breadcrumbData = {
@@ -332,6 +376,12 @@ export default function PublicInstitutionDetail() {
         <script type="application/ld+json">
           {JSON.stringify(breadcrumbData)}
         </script>
+        {/* FAQ Schema for AI/LLM extraction */}
+        {institutionFaqSchema && (
+          <script type="application/ld+json">
+            {JSON.stringify(institutionFaqSchema)}
+          </script>
+        )}
       </Helmet>
 
       {/* Header */}

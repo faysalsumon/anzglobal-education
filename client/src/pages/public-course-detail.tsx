@@ -282,28 +282,130 @@ export default function PublicCourseDetail() {
     : `Study ${course.title} at ${course.university?.name || 'a top university'}. ${course.level || 'Degree'} program in ${course.subject || 'your field'}. ${course.country ? `Location: ${course.country}.` : ''}`;
   const ogImage = course.university?.logo || `${siteUrl}/og-image.png`;
 
-  // Create JSON-LD structured data for Course
+  // Create JSON-LD structured data for Course (Enhanced for AI/GEO)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Course",
     "name": course.title,
     "description": course.description || metaDescription,
     "provider": course.university ? {
-      "@type": "Organization",
+      "@type": "EducationalOrganization",
       "name": course.university.name,
       "url": course.university.website,
-      "logo": course.university.logo
+      "logo": course.university.logo,
+      "address": course.country ? {
+        "@type": "PostalAddress",
+        "addressCountry": course.country
+      } : undefined
     } : undefined,
     "teaches": course.subject || undefined,
     "educationalLevel": course.level || undefined,
     "timeToComplete": course.duration || undefined,
-    "totalCost": course.fees ? `${course.currency || 'AUD'} ${course.fees}` : undefined,
+    "courseMode": course.deliveryMode === "online" ? "online" : course.deliveryMode === "on-campus" ? "onsite" : "blended",
+    "inLanguage": "en",
+    "hasCourseInstance": course.intakes && course.intakes.length > 0 ? course.intakes.map((intake: string) => ({
+      "@type": "CourseInstance",
+      "courseMode": course.deliveryMode === "online" ? "online" : course.deliveryMode === "on-campus" ? "onsite" : "blended",
+      "startDate": intake,
+      "locationCreated": course.country ? {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": course.country
+        }
+      } : undefined
+    })) : undefined,
+    "totalCost": course.fees ? {
+      "@type": "MonetaryAmount",
+      "value": course.fees,
+      "currency": course.currency || 'AUD'
+    } : undefined,
     "offers": course.fees ? {
       "@type": "Offer",
       "price": course.fees,
-      "priceCurrency": course.currency || 'AUD'
-    } : undefined
+      "priceCurrency": course.currency || 'AUD',
+      "availability": "https://schema.org/InStock",
+      "url": courseUrl
+    } : undefined,
+    "coursePrerequisites": course.prerequisites || undefined,
+    "occupationalCredentialAwarded": course.level || undefined
   };
+
+  // Generate FAQ schema from course data (critical for AI extraction)
+  const faqItems = [];
+  
+  if (course.fees) {
+    faqItems.push({
+      "@type": "Question",
+      "name": `How much does ${course.title} cost?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `The tuition fee for ${course.title} is ${course.currency || 'AUD'} ${course.fees.toLocaleString()}.`
+      }
+    });
+  }
+  
+  if (course.duration) {
+    faqItems.push({
+      "@type": "Question",
+      "name": `How long is the ${course.title} program?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `The ${course.title} program has a duration of ${course.duration}.`
+      }
+    });
+  }
+  
+  if (course.deliveryMode) {
+    const modeText = course.deliveryMode === "online" ? "fully online" : course.deliveryMode === "on-campus" ? "on-campus" : "hybrid (combination of online and on-campus)";
+    faqItems.push({
+      "@type": "Question",
+      "name": `Is ${course.title} available online?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `${course.title} is offered ${modeText}${course.university ? ` at ${course.university.name}` : ''}.`
+      }
+    });
+  }
+  
+  if (course.intakes && course.intakes.length > 0) {
+    faqItems.push({
+      "@type": "Question",
+      "name": `When can I start ${course.title}?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `${course.title} has intake periods in ${course.intakes.join(', ')}.`
+      }
+    });
+  }
+  
+  if (course.prerequisites) {
+    faqItems.push({
+      "@type": "Question",
+      "name": `What are the entry requirements for ${course.title}?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": course.prerequisites
+      }
+    });
+  }
+  
+  if (course.applicationDeadline) {
+    faqItems.push({
+      "@type": "Question",
+      "name": `What is the application deadline for ${course.title}?`,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": `The application deadline for ${course.title} is ${course.applicationDeadline}.`
+      }
+    });
+  }
+
+  const faqSchema = faqItems.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqItems
+  } : null;
 
   // Create JSON-LD Breadcrumb structured data for rich snippets
   const breadcrumbData = {
@@ -362,6 +464,12 @@ export default function PublicCourseDetail() {
         <script type="application/ld+json">
           {JSON.stringify(breadcrumbData)}
         </script>
+        {/* FAQ Schema for AI/LLM extraction */}
+        {faqSchema && (
+          <script type="application/ld+json">
+            {JSON.stringify(faqSchema)}
+          </script>
+        )}
       </Helmet>
       {/* Course Section Navigation - Shows when scrolling past hero */}
       <CourseSectionNav 
