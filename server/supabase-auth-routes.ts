@@ -760,47 +760,46 @@ router.post('/sync-user', async (req: Request, res: Response) => {
     // Handle referral code for students
     if (referralCode && safeUserType === 'student' && newUser) {
       try {
-        // Find the referrer by their referral code
-        const referrerProfile = await db
-          .select()
-          .from(studentProfiles)
-          .where(eq(studentProfiles.referralCode, referralCode))
-          .limit(1)
-          .then(rows => rows[0]);
+        // Validate the referral code and get the referrer
+        const referrer = await storage.validateReferralCode(referralCode);
 
-        if (referrerProfile) {
+        if (referrer) {
           // Get or create student profile for the new user
-          let newStudentProfile = await db
-            .select()
-            .from(studentProfiles)
-            .where(eq(studentProfiles.userId, newUser.id))
-            .limit(1)
-            .then(rows => rows[0]);
+          let newStudentProfile = await storage.getStudentProfileByUserId(newUser.id);
 
-          // If no profile exists, create one
+          // If no profile exists, create one with its own referral code
           if (!newStudentProfile) {
-            const profileResult = await db
-              .insert(studentProfiles)
-              .values({
-                userId: newUser.id,
-                firstName: firstName || null,
-                lastName: lastName || null,
-                email: email,
-                referralCode: await storage.generateReferralCode(),
-              })
-              .returning();
-            newStudentProfile = profileResult[0];
+            const newReferralCode = await storage.generateReferralCode();
+            newStudentProfile = await storage.createStudentProfile({
+              userId: newUser.id,
+              firstName: firstName || null,
+              lastName: lastName || null,
+              email: email,
+              referralCode: newReferralCode,
+            });
           }
 
-          // Create the referral record
-          if (newStudentProfile && referrerProfile.id !== newStudentProfile.id) {
-            await db.insert(referrals).values({
-              referrerId: referrerProfile.id,
-              referredId: newStudentProfile.id,
-              referralCode: referralCode,
-              status: 'pending',
-            });
-            console.log(`[Referral] Created referral: ${referrerProfile.id} -> ${newStudentProfile.id} with code ${referralCode}`);
+          // Create the referral record (only if not already exists)
+          if (newStudentProfile && referrer.id !== newStudentProfile.id) {
+            // Check for existing referral to prevent duplicates
+            const existingReferral = await db
+              .select()
+              .from(referrals)
+              .where(eq(referrals.referredId, newStudentProfile.id))
+              .limit(1)
+              .then(rows => rows[0]);
+
+            if (!existingReferral) {
+              await storage.createReferral({
+                referrerId: referrer.id,
+                referredId: newStudentProfile.id,
+                referralCode: referralCode,
+                status: 'pending',
+              });
+              console.log(`[Referral] Created referral: ${referrer.id} -> ${newStudentProfile.id} with code ${referralCode}`);
+            } else {
+              console.log(`[Referral] Referral already exists for student ${newStudentProfile.id}`);
+            }
           }
         } else {
           console.warn(`[Referral] Invalid referral code: ${referralCode}`);
