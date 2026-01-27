@@ -37,6 +37,8 @@ import PublicInstitutions from "@/pages/public-institutions";
 import PublicInstitutionDetail from "@/pages/public-institution-detail";
 import PublicBlogArchive from "@/pages/public-blog-archive";
 import PublicBlogDetail from "@/pages/public-blog-detail";
+import PublicBrowse from "@/pages/public-browse";
+import PublicTag from "@/pages/public-tag";
 import CompareCourses from "@/pages/compare-courses";
 import Contact from "@/pages/contact";
 import PartnerWithUs from "@/pages/partner-with-us";
@@ -93,6 +95,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
       <Route path="/institutions" component={PublicInstitutions} />
       <Route path="/blog/:slug" component={PublicBlogDetail} />
       <Route path="/blog" component={PublicBlogArchive} />
+      <Route path="/browse/:slug" component={PublicTag} />
+      <Route path="/browse" component={PublicBrowse} />
       <Route path="/terms" component={TermsOfService} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/affiliate" component={AffiliatePage} />

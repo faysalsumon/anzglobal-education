@@ -13,7 +13,7 @@ import {
   Download, LogIn, Award, Globe, BookOpen, Home, Sparkles,
   Users, TrendingUp, CheckCircle, Building2, Briefcase, FileText,
   Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
-  Share2, MoreHorizontal, MessageCircle
+  Share2, MoreHorizontal, MessageCircle, HelpCircle
 } from "lucide-react";
 import type { Course, University, Application, Favorite } from "@shared/schema";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
@@ -1761,6 +1761,72 @@ export default function PublicCourseDetail() {
         isOpen={!!selectedCampusLocation}
         onClose={() => setSelectedCampusLocation(null)}
       />
+
+      {/* FAQ Section for AI/LLM Extraction - Visible natural language content */}
+      <section className="container mx-auto px-4 py-12 border-t bg-muted/30" id="faq">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2" data-testid="text-faq-heading">
+            <HelpCircle className="h-6 w-6 text-primary" />
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-4">
+            {course.fees && (
+              <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-fees">
+                <h3 className="font-semibold mb-2" data-testid="faq-question-fees">How much does {course.title} cost?</h3>
+                <p className="text-muted-foreground" data-testid="faq-answer-fees">
+                  The tuition fee for {course.title} is {course.currency || 'AUD'} {course.fees.toLocaleString()}.
+                  {course.university?.name && ` This program is offered by ${course.university.name}.`}
+                </p>
+              </div>
+            )}
+            {course.duration && (
+              <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-duration">
+                <h3 className="font-semibold mb-2" data-testid="faq-question-duration">How long is the {course.title} program?</h3>
+                <p className="text-muted-foreground" data-testid="faq-answer-duration">
+                  The {course.title} program takes {course.duration} to complete.
+                  {course.courseLevel && ` This is a ${course.courseLevel} level qualification.`}
+                </p>
+              </div>
+            )}
+            {course.intakes && course.intakes.length > 0 && (
+              <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-intakes">
+                <h3 className="font-semibold mb-2" data-testid="faq-question-intakes">When can I start studying {course.title}?</h3>
+                <p className="text-muted-foreground" data-testid="faq-answer-intakes">
+                  This course has intake periods in {course.intakes.join(', ')}.
+                  {' '}Check with the institution for application deadlines.
+                </p>
+              </div>
+            )}
+            {course.location && (
+              <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-location">
+                <h3 className="font-semibold mb-2" data-testid="faq-question-location">Where is {course.title} offered?</h3>
+                <p className="text-muted-foreground" data-testid="faq-answer-location">
+                  {course.title} is offered in {course.location}.
+                  {course.university?.name && ` It is provided by ${course.university.name}.`}
+                  {course.campusLocations && course.campusLocations.length > 0 && 
+                    ` Campus locations include: ${course.campusLocations.join(', ')}.`}
+                </p>
+              </div>
+            )}
+            {course.englishRequirements && (
+              <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-english">
+                <h3 className="font-semibold mb-2" data-testid="faq-question-english">What are the English requirements for {course.title}?</h3>
+                <p className="text-muted-foreground" data-testid="faq-answer-english">
+                  {course.englishRequirements}
+                </p>
+              </div>
+            )}
+            <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-apply">
+              <h3 className="font-semibold mb-2" data-testid="faq-question-apply">How do I apply for {course.title}?</h3>
+              <p className="text-muted-foreground" data-testid="faq-answer-apply">
+                You can apply for {course.title} through ANZ Global Education. 
+                Create an account, complete your student profile, and submit your application. 
+                Our team will guide you through the visa process and help you get started.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Mobile Sticky Bottom CTA Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50 safe-area-bottom" data-testid="mobile-sticky-cta">

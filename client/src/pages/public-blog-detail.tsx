@@ -2,14 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
 import { Helmet } from "react-helmet";
 import { PublicLayout } from "@/components/public-layout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, ArrowLeft, Share2 } from "lucide-react";
-import type { Blog } from "@shared/schema";
+import { Calendar, Clock, ArrowLeft, Share2, GraduationCap, MapPin, DollarSign } from "lucide-react";
+import type { Blog, CourseWithDetails } from "@shared/schema";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { InstitutionLogo } from "@/components/institution-logo";
 
 export default function PublicBlogDetail() {
   const params = useParams();
@@ -21,24 +22,24 @@ export default function PublicBlogDetail() {
     enabled: !!slug,
   });
 
-  // Fetch related blogs (same category, excluding current post)
+  // Fetch related blogs (same category, excluding current post) - using default fetcher
+  const categoryParam = blog?.category ? encodeURIComponent(blog.category) : "";
   const { data: relatedBlogsData } = useQuery<{ blogs: Blog[]; total: number }>({
-    queryKey: ["/api/blogs", { category: blog?.category, exclude: slug }],
-    queryFn: async () => {
-      if (!blog?.category) return { blogs: [], total: 0 };
-      const params = new URLSearchParams({
-        category: blog.category,
-        limit: "3",
-      });
-      const response = await fetch(`/api/blogs?${params}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch related blogs");
-      return response.json();
-    },
+    queryKey: [`/api/blogs?category=${categoryParam}&limit=3`],
     enabled: !!blog?.category,
   });
 
   // Filter out current blog slug client-side as a safety measure
   const relatedBlogs = (relatedBlogsData?.blogs || []).filter((b: Blog) => b.slug !== slug);
+
+  // Fetch related courses based on blog category (for SEO cross-linking)
+  const tagSearchParam = blog?.tags?.slice(0, 3).join(" ") || blog?.category || "";
+  const { data: relatedCoursesData } = useQuery<{ courses: CourseWithDetails[]; total: number }>({
+    queryKey: [`/api/public/courses?search=${encodeURIComponent(tagSearchParam)}&limit=3`],
+    enabled: !!blog && (!!blog.tags?.length || !!blog.category),
+  });
+
+  const relatedCourses = relatedCoursesData?.courses || [];
 
   const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return "";
@@ -108,7 +109,7 @@ export default function PublicBlogDetail() {
   }
 
   // Prepare SEO data
-  const siteUrl = window.location.origin;
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
   const blogUrl = `${siteUrl}/blog/${blog.slug}`;
   const metaTitle = blog.metaTitle || blog.title;
   const metaDescription = blog.metaDescription || blog.excerpt || blog.content.substring(0, 160);
@@ -334,6 +335,74 @@ export default function PublicBlogDetail() {
                     </Card>
                   </Link>
                 ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Related Courses - Cross-linking for SEO */}
+        {relatedCourses.length > 0 && (
+          <section className="container mx-auto px-4 py-16 bg-muted/50">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-2 mb-8">
+                <GraduationCap className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl font-bold">Related Courses</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {relatedCourses.map((course) => (
+                  <Link key={course.id} href={`/courses/${course.id}`}>
+                    <Card className="h-full hover-elevate" data-testid={`related-course-${course.id}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start gap-3">
+                          {course.university && (
+                            <InstitutionLogo
+                              src={course.university.logo}
+                              alt={course.university.name}
+                              size="sm"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base line-clamp-2" data-testid={`text-course-title-${course.id}`}>
+                              {course.title}
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1" data-testid={`text-course-provider-${course.id}`}>
+                              {course.university?.name || "Unknown Provider"}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-2">
+                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          {course.duration && (
+                            <span className="flex items-center gap-1" data-testid={`text-course-duration-${course.id}`}>
+                              <Clock className="h-3.5 w-3.5" />
+                              {course.duration}
+                            </span>
+                          )}
+                          {course.location && (
+                            <span className="flex items-center gap-1" data-testid={`text-course-location-${course.id}`}>
+                              <MapPin className="h-3.5 w-3.5" />
+                              {course.location}
+                            </span>
+                          )}
+                        </div>
+                        {course.fees && (
+                          <p className="text-primary font-medium mt-2 flex items-center gap-1" data-testid={`text-course-fees-${course.id}`}>
+                            <DollarSign className="h-3.5 w-3.5" />
+                            {course.currency || "AUD"} {course.fees.toLocaleString()}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <Link href="/courses">
+                  <Button variant="outline" data-testid="button-view-all-courses">
+                    Browse All Courses
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>

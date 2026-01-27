@@ -73,6 +73,14 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **AI Web Scraping System**: Combines dynamic schema introspection, GPT-4o-mini for structured data extraction, Playwright/Cheerio, and BullMQ for job queuing.
 - **Student Application Portal**: 11-stage workflow with dedicated database tables and Student Portal UI.
 - **Centralized Notification System**: Located in `server/notifications.ts`, providing a notification link registry, auto-generated links, type-safe helper functions, and real-time WebSocket push.
+- **GEO (Generative Engine Optimization)**: Future-ready SEO strategy optimized for AI search engines (Google AI Overviews, ChatGPT, Perplexity):
+  - **Course Schema**: Enhanced Schema.org/Course with courseMode, hasCourseInstance, CourseInstance, prerequisites, and Offers
+  - **FAQ Schema**: Auto-generated FAQPage schema on course and institution pages for AI extraction
+  - **Organization Schema**: Enhanced EducationalOrganization schema with aggregateRating and review data
+  - **Tag-Based Landing Pages**: `/browse` and `/browse/:slug` with CollectionPage schema for category browsing
+  - **Cross-Linking**: Blog articles link to related courses based on tags; testimonials include Review/AggregateRating schema
+  - **Visible FAQ Sections**: Natural language Q&A content on course pages for AI/LLM extraction
+  - **BreadcrumbList Schema**: All detail pages include breadcrumb structured data for rich snippets
 
 ## External Dependencies
 - **Authentication Service**: Supabase Auth.

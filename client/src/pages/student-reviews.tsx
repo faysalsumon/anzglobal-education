@@ -91,6 +91,40 @@ export default function StudentReviews() {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
 
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const pageUrl = `${siteUrl}/student-reviews`;
+
+  // Organization schema with testimonials (without ratings as these are success stories, not rated reviews)
+  const organizationWithReviewsSchema = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "ANZ Global Education",
+    "url": siteUrl,
+    "logo": `${siteUrl}/logo.png`,
+    "description": "Australia's trusted education consultancy helping international students achieve their study abroad dreams since 2017.",
+    "foundingDate": "2017",
+    "areaServed": ["Australia", "Bangladesh"],
+    "review": reviews.slice(0, 10).map((review) => ({
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": review.studentName
+      },
+      "reviewBody": review.content,
+      "name": review.title,
+      "datePublished": new Date().toISOString().split('T')[0]
+    }))
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": siteUrl },
+      { "@type": "ListItem", "position": 2, "name": "Student Reviews", "item": pageUrl }
+    ]
+  };
+
   return (
     <>
       <Helmet>
@@ -99,7 +133,9 @@ export default function StudentReviews() {
           name="description" 
           content="Read authentic testimonials from students who achieved their Australian education dreams with ANZ Global Education. Real stories, proven success since 2017." 
         />
+        <link rel="canonical" href={pageUrl} />
         <meta property="og:title" content="Student Reviews - ANZ Global Education" />
+        <meta property="og:url" content={pageUrl} />
         <meta property="og:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories and discover our proven track record." />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
@@ -107,6 +143,13 @@ export default function StudentReviews() {
         <meta name="twitter:title" content="Student Reviews - ANZ Global Education" />
         <meta name="twitter:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories." />
         <meta name="twitter:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
+        
+        <script type="application/ld+json">
+          {JSON.stringify(organizationWithReviewsSchema)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbData)}
+        </script>
       </Helmet>
 
       <div className="min-h-screen bg-background">
