@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 import { storage } from './storage';
 import { db } from './db';
-import { users, roles, branches } from '@shared/schema';
+import { users, roles, branches, studentProfiles, referrals } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail } from './email-service';
@@ -676,7 +676,7 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
 // Sync user from Supabase to local database (called after email confirmation)
 router.post('/sync-user', async (req: Request, res: Response) => {
   try {
-    const { supabaseId, email, firstName, lastName, userType, emailVerified, profileImageUrl } = req.body;
+    const { supabaseId, email, firstName, lastName, userType, emailVerified, profileImageUrl, referralCode } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -756,6 +756,60 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       firstName: firstName || 'there',
       userType: welcomeUserType,
     }).catch(err => console.error('[Email] Failed to send welcome email:', err));
+
+    // Handle referral code for students
+    if (referralCode && safeUserType === 'student' && newUser) {
+      try {
+        // Find the referrer by their referral code
+        const referrerProfile = await db
+          .select()
+          .from(studentProfiles)
+          .where(eq(studentProfiles.referralCode, referralCode))
+          .limit(1)
+          .then(rows => rows[0]);
+
+        if (referrerProfile) {
+          // Get or create student profile for the new user
+          let newStudentProfile = await db
+            .select()
+            .from(studentProfiles)
+            .where(eq(studentProfiles.userId, newUser.id))
+            .limit(1)
+            .then(rows => rows[0]);
+
+          // If no profile exists, create one
+          if (!newStudentProfile) {
+            const profileResult = await db
+              .insert(studentProfiles)
+              .values({
+                userId: newUser.id,
+                firstName: firstName || null,
+                lastName: lastName || null,
+                email: email,
+                referralCode: await storage.generateReferralCode(),
+              })
+              .returning();
+            newStudentProfile = profileResult[0];
+          }
+
+          // Create the referral record
+          if (newStudentProfile && referrerProfile.id !== newStudentProfile.id) {
+            await db.insert(referrals).values({
+              referrerId: referrerProfile.id,
+              referredId: newStudentProfile.id,
+              referralCode: referralCode,
+              status: 'pending',
+            });
+            console.log(`[Referral] Created referral: ${referrerProfile.id} -> ${newStudentProfile.id} with code ${referralCode}`);
+          }
+        } else {
+          console.warn(`[Referral] Invalid referral code: ${referralCode}`);
+        }
+      } catch (refErr) {
+        // Don't fail the whole sync if referral creation fails
+        console.error('[Referral] Failed to create referral record:', refErr);
+      }
+    }
 
     res.status(201).json({ 
       message: 'User synced successfully', 

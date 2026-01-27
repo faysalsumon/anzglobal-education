@@ -106,12 +106,18 @@ export default function AuthCallback() {
     async function syncUserToDatabase(supabaseUser: any): Promise<{ approvalStatus?: string | null; userType: string }> {
       // Check for stored OAuth intended user type (set before redirecting to Google)
       const storedUserType = localStorage.getItem('oauth_intended_user_type');
+      // Check for stored referral code (set when user visits via referral link)
+      const storedReferralCode = localStorage.getItem('referral_code');
+      
       // Use stored type, then Supabase metadata, then default to student
       const userType = storedUserType || supabaseUser.user_metadata?.user_type || "student";
       
-      // Clear the stored user type after using it
+      // Clear the stored values after using them
       if (storedUserType) {
         localStorage.removeItem('oauth_intended_user_type');
+      }
+      if (storedReferralCode) {
+        localStorage.removeItem('referral_code');
       }
       
       // Extract profile picture from OAuth provider metadata
@@ -130,6 +136,7 @@ export default function AuthCallback() {
           userType,
           emailVerified: !!supabaseUser.email_confirmed_at,
           profileImageUrl,
+          referralCode: storedReferralCode || undefined,
         }) as { approvalStatus?: string | null };
         return { ...response, userType };
       } catch (err) {

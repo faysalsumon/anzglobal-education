@@ -67,14 +67,23 @@ export default function AuthPage() {
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
   const { user, isAuthenticated, isAuthResolved } = useAuth();
 
-  // Read mode from URL query params
+  // Read mode and referral code from URL query params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
+    const referralCode = urlParams.get('ref');
+    
     if (mode === 'signup') {
       setIsSignup(true);
     } else if (mode === 'login') {
       setIsSignup(false);
+    }
+    
+    // Store referral code in localStorage for use during signup
+    if (referralCode) {
+      localStorage.setItem('referral_code', referralCode);
+      // Auto-set to signup mode when coming from a referral link
+      setIsSignup(true);
     }
   }, []);
 
@@ -123,6 +132,8 @@ export default function AuthPage() {
     // This will be read by auth-callback to properly set the user type
     const userTypeToStore = intendedUserType || (userType === "institution" ? "institution_admin" : "student");
     localStorage.setItem('oauth_intended_user_type', userTypeToStore);
+    
+    // Preserve referral code for OAuth flow - it's already in localStorage if present
     
     setIsLoading(true);
     try {
