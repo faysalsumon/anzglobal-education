@@ -433,6 +433,104 @@ export function StudentDashboard() {
         </CardContent>
       </Card>
 
+      {/* Blockchain Document Verification - Coming Soon */}
+      <Card className="border-2 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent shadow-xl overflow-hidden relative" data-testid="card-blockchain-coming-soon">
+        <div className="absolute top-0 left-0 w-full h-1 md:h-1.5 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 animate-gradient" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+        <CardHeader className="pb-4 md:pb-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2.5 md:gap-3">
+              <div className="p-2.5 md:p-3 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl shadow-lg shrink-0">
+                <Boxes className="h-5 w-5 md:h-6 md:w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg md:text-xl lg:text-2xl flex items-center gap-2 flex-wrap" data-testid="text-blockchain-title">
+                  Blockchain Document Verification
+                </CardTitle>
+                <CardDescription className="text-sm md:text-base">
+                  Tamper-proof, instant verification for your academic credentials
+                </CardDescription>
+              </div>
+            </div>
+            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-700 text-xs font-bold uppercase tracking-wider" data-testid="badge-coming-soon">
+              Coming Soon
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Feature Description */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-background/60 border border-purple-200/50 dark:border-purple-800/50">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1" data-testid="text-feature-tamper-proof">Tamper-Proof</h4>
+                <p className="text-xs text-muted-foreground">Documents secured with immutable blockchain technology</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-background/60 border border-purple-200/50 dark:border-purple-800/50">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1" data-testid="text-feature-instant">Instant Verification</h4>
+                <p className="text-xs text-muted-foreground">Universities verify your documents in seconds, not weeks</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-background/60 border border-purple-200/50 dark:border-purple-800/50">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                <Lock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1" data-testid="text-feature-fraud">Fraud Prevention</h4>
+                <p className="text-xs text-muted-foreground">Eliminate fake credentials with cryptographic proof</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview of Verified Documents */}
+          <div className="p-4 md:p-5 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border border-purple-200/50 dark:border-purple-800/50">
+            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2" data-testid="text-preview-heading">
+              <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              Your Documents Will Look Like This
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {["Academic Transcript", "Degree Certificate", "English Test Score"].map((doc, index) => (
+                <div 
+                  key={doc}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-background/80 border border-purple-200/50 dark:border-purple-800/50 shadow-sm"
+                  data-testid={`preview-doc-${index}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded">
+                      <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <span className="text-sm font-medium" data-testid={`text-doc-name-${index}`}>{doc}</span>
+                  </div>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-700 text-xs gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verified
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="flex items-center justify-between pt-2 flex-wrap gap-4">
+            <p className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-blockchain-powered">
+              <Boxes className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              Powered by enterprise blockchain technology
+            </p>
+            <Button variant="outline" className="border-2 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300" disabled data-testid="button-notify-me">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Get Notified When Available
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Referral Program with Enhanced Design */}
       {profile && referralData && (
         <Card className="border-2 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent shadow-xl overflow-hidden relative">

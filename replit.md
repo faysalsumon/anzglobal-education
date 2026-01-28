@@ -93,3 +93,26 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Mapping/Location**: Google Maps JavaScript API, Google Places API.
 - **Replit-Specific Integrations**: `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`.
 - **Email Service**: Resend API.
+
+## Future Roadmap
+The platform is being developed with these planned features:
+
+### Phase 2: Language Courses
+- **IELTS/PTE/NAATI Courses**: Language and test preparation courses with direct purchase capability
+- Will reuse existing courses/institutions tables, filtered by category
+
+### Phase 3: Insurance Products
+- **OSHC/OVHC Insurance**: Overseas Student Health Cover and Overseas Visitor Health Cover
+- Database tables: insurance_providers, insurance_products, insurance_pricing, insurance_orders
+- Features: Search, filter, compare, and purchase insurance directly on platform
+
+### Phase 4: Blockchain Document Verification
+- **Technology**: Enterprise blockchain for tamper-proof credential verification
+- **Features**:
+  - SHA-256 document hashing at upload time
+  - Immutable verification records (hybrid model: database initially, then Polygon blockchain)
+  - QR code verification links on documents
+  - "Verified" badge on student profiles
+  - Instant verification for universities/employers reviewing applications
+- **Benefits**: Eliminates fake credentials, reduces verification time from weeks to seconds
+- **Status**: Coming Soon - UI preview in student dashboard
