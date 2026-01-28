@@ -1907,6 +1907,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(inArray(institutionTags.institutionId, institutionIds))
           : [];
         
+        // Fetch active scholarships for all institutions in the current page
+        const allScholarships = institutionIds.length > 0
+          ? await db.select({
+              institutionId: scholarships.institutionId,
+              valueType: scholarships.valueType,
+              value: scholarships.value,
+              name: scholarships.name,
+            })
+            .from(scholarships)
+            .where(
+              and(
+                inArray(scholarships.institutionId, institutionIds),
+                eq(scholarships.isActive, true),
+                eq(scholarships.status, 'open')
+              )
+            )
+          : [];
+        
+        // Calculate max scholarship percentage for each institution
+        const scholarshipsByInstitution = new Map<string, { maxPercentage: number | null; scholarshipCount: number }>();
+        for (const scholarship of allScholarships) {
+          const current = scholarshipsByInstitution.get(scholarship.institutionId) || { maxPercentage: null, scholarshipCount: 0 };
+          current.scholarshipCount += 1;
+          
+          if (scholarship.valueType === 'percentage') {
+            const percentage = parseFloat(scholarship.value as string);
+            if (current.maxPercentage === null || percentage > current.maxPercentage) {
+              current.maxPercentage = percentage;
+            }
+          }
+          scholarshipsByInstitution.set(scholarship.institutionId, current);
+        }
+        
         // Group tags by institution
         const tagsByInstitution = new Map<string, Array<{ id: string; name: string; category: string; color: string | null }>>();
         for (const tag of allInstitutionTags) {
@@ -1921,11 +1954,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Add structured tags to each institution
-        const institutionsWithTags = institutions.map(inst => ({
-          ...inst,
-          structuredTags: tagsByInstitution.get(inst.id) || [],
-        }));
+        // Add structured tags and scholarship data to each institution
+        const institutionsWithTags = institutions.map(inst => {
+          const scholarshipData = scholarshipsByInstitution.get(inst.id);
+          return {
+            ...inst,
+            structuredTags: tagsByInstitution.get(inst.id) || [],
+            // Use new scholarship module data, fallback to legacy field
+            activeScholarshipMaxPercentage: scholarshipData?.maxPercentage ?? inst.scholarshipPercentageMax,
+            activeScholarshipCount: scholarshipData?.scholarshipCount ?? 0,
+          };
+        });
         
         // Return paginated response with total count
         res.json({
@@ -1937,7 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Return unpaginated response for backward compatibility
-        // Also include structured tags for consistency
+        // Also include structured tags and scholarship data for consistency
         const institutionIds = institutions.map(i => i.id);
         const allInstitutionTags = institutionIds.length > 0 
           ? await db.select({
@@ -1952,6 +1991,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(inArray(institutionTags.institutionId, institutionIds))
           : [];
         
+        // Fetch active scholarships for all institutions
+        const allScholarshipsUnpaged = institutionIds.length > 0
+          ? await db.select({
+              institutionId: scholarships.institutionId,
+              valueType: scholarships.valueType,
+              value: scholarships.value,
+            })
+            .from(scholarships)
+            .where(
+              and(
+                inArray(scholarships.institutionId, institutionIds),
+                eq(scholarships.isActive, true),
+                eq(scholarships.status, 'open')
+              )
+            )
+          : [];
+        
+        // Calculate max scholarship percentage for each institution
+        const scholarshipsByInstUnpaged = new Map<string, { maxPercentage: number | null; scholarshipCount: number }>();
+        for (const scholarship of allScholarshipsUnpaged) {
+          const current = scholarshipsByInstUnpaged.get(scholarship.institutionId) || { maxPercentage: null, scholarshipCount: 0 };
+          current.scholarshipCount += 1;
+          
+          if (scholarship.valueType === 'percentage') {
+            const percentage = parseFloat(scholarship.value as string);
+            if (current.maxPercentage === null || percentage > current.maxPercentage) {
+              current.maxPercentage = percentage;
+            }
+          }
+          scholarshipsByInstUnpaged.set(scholarship.institutionId, current);
+        }
+        
         const tagsByInstitution = new Map<string, Array<{ id: string; name: string; category: string; color: string | null }>>();
         for (const tag of allInstitutionTags) {
           if (!tagsByInstitution.has(tag.institutionId)) {
@@ -1965,10 +2036,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        const institutionsWithTags = institutions.map(inst => ({
-          ...inst,
-          structuredTags: tagsByInstitution.get(inst.id) || [],
-        }));
+        const institutionsWithTags = institutions.map(inst => {
+          const scholarshipData = scholarshipsByInstUnpaged.get(inst.id);
+          return {
+            ...inst,
+            structuredTags: tagsByInstitution.get(inst.id) || [],
+            activeScholarshipMaxPercentage: scholarshipData?.maxPercentage ?? inst.scholarshipPercentageMax,
+            activeScholarshipCount: scholarshipData?.scholarshipCount ?? 0,
+          };
+        });
         
         res.json(institutionsWithTags);
       }

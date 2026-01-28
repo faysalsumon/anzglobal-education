@@ -108,6 +108,8 @@ type University = {
   coursesCount?: number;
   campusAddresses?: CampusAddress[] | null;
   structuredTags?: StructuredTag[];
+  activeScholarshipMaxPercentage?: number | null;
+  activeScholarshipCount?: number;
 };
 
 type TagInfo = {
@@ -1072,10 +1074,11 @@ export default function PublicInstitutions() {
                       {/* Top Row: Badges left, Favorite top right */}
                       <div className="flex justify-between items-center mb-3">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {institution.scholarshipPercentageMax !== null && institution.scholarshipPercentageMax > 0 && (
-                            <Badge variant="default" className="text-xs">
+                          {(institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax) !== null && 
+                           (institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax)! > 0 && (
+                            <Badge variant="default" className="text-xs" data-testid={`badge-scholarship-${institution.id}`}>
                               <Award className="h-3 w-3 mr-1" />
-                              Up to {institution.scholarshipPercentageMax}% Scholarship
+                              Up to {institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax}% Scholarship
                             </Badge>
                           )}
                           {institution.rankingBand && (
@@ -1117,6 +1120,15 @@ export default function PublicInstitutions() {
                               {institution.name}
                             </h3>
                           </Link>
+                          
+                          {institution.description && (
+                            <p 
+                              className="text-sm text-muted-foreground mb-1 line-clamp-1"
+                              data-testid={`text-description-${institution.id}`}
+                            >
+                              {institution.description}
+                            </p>
+                          )}
                           
                           {institution.location && (
                             <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
