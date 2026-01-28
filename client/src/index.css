@@ -448,6 +448,25 @@
   animation-play-state: paused;
 }
 
+/* Tag Marquee Animation for Course Cards */
+@keyframes tag-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-tag-marquee {
+  animation: tag-marquee 12s linear infinite;
+}
+
+.tag-marquee-container:hover .animate-tag-marquee,
+.animate-tag-marquee.pause-animation {
+  animation-play-state: paused;
+}
+
 /* Hover Transform */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;

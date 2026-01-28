@@ -54,6 +54,7 @@ import { ListPagination } from "@/components/list-pagination";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { getCountryByName, getFlagUrl } from "@/lib/countries";
 import { Slider } from "@/components/ui/slider";
+import { TagMarquee } from "@/components/ui/tag-marquee";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -1651,33 +1652,17 @@ export default function PublicCourses() {
                     >
                       <CardContent className="p-4">
                         {/* Top Row: Favorite and Compare in top right */}
-                        <div className="flex justify-between items-start mb-3">
-                          {/* Badges Row */}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Badge className="bg-primary/10 text-primary text-xs">{course.level}</Badge>
-                            <Badge variant="outline" className="text-xs">{course.subject}</Badge>
-                            {course.tags && course.tags.slice(0, 2).map((tag: { id: number; name: string; slug: string; color: string | null }) => (
-                              <Badge 
-                                key={tag.id}
-                                variant="secondary"
-                                className="text-xs"
-                                style={tag.color ? { 
-                                  backgroundColor: hexToRgba(tag.color, 0.15), 
-                                  color: tag.color, 
-                                  borderColor: hexToRgba(tag.color, 0.3) 
-                                } : undefined}
-                                data-testid={`badge-tag-${course.id}-${tag.slug}`}
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {course.tags && course.tags.length > 2 && (
-                              <Badge variant="secondary" className="text-xs" data-testid={`badge-more-tags-${course.id}`}>
-                                +{course.tags.length - 2}
-                              </Badge>
-                            )}
+                        <div className="flex justify-between items-start mb-3 gap-2">
+                          {/* Tags Marquee - Scrolling Tags */}
+                          <div className="flex-1 min-w-0 overflow-hidden">
+                            <TagMarquee
+                              level={course.level || ''}
+                              subject={course.subject}
+                              tags={(course as any).tags as { id: number; name: string; slug: string; color: string | null }[] | undefined}
+                              testId={`tag-marquee-${course.id}`}
+                            />
                             {isHighlighted && (
-                              <Badge className="bg-accent text-accent-foreground text-xs">
+                              <Badge className="bg-accent text-accent-foreground text-xs mt-1">
                                 <Sparkles className="h-3 w-3 mr-1" />
                                 Your Search Result
                               </Badge>
