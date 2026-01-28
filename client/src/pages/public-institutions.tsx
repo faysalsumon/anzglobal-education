@@ -58,6 +58,7 @@ import { useInstitutionFilters } from "@/hooks/useInstitutionFilters";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { ListPagination } from "@/components/list-pagination";
 import { ScholarshipMarquee } from "@/components/ui/scholarship-marquee";
+import { getCountryCode, getFlagUrl } from "@/lib/country-flags";
 import type { Favorite } from "@shared/schema";
 
 type CampusAddress = {
@@ -1180,12 +1181,27 @@ export default function PublicInstitutions() {
                         <div className="flex flex-col gap-3">
                           {/* Stats Row */}
                           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
-                            {institution.providerType && (
-                              <div className="flex items-center gap-1.5">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">{institution.providerType}</span>
-                              </div>
-                            )}
+                            {/* Country Flag + Institution Type */}
+                            <div className="flex items-center gap-1.5">
+                              {(() => {
+                                const countryCode = getCountryCode(institution.country);
+                                if (countryCode) {
+                                  return (
+                                    <img 
+                                      src={getFlagUrl(countryCode)} 
+                                      alt={`${institution.country} flag`}
+                                      className="h-4 w-5 object-cover rounded-sm flex-shrink-0"
+                                      data-testid={`flag-${institution.id}`}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground" data-testid={`text-provider-type-${institution.id}`}>
+                                {institution.providerType || 'Institution'}
+                              </span>
+                            </div>
                             {institution.coursesCount !== undefined && (
                               <div className="flex items-center gap-1.5">
                                 <BookOpen className="h-4 w-4 text-muted-foreground" />

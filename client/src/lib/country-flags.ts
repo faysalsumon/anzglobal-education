@@ -1,0 +1,72 @@
+const countryNameToCode: Record<string, string> = {
+  'australia': 'AU',
+  'bangladesh': 'BD',
+  'united states': 'US',
+  'united states of america': 'US',
+  'usa': 'US',
+  'united kingdom': 'GB',
+  'uk': 'GB',
+  'canada': 'CA',
+  'new zealand': 'NZ',
+  'india': 'IN',
+  'china': 'CN',
+  'japan': 'JP',
+  'south korea': 'KR',
+  'korea': 'KR',
+  'singapore': 'SG',
+  'malaysia': 'MY',
+  'germany': 'DE',
+  'france': 'FR',
+  'italy': 'IT',
+  'spain': 'ES',
+  'netherlands': 'NL',
+  'ireland': 'IE',
+  'switzerland': 'CH',
+  'sweden': 'SE',
+  'norway': 'NO',
+  'denmark': 'DK',
+  'finland': 'FI',
+  'austria': 'AT',
+  'belgium': 'BE',
+  'portugal': 'PT',
+  'poland': 'PL',
+  'czech republic': 'CZ',
+  'czechia': 'CZ',
+  'hungary': 'HU',
+  'greece': 'GR',
+  'russia': 'RU',
+  'brazil': 'BR',
+  'mexico': 'MX',
+  'argentina': 'AR',
+  'chile': 'CL',
+  'colombia': 'CO',
+  'peru': 'PE',
+  'south africa': 'ZA',
+  'egypt': 'EG',
+  'nigeria': 'NG',
+  'kenya': 'KE',
+  'uae': 'AE',
+  'united arab emirates': 'AE',
+  'saudi arabia': 'SA',
+  'qatar': 'QA',
+  'pakistan': 'PK',
+  'sri lanka': 'LK',
+  'nepal': 'NP',
+  'thailand': 'TH',
+  'vietnam': 'VN',
+  'indonesia': 'ID',
+  'philippines': 'PH',
+  'taiwan': 'TW',
+  'hong kong': 'HK',
+};
+
+export function getCountryCode(countryName: string | null | undefined): string | null {
+  if (!countryName) return null;
+  
+  const normalized = countryName.toLowerCase().trim();
+  return countryNameToCode[normalized] || null;
+}
+
+export function getFlagUrl(countryCode: string): string {
+  return `https://purecatamphetamine.github.io/country-flag-icons/3x2/${countryCode}.svg`;
+}
