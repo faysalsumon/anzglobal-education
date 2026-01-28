@@ -720,6 +720,7 @@ export const universities = pgTable("universities", {
   intakePeriods: text("intake_periods").array(), // ["January", "February", "July", "September"]
   accreditationStatus: text("accreditation_status"), // "Fully Accredited", "Provisional", etc.
   rankingBand: text("ranking_band"), // "Top 100", "Top 500", "Regional Leader", etc.
+  rtoNumber: varchar("rto_number", { length: 20 }), // Registered Training Organization number (Australia-specific)
   facilities: text("facilities").array(), // ["Library", "Sports Center", "Career Services", "Student Housing"]
   internationalStudentSupport: boolean("international_student_support"), // Whether institution provides international student support
   tags: text("tags").array(), // AI-generated or admin-curated tags for discovery
