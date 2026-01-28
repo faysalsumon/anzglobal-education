@@ -57,6 +57,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useInstitutionFilters } from "@/hooks/useInstitutionFilters";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { ListPagination } from "@/components/list-pagination";
+import { ScholarshipMarquee } from "@/components/ui/scholarship-marquee";
 import type { Favorite } from "@shared/schema";
 
 type CampusAddress = {
@@ -109,7 +110,9 @@ type University = {
   campusAddresses?: CampusAddress[] | null;
   structuredTags?: StructuredTag[];
   activeScholarshipMaxPercentage?: number | null;
+  activeScholarshipMaxFixed?: number | null;
   activeScholarshipCount?: number;
+  activeScholarships?: Array<{ name: string; valueType: string; value: number; }>;
 };
 
 type TagInfo = {
@@ -1071,40 +1074,66 @@ export default function PublicInstitutions() {
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-4">
-                      {/* Top Row: Badges left, Favorite top right */}
-                      <div className="flex justify-between items-center mb-3">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {(institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax) !== null && 
-                           (institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax)! > 0 && (
-                            <Badge variant="default" className="text-xs" data-testid={`badge-scholarship-${institution.id}`}>
-                              <Award className="h-3 w-3 mr-1" />
-                              Up to {institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax}% Scholarship
-                            </Badge>
-                          )}
-                          {institution.rankingBand && (
-                            <Badge variant="outline" className="text-xs">
-                              {institution.rankingBand}
-                            </Badge>
-                          )}
-                          {institution.rankingBand === "Top 100" && (
-                            <Badge variant="secondary" className="text-xs">Global Top 100</Badge>
-                          )}
+                      {/* Top Row: Animated Scholarship Marquee or fallback badge */}
+                      {institution.activeScholarships && institution.activeScholarships.length > 0 ? (
+                        <div className="flex justify-between items-center gap-2 mb-3">
+                          <ScholarshipMarquee 
+                            scholarships={institution.activeScholarships}
+                            className="flex-1 max-w-[280px]"
+                            testId={`marquee-scholarship-${institution.id}`}
+                          />
+                          <Button
+                            variant={isFavorited(institution.id) ? "default" : "ghost"}
+                            size="icon"
+                            className="flex-shrink-0"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleFavoriteToggle(institution.id);
+                            }}
+                            disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+                            data-testid={`button-favorite-${institution.id}`}
+                          >
+                            <Heart className={`h-4 w-4 ${isFavorited(institution.id) ? "fill-current" : ""}`} />
+                          </Button>
                         </div>
+                      ) : (
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax) !== null && 
+                             (institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax)! > 0 && (
+                              <Badge variant="default" className="text-xs" data-testid={`badge-scholarship-${institution.id}`}>
+                                <Award className="h-3 w-3 mr-1" />
+                                Up to {institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax}% Scholarship
+                              </Badge>
+                            )}
+                            {institution.rankingBand && (
+                              <Badge variant="outline" className="text-xs">
+                                {institution.rankingBand}
+                              </Badge>
+                            )}
+                            {institution.rankingBand === "Top 100" && (
+                              <Badge variant="secondary" className="text-xs">Global Top 100</Badge>
+                            )}
+                          </div>
                         
-                        {/* Top Right: Favorite */}
-                        <Button
-                          variant={isFavorited(institution.id) ? "default" : "ghost"}
-                          size="icon"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleFavoriteToggle(institution.id);
-                          }}
-                          aria-label={isFavorited(institution.id) ? "Remove from favorites" : "Add to favorites"}
-                          data-testid={`button-favorite-${institution.id}`}
-                        >
-                          <Heart className={`h-4 w-4 ${isFavorited(institution.id) ? "fill-current" : ""}`} />
-                        </Button>
-                      </div>
+                          {/* Top Right: Favorite */}
+                          <Button
+                            variant={isFavorited(institution.id) ? "default" : "ghost"}
+                            size="icon"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleFavoriteToggle(institution.id);
+                            }}
+                            disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+                            aria-label={isFavorited(institution.id) ? "Remove from favorites" : "Add to favorites"}
+                            data-testid={`button-favorite-fallback-${institution.id}`}
+                          >
+                            <Heart className={`h-4 w-4 ${isFavorited(institution.id) ? "fill-current" : ""}`} />
+                          </Button>
+                        </div>
+                      )}
 
                       {/* Main Content: Logo + Institution Info */}
                       <div className="flex items-center gap-3">

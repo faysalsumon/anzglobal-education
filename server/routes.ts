@@ -1925,16 +1925,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           : [];
         
-        // Calculate max scholarship percentage for each institution
-        const scholarshipsByInstitution = new Map<string, { maxPercentage: number | null; scholarshipCount: number }>();
+        // Group scholarships by institution with full details for marquee display
+        type ScholarshipInfo = { name: string; valueType: string; value: number; };
+        const scholarshipsByInstitution = new Map<string, { 
+          maxPercentage: number | null; 
+          maxFixed: number | null;
+          scholarshipCount: number;
+          scholarships: ScholarshipInfo[];
+        }>();
         for (const scholarship of allScholarships) {
-          const current = scholarshipsByInstitution.get(scholarship.institutionId) || { maxPercentage: null, scholarshipCount: 0 };
+          const current = scholarshipsByInstitution.get(scholarship.institutionId) || { 
+            maxPercentage: null, 
+            maxFixed: null,
+            scholarshipCount: 0,
+            scholarships: []
+          };
           current.scholarshipCount += 1;
           
+          const value = parseFloat(scholarship.value as string);
+          current.scholarships.push({
+            name: scholarship.name,
+            valueType: scholarship.valueType,
+            value: value,
+          });
+          
           if (scholarship.valueType === 'percentage') {
-            const percentage = parseFloat(scholarship.value as string);
-            if (current.maxPercentage === null || percentage > current.maxPercentage) {
-              current.maxPercentage = percentage;
+            if (current.maxPercentage === null || value > current.maxPercentage) {
+              current.maxPercentage = value;
+            }
+          } else if (scholarship.valueType === 'fixed') {
+            if (current.maxFixed === null || value > current.maxFixed) {
+              current.maxFixed = value;
             }
           }
           scholarshipsByInstitution.set(scholarship.institutionId, current);
@@ -1962,7 +1983,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             structuredTags: tagsByInstitution.get(inst.id) || [],
             // Use new scholarship module data, fallback to legacy field
             activeScholarshipMaxPercentage: scholarshipData?.maxPercentage ?? inst.scholarshipPercentageMax,
+            activeScholarshipMaxFixed: scholarshipData?.maxFixed ?? null,
             activeScholarshipCount: scholarshipData?.scholarshipCount ?? 0,
+            activeScholarships: scholarshipData?.scholarships ?? [],
           };
         });
         
@@ -1997,6 +2020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               institutionId: scholarships.institutionId,
               valueType: scholarships.valueType,
               value: scholarships.value,
+              name: scholarships.name,
             })
             .from(scholarships)
             .where(
@@ -2008,16 +2032,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           : [];
         
-        // Calculate max scholarship percentage for each institution
-        const scholarshipsByInstUnpaged = new Map<string, { maxPercentage: number | null; scholarshipCount: number }>();
+        // Group scholarships by institution with full details for marquee display
+        type ScholarshipInfoUnpaged = { name: string; valueType: string; value: number; };
+        const scholarshipsByInstUnpaged = new Map<string, { 
+          maxPercentage: number | null; 
+          maxFixed: number | null;
+          scholarshipCount: number;
+          scholarships: ScholarshipInfoUnpaged[];
+        }>();
         for (const scholarship of allScholarshipsUnpaged) {
-          const current = scholarshipsByInstUnpaged.get(scholarship.institutionId) || { maxPercentage: null, scholarshipCount: 0 };
+          const current = scholarshipsByInstUnpaged.get(scholarship.institutionId) || { 
+            maxPercentage: null, 
+            maxFixed: null,
+            scholarshipCount: 0,
+            scholarships: []
+          };
           current.scholarshipCount += 1;
           
+          const value = parseFloat(scholarship.value as string);
+          current.scholarships.push({
+            name: scholarship.name,
+            valueType: scholarship.valueType,
+            value: value,
+          });
+          
           if (scholarship.valueType === 'percentage') {
-            const percentage = parseFloat(scholarship.value as string);
-            if (current.maxPercentage === null || percentage > current.maxPercentage) {
-              current.maxPercentage = percentage;
+            if (current.maxPercentage === null || value > current.maxPercentage) {
+              current.maxPercentage = value;
+            }
+          } else if (scholarship.valueType === 'fixed') {
+            if (current.maxFixed === null || value > current.maxFixed) {
+              current.maxFixed = value;
             }
           }
           scholarshipsByInstUnpaged.set(scholarship.institutionId, current);
@@ -2042,7 +2087,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...inst,
             structuredTags: tagsByInstitution.get(inst.id) || [],
             activeScholarshipMaxPercentage: scholarshipData?.maxPercentage ?? inst.scholarshipPercentageMax,
+            activeScholarshipMaxFixed: scholarshipData?.maxFixed ?? null,
             activeScholarshipCount: scholarshipData?.scholarshipCount ?? 0,
+            activeScholarships: scholarshipData?.scholarships ?? [],
           };
         });
         

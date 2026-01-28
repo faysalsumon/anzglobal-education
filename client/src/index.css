@@ -429,6 +429,25 @@
   animation: shimmer 2s infinite;
 }
 
+/* Scholarship Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 15s linear infinite;
+}
+
+.scholarship-marquee-container:hover .animate-marquee,
+.animate-marquee.pause-animation {
+  animation-play-state: paused;
+}
+
 /* Hover Transform */
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
