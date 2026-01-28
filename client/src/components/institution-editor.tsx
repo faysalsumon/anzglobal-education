@@ -70,6 +70,7 @@ const institutionSchema = z.object({
     postcode: z.string(),
     country: z.string(),
   })).optional(),
+  rtoNumber: z.string().optional(), // RTO number for Australian institutions
 });
 
 const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
@@ -97,6 +98,7 @@ interface Institution {
     postcode: string;
     country: string;
   }> | null;
+  rtoNumber: string | null; // RTO number for Australian institutions
   approvalStatus: string | null;
   publishStatus?: string | null;
   visibility?: string | null; // 'public' | 'private'
@@ -270,6 +272,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       topCourses: institution?.topCourses?.join(", ") || "",
       institutionGallery: institution?.institutionGallery || [],
       campusAddresses: institution?.campusAddresses || [],
+      rtoNumber: institution?.rtoNumber || "",
     },
   });
 
