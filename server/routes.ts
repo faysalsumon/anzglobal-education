@@ -5207,14 +5207,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Document must be a passport type" });
       }
 
-      // Check if file is an image or PDF
+      // Check if file is an image (PDF not supported due to server environment limitations)
       const imageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      const isPdf = document.mimeType === 'application/pdf';
       const isImage = imageMimeTypes.includes(document.mimeType || '');
       
-      if (!isPdf && !isImage) {
+      if (!isImage) {
         return res.status(400).json({ 
-          message: "Passport document must be an image (JPEG, PNG, WebP) or PDF file." 
+          message: "Passport extraction only supports image files (JPEG, PNG, WebP). Please upload a photo or scan of your passport as an image file." 
         });
       }
 
@@ -5227,58 +5226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to read document file" });
       }
 
-      let imageBase64: string;
-      let mimeType: string;
-
-      if (isPdf) {
-        // Convert PDF first page to image using pdf-poppler
-        const pdfPoppler = await import('pdf-poppler');
-        const os = await import('os');
-        const crypto = await import('crypto');
-        
-        // Create unique temp file paths
-        const tempId = crypto.randomBytes(8).toString('hex');
-        const tempDir = os.tmpdir();
-        const tempPdfPath = path.join(tempDir, `passport_${tempId}.pdf`);
-        const tempOutputPrefix = path.join(tempDir, `passport_${tempId}`);
-        
-        try {
-          // Write PDF to temp file
-          await fs.writeFile(tempPdfPath, fileBuffer);
-          
-          // Convert first page of PDF to PNG
-          const opts = {
-            format: 'png',
-            out_dir: tempDir,
-            out_prefix: `passport_${tempId}`,
-            page: 1,
-            scale: 2048, // Higher resolution for better OCR
-          };
-          
-          await pdfPoppler.convert(tempPdfPath, opts);
-          
-          // Read the generated image (pdf-poppler adds -1 suffix for page 1)
-          const generatedImagePath = `${tempOutputPrefix}-1.png`;
-          const imageBuffer = await fs.readFile(generatedImagePath);
-          imageBase64 = imageBuffer.toString('base64');
-          mimeType = 'image/png';
-          
-          // Clean up temp files
-          await fs.unlink(tempPdfPath).catch(() => {});
-          await fs.unlink(generatedImagePath).catch(() => {});
-        } catch (pdfError: any) {
-          console.error("PDF conversion error:", pdfError);
-          // Clean up on error
-          await fs.unlink(tempPdfPath).catch(() => {});
-          return res.status(500).json({ 
-            message: "Failed to process PDF document. Please try uploading an image instead." 
-          });
-        }
-      } else {
-        // Direct image processing
-        imageBase64 = fileBuffer.toString('base64');
-        mimeType = document.mimeType || 'image/jpeg';
-      }
+      // Direct image processing
+      const imageBase64 = fileBuffer.toString('base64');
+      const mimeType = document.mimeType || 'image/jpeg';
 
       // Call AI to extract passport data
       const extractedData = await extractPassportFromImage(imageBase64, mimeType);
