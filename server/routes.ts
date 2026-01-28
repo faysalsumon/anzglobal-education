@@ -5218,14 +5218,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get the file from object storage
-      const { Client } = await import("@replit/object-storage");
-      const objectStorageClient = new Client();
-
-      // Download the file
-      const downloadResult = await objectStorageClient.downloadAsBytes(document.filePath);
-      if (!downloadResult.ok) {
-        return res.status(500).json({ message: "Failed to download document file" });
+      // Read the file from local file system (files are stored in mounted object storage directory)
+      let fileBuffer: Buffer;
+      try {
+        fileBuffer = await fs.readFile(document.filePath);
+      } catch (err) {
+        console.error('Failed to read document file:', err);
+        return res.status(500).json({ message: "Failed to read document file" });
       }
 
       let imageBase64: string;
@@ -5245,7 +5244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           // Write PDF to temp file
-          await fs.writeFile(tempPdfPath, Buffer.from(downloadResult.value));
+          await fs.writeFile(tempPdfPath, fileBuffer);
           
           // Convert first page of PDF to PNG
           const opts = {
@@ -5277,7 +5276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // Direct image processing
-        imageBase64 = Buffer.from(downloadResult.value).toString('base64');
+        imageBase64 = fileBuffer.toString('base64');
         mimeType = document.mimeType || 'image/jpeg';
       }
 
