@@ -202,7 +202,7 @@ export function Footer() {
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Powered by AI and Blockchain Technology</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
                 {aiTechnologies.map((tech) => (
@@ -323,7 +323,7 @@ export function Footer() {
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Enterprise-Grade AI</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Powered by AI and Blockchain Technology</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {aiTechnologies.map((tech) => (
