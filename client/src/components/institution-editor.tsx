@@ -8,9 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye, History, Users, Clock, Edit, Plus, Trash2, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -126,6 +128,24 @@ const INSTITUTION_TAG_CATEGORY_LABELS: Record<string, string> = {
   services: "Services",
 };
 
+// Activity log interface
+interface ActivityLogItem {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  userName: string | null;
+  userProfilePicture: string | null;
+  userType: string | null;
+  entityType: string;
+  entityId: string;
+  entityName: string | null;
+  action: string;
+  actionDescription: string | null;
+  changes: Record<string, { before: any; after: any }> | null;
+  metadata: any;
+  createdAt: string;
+}
+
 export function InstitutionEditor({ institution, onBack, userId }: InstitutionEditorProps) {
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
@@ -135,6 +155,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
   const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
+  const [activeTab, setActiveTab] = useState<string>("website");
 
   // Fetch grouped tags for picker
   const { data: groupedTags } = useQuery<Record<string, InstitutionTagItem[]>>({
@@ -188,6 +209,18 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       setLegacyCourseNames(unmatchedLegacy);
     }
   }, [institution?.topCourses, coursesData]);
+
+  // Fetch activity logs for history tab
+  const { data: activityLogsData, isLoading: loadingActivityLogs } = useQuery<{ logs: ActivityLogItem[]; total: number }>({
+    queryKey: ["/api/admin/activity-logs/entity", "institution", institution?.id],
+    queryFn: async () => {
+      if (!institution?.id) return { logs: [], total: 0 };
+      const res = await fetch(`/api/admin/activity-logs/entity/institution/${institution.id}?limit=50`);
+      if (!res.ok) return { logs: [], total: 0 };
+      return res.json();
+    },
+    enabled: !!institution?.id && activeTab === "history",
+  });
 
   // Update tags mutation
   const updateTagsMutation = useMutation({
@@ -440,16 +473,35 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <Form {...form}>
-          <form className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
-                    <CardDescription>Essential details about the institution</CardDescription>
-                  </CardHeader>
+      <div className="flex-1 overflow-y-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <div className="border-b bg-background sticky top-0 z-10 px-6">
+            <TabsList className="h-12" data-testid="tabs-institution-editor">
+              <TabsTrigger value="website" className="gap-2" data-testid="tab-website">
+                <Globe className="h-4 w-4" />
+                Website
+              </TabsTrigger>
+              <TabsTrigger value="crm" className="gap-2" data-testid="tab-crm">
+                <Users className="h-4 w-4" />
+                CRM
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2" data-testid="tab-history">
+                <History className="h-4 w-4" />
+                History
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="website" className="flex-1 overflow-y-auto p-6 mt-0">
+            <Form {...form}>
+              <form className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Basic Information</CardTitle>
+                        <CardDescription>Essential details about the institution</CardDescription>
+                      </CardHeader>
                   <CardContent className="space-y-4">
                     <FormField
                       control={form.control}
@@ -1007,29 +1059,137 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                 )}
               </div>
             </div>
-          </form>
-        </Form>
+              </form>
+            </Form>
 
-        {institution && (
-          <div className="space-y-6 mt-6">
-            <InstitutionScholarshipsPanel
-              institutionId={institution.id}
-              institutionName={institution.name}
-            />
-            <InstitutionContactsPanel
-              institutionId={institution.id}
-              institutionName={institution.name}
-            />
-            <InstitutionBusinessTermsPanel
-              institutionId={institution.id}
-              institutionName={institution.name}
-            />
-            <InstitutionDocumentsPanel
-              institutionId={institution.id}
-              institutionName={institution.name}
-            />
-          </div>
-        )}
+            {institution && (
+              <div className="space-y-6 mt-6">
+                <InstitutionScholarshipsPanel
+                  institutionId={institution.id}
+                  institutionName={institution.name}
+                />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="crm" className="flex-1 overflow-y-auto p-6 mt-0">
+            {institution ? (
+              <div className="max-w-7xl mx-auto space-y-6">
+                <InstitutionContactsPanel
+                  institutionId={institution.id}
+                  institutionName={institution.name}
+                />
+                <InstitutionBusinessTermsPanel
+                  institutionId={institution.id}
+                  institutionName={institution.name}
+                />
+                <InstitutionDocumentsPanel
+                  institutionId={institution.id}
+                  institutionName={institution.name}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground" data-testid="text-crm-save-first">
+                Please save the institution first to access CRM features.
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="history" className="flex-1 overflow-y-auto p-6 mt-0">
+            {institution ? (
+              <div className="max-w-7xl mx-auto">
+                <Card data-testid="card-institution-history">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Activity History
+                    </CardTitle>
+                    <CardDescription>Track all changes and activities for this institution</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingActivityLogs ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground">Loading activity history...</span>
+                      </div>
+                    ) : activityLogsData?.logs && activityLogsData.logs.length > 0 ? (
+                      <div className="space-y-4">
+                        {activityLogsData.logs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="flex gap-4 p-4 border rounded-lg bg-muted/30"
+                            data-testid={`activity-log-${log.id}`}
+                          >
+                            <Avatar className="h-10 w-10 shrink-0">
+                              <AvatarImage src={log.userProfilePicture || undefined} alt={log.userName || "User"} />
+                              <AvatarFallback>
+                                {log.userName ? log.userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : <User className="h-4 w-4" />}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 flex-wrap">
+                                <div>
+                                  <span className="font-medium" data-testid={`activity-user-${log.id}`}>
+                                    {log.userName || log.userEmail || "Unknown User"}
+                                  </span>
+                                  <span className="text-muted-foreground mx-1">-</span>
+                                  <Badge
+                                    variant={
+                                      log.action === "create" ? "default" :
+                                      log.action === "update" ? "secondary" :
+                                      log.action === "delete" ? "destructive" : "outline"
+                                    }
+                                    data-testid={`activity-action-${log.id}`}
+                                  >
+                                    {log.action === "create" && <Plus className="h-3 w-3 mr-1" />}
+                                    {log.action === "update" && <Edit className="h-3 w-3 mr-1" />}
+                                    {log.action === "delete" && <Trash2 className="h-3 w-3 mr-1" />}
+                                    {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`activity-time-${log.id}`}>
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(log.createdAt).toLocaleString()}
+                                </div>
+                              </div>
+                              {log.actionDescription && (
+                                <p className="text-sm text-muted-foreground mt-1" data-testid={`activity-description-${log.id}`}>
+                                  {log.actionDescription}
+                                </p>
+                              )}
+                              {log.changes && Object.keys(log.changes).length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {Object.entries(log.changes).map(([field, change]) => (
+                                    <div key={field} className="text-xs bg-muted px-2 py-1 rounded" data-testid={`activity-change-${log.id}-${field}`}>
+                                      <span className="font-medium">{field}:</span>
+                                      <span className="text-destructive mx-1 line-through">{String(change.before || "empty")}</span>
+                                      <span className="text-muted-foreground mx-1">→</span>
+                                      <span className="text-green-600 dark:text-green-400">{String(change.after || "empty")}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground" data-testid="text-no-activity">
+                        <History className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                        <p>No activity recorded yet.</p>
+                        <p className="text-sm">Changes to this institution will appear here.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground" data-testid="text-history-save-first">
+                Please save the institution first to view activity history.
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
