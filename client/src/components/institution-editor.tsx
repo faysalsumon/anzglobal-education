@@ -475,17 +475,29 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
       <div className="flex-1 overflow-y-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="border-b bg-background sticky top-0 z-10 px-6">
-            <TabsList className="h-12" data-testid="tabs-institution-editor">
-              <TabsTrigger value="website" className="gap-2" data-testid="tab-website">
+          <div className="border-b bg-muted/50 sticky top-0 z-50 px-6 py-3">
+            <TabsList className="h-12 bg-background border shadow-sm p-1" data-testid="tabs-institution-editor">
+              <TabsTrigger 
+                value="website" 
+                className="gap-2 px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md" 
+                data-testid="tab-website"
+              >
                 <Globe className="h-4 w-4" />
                 Website
               </TabsTrigger>
-              <TabsTrigger value="crm" className="gap-2" data-testid="tab-crm">
+              <TabsTrigger 
+                value="crm" 
+                className="gap-2 px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md" 
+                data-testid="tab-crm"
+              >
                 <Users className="h-4 w-4" />
                 CRM
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-2" data-testid="tab-history">
+              <TabsTrigger 
+                value="history" 
+                className="gap-2 px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md" 
+                data-testid="tab-history"
+              >
                 <History className="h-4 w-4" />
                 History
               </TabsTrigger>
