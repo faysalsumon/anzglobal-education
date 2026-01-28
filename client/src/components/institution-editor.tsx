@@ -71,6 +71,7 @@ const institutionSchema = z.object({
     country: z.string(),
   })).optional(),
   rtoNumber: z.string().optional(), // RTO number for Australian institutions
+  cricosProviderCode: z.string().optional(), // CRICOS Provider Code for international students
 });
 
 const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
@@ -99,6 +100,7 @@ interface Institution {
     country: string;
   }> | null;
   rtoNumber: string | null; // RTO number for Australian institutions
+  cricosProviderCode: string | null; // CRICOS Provider Code for international students
   approvalStatus: string | null;
   publishStatus?: string | null;
   visibility?: string | null; // 'public' | 'private'
@@ -273,6 +275,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       institutionGallery: institution?.institutionGallery || [],
       campusAddresses: institution?.campusAddresses || [],
       rtoNumber: institution?.rtoNumber || "",
+      cricosProviderCode: institution?.cricosProviderCode || "",
     },
   });
 
@@ -578,22 +581,40 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                     </div>
 
                     {form.watch("country") === "Australia" && (
-                      <FormField
-                        control={form.control}
-                        name="rtoNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>RTO Number</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g., 12345" data-testid="input-institution-rtoNumber" />
-                            </FormControl>
-                            <FormDescription className="text-xs">
-                              Registered Training Organization number (Australian institutions only)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="cricosProviderCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CRICOS Provider Code</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., 03548F" data-testid="input-institution-cricosProviderCode" />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Required for enrolling international students
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="rtoNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>RTO Number</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., 52010" data-testid="input-institution-rtoNumber" />
+                              </FormControl>
+                              <FormDescription className="text-xs">
+                                Registered Training Organization number
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     )}
 
                     <FormField
