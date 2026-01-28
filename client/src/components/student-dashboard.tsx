@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, GitCompare, Sparkles, GraduationCap, BookOpen, Target, ArrowRight, Brain, Zap, Award } from "lucide-react";
+import { FileText, User, Search, TrendingUp, Users, Copy, Check, Gift, Heart, GitCompare, Sparkles, GraduationCap, BookOpen, Target, ArrowRight, Brain, Zap, Award, Boxes, Shield, CheckCircle2, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes } from "lucide-react";
 import { SiOpenai } from "react-icons/si";
 import {
   Accordion,
@@ -29,6 +29,11 @@ const aiTechnologies = [
     name: "Pinecone",
     icon: Database,
     description: "Vector database",
+  },
+  {
+    name: "Blockchain",
+    icon: Boxes,
+    description: "Document verification",
   },
 ];
 
