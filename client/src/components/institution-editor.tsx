@@ -577,6 +577,25 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       />
                     </div>
 
+                    {form.watch("country") === "Australia" && (
+                      <FormField
+                        control={form.control}
+                        name="rtoNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>RTO Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., 12345" data-testid="input-institution-rtoNumber" />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Registered Training Organization number (Australian institutions only)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
                     <FormField
                       control={form.control}
                       name="description"
