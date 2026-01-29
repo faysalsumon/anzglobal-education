@@ -1653,16 +1653,10 @@ export default function PublicCourses() {
                       <CardContent className="p-4">
                         {/* Top Row: Favorite and Compare in top right */}
                         <div className="flex justify-between items-start mb-3 gap-2">
-                          {/* Tags Marquee - Scrolling Tags */}
+                          {/* Top Left: Search Highlight Badge */}
                           <div className="flex-1 min-w-0 overflow-hidden">
-                            <TagMarquee
-                              level={course.level || ''}
-                              subject={course.subject}
-                              tags={(course as any).tags as { id: number; name: string; slug: string; color: string | null }[] | undefined}
-                              testId={`tag-marquee-${course.id}`}
-                            />
                             {isHighlighted && (
-                              <Badge className="bg-accent text-accent-foreground text-xs mt-1">
+                              <Badge className="bg-accent text-accent-foreground text-xs">
                                 <Sparkles className="h-3 w-3 mr-1" />
                                 Your Search Result
                               </Badge>
@@ -1808,37 +1802,50 @@ export default function PublicCourses() {
                           </div>
                         </div>
 
-                        {/* Bottom Section: Action Buttons */}
+                        {/* Bottom Section: Tag Marquee + Action Buttons */}
                         <div className="mt-4 pt-3 border-t border-border/50">
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              className="bg-[#FF5000] hover:bg-[#FF5000]/90 text-white"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedCourseForLead(course);
-                              }}
-                              data-testid={`button-request-info-${course.id}`}
-                            >
-                              <Mail className="mr-1.5 h-3.5 w-3.5" />
-                              Request Info
-                            </Button>
-                            {isAuthenticated && isStudent ? (
-                              <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
-                                <Link href={`/student/courses/${course.id}`}>
-                                  <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
-                                  Apply
-                                </Link>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            {/* Left: Tag Marquee */}
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <TagMarquee
+                                level={course.level || ''}
+                                subject={course.subject}
+                                tags={(course as any).tags as { id: number; name: string; slug: string; color: string | null }[] | undefined}
+                                testId={`tag-marquee-${course.id}`}
+                              />
+                            </div>
+                            
+                            {/* Right: Action Buttons */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button
+                                size="sm"
+                                className="bg-[#FF5000] text-white"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedCourseForLead(course);
+                                }}
+                                data-testid={`button-request-info-${course.id}`}
+                              >
+                                <Mail className="mr-1.5 h-3.5 w-3.5" />
+                                Request Info
                               </Button>
-                            ) : (
-                              <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
-                                <a href="/auth">
-                                  <LogIn className="mr-1.5 h-3.5 w-3.5" />
-                                  Apply
-                                </a>
-                              </Button>
-                            )}
+                              {isAuthenticated && isStudent ? (
+                                <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
+                                  <Link href={`/student/courses/${course.id}`}>
+                                    <GraduationCap className="mr-1.5 h-3.5 w-3.5" />
+                                    Apply
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button asChild size="sm" onClick={(e) => e.stopPropagation()} data-testid={`button-apply-course-${course.id}`}>
+                                  <a href="/auth">
+                                    <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                                    Apply
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
