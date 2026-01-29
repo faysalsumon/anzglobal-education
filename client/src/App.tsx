@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -11,62 +12,74 @@ import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
 import { RegionProvider } from "@/context/RegionContext";
 import { SupabaseAuthProvider } from "@/lib/supabase-auth";
-import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
-import Home from "@/pages/home";
-import UniversityProfile from "@/pages/university-profile";
-import UniversityInstitutions from "@/pages/university-institutions";
-import UniversityCourses from "@/pages/university-courses";
-import CourseForm from "@/pages/course-form";
-import UniversityApplications from "@/pages/university-applications";
-import UniversityTeam from "@/pages/university-team";
-import UniversityAIAssistant from "@/pages/university-ai-assistant";
-import StudentCourses from "@/pages/student-courses";
-import CourseDetail from "@/pages/course-detail";
-import StudentProfilePage from "@/pages/student-profile";
-import StudentApplications from "@/pages/student-applications";
-import StudentAIAssistant from "@/pages/student-ai-assistant";
-import StudentReferrals from "@/pages/student-referrals";
-import StudentDocuments from "@/pages/student-documents";
-import StudentFavorites from "@/pages/student-favorites";
-import StudentDashboardPage from "@/pages/student-dashboard-page";
-import DashboardRedirect from "@/pages/dashboard-redirect";
-import PublicCourses from "@/pages/public-courses";
-import PublicCourseDetail from "@/pages/public-course-detail";
-import PublicInstitutions from "@/pages/public-institutions";
-import PublicInstitutionDetail from "@/pages/public-institution-detail";
-import PublicBlogArchive from "@/pages/public-blog-archive";
-import PublicBlogDetail from "@/pages/public-blog-detail";
-import PublicBrowse from "@/pages/public-browse";
-import PublicTag from "@/pages/public-tag";
-import CompareCourses from "@/pages/compare-courses";
-import Contact from "@/pages/contact";
-import PartnerWithUs from "@/pages/partner-with-us";
-import StudyInAustralia from "@/pages/study-in-australia";
-import OurStory from "@/pages/our-story";
-import StudentReviews from "@/pages/student-reviews";
-import UserTypeSelection from "@/pages/user-type-selection";
-import AdminLogin from "@/pages/admin-login";
-import AdminForgotPassword from "@/pages/admin-forgot-password";
-import InstitutionLogin from "@/pages/institution-login";
-import AuthPage from "@/pages/auth";
-import AdminDashboard from "@/pages/admin-dashboard";
-import AdminProfile from "@/pages/admin-profile";
-import AdminCSVImport from "@/pages/admin-csv-import";
-import ScrapingJobDetail from "@/pages/scraping-job-detail";
-import ScrapingReviewDashboard from "@/pages/scraping-review-dashboard";
-import AdminApplicationDetail from "@/pages/admin-application-detail";
-import ChatPage from "@/pages/chat";
-import TermsOfService from "@/pages/terms-of-service";
-import PrivacyPolicy from "@/pages/privacy-policy";
-import AffiliatePage from "@/pages/affiliate";
-import ResetPasswordPage from "@/pages/reset-password";
-import AuthCallback from "@/pages/auth-callback";
-import AdminPendingApproval from "@/pages/admin-pending-approval";
-import AcceptInvitation from "@/pages/accept-invitation";
-import ForcePasswordReset from "@/pages/force-password-reset";
-import AdminLeadForm from "@/pages/admin-lead-form";
-import AdminContactForm from "@/pages/admin-contact-form";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Landing = lazy(() => import("@/pages/landing"));
+const Home = lazy(() => import("@/pages/home"));
+const UniversityProfile = lazy(() => import("@/pages/university-profile"));
+const UniversityInstitutions = lazy(() => import("@/pages/university-institutions"));
+const UniversityCourses = lazy(() => import("@/pages/university-courses"));
+const CourseForm = lazy(() => import("@/pages/course-form"));
+const UniversityApplications = lazy(() => import("@/pages/university-applications"));
+const UniversityTeam = lazy(() => import("@/pages/university-team"));
+const UniversityAIAssistant = lazy(() => import("@/pages/university-ai-assistant"));
+const StudentCourses = lazy(() => import("@/pages/student-courses"));
+const CourseDetail = lazy(() => import("@/pages/course-detail"));
+const StudentProfilePage = lazy(() => import("@/pages/student-profile"));
+const StudentApplications = lazy(() => import("@/pages/student-applications"));
+const StudentAIAssistant = lazy(() => import("@/pages/student-ai-assistant"));
+const StudentReferrals = lazy(() => import("@/pages/student-referrals"));
+const StudentDocuments = lazy(() => import("@/pages/student-documents"));
+const StudentFavorites = lazy(() => import("@/pages/student-favorites"));
+const StudentDashboardPage = lazy(() => import("@/pages/student-dashboard-page"));
+const DashboardRedirect = lazy(() => import("@/pages/dashboard-redirect"));
+const PublicCourses = lazy(() => import("@/pages/public-courses"));
+const PublicCourseDetail = lazy(() => import("@/pages/public-course-detail"));
+const PublicInstitutions = lazy(() => import("@/pages/public-institutions"));
+const PublicInstitutionDetail = lazy(() => import("@/pages/public-institution-detail"));
+const PublicBlogArchive = lazy(() => import("@/pages/public-blog-archive"));
+const PublicBlogDetail = lazy(() => import("@/pages/public-blog-detail"));
+const PublicBrowse = lazy(() => import("@/pages/public-browse"));
+const PublicTag = lazy(() => import("@/pages/public-tag"));
+const CompareCourses = lazy(() => import("@/pages/compare-courses"));
+const Contact = lazy(() => import("@/pages/contact"));
+const PartnerWithUs = lazy(() => import("@/pages/partner-with-us"));
+const StudyInAustralia = lazy(() => import("@/pages/study-in-australia"));
+const OurStory = lazy(() => import("@/pages/our-story"));
+const StudentReviews = lazy(() => import("@/pages/student-reviews"));
+const UserTypeSelection = lazy(() => import("@/pages/user-type-selection"));
+const AdminLogin = lazy(() => import("@/pages/admin-login"));
+const AdminForgotPassword = lazy(() => import("@/pages/admin-forgot-password"));
+const InstitutionLogin = lazy(() => import("@/pages/institution-login"));
+const AuthPage = lazy(() => import("@/pages/auth"));
+const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
+const AdminProfile = lazy(() => import("@/pages/admin-profile"));
+const AdminCSVImport = lazy(() => import("@/pages/admin-csv-import"));
+const ScrapingJobDetail = lazy(() => import("@/pages/scraping-job-detail"));
+const ScrapingReviewDashboard = lazy(() => import("@/pages/scraping-review-dashboard"));
+const AdminApplicationDetail = lazy(() => import("@/pages/admin-application-detail"));
+const ChatPage = lazy(() => import("@/pages/chat"));
+const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
+const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const AffiliatePage = lazy(() => import("@/pages/affiliate"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const AuthCallback = lazy(() => import("@/pages/auth-callback"));
+const AdminPendingApproval = lazy(() => import("@/pages/admin-pending-approval"));
+const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
+const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
+const AdminLeadForm = lazy(() => import("@/pages/admin-lead-form"));
+const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[200px] w-full">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground text-sm">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 interface RouterProps {
   user: any;
@@ -76,73 +89,71 @@ interface RouterProps {
 
 function Router({ user, isAuthenticated, isLoading }: RouterProps) {
   return (
-    <Switch>
-      {/* Public routes accessible to everyone */}
-      <Route path="/" component={Landing} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin/forgot-password" component={AdminForgotPassword} />
-      <Route path="/institution/login" component={InstitutionLogin} />
-      <Route path="/compare-courses" component={CompareCourses} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/partner-with-us" component={PartnerWithUs} />
-      <Route path="/study-in-australia" component={StudyInAustralia} />
-      <Route path="/our-story" component={OurStory} />
-      <Route path="/student-reviews" component={StudentReviews} />
-      <Route path="/courses/:id" component={PublicCourseDetail} />
-      <Route path="/courses" component={PublicCourses} />
-      <Route path="/institutions/:id" component={PublicInstitutionDetail} />
-      <Route path="/institutions" component={PublicInstitutions} />
-      <Route path="/blog/:slug" component={PublicBlogDetail} />
-      <Route path="/blog" component={PublicBlogArchive} />
-      <Route path="/browse/:slug" component={PublicTag} />
-      <Route path="/browse" component={PublicBrowse} />
-      <Route path="/terms" component={TermsOfService} />
-      <Route path="/privacy" component={PrivacyPolicy} />
-      <Route path="/affiliate" component={AffiliatePage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/force-password-reset" component={ForcePasswordReset} />
-      <Route path="/auth/callback" component={AuthCallback} />
-      <Route path="/auth/accept-invite" component={AcceptInvitation} />
-      <Route path="/accept-invitation" component={AcceptInvitation} />
-      
-      {/* Protected routes - always available but protected at component level */}
-      <Route path="/user-type" component={UserTypeSelection} />
-      <Route path="/dashboard" component={DashboardRedirect} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/pending-approval" component={AdminPendingApproval} />
-      <Route path="/admin/profile" component={AdminProfile} />
-      <Route path="/admin/csv-import" component={AdminCSVImport} />
-      <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
-      <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
-      <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
-      <Route path="/admin/leads/new" component={AdminLeadForm} />
-      <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
-      <Route path="/admin/contacts/new" component={AdminContactForm} />
-      <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
-      <Route path="/university/profile" component={UniversityProfile} />
-      <Route path="/university/dashboard" component={Home} />
-      <Route path="/university/institutions" component={UniversityInstitutions} />
-      <Route path="/university/courses" component={UniversityCourses} />
-      <Route path="/university/courses/new" component={CourseForm} />
-      <Route path="/university/courses/:id/edit" component={CourseForm} />
-      <Route path="/university/applications" component={UniversityApplications} />
-      <Route path="/university/team" component={UniversityTeam} />
-      <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
-      <Route path="/student/dashboard" component={StudentDashboardPage} />
-      <Route path="/student/courses" component={StudentCourses} />
-      <Route path="/student/courses/:id" component={CourseDetail} />
-      <Route path="/student/profile" component={StudentProfilePage} />
-      <Route path="/student/applications" component={StudentApplications} />
-      <Route path="/student/documents" component={StudentDocuments} />
-      <Route path="/student/favorites" component={StudentFavorites} />
-      <Route path="/student/referrals" component={StudentReferrals} />
-      <Route path="/student/ai-assistant" component={StudentAIAssistant} />
-      <Route path="/chat" component={ChatPage} />
-      
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/admin/login" component={AdminLogin} />
+        <Route path="/admin/forgot-password" component={AdminForgotPassword} />
+        <Route path="/institution/login" component={InstitutionLogin} />
+        <Route path="/compare-courses" component={CompareCourses} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/partner-with-us" component={PartnerWithUs} />
+        <Route path="/study-in-australia" component={StudyInAustralia} />
+        <Route path="/our-story" component={OurStory} />
+        <Route path="/student-reviews" component={StudentReviews} />
+        <Route path="/courses/:id" component={PublicCourseDetail} />
+        <Route path="/courses" component={PublicCourses} />
+        <Route path="/institutions/:id" component={PublicInstitutionDetail} />
+        <Route path="/institutions" component={PublicInstitutions} />
+        <Route path="/blog/:slug" component={PublicBlogDetail} />
+        <Route path="/blog" component={PublicBlogArchive} />
+        <Route path="/browse/:slug" component={PublicTag} />
+        <Route path="/browse" component={PublicBrowse} />
+        <Route path="/terms" component={TermsOfService} />
+        <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/affiliate" component={AffiliatePage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/force-password-reset" component={ForcePasswordReset} />
+        <Route path="/auth/callback" component={AuthCallback} />
+        <Route path="/auth/accept-invite" component={AcceptInvitation} />
+        <Route path="/accept-invitation" component={AcceptInvitation} />
+        <Route path="/user-type" component={UserTypeSelection} />
+        <Route path="/dashboard" component={DashboardRedirect} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/dashboard" component={AdminDashboard} />
+        <Route path="/admin/pending-approval" component={AdminPendingApproval} />
+        <Route path="/admin/profile" component={AdminProfile} />
+        <Route path="/admin/csv-import" component={AdminCSVImport} />
+        <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
+        <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
+        <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
+        <Route path="/admin/leads/new" component={AdminLeadForm} />
+        <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
+        <Route path="/admin/contacts/new" component={AdminContactForm} />
+        <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
+        <Route path="/university/profile" component={UniversityProfile} />
+        <Route path="/university/dashboard" component={Home} />
+        <Route path="/university/institutions" component={UniversityInstitutions} />
+        <Route path="/university/courses" component={UniversityCourses} />
+        <Route path="/university/courses/new" component={CourseForm} />
+        <Route path="/university/courses/:id/edit" component={CourseForm} />
+        <Route path="/university/applications" component={UniversityApplications} />
+        <Route path="/university/team" component={UniversityTeam} />
+        <Route path="/university/ai-assistant" component={UniversityAIAssistant} />
+        <Route path="/student/dashboard" component={StudentDashboardPage} />
+        <Route path="/student/courses" component={StudentCourses} />
+        <Route path="/student/courses/:id" component={CourseDetail} />
+        <Route path="/student/profile" component={StudentProfilePage} />
+        <Route path="/student/applications" component={StudentApplications} />
+        <Route path="/student/documents" component={StudentDocuments} />
+        <Route path="/student/favorites" component={StudentFavorites} />
+        <Route path="/student/referrals" component={StudentReferrals} />
+        <Route path="/student/ai-assistant" component={StudentAIAssistant} />
+        <Route path="/chat" component={ChatPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

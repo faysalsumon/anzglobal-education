@@ -589,7 +589,10 @@ export default function PublicInstitutions() {
                         <div className="flex items-center gap-2">
                           <img 
                             src={flagUrl} 
-                            alt={`${ctry} flag`} 
+                            alt={`${ctry} flag`}
+                            loading="lazy"
+                            width={16}
+                            height={12} 
                             className="w-4 h-auto rounded-sm"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
@@ -1097,6 +1100,9 @@ export default function PublicInstitutions() {
                                     <img 
                                       src={getFlagUrl(countryCode)} 
                                       alt={`${institution.country} flag`}
+                                      loading="lazy"
+                                      width={20}
+                                      height={16}
                                       className="h-4 w-5 object-cover rounded-sm flex-shrink-0"
                                       data-testid={`flag-name-${institution.id}`}
                                     />
@@ -1329,6 +1335,9 @@ export default function PublicInstitutions() {
                 <img 
                   src={selectedInstitutionForMap.logo} 
                   alt={selectedInstitutionForMap.name}
+                  loading="lazy"
+                  width={24}
+                  height={24}
                   className="h-6 w-6 rounded object-contain"
                 />
               ) : (

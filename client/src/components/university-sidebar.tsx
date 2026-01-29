@@ -193,8 +193,8 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
         className
       )}>
         <div className="w-16 flex flex-col items-center py-4 border-r bg-muted/30">
-          <Link href="/" className="mb-6" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
+          <Link href="/" className="mb-6" aria-label="Go to homepage" data-testid="link-logo">
+            <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
           </Link>
 
           <ScrollArea className="flex-1 w-full">

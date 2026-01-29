@@ -999,7 +999,7 @@ export default function PublicCourses() {
                                 return (
                                   <SelectItem key={ctry} value={ctry}>
                                     <div className="flex items-center gap-2">
-                                      {flagUrl && <img src={flagUrl} alt={ctry} className="w-5 h-auto rounded-sm" />}
+                                      {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
                                       {ctry}
                                     </div>
                                   </SelectItem>
@@ -1358,7 +1358,7 @@ export default function PublicCourses() {
                                 return (
                                   <SelectItem key={ctry} value={ctry}>
                                     <div className="flex items-center gap-2">
-                                      {flagUrl && <img src={flagUrl} alt={ctry} className="w-5 h-auto rounded-sm" />}
+                                      {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
                                       {ctry}
                                     </div>
                                   </SelectItem>

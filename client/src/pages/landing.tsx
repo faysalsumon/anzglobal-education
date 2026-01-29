@@ -773,6 +773,9 @@ export default function Landing() {
                         <img
                           src={blog.featuredImageUrl}
                           alt={blog.title}
+                          loading="lazy"
+                          width={400}
+                          height={225}
                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           data-testid={`img-blog-${blog.slug}`}
                         />

@@ -158,7 +158,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     <Sidebar collapsible="icon" data-testid="admin-sidebar">
       <SidebarHeader className="border-b border-border/40 px-2 py-3">
         <div className="flex items-center gap-2 px-1">
-          <img src={logoUrl} alt="ANZ Global" className="h-6 w-auto group-data-[collapsible=icon]:hidden" />
+          <img src={logoUrl} alt="ANZ Global Education logo" width={80} height={24} className="h-6 w-auto group-data-[collapsible=icon]:hidden" />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-xs font-semibold">Admin</span>
             <span className="text-[10px] text-muted-foreground">Dashboard</span>

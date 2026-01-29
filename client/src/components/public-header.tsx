@@ -150,12 +150,12 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
+          <Link href="/" className="flex items-center" aria-label="Go to homepage" data-testid="link-logo">
+            <img src={logoUrl} alt="ANZ Global Education logo" width={120} height={36} className="h-9 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -178,7 +178,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                 {/* Profile Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
+                    <Button variant="ghost" size="icon" className="rounded-full" aria-label="Open user menu" data-testid="button-user-menu">
                       <Avatar className="h-9 w-9">
                         {profileImageUrl && (
                           <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
@@ -273,7 +273,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 {isAuthenticated && user ? (
-                  <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-mobile-menu">
+                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="Open user menu" data-testid="button-mobile-menu">
                     <Avatar className="h-8 w-8">
                       {profileImageUrl && (
                         <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
@@ -284,7 +284,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     </Avatar>
                   </Button>
                 ) : (
-                  <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                  <Button variant="ghost" size="icon" aria-label="Open menu" data-testid="button-mobile-menu">
                     <Menu className="h-5 w-5" />
                   </Button>
                 )}

@@ -235,8 +235,8 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
       {/* Icon panel - always visible */}
       <div className="fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background">
-        <Link href="/" className="mb-4" data-testid="link-logo">
-          <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain" />
+        <Link href="/" className="mb-4" aria-label="Go to homepage" data-testid="link-logo">
+          <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
         </Link>
 
         <Tooltip delayDuration={0}>
