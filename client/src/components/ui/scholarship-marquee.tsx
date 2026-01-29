@@ -40,7 +40,7 @@ export function ScholarshipMarquee({ scholarships, className = "", testId }: Sch
 
   return (
     <div 
-      className={`relative overflow-hidden text-primary font-bold text-xs py-1.5 ${className}`}
+      className={`relative overflow-hidden text-primary font-bold text-xs py-1.5 max-w-[50%] ${className}`}
       data-testid={testId}
     >
       <div className="scholarship-marquee-container flex">
