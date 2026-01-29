@@ -162,6 +162,25 @@ import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
 import { geocodingService } from "./geocoding-service";
 
+// Standardized main disciplines list - single source of truth for courses and institutions
+export const MAIN_DISCIPLINES = [
+  'Accounting, Business & Finance',
+  'Agriculture & Forestry',
+  'Applied Sciences & Professions',
+  'Arts, Design & Architecture',
+  'Computer Science & IT',
+  'Education & Training',
+  'Engineering & Technology',
+  'Environmental Studies & Earth Sciences',
+  'Hospitality, Leisure & Sports',
+  'Humanities',
+  'Journalism & Media',
+  'Law',
+  'Medicine & Health',
+  'Short Courses',
+  'Trade',
+] as const;
+
 // Environment-aware rate limiting for AI extraction endpoint
 // DEV: 30/hr, PREVIEW: 15/hr, PROD: 5/hr
 function getAIExtractionRateLimit(): number {
@@ -1548,7 +1567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const countries = Array.from(new Set(approvedInstitutions.map(i => i.country).filter(Boolean)));
       const providerTypes = Array.from(new Set(approvedInstitutions.map(i => i.providerType).filter(Boolean)));
       const allTags = Array.from(new Set(approvedInstitutions.flatMap(i => i.tags || []).filter(Boolean)));
-      const allDisciplines = Array.from(new Set(approvedInstitutions.flatMap(i => i.topDisciplines || []).filter(Boolean)));
+      
+      // Use the standardized discipline list (same as courses) instead of legacy topDisciplines field
 
       // Get structured tags assigned to institutions, grouped by category
       const institutionIds = approvedInstitutions.map(i => i.id);
@@ -1646,7 +1666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         citiesByState,
         providerTypes: providerTypes.sort(),
         tags: allTags.sort(),
-        disciplines: allDisciplines.sort(),
+        disciplines: [...MAIN_DISCIPLINES],
         tagsByCategory,
         scholarshipRange: {
           min: scholarshipRanges.length > 0 ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
@@ -2406,25 +2426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all main disciplines (master list for admin selection)
   app.get("/api/disciplines/all", async (_req, res) => {
     try {
-      // Return the full list of main disciplines for selection
-      const disciplines = [
-        'Accounting, Business & Finance',
-        'Agriculture & Forestry',
-        'Applied Sciences & Professions',
-        'Arts, Design & Architecture',
-        'Computer Science & IT',
-        'Education & Training',
-        'Engineering & Technology',
-        'Environmental Studies & Earth Sciences',
-        'Hospitality, Leisure & Sports',
-        'Humanities',
-        'Journalism & Media',
-        'Law',
-        'Medicine & Health',
-        'Short Courses',
-        'Trade',
-      ];
-      res.json(disciplines.map(name => ({ name, count: 0 })));
+      // Return the full list of main disciplines for selection (uses shared constant)
+      res.json(MAIN_DISCIPLINES.map(name => ({ name, count: 0 })));
     } catch (error) {
       console.error("Error fetching all disciplines:", error);
       res.status(500).json({ message: "Failed to fetch disciplines" });
