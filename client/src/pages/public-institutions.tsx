@@ -59,7 +59,7 @@ import { InstitutionLogo } from "@/components/institution-logo";
 import { ListPagination } from "@/components/list-pagination";
 import { ScholarshipMarquee } from "@/components/ui/scholarship-marquee";
 import { getCountryCode, getFlagUrl } from "@/lib/country-flags";
-import type { Favorite } from "@shared/schema";
+import type { Favorite, SubDiscipline } from "@shared/schema";
 
 type CampusAddress = {
   name?: string;
@@ -162,6 +162,8 @@ export default function PublicInstitutions() {
     setFilters,
     setSearch,
     toggleMultiSelect,
+    setDiscipline,
+    setSubDiscipline,
     setRange,
     clearFilters,
     hasActiveFilters,
@@ -237,6 +239,12 @@ export default function PublicInstitutions() {
     queryKey: ["/api/institutions/filter-metadata"],
   });
 
+  // Fetch sub-disciplines when a discipline is selected
+  const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({
+    queryKey: ["/api/sub-disciplines", filters.discipline],
+    enabled: !!filters.discipline,
+  });
+
   // Build pagination params
   const paginationParams = `page=${currentPage}&pageSize=${pageSize}`;
   const fullQueryString = queryParamsString 
@@ -294,7 +302,8 @@ export default function PublicInstitutions() {
     if (filters.countries.length > 0) params.set('countries', filters.countries.join(','));
     if (filters.states.length > 0) params.set('states', filters.states.join(','));
     if (filters.cities.length > 0) params.set('cities', filters.cities.join(','));
-    if (filters.disciplines.length > 0) params.set('disciplines', filters.disciplines.join(','));
+    if (filters.discipline) params.set('discipline', filters.discipline);
+    if (filters.subDiscipline) params.set('subDiscipline', filters.subDiscipline);
     if (filters.providerTypes.length > 0) params.set('providerTypes', filters.providerTypes.join(','));
     if (filters.search) params.set('search', filters.search);
     
@@ -415,7 +424,8 @@ export default function PublicInstitutions() {
     filters.countries.length + 
     filters.states.length +
     filters.cities.length +
-    filters.disciplines.length + 
+    (filters.discipline ? 1 : 0) + 
+    (filters.subDiscipline ? 1 : 0) + 
     filters.providerTypes.length +
     filters.tags.length +
     (filters.scholarshipMin !== undefined || filters.scholarshipMax !== undefined ? 1 : 0) +
@@ -467,14 +477,22 @@ export default function PublicInstitutions() {
                 </button>
               </Badge>
             ))}
-            {filters.disciplines.map(discipline => (
-              <Badge key={discipline} variant="secondary" className="gap-1 pr-1 text-xs">
-                {discipline.length > 20 ? discipline.slice(0, 20) + '...' : discipline}
-                <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => toggleMultiSelect('disciplines', discipline)} data-testid={`button-clear-discipline-${discipline.toLowerCase().replace(/\s+/g, '-')}`}>
+            {filters.discipline && (
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                {filters.discipline.length > 20 ? filters.discipline.slice(0, 20) + '...' : filters.discipline}
+                <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setDiscipline("")} data-testid={`button-clear-discipline-${filters.discipline.toLowerCase().replace(/\s+/g, '-')}`}>
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
-            ))}
+            )}
+            {filters.subDiscipline && (
+              <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                {filters.subDiscipline.length > 20 ? filters.subDiscipline.slice(0, 20) + '...' : filters.subDiscipline}
+                <button className="ml-0.5 rounded-sm opacity-70 hover:opacity-100" onClick={() => setSubDiscipline("")} data-testid={`button-clear-subdiscipline-${filters.subDiscipline.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
             {filters.providerTypes.map(type => (
               <Badge key={type} variant="secondary" className="gap-1 pr-1 text-xs">
                 {type}
@@ -676,25 +694,36 @@ export default function PublicInstitutions() {
             <div className="flex items-center gap-2 font-medium text-sm">
               <GraduationCap className="h-4 w-4 text-primary" />
               Discipline
-              {filters.disciplines.length > 0 && (
+              {filters.discipline && (
                 <span className="h-2 w-2 rounded-full bg-primary" />
               )}
             </div>
             {openSections.discipline ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-1">
-            {filterMetadata.disciplines.slice(0, 10).map((discipline) => (
-              <label key={discipline} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                <Checkbox
-                  checked={filters.disciplines.includes(discipline)}
-                  onCheckedChange={() => toggleMultiSelect('disciplines', discipline)}
-                  data-testid={`checkbox-discipline-${discipline.toLowerCase().replace(/\s+/g, '-')}`}
-                />
-                <span className="text-sm truncate">{discipline}</span>
-              </label>
-            ))}
-            {filterMetadata.disciplines.length > 10 && (
-              <p className="text-xs text-muted-foreground px-2 pt-1">+{filterMetadata.disciplines.length - 10} more</p>
+          <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
+            <Select value={filters.discipline || "all"} onValueChange={(val) => setDiscipline(val === "all" ? "" : val)}>
+              <SelectTrigger data-testid="select-discipline" className="h-9">
+                <SelectValue placeholder="All Disciplines" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Disciplines</SelectItem>
+                {filterMetadata.disciplines.map((disc) => (
+                  <SelectItem key={disc} value={disc}>{disc}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filters.discipline && subDisciplines.length > 0 && (
+              <Select value={filters.subDiscipline || "all"} onValueChange={(val) => setSubDiscipline(val === "all" ? "" : val)}>
+                <SelectTrigger data-testid="select-sub-discipline" className="h-9">
+                  <SelectValue placeholder="All Sub-disciplines" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sub-disciplines</SelectItem>
+                  {subDisciplines.map((sd) => (
+                    <SelectItem key={sd.id} value={sd.name}>{sd.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </CollapsibleContent>
         </Collapsible>

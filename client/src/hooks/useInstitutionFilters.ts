@@ -6,7 +6,8 @@ export interface InstitutionFilters {
   states: string[];
   cities: string[];
   providerTypes: string[];
-  disciplines: string[];
+  discipline: string;
+  subDiscipline: string;
   tags: string[];
   scholarshipMin?: number;
   scholarshipMax?: number;
@@ -29,7 +30,8 @@ const parseFiltersFromURL = (): InstitutionFilters => {
     states: params.getAll("states").sort(),
     cities: params.getAll("cities").sort(),
     providerTypes: params.getAll("providerTypes").sort(),
-    disciplines: params.getAll("disciplines").sort(),
+    discipline: params.get("discipline") || "",
+    subDiscipline: params.get("subDiscipline") || "",
     tags: params.getAll("tags").sort(),
     scholarshipMin: params.get("scholarshipMin") ? parseFloat(params.get("scholarshipMin")!) : undefined,
     scholarshipMax: params.get("scholarshipMax") ? parseFloat(params.get("scholarshipMax")!) : undefined,
@@ -47,7 +49,8 @@ const serializeFiltersToURL = (filters: InstitutionFilters): string => {
   [...filters.states].sort().forEach(s => params.append("states", s));
   [...filters.cities].sort().forEach(c => params.append("cities", c));
   [...filters.providerTypes].sort().forEach(t => params.append("providerTypes", t));
-  [...filters.disciplines].sort().forEach(d => params.append("disciplines", d));
+  if (filters.discipline) params.set("discipline", filters.discipline);
+  if (filters.subDiscipline) params.set("subDiscipline", filters.subDiscipline);
   [...filters.tags].sort().forEach(t => params.append("tags", t));
   
   if (filters.scholarshipMin !== undefined) params.set("scholarshipMin", String(filters.scholarshipMin));
@@ -107,6 +110,14 @@ export function useInstitutionFilters() {
     });
   }, [setFilters]);
 
+  const setDiscipline = useCallback((discipline: string) => {
+    setFilters(prev => ({ ...prev, discipline, subDiscipline: "" }));
+  }, [setFilters]);
+
+  const setSubDiscipline = useCallback((subDiscipline: string) => {
+    setFilters(prev => ({ ...prev, subDiscipline }));
+  }, [setFilters]);
+
   const clearFilters = useCallback(() => {
     const emptyFilters: InstitutionFilters = {
       search: "",
@@ -114,7 +125,8 @@ export function useInstitutionFilters() {
       states: [],
       cities: [],
       providerTypes: [],
-      disciplines: [],
+      discipline: "",
+      subDiscipline: "",
       tags: [],
     };
     setFilters(emptyFilters);
@@ -160,14 +172,23 @@ export function useInstitutionFilters() {
       });
     });
 
-    filters.disciplines.forEach(discipline => {
+    if (filters.discipline) {
       chips.push({
-        key: `discipline-${discipline}`,
-        label: discipline,
-        value: discipline,
-        onRemove: () => toggleMultiSelect('disciplines', discipline)
+        key: `discipline-${filters.discipline}`,
+        label: filters.discipline,
+        value: filters.discipline,
+        onRemove: () => setDiscipline("")
       });
-    });
+    }
+    
+    if (filters.subDiscipline) {
+      chips.push({
+        key: `subDiscipline-${filters.subDiscipline}`,
+        label: filters.subDiscipline,
+        value: filters.subDiscipline,
+        onRemove: () => setSubDiscipline("")
+      });
+    }
 
     filters.tags.forEach(tag => {
       chips.push({
@@ -188,7 +209,7 @@ export function useInstitutionFilters() {
     }
 
     return chips;
-  }, [filters, toggleMultiSelect, setRange]);
+  }, [filters, toggleMultiSelect, setRange, setDiscipline, setSubDiscipline]);
 
   const hasActiveFilters = activeFilterChips.length > 0 || filters.search !== "";
 
@@ -200,10 +221,12 @@ export function useInstitutionFilters() {
     setFilters,
     setSearch,
     toggleMultiSelect,
+    setDiscipline,
+    setSubDiscipline,
     setRange,
     clearFilters,
     activeFilterChips,
     hasActiveFilters,
-    queryParamsString, // Export this for use in TanStack Query
+    queryParamsString,
   };
 }
