@@ -90,7 +90,7 @@ export function TagMarquee({ level, subject, tags = [], className = "", testId }
 
   return (
     <div 
-      className={`relative overflow-hidden py-1 tag-marquee-container ${className}`}
+      className={`relative overflow-hidden py-1 tag-marquee-container max-w-[50%] ${className}`}
       data-testid={testId}
     >
       <div className="flex">
