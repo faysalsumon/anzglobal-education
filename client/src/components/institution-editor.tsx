@@ -394,6 +394,36 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
             >
               Discard
             </Button>
+            {institution?.id && (
+              <Button 
+                variant="default"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  const formData = form.getValues();
+                  const isValid = await form.trigger();
+                  if (isValid) {
+                    // Keep current publish status and visibility
+                    const currentStatus = institution.publishStatus || 'draft';
+                    const currentVisibility = institution.visibility || 'public';
+                    handleSubmit(formData, currentStatus as 'draft' | 'published', currentVisibility as 'public' | 'private');
+                  } else {
+                    const errors = form.formState.errors;
+                    const errorFields = Object.keys(errors).join(', ');
+                    toast({
+                      title: "Validation Error",
+                      description: `Please fix the following fields: ${errorFields}`,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                data-testid="button-update"
+              >
+                <Save className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">{isSubmitting ? "Updating..." : "Update"}</span>
+                <span className="sm:hidden">{isSubmitting ? "..." : "Update"}</span>
+              </Button>
+            )}
             <Button 
               variant="secondary"
               size="sm"
