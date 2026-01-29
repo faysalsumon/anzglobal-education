@@ -22,14 +22,13 @@ import {
 import { 
   MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
   ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, 
-  ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles, Info
+  ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles
 } from "lucide-react";
 import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
 import { ResponsiveSection } from "@/components/responsive-section";
 import { InstitutionSectionNav } from "@/components/institution-section-nav";
-import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -78,7 +77,6 @@ export default function PublicInstitutionDetail() {
   const [disciplineFilter, setDisciplineFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [coursesShown, setCoursesShown] = useState(INITIAL_COURSES_SHOWN);
-  const [leadFormOpen, setLeadFormOpen] = useState(false);
 
   const { data: institution, isLoading } = useQuery<University>({
     queryKey: [`/api/institutions/${institutionId}`],
@@ -794,13 +792,6 @@ export default function PublicInstitutionDetail() {
                     Browse All Courses
                   </Link>
                 </Button>
-                
-                <div className="text-center text-sm text-muted-foreground">or request more details first</div>
-                
-                <Button variant="outline" className="w-full text-accent border-accent hover:bg-accent/10" onClick={() => setLeadFormOpen(true)} data-testid="button-request-info">
-                  <Info className="h-4 w-4 mr-2" />
-                  Request More Information
-                </Button>
 
                 {institution.website && (
                   <Button variant="ghost" className="w-full" asChild data-testid="button-visit-website">
@@ -868,13 +859,6 @@ export default function PublicInstitutionDetail() {
           </div>
         </div>
       </div>
-
-      {/* Lead Form Dialog */}
-      <LeadFormDialog 
-        open={leadFormOpen} 
-        onOpenChange={setLeadFormOpen}
-        prefilledData={{ institutionId: institutionId }}
-      />
 
       {/* Gallery Lightbox Modal */}
       {lightboxIndex !== null && galleryImages.length > 0 && (
