@@ -1088,8 +1088,22 @@ export default function PublicInstitutions() {
                         />
                         <div className="flex-1 min-w-0">
                           <Link href={`/institutions/${institution.id}`}>
-                            <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer mb-1" data-testid={`text-name-${institution.id}`}>
+                            <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer mb-1 flex items-center gap-2 flex-wrap" data-testid={`text-name-${institution.id}`}>
                               {institution.name}
+                              {(() => {
+                                const countryCode = getCountryCode(institution.country);
+                                if (countryCode) {
+                                  return (
+                                    <img 
+                                      src={getFlagUrl(countryCode)} 
+                                      alt={`${institution.country} flag`}
+                                      className="h-4 w-5 object-cover rounded-sm flex-shrink-0"
+                                      data-testid={`flag-name-${institution.id}`}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
                             </h3>
                           </Link>
                           
