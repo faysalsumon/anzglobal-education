@@ -24,14 +24,19 @@ export function CampusMapTabs({
   const infoWindowsRef = useRef<google.maps.InfoWindow[]>([]);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
-  // Extract city name from address string
-  const extractCityName = (address: string): string => {
-    const parts = address.split(',').map(p => p.trim());
-    if (parts.length >= 2) {
-      // Usually city is the second part after street address
-      return parts[1].split(' ')[0];
+  // Extract campus name from location string (first part before comma)
+  const extractCampusName = (location: string): string => {
+    const parts = location.split(',').map(p => p.trim());
+    return parts[0] || "Campus";
+  };
+
+  // Extract address from location string (everything after the campus name)
+  const extractAddress = (location: string): string => {
+    const parts = location.split(',').map(p => p.trim());
+    if (parts.length > 1) {
+      return parts.slice(1).join(', ');
     }
-    return parts[0];
+    return location;
   };
 
   // Create info window content using DOM nodes (safer than HTML strings)
@@ -276,7 +281,8 @@ export function CampusMapTabs({
         <div className="space-y-2 max-h-[300px] lg:max-h-[350px] overflow-y-auto pr-1">
           {campusLocations.map((location, index) => {
             const isSelected = selectedIndex === index;
-            const cityName = extractCityName(location);
+            const campusName = extractCampusName(location);
+            const campusAddress = extractAddress(location);
             
             return (
               <button
@@ -303,10 +309,10 @@ export function CampusMapTabs({
                       "font-semibold text-sm mb-0.5",
                       isSelected && "text-primary"
                     )}>
-                      {cityName}
+                      {campusName}
                     </p>
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {location}
+                      {campusAddress}
                     </p>
                   </div>
                   {isSelected && (
