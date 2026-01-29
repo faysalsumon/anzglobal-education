@@ -392,6 +392,7 @@ function AffiliateDashboard() {
                     value={referralData?.referralLink || "Loading..."} 
                     readOnly 
                     className="font-mono text-sm"
+                    aria-label="Your referral link"
                     data-testid="input-referral-link"
                   />
                   <Button 

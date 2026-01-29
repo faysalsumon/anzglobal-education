@@ -838,7 +838,7 @@ export default function PublicCourses() {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
 
-      <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
+      <main id="main-content" className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
         <div className="space-y-4 sm:space-y-6">
           {/* Breadcrumb */}
           <Breadcrumb data-testid="breadcrumb">
@@ -903,12 +903,13 @@ export default function PublicCourses() {
                   <div className="space-y-4">
                     {/* Search */}
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                       <Input
                         placeholder="Search courses..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9"
+                        aria-label="Search courses"
                         data-testid="input-search-courses-mobile"
                       />
                     </div>
@@ -1225,12 +1226,13 @@ export default function PublicCourses() {
                   <CardContent className="p-4 space-y-4">
                     {/* Search */}
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                       <Input
                         placeholder="Search courses..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9"
+                        aria-label="Search courses"
                         data-testid="input-search-courses"
                       />
                     </div>
@@ -1876,7 +1878,7 @@ export default function PublicCourses() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Login Modal */}
       <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>

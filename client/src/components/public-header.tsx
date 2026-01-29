@@ -140,19 +140,27 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
   };
 
   return (
-    <header 
-      className={cn(
-        "sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/40",
-        "transform transition-transform duration-300 ease-out",
-        scrollDirection === "down" && !isAtTop ? "md:translate-y-0 -translate-y-full" : "translate-y-0"
-      )}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center" aria-label="Go to homepage" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ Global Education logo" width={120} height={36} className="h-9 w-auto" />
-          </Link>
+    <>
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+        data-testid="link-skip-navigation"
+      >
+        Skip to main content
+      </a>
+      <header 
+        className={cn(
+          "sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/40",
+          "transform transition-transform duration-300 ease-out",
+          scrollDirection === "down" && !isAtTop ? "md:translate-y-0 -translate-y-full" : "translate-y-0"
+        )}
+      >
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center" aria-label="Go to homepage" data-testid="link-logo">
+              <img src={logoUrl} alt="ANZ Global Education logo" width={120} height={36} className="h-9 w-auto" />
+            </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
@@ -407,5 +415,6 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
         </div>
       </div>
     </header>
+    </>
   );
 }

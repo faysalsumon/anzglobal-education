@@ -834,7 +834,7 @@ export default function PublicInstitutions() {
         <meta name="twitter:image" content={ogImage} />
       </Helmet>
 
-      <div className="container mx-auto px-4 py-6">
+      <div id="main-content" className="container mx-auto px-4 py-6">
         {/* Breadcrumb */}
         <Breadcrumb data-testid="breadcrumb" className="mb-4">
           <BreadcrumbList>
@@ -896,12 +896,13 @@ export default function PublicInstitutions() {
                 
                 {/* Search in Mobile */}
                 <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                   <Input
                     placeholder="Search institutions..."
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="pl-9"
+                    aria-label="Search institutions"
                     data-testid="input-search-mobile"
                   />
                 </div>
@@ -925,12 +926,13 @@ export default function PublicInstitutions() {
                 <CardContent className="p-4 space-y-4">
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                     <Input
                       placeholder="Search institutions..."
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       className="pl-9"
+                      aria-label="Search institutions"
                       data-testid="input-search-institutions"
                     />
                   </div>
