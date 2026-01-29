@@ -32,15 +32,15 @@ export function ScholarshipMarquee({ scholarships, className = "", testId }: Sch
       ) : (
         <DollarSign className="h-3.5 w-3.5 flex-shrink-0" />
       )}
-      <span className="font-medium">{s.name}</span>
-      <span className="text-primary-foreground/80">-</span>
-      <span className="font-semibold">{formatScholarshipValue(s)}</span>
+      <span className="font-bold">{s.name}</span>
+      <span className="opacity-70">-</span>
+      <span className="font-bold">{formatScholarshipValue(s)}</span>
     </span>
   ));
 
   return (
     <div 
-      className={`relative overflow-hidden bg-primary text-primary-foreground text-xs py-1.5 rounded-md ${className}`}
+      className={`relative overflow-hidden text-primary font-bold text-xs py-1.5 ${className}`}
       data-testid={testId}
     >
       <div className="scholarship-marquee-container flex">
