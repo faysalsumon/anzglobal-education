@@ -1107,6 +1107,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertUniversitySchema.parse(safeData);
       const updated = await storage.updateUniversity(institutionId, data);
       
+      // Log activity for institution update
+      await logUpdate({
+        req,
+        entityType: 'institution',
+        entityId: institutionId,
+        entityName: institution.name,
+        oldData: institution,
+        newData: updated,
+        fieldsToTrack: ['name', 'description', 'smallDescription', 'country', 'city', 'state', 'logo', 'coverImage', 'website', 'email', 'phone', 'establishedYear', 'providerType', 'campusAddresses', 'publishStatus'],
+      });
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating institution:", error);
@@ -9561,6 +9572,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('[Routes] PATCH /api/super-admin/institutions/:id - Received updateData:', JSON.stringify(updateData, null, 2));
 
+      // Get existing institution for activity logging
+      const existingInstitution = await storage.getUniversityById(institutionId);
+      if (!existingInstitution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+
       // Sanitize optional numeric fields - convert empty strings to null for database
       const numericFields = ['numberOfCampuses', 'establishedYear', 'scholarshipPercentageMin', 'scholarshipPercentageMax'];
       for (const field of numericFields) {
@@ -9597,6 +9614,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedInstitution = await storage.updateUniversity(institutionId, updateData);
       
       console.log('[Routes] PATCH /api/super-admin/institutions/:id - Updated institution publishStatus:', updatedInstitution.publishStatus);
+      
+      // Log activity for institution update
+      await logUpdate({
+        req,
+        entityType: 'institution',
+        entityId: institutionId,
+        entityName: existingInstitution.name,
+        oldData: existingInstitution,
+        newData: updatedInstitution,
+        fieldsToTrack: ['name', 'description', 'smallDescription', 'country', 'city', 'state', 'logo', 'coverImage', 'website', 'email', 'phone', 'establishedYear', 'providerType', 'campusAddresses', 'publishStatus', 'approvalStatus', 'featuredOrder'],
+      });
       
       // Trigger async knowledge base rebuild
       triggerKnowledgeBaseRebuild('super-admin institution update');
