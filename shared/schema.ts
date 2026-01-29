@@ -712,18 +712,9 @@ export const universities = pgTable("universities", {
   topCourses: text("top_courses").array(), // Array of course IDs or names
   campusAddresses: jsonb("campus_addresses"), // Array of campus address objects: [{name: string, address: string, city: string, state: string, postcode: string, country: string}]
   
-  // Filter-friendly fields (nullable, precomputed from course data)
-  tuitionFeesMin: decimal("tuition_fees_min", { precision: 10, scale: 2 }), // Minimum tuition across all programs
-  tuitionFeesMax: decimal("tuition_fees_max", { precision: 10, scale: 2 }), // Maximum tuition across all programs
-  tuitionCurrency: varchar("tuition_currency", { length: 3 }).default("AUD"), // Currency code
-  deliveryModes: text("delivery_modes").array(), // ["on-campus", "online", "hybrid"]
-  intakePeriods: text("intake_periods").array(), // ["January", "February", "July", "September"]
-  accreditationStatus: text("accreditation_status"), // "Fully Accredited", "Provisional", etc.
-  rankingBand: text("ranking_band"), // "Top 100", "Top 500", "Regional Leader", etc.
+  // Australia-specific regulatory fields
   rtoNumber: varchar("rto_number", { length: 20 }), // Registered Training Organization number (Australia-specific)
   cricosProviderCode: varchar("cricos_provider_code", { length: 10 }), // CRICOS Provider Code for international students (Australia-specific)
-  facilities: text("facilities").array(), // ["Library", "Sports Center", "Career Services", "Student Housing"]
-  internationalStudentSupport: boolean("international_student_support"), // Whether institution provides international student support
   tags: text("tags").array(), // AI-generated or admin-curated tags for discovery
   
   // Approval workflow
@@ -750,13 +741,9 @@ export const universities = pgTable("universities", {
 }, (table) => ({
   // GIN indexes for array fields to support efficient filtering
   topDisciplinesIdx: index("universities_top_disciplines_gin_idx").using("gin", table.topDisciplines),
-  deliveryModesIdx: index("universities_delivery_modes_gin_idx").using("gin", table.deliveryModes),
-  intakePeriodsIdx: index("universities_intake_periods_gin_idx").using("gin", table.intakePeriods),
-  facilitiesIdx: index("universities_facilities_gin_idx").using("gin", table.facilities),
   tagsIdx: index("universities_tags_gin_idx").using("gin", table.tags),
   // B-tree indexes for range filtering
   scholarshipRangeIdx: index("universities_scholarship_range_idx").on(table.scholarshipPercentageMin, table.scholarshipPercentageMax),
-  tuitionRangeIdx: index("universities_tuition_range_idx").on(table.tuitionFeesMin, table.tuitionFeesMax),
   // Composite indexes for common filter patterns
   countryProviderIdx: index("universities_country_provider_idx").on(table.country, table.providerType),
   activeApprovedIdx: index("universities_active_approved_idx").on(table.isActive, table.approvalStatus),

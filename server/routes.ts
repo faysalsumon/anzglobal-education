@@ -1536,11 +1536,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract unique values for each filter category
       const countries = Array.from(new Set(approvedInstitutions.map(i => i.country).filter(Boolean)));
       const providerTypes = Array.from(new Set(approvedInstitutions.map(i => i.providerType).filter(Boolean)));
-      const deliveryModes = Array.from(new Set(approvedInstitutions.flatMap(i => i.deliveryModes || []).filter(Boolean)));
-      const intakePeriods = Array.from(new Set(approvedInstitutions.flatMap(i => i.intakePeriods || []).filter(Boolean)));
-      const facilities = Array.from(new Set(approvedInstitutions.flatMap(i => i.facilities || []).filter(Boolean)));
-      const accreditationStatuses = Array.from(new Set(approvedInstitutions.map(i => i.accreditationStatus).filter(Boolean)));
-      const rankingBands = Array.from(new Set(approvedInstitutions.map(i => i.rankingBand).filter(Boolean)));
       const allTags = Array.from(new Set(approvedInstitutions.flatMap(i => i.tags || []).filter(Boolean)));
       const allDisciplines = Array.from(new Set(approvedInstitutions.flatMap(i => i.topDisciplines || []).filter(Boolean)));
 
@@ -1633,30 +1628,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const scholarshipRanges = approvedInstitutions
         .map(i => ({ min: i.scholarshipPercentageMin, max: i.scholarshipPercentageMax }))
         .filter(r => r.min !== null || r.max !== null);
-      const tuitionRanges = approvedInstitutions
-        .map(i => ({ min: i.tuitionFeesMin, max: i.tuitionFeesMax }))
-        .filter(r => r.min !== null || r.max !== null);
 
       res.json({
         countries: countries.sort(),
         statesByCountry,
         citiesByState,
         providerTypes: providerTypes.sort(),
-        deliveryModes: deliveryModes.sort(),
-        intakePeriods: intakePeriods.sort(),
-        facilities: facilities.sort(),
-        accreditationStatuses: accreditationStatuses.sort(),
-        rankingBands: rankingBands.sort(),
         tags: allTags.sort(),
         disciplines: allDisciplines.sort(),
         tagsByCategory,
         scholarshipRange: {
           min: scholarshipRanges.length > 0 ? Math.min(...scholarshipRanges.map(r => r.min || 0).filter(v => v > 0)) : 0,
           max: scholarshipRanges.length > 0 ? Math.max(...scholarshipRanges.map(r => r.max || 0)) : 100,
-        },
-        tuitionRange: {
-          min: tuitionRanges.length > 0 ? Math.min(...tuitionRanges.map(r => Number(r.min) || 0).filter(v => v > 0)) : 0,
-          max: tuitionRanges.length > 0 ? Math.max(...tuitionRanges.map(r => Number(r.max) || 0)) : 100000,
         },
         totalCount: approvedInstitutions.length,
       });
@@ -1695,18 +1678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         states,
         cities,
         providerTypes,
-        deliveryModes,
-        intakePeriods,
-        facilities,
         disciplines,
         tags: filterTags,
         scholarshipMin,
         scholarshipMax,
-        tuitionMin,
-        tuitionMax,
-        accreditationStatus,
-        rankingBand,
-        internationalSupport,
         page,
         pageSize,
         includePrivate,
@@ -1788,30 +1763,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         institutions = institutions.filter(i => i.providerType && typeList.includes(i.providerType));
       }
 
-      // Delivery modes filter (array overlap)
-      if (deliveryModes) {
-        const modeList = Array.isArray(deliveryModes) ? deliveryModes : [deliveryModes];
-        institutions = institutions.filter(i => 
-          i.deliveryModes && i.deliveryModes.some(mode => modeList.includes(mode))
-        );
-      }
-
-      // Intake periods filter (array overlap)
-      if (intakePeriods) {
-        const intakeList = Array.isArray(intakePeriods) ? intakePeriods : [intakePeriods];
-        institutions = institutions.filter(i => 
-          i.intakePeriods && i.intakePeriods.some(intake => intakeList.includes(intake))
-        );
-      }
-
-      // Facilities filter (array overlap)
-      if (facilities) {
-        const facilityList = Array.isArray(facilities) ? facilities : [facilities];
-        institutions = institutions.filter(i => 
-          i.facilities && i.facilities.some(facility => facilityList.includes(facility))
-        );
-      }
-
       // Disciplines filter (array overlap)
       if (disciplines) {
         const disciplineList = Array.isArray(disciplines) ? disciplines : [disciplines];
@@ -1850,34 +1801,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check if ranges overlap
           return instMax >= minVal && instMin <= maxVal;
         });
-      }
-
-      // Tuition range filter
-      if (tuitionMin !== undefined || tuitionMax !== undefined) {
-        const minVal = tuitionMin ? parseFloat(tuitionMin as string) : 0;
-        const maxVal = tuitionMax ? parseFloat(tuitionMax as string) : Number.MAX_SAFE_INTEGER;
-        institutions = institutions.filter(i => {
-          if (!i.tuitionFeesMin && !i.tuitionFeesMax) return false;
-          const instMin = parseFloat(i.tuitionFeesMin as any) || 0;
-          const instMax = parseFloat(i.tuitionFeesMax as any) || Number.MAX_SAFE_INTEGER;
-          // Check if ranges overlap
-          return instMax >= minVal && instMin <= maxVal;
-        });
-      }
-
-      // Accreditation status filter
-      if (accreditationStatus && typeof accreditationStatus === 'string') {
-        institutions = institutions.filter(i => i.accreditationStatus === accreditationStatus);
-      }
-
-      // Ranking band filter
-      if (rankingBand && typeof rankingBand === 'string') {
-        institutions = institutions.filter(i => i.rankingBand === rankingBand);
-      }
-
-      // International student support filter
-      if (internationalSupport === 'true') {
-        institutions = institutions.filter(i => i.internationalStudentSupport === true);
       }
 
       // Get total count before pagination
@@ -9103,15 +9026,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         institutionGallery: universities.institutionGallery,
         topCourses: universities.topCourses,
         campusAddresses: universities.campusAddresses,
-        tuitionFeesMin: universities.tuitionFeesMin,
-        tuitionFeesMax: universities.tuitionFeesMax,
-        tuitionCurrency: universities.tuitionCurrency,
-        deliveryModes: universities.deliveryModes,
-        intakePeriods: universities.intakePeriods,
-        accreditationStatus: universities.accreditationStatus,
-        rankingBand: universities.rankingBand,
-        facilities: universities.facilities,
-        internationalStudentSupport: universities.internationalStudentSupport,
         tags: universities.tags,
         approvalStatus: universities.approvalStatus,
         rejectionReason: universities.rejectionReason,
@@ -9238,15 +9152,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         institutionGallery: universities.institutionGallery,
         topCourses: universities.topCourses,
         campusAddresses: universities.campusAddresses,
-        tuitionFeesMin: universities.tuitionFeesMin,
-        tuitionFeesMax: universities.tuitionFeesMax,
-        tuitionCurrency: universities.tuitionCurrency,
-        deliveryModes: universities.deliveryModes,
-        intakePeriods: universities.intakePeriods,
-        accreditationStatus: universities.accreditationStatus,
-        rankingBand: universities.rankingBand,
-        facilities: universities.facilities,
-        internationalStudentSupport: universities.internationalStudentSupport,
         tags: universities.tags,
         approvalStatus: universities.approvalStatus,
         rejectionReason: universities.rejectionReason,
@@ -9572,15 +9477,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasScholarship,
         smallDescription,
         fullDescription,
-        tuitionFeesMin,
-        tuitionFeesMax,
-        tuitionCurrency,
-        deliveryModes,
-        intakePeriods,
-        accreditationStatus,
-        rankingBand,
-        facilities,
-        internationalStudentSupport,
         tags,
       } = req.body;
 
@@ -9633,15 +9529,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         campusAddresses: geocodedCampusAddresses,
         smallDescription: smallDescription || null,
         fullDescription: fullDescription || null,
-        tuitionFeesMin: tuitionFeesMin || null,
-        tuitionFeesMax: tuitionFeesMax || null,
-        tuitionCurrency: tuitionCurrency || "AUD",
-        deliveryModes: deliveryModes || null,
-        intakePeriods: intakePeriods || null,
-        accreditationStatus: accreditationStatus || null,
-        rankingBand: rankingBand || null,
-        facilities: facilities || null,
-        internationalStudentSupport: internationalStudentSupport || null,
         tags: tags || null,
         createdByUserId: userId,
         updatedByUserId: userId,

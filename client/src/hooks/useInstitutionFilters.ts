@@ -6,18 +6,10 @@ export interface InstitutionFilters {
   states: string[];
   cities: string[];
   providerTypes: string[];
-  deliveryModes: string[];
-  intakePeriods: string[];
-  facilities: string[];
   disciplines: string[];
   tags: string[];
   scholarshipMin?: number;
   scholarshipMax?: number;
-  tuitionMin?: number;
-  tuitionMax?: number;
-  accreditationStatus?: string;
-  rankingBand?: string;
-  internationalSupport?: boolean;
 }
 
 export interface FilterChip {
@@ -37,18 +29,10 @@ const parseFiltersFromURL = (): InstitutionFilters => {
     states: params.getAll("states").sort(),
     cities: params.getAll("cities").sort(),
     providerTypes: params.getAll("providerTypes").sort(),
-    deliveryModes: params.getAll("deliveryModes").sort(),
-    intakePeriods: params.getAll("intakePeriods").sort(),
-    facilities: params.getAll("facilities").sort(),
     disciplines: params.getAll("disciplines").sort(),
     tags: params.getAll("tags").sort(),
     scholarshipMin: params.get("scholarshipMin") ? parseFloat(params.get("scholarshipMin")!) : undefined,
     scholarshipMax: params.get("scholarshipMax") ? parseFloat(params.get("scholarshipMax")!) : undefined,
-    tuitionMin: params.get("tuitionMin") ? parseFloat(params.get("tuitionMin")!) : undefined,
-    tuitionMax: params.get("tuitionMax") ? parseFloat(params.get("tuitionMax")!) : undefined,
-    accreditationStatus: params.get("accreditationStatus") || undefined,
-    rankingBand: params.get("rankingBand") || undefined,
-    internationalSupport: params.get("internationalSupport") === "true" ? true : undefined,
   };
 };
 
@@ -63,19 +47,11 @@ const serializeFiltersToURL = (filters: InstitutionFilters): string => {
   [...filters.states].sort().forEach(s => params.append("states", s));
   [...filters.cities].sort().forEach(c => params.append("cities", c));
   [...filters.providerTypes].sort().forEach(t => params.append("providerTypes", t));
-  [...filters.deliveryModes].sort().forEach(m => params.append("deliveryModes", m));
-  [...filters.intakePeriods].sort().forEach(i => params.append("intakePeriods", i));
-  [...filters.facilities].sort().forEach(f => params.append("facilities", f));
   [...filters.disciplines].sort().forEach(d => params.append("disciplines", d));
   [...filters.tags].sort().forEach(t => params.append("tags", t));
   
   if (filters.scholarshipMin !== undefined) params.set("scholarshipMin", String(filters.scholarshipMin));
   if (filters.scholarshipMax !== undefined) params.set("scholarshipMax", String(filters.scholarshipMax));
-  if (filters.tuitionMin !== undefined) params.set("tuitionMin", String(filters.tuitionMin));
-  if (filters.tuitionMax !== undefined) params.set("tuitionMax", String(filters.tuitionMax));
-  if (filters.accreditationStatus) params.set("accreditationStatus", filters.accreditationStatus);
-  if (filters.rankingBand) params.set("rankingBand", filters.rankingBand);
-  if (filters.internationalSupport) params.set("internationalSupport", "true");
 
   return params.toString();
 };
@@ -125,22 +101,10 @@ export function useInstitutionFilters() {
     });
   }, [setFilters]);
 
-  const setRange = useCallback((key: 'scholarship' | 'tuition', min?: number, max?: number) => {
+  const setRange = useCallback((key: 'scholarship', min?: number, max?: number) => {
     setFilters(prev => {
-      if (key === 'scholarship') {
-        return { ...prev, scholarshipMin: min, scholarshipMax: max };
-      } else {
-        return { ...prev, tuitionMin: min, tuitionMax: max };
-      }
+      return { ...prev, scholarshipMin: min, scholarshipMax: max };
     });
-  }, [setFilters]);
-
-  const setSingleSelect = useCallback((key: 'accreditationStatus' | 'rankingBand', value?: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, [setFilters]);
-
-  const setInternationalSupport = useCallback((value?: boolean) => {
-    setFilters(prev => ({ ...prev, internationalSupport: value }));
   }, [setFilters]);
 
   const clearFilters = useCallback(() => {
@@ -150,9 +114,6 @@ export function useInstitutionFilters() {
       states: [],
       cities: [],
       providerTypes: [],
-      deliveryModes: [],
-      intakePeriods: [],
-      facilities: [],
       disciplines: [],
       tags: [],
     };
@@ -199,33 +160,6 @@ export function useInstitutionFilters() {
       });
     });
 
-    filters.deliveryModes.forEach(mode => {
-      chips.push({
-        key: `delivery-${mode}`,
-        label: `Delivery: ${mode}`,
-        value: mode,
-        onRemove: () => toggleMultiSelect('deliveryModes', mode)
-      });
-    });
-
-    filters.intakePeriods.forEach(intake => {
-      chips.push({
-        key: `intake-${intake}`,
-        label: `Intake: ${intake}`,
-        value: intake,
-        onRemove: () => toggleMultiSelect('intakePeriods', intake)
-      });
-    });
-
-    filters.facilities.forEach(facility => {
-      chips.push({
-        key: `facility-${facility}`,
-        label: `Facility: ${facility}`,
-        value: facility,
-        onRemove: () => toggleMultiSelect('facilities', facility)
-      });
-    });
-
     filters.disciplines.forEach(discipline => {
       chips.push({
         key: `discipline-${discipline}`,
@@ -253,44 +187,8 @@ export function useInstitutionFilters() {
       });
     }
 
-    if (filters.tuitionMin !== undefined || filters.tuitionMax !== undefined) {
-      chips.push({
-        key: 'tuition-range',
-        label: `Tuition: $${filters.tuitionMin?.toLocaleString() || 0} - $${filters.tuitionMax?.toLocaleString() || '∞'}`,
-        value: `${filters.tuitionMin}-${filters.tuitionMax}`,
-        onRemove: () => setRange('tuition', undefined, undefined)
-      });
-    }
-
-    if (filters.accreditationStatus) {
-      chips.push({
-        key: 'accreditation',
-        label: `Accreditation: ${filters.accreditationStatus}`,
-        value: filters.accreditationStatus,
-        onRemove: () => setSingleSelect('accreditationStatus', undefined)
-      });
-    }
-
-    if (filters.rankingBand) {
-      chips.push({
-        key: 'ranking',
-        label: `Ranking: ${filters.rankingBand}`,
-        value: filters.rankingBand,
-        onRemove: () => setSingleSelect('rankingBand', undefined)
-      });
-    }
-
-    if (filters.internationalSupport) {
-      chips.push({
-        key: 'international-support',
-        label: 'International Support',
-        value: 'true',
-        onRemove: () => setInternationalSupport(undefined)
-      });
-    }
-
     return chips;
-  }, [filters, toggleMultiSelect, setRange, setSingleSelect, setInternationalSupport]);
+  }, [filters, toggleMultiSelect, setRange]);
 
   const hasActiveFilters = activeFilterChips.length > 0 || filters.search !== "";
 
@@ -303,8 +201,6 @@ export function useInstitutionFilters() {
     setSearch,
     toggleMultiSelect,
     setRange,
-    setSingleSelect,
-    setInternationalSupport,
     clearFilters,
     activeFilterChips,
     hasActiveFilters,

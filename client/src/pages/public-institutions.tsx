@@ -96,15 +96,6 @@ type University = {
   numberOfCampuses: number | null;
   scholarshipPercentageMin: number | null;
   scholarshipPercentageMax: number | null;
-  tuitionFeesMin: string | null;
-  tuitionFeesMax: string | null;
-  tuitionCurrency: string | null;
-  deliveryModes: string[] | null;
-  intakePeriods: string[] | null;
-  accreditationStatus: string | null;
-  rankingBand: string | null;
-  facilities: string[] | null;
-  internationalStudentSupport: boolean | null;
   tags: string[] | null;
   topDisciplines: string[] | null;
   coursesCount?: number;
@@ -128,20 +119,14 @@ type FilterMetadata = {
   statesByCountry: Record<string, string[]>;
   citiesByState: Record<string, string[]>;
   providerTypes: string[];
-  deliveryModes: string[];
-  intakePeriods: string[];
-  facilities: string[];
-  accreditationStatuses: string[];
-  rankingBands: string[];
   tags: string[];
   disciplines: string[];
   tagsByCategory?: Record<string, TagInfo[]>;
   scholarshipRange: { min: number; max: number };
-  tuitionRange: { min: number; max: number };
   totalCount: number;
 };
 
-type SortOption = "name-asc" | "name-desc" | "ranking" | "courses";
+type SortOption = "name-asc" | "name-desc" | "courses";
 
 export default function PublicInstitutions() {
   const [location, setLocation] = useLocation();
@@ -286,16 +271,6 @@ export default function PublicInstitutions() {
         break;
       case "name-desc":
         sorted.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case "ranking":
-        sorted.sort((a, b) => {
-          const rankOrder: Record<string, number> = {
-            "Top 100": 1, "Top 200": 2, "Top 500": 3, "Top 1000": 4
-          };
-          const aRank = a.rankingBand ? (rankOrder[a.rankingBand] ?? 99) : 99;
-          const bRank = b.rankingBand ? (rankOrder[b.rankingBand] ?? 99) : 99;
-          return aRank - bRank;
-        });
         break;
       case "courses":
         sorted.sort((a, b) => (b.coursesCount ?? 0) - (a.coursesCount ?? 0));
@@ -722,31 +697,6 @@ export default function PublicInstitutions() {
         </Collapsible>
       )}
 
-      {/* Ranking Filter */}
-      {filterMetadata && filterMetadata.rankingBands.length > 0 && (
-        <Collapsible open={openSections.ranking} onOpenChange={(open) => toggleSection('ranking', open)}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover-elevate rounded-md px-2">
-            <div className="flex items-center gap-2 font-medium text-sm">
-              <Award className="h-4 w-4 text-primary" />
-              Ranking
-            </div>
-            {openSections.ranking ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2 space-y-1">
-            {filterMetadata.rankingBands.map((band) => (
-              <label key={band} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover-elevate">
-                <Checkbox
-                  checked={false}
-                  onCheckedChange={() => {}}
-                  data-testid={`checkbox-ranking-${band.toLowerCase().replace(/\s+/g, '-')}`}
-                />
-                <span className="text-sm">{band}</span>
-              </label>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
       {/* Tag Filters by Category */}
       {/* Type Tags (Public/Private) */}
       {filterMetadata?.tagsByCategory?.type && filterMetadata.tagsByCategory.type.length > 0 && (
@@ -1108,14 +1058,6 @@ export default function PublicInstitutions() {
                                 Up to {institution.activeScholarshipMaxPercentage ?? institution.scholarshipPercentageMax}% Scholarship
                               </Badge>
                             )}
-                            {institution.rankingBand && (
-                              <Badge variant="outline" className="text-xs">
-                                {institution.rankingBand}
-                              </Badge>
-                            )}
-                            {institution.rankingBand === "Top 100" && (
-                              <Badge variant="secondary" className="text-xs">Global Top 100</Badge>
-                            )}
                           </div>
                         
                           {/* Top Right: Favorite */}
@@ -1167,12 +1109,6 @@ export default function PublicInstitutions() {
                             </div>
                           )}
                           
-                          {institution.deliveryModes && institution.deliveryModes.length > 0 && (
-                            <div className="text-sm text-muted-foreground">
-                              <span>Attendance: </span>
-                              {institution.deliveryModes.join(' / ')}
-                            </div>
-                          )}
                         </div>
                       </div>
 
