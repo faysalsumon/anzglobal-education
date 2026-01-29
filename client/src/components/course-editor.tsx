@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages, Save } from "lucide-react";
 import { 
   FRAMEWORK_CONFIGS, 
   ALL_FRAMEWORKS, 
@@ -1507,6 +1507,35 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
             >
               Discard
             </Button>
+            {course?.id && (
+              <Button 
+                variant="default"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  const formData = form.getValues();
+                  const isValid = await form.trigger();
+                  if (isValid) {
+                    // Keep current publish status
+                    const currentStatus = course.publishStatus || 'draft';
+                    handleSubmit(formData, currentStatus as 'draft' | 'published');
+                  } else {
+                    const errors = form.formState.errors;
+                    const errorFields = Object.keys(errors).join(', ');
+                    toast({
+                      title: "Validation Error",
+                      description: `Please fix the following fields: ${errorFields}`,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                data-testid="button-course-update"
+              >
+                <Save className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">{isSubmitting ? "Updating..." : "Update"}</span>
+                <span className="sm:hidden">{isSubmitting ? "..." : "Update"}</span>
+              </Button>
+            )}
             <Button 
               variant="secondary"
               size="sm"
