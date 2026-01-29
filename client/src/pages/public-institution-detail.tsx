@@ -760,9 +760,9 @@ export default function PublicInstitutionDetail() {
           </div>
 
           {/* Sticky Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-28 self-start">
             {/* CTA Card */}
-            <Card className="sticky top-28 border-primary/20">
+            <Card className="border-primary/20">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-accent" />
