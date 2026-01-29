@@ -336,6 +336,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       topCourses: featuredCourses.length > 0 || legacyCourseNames.length > 0
         ? [...featuredCourses.map(c => c.id), ...legacyCourseNames]
         : undefined,
+      rtoNumber: data.rtoNumber?.trim() || null,
+      cricosProviderCode: data.cricosProviderCode?.trim() || null,
       publishStatus,
       visibility,
       ...(publishStatus === 'published' && {
