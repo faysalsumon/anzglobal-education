@@ -1131,22 +1131,8 @@ export default function PublicInstitutions() {
                         <div className="flex flex-col gap-3">
                           {/* Stats Row */}
                           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm">
-                            {/* Country Flag + Institution Type */}
+                            {/* Institution Type */}
                             <div className="flex items-center gap-1.5">
-                              {(() => {
-                                const countryCode = getCountryCode(institution.country);
-                                if (countryCode) {
-                                  return (
-                                    <img 
-                                      src={getFlagUrl(countryCode)} 
-                                      alt={`${institution.country} flag`}
-                                      className="h-4 w-5 object-cover rounded-sm flex-shrink-0"
-                                      data-testid={`flag-${institution.id}`}
-                                    />
-                                  );
-                                }
-                                return null;
-                              })()}
                               <Building2 className="h-4 w-4 text-muted-foreground" />
                               <span className="text-muted-foreground" data-testid={`text-provider-type-${institution.id}`}>
                                 {institution.providerType || 'Institution'}
