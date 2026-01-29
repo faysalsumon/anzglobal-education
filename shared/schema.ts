@@ -2659,7 +2659,7 @@ export const crmContacts = pgTable("crm_contacts", {
   preferredName: text("preferred_name"),
   gender: genderEnum("gender"),
   email: text("email").notNull(),
-  mobile: text("mobile").notNull(),
+  mobile: text("mobile"),
   phone: text("phone"),
   whatsapp: text("whatsapp"),
   nationality: text("nationality"),
