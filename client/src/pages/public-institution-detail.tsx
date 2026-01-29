@@ -212,6 +212,19 @@ export default function PublicInstitutionDetail() {
     }));
   }, [institution, institutionId]);
 
+  const campusLocations = useMemo<string[]>(() => {
+    return campuses.map(campus => {
+      const parts = [
+        campus.address,
+        campus.city,
+        campus.state,
+        campus.postcode,
+        campus.country || "Australia"
+      ].filter(Boolean);
+      return `${campus.name}, ${parts.join(", ")}, ${campus.city}, ${campus.state} ${campus.postcode}`;
+    });
+  }, [campuses]);
+
   const galleryImages = institution?.institutionGallery || [];
 
   const openLightbox = useCallback((index: number) => setLightboxIndex(index), []);
@@ -255,10 +268,10 @@ export default function PublicInstitutionDetail() {
     if (galleryImages.length > 0) sections.push("gallery");
     if (institutionTags.length > 0) sections.push("features");
     if (scholarships.length > 0) sections.push("scholarships");
-    if (campuses.length > 0) sections.push("campuses");
+    if (campusLocations.length > 0) sections.push("campuses");
     sections.push("courses");
     return sections;
-  }, [galleryImages.length, institutionTags.length, scholarships.length, campuses.length]);
+  }, [galleryImages.length, institutionTags.length, scholarships.length, campusLocations.length]);
 
   if (isLoading) {
     return (
@@ -662,14 +675,18 @@ export default function PublicInstitutionDetail() {
             )}
 
             {/* Campus Locations Section */}
-            {campuses.length > 0 && (
+            {campusLocations.length > 0 && (
               <ResponsiveSection
                 id="campuses"
                 icon={<MapPin className="h-5 w-5 text-primary" />}
                 title="Campus Locations"
                 defaultOpen={true}
               >
-                <CampusMapTabs campuses={campuses} />
+                <CampusMapTabs 
+                  campusLocations={campusLocations}
+                  institutionName={institution.name}
+                  institutionLogo={institution.logo || undefined}
+                />
               </ResponsiveSection>
             )}
 
