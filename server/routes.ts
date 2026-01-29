@@ -16927,6 +16927,30 @@ Sitemap: ${baseUrl}/sitemap.xml
   // ============================================
 
   // ============================================
+  // PUBLIC INSTITUTION TAGS ENDPOINT
+  // Get all tags for a specific institution (public)
+  app.get("/api/institutions/:institutionId/tags", async (req, res) => {
+    try {
+      const { institutionId } = req.params;
+      
+      const institutionTagList = await db
+        .select({
+          id: tags.id,
+          name: tags.name,
+          category: tags.category,
+          color: tags.color,
+        })
+        .from(institutionTags)
+        .innerJoin(tags, eq(institutionTags.tagId, tags.id))
+        .where(eq(institutionTags.institutionId, institutionId));
+      
+      res.json(institutionTagList);
+    } catch (error: any) {
+      console.error("Error fetching institution tags:", error);
+      res.status(500).json({ message: "Failed to fetch institution tags" });
+    }
+  });
+
   // INSTITUTION SCHOLARSHIPS API ENDPOINTS
   // Scholarships are institution-wide and can be linked to courses
   // ============================================

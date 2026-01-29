@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,64 +19,72 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, ArrowLeft, ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
+import { 
+  MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
+  ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, 
+  ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles, Info
+} from "lucide-react";
 import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
 import { GoogleCampusMap } from "@/components/google-campus-map";
+import { ResponsiveSection } from "@/components/responsive-section";
+import { InstitutionSectionNav } from "@/components/institution-section-nav";
+import { LeadFormDialog } from "@/components/lead-form-dialog";
+import { CampusMapTabs } from "@/components/campus-map-tabs";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Favorite } from "@shared/schema";
 
-// Available course levels for filtering
 const COURSE_LEVELS = [
-  'VCE (11-12)',
-  'Certificate II',
-  'Certificate III',
-  'Certificate IV',
-  'Diploma',
-  'Advanced Diploma',
-  'Graduate Certificate',
-  'Graduate Diploma',
-  'Bachelor Degree',
-  'Professional Year',
-  'Masters Degree',
-  'Doctoral Degree',
-  'Higher Doctoral Degree',
-  'ELICOS',
+  'VCE (11-12)', 'Certificate II', 'Certificate III', 'Certificate IV',
+  'Diploma', 'Advanced Diploma', 'Graduate Certificate', 'Graduate Diploma',
+  'Bachelor Degree', 'Professional Year', 'Masters Degree', 'Doctoral Degree',
+  'Higher Doctoral Degree', 'ELICOS',
 ];
 
-// Number of courses to show initially
 const INITIAL_COURSES_SHOWN = 6;
 const COURSES_PER_PAGE = 6;
+
+interface InstitutionTag {
+  id: string;
+  name: string;
+  category: string;
+  color: string | null;
+}
+
+interface Scholarship {
+  id: string;
+  name: string;
+  valueType: string;
+  value: number;
+  description: string | null;
+  eligibilityCriteria: string | null;
+  applicationDeadline: string | null;
+  isActive: boolean;
+  status: string;
+}
 
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
+  const { user, isStudent } = useAuth();
+  const { toast } = useToast();
   
-  // Gallery lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  
-  // Campus map dialog state
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [mapDialogCampusIndex, setMapDialogCampusIndex] = useState<number>(0);
-  
-  // Course filter states
   const [courseSearch, setCourseSearch] = useState("");
   const [disciplineFilter, setDisciplineFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [coursesShown, setCoursesShown] = useState(INITIAL_COURSES_SHOWN);
+  const [leadFormOpen, setLeadFormOpen] = useState(false);
 
   const { data: institution, isLoading } = useQuery<University>({
     queryKey: [`/api/institutions/${institutionId}`],
     enabled: !!institutionId,
   });
 
-  // Fetch courses for this specific institution
   const { data: institutionCourses = [], isLoading: coursesLoading } = useQuery<Course[]>({
     queryKey: ['/api/courses', { universityId: institutionId }],
     queryFn: async () => {
@@ -87,144 +95,175 @@ export default function PublicInstitutionDetail() {
     enabled: !!institutionId,
   });
 
-  // Get unique disciplines from institution's courses
+  const { data: institutionTags = [] } = useQuery<InstitutionTag[]>({
+    queryKey: ["/api/institutions", institutionId, "tags"],
+    enabled: !!institutionId,
+  });
+
+  const { data: scholarships = [] } = useQuery<Scholarship[]>({
+    queryKey: ["/api/institutions", institutionId, "scholarships"],
+    enabled: !!institutionId,
+  });
+
+  const { data: favorites = [] } = useQuery<Favorite[]>({
+    queryKey: ["/api/student/favorites"],
+    enabled: isStudent,
+  });
+
+  const isFavorited = favorites.some(
+    (f) => f.itemType === "institution" && f.itemId === institutionId
+  );
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: async (data: { itemType: string; itemId: string }) => {
+      return await apiRequest("POST", "/api/student/favorites", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({ title: "Institution saved to favorites" });
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: async (favoriteId: number) => {
+      return await apiRequest("DELETE", `/api/student/favorites/${favoriteId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/favorites"] });
+      toast({ title: "Removed from favorites" });
+    },
+  });
+
+  const handleFavoriteToggle = () => {
+    if (isFavorited) {
+      const favorite = favorites.find(
+        (f) => f.itemType === "institution" && f.itemId === institutionId
+      );
+      if (favorite) {
+        removeFavoriteMutation.mutate(favorite.id);
+      }
+    } else if (institutionId) {
+      addFavoriteMutation.mutate({ itemType: "institution", itemId: institutionId });
+    }
+  };
+
+  const tagsByCategory = useMemo(() => {
+    const grouped: Record<string, InstitutionTag[]> = {};
+    institutionTags.forEach(tag => {
+      if (!grouped[tag.category]) grouped[tag.category] = [];
+      grouped[tag.category].push(tag);
+    });
+    return grouped;
+  }, [institutionTags]);
+
   const availableDisciplines = useMemo(() => {
     const disciplines = new Set<string>();
     institutionCourses.forEach(course => {
-      if (course.discipline) {
-        disciplines.add(course.discipline);
-      }
+      if (course.discipline) disciplines.add(course.discipline);
     });
     return Array.from(disciplines).sort();
   }, [institutionCourses]);
 
-  // Get unique levels from institution's courses
   const availableLevels = useMemo(() => {
     const levels = new Set<string>();
     institutionCourses.forEach(course => {
-      if (course.level) {
-        levels.add(course.level);
-      }
+      if (course.level) levels.add(course.level);
     });
     return COURSE_LEVELS.filter(level => levels.has(level));
   }, [institutionCourses]);
 
-  // Apply filters to courses
   const filteredCourses = useMemo(() => {
     let filtered = institutionCourses;
-
-    // Search filter
     if (courseSearch.trim()) {
       const searchLower = courseSearch.toLowerCase();
       filtered = filtered.filter(course => 
         course.title?.toLowerCase().includes(searchLower) ||
-        course.discipline?.toLowerCase().includes(searchLower) ||
-        course.level?.toLowerCase().includes(searchLower)
+        course.discipline?.toLowerCase().includes(searchLower)
       );
     }
-
-    // Discipline filter
-    if (disciplineFilter && disciplineFilter !== "all") {
+    if (disciplineFilter !== "all") {
       filtered = filtered.filter(course => course.discipline === disciplineFilter);
     }
-
-    // Level filter
-    if (levelFilter && levelFilter !== "all") {
+    if (levelFilter !== "all") {
       filtered = filtered.filter(course => course.level === levelFilter);
     }
-
     return filtered;
   }, [institutionCourses, courseSearch, disciplineFilter, levelFilter]);
 
-  // Courses to display (with pagination)
-  const displayedCourses = useMemo(() => {
-    return filteredCourses.slice(0, coursesShown);
-  }, [filteredCourses, coursesShown]);
+  const displayedCourses = useMemo(() => filteredCourses.slice(0, coursesShown), [filteredCourses, coursesShown]);
 
-  // Reset pagination when filters change
-  const handleFilterChange = () => {
-    setCoursesShown(INITIAL_COURSES_SHOWN);
-  };
+  const handleFilterChange = () => setCoursesShown(INITIAL_COURSES_SHOWN);
 
-  // Transform campusAddresses JSONB field to Campus[] format for the map component
   const campuses = useMemo<Campus[]>(() => {
-    if (!institution?.campusAddresses || !Array.isArray(institution.campusAddresses)) {
-      return [];
-    }
-    return institution.campusAddresses.map((campus: any) => ({
-      name: campus.name || `${campus.city || ''} Campus`,
-      address: campus.address || '',
-      street: campus.address || campus.street || '',
-      city: campus.city || '',
-      state: campus.state || '',
-      postcode: campus.postcode || '',
-      country: campus.country || '',
-      latitude: campus.latitude,
-      longitude: campus.longitude,
+    if (!institution?.campusAddresses) return [];
+    const addresses = institution.campusAddresses;
+    if (!Array.isArray(addresses)) return [];
+    return addresses.map((addr: any, index: number) => ({
+      id: index,
+      universityId: institutionId || "",
+      name: addr.name || addr.city || `Campus ${index + 1}`,
+      address: addr.address || "",
+      city: addr.city || "",
+      state: addr.state || "",
+      postcode: addr.postcode || "",
+      country: addr.country || institution.country || "",
+      latitude: addr.latitude ? parseFloat(addr.latitude) : null,
+      longitude: addr.longitude ? parseFloat(addr.longitude) : null,
     }));
-  }, [institution?.campusAddresses]);
+  }, [institution, institutionId]);
 
-  // Gallery lightbox navigation
   const galleryImages = institution?.institutionGallery || [];
-  const openLightbox = useCallback((index: number) => {
-    setLightboxIndex(index);
-  }, []);
 
-  const closeLightbox = useCallback(() => {
-    setLightboxIndex(null);
-  }, []);
-
+  const openLightbox = useCallback((index: number) => setLightboxIndex(index), []);
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const goToPrevImage = useCallback(() => {
     if (lightboxIndex !== null && galleryImages.length > 0) {
       setLightboxIndex((lightboxIndex - 1 + galleryImages.length) % galleryImages.length);
     }
   }, [lightboxIndex, galleryImages.length]);
-
   const goToNextImage = useCallback(() => {
     if (lightboxIndex !== null && galleryImages.length > 0) {
       setLightboxIndex((lightboxIndex + 1) % galleryImages.length);
     }
   }, [lightboxIndex, galleryImages.length]);
 
-  // Keyboard navigation for lightbox
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (lightboxIndex === null) return;
-      
       switch (e.key) {
-        case 'Escape':
-          closeLightbox();
-          break;
-        case 'ArrowLeft':
-          goToPrevImage();
-          break;
-        case 'ArrowRight':
-          goToNextImage();
-          break;
+        case 'Escape': closeLightbox(); break;
+        case 'ArrowLeft': goToPrevImage(); break;
+        case 'ArrowRight': goToNextImage(); break;
       }
     };
-
     if (lightboxIndex !== null) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
-
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
   }, [lightboxIndex, closeLightbox, goToPrevImage, goToNextImage]);
 
-  // Open map dialog for a specific campus
   const openCampusMap = useCallback((index: number) => {
     setMapDialogCampusIndex(index);
     setMapDialogOpen(true);
   }, []);
 
+  const visibleSections = useMemo(() => {
+    const sections: string[] = ["about"];
+    if (galleryImages.length > 0) sections.push("gallery");
+    if (institutionTags.length > 0) sections.push("features");
+    if (scholarships.length > 0) sections.push("scholarships");
+    sections.push("courses");
+    if (campuses.length > 0) sections.push("campuses");
+    return sections;
+  }, [galleryImages.length, institutionTags.length, scholarships.length, campuses.length]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading institution details...</div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -235,26 +274,19 @@ export default function PublicInstitutionDetail() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Institution Not Found</h1>
           <Button asChild>
-            <Link href="/institutions">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Institutions
-            </Link>
+            <Link href="/institutions">Back to Institutions</Link>
           </Button>
         </div>
       </div>
     );
   }
 
-  // Prepare SEO data
   const siteUrl = window.location.origin;
   const institutionUrl = `${siteUrl}/institutions/${institutionId}`;
   const metaTitle = `${institution.name} - ${institution.country || 'International University'} | ANZ Global Education`;
-  const metaDescription = institution.description 
-    ? institution.description.substring(0, 160)
-    : `Discover ${institution.name}, ${institution.providerType || 'a leading institution'} in ${institution.country || 'international education'}. ${institution.establishedYear ? `Established ${institution.establishedYear}.` : ''} ${institution.scholarshipPercentageMin !== null || institution.scholarshipPercentageMax !== null ? 'Scholarships available.' : ''}`;
-  const ogImage = institution.logo || `${siteUrl}/og-image.png`;
+  const metaDescription = institution.smallDescription || institution.description?.substring(0, 160) || 
+    `Discover ${institution.name}, a ${institution.providerType || 'leading institution'} in ${institution.country || 'international education'}.`;
 
-  // Create JSON-LD structured data for Organization (Enhanced for AI/GEO)
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
@@ -262,399 +294,552 @@ export default function PublicInstitutionDetail() {
     "description": institution.description || metaDescription,
     "url": institution.website,
     "logo": institution.logo,
-    "address": institution.country ? {
-      "@type": "PostalAddress",
-      "addressCountry": institution.country
-    } : undefined,
-    "contactPoint": (institution.contactPhone || institution.contactEmail) ? {
-      "@type": "ContactPoint",
-      "telephone": institution.contactPhone || undefined,
-      "email": institution.contactEmail || undefined,
-      "contactType": "Admissions"
-    } : undefined,
+    "address": institution.country ? { "@type": "PostalAddress", "addressCountry": institution.country } : undefined,
     "foundingDate": institution.establishedYear ? `${institution.establishedYear}-01-01` : undefined,
-    "areaServed": "International",
-    "knowsLanguage": "en"
   };
 
-  // Generate FAQ schema for institution (AI extraction friendly)
-  const institutionFaqItems = [];
-  
-  if (institution.establishedYear) {
-    institutionFaqItems.push({
-      "@type": "Question",
-      "name": `When was ${institution.name} established?`,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": `${institution.name} was established in ${institution.establishedYear}.`
-      }
-    });
-  }
-  
-  if (institution.country) {
-    institutionFaqItems.push({
-      "@type": "Question",
-      "name": `Where is ${institution.name} located?`,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": `${institution.name} is located in ${institution.country}.`
-      }
-    });
-  }
-  
-  if (institution.contactEmail || institution.contactPhone) {
-    institutionFaqItems.push({
-      "@type": "Question",
-      "name": `How do I contact ${institution.name}?`,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": `You can contact ${institution.name} ${institution.contactEmail ? `by email at ${institution.contactEmail}` : ''}${institution.contactEmail && institution.contactPhone ? ' or ' : ''}${institution.contactPhone ? `by phone at ${institution.contactPhone}` : ''}.`
-      }
-    });
-  }
-
-  const institutionFaqSchema = institutionFaqItems.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": institutionFaqItems
-  } : null;
-
-  // Create JSON-LD Breadcrumb structured data for rich snippets
   const breadcrumbData = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Home",
-        "item": siteUrl
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Institutions",
-        "item": `${siteUrl}/institutions`
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": institution.name,
-        "item": institutionUrl
-      }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": siteUrl },
+      { "@type": "ListItem", "position": 2, "name": "Institutions", "item": `${siteUrl}/institutions` },
+      { "@type": "ListItem", "position": 3, "name": institution.name, "item": institutionUrl }
     ]
   };
+
+  const activeScholarships = scholarships.filter(s => s.isActive && s.status === 'open');
+  const maxScholarshipPercentage = activeScholarships
+    .filter(s => s.valueType === 'percentage')
+    .reduce((max, s) => Math.max(max, s.value), 0);
 
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        {/* Primary Meta Tags */}
         <title>{metaTitle}</title>
-        <meta name="title" content={metaTitle} />
         <meta name="description" content={metaDescription} />
         <link rel="canonical" href={institutionUrl} />
-
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={institutionUrl} />
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
-        <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={institutionUrl} />
-        <meta name="twitter:title" content={metaTitle} />
-        <meta name="twitter:description" content={metaDescription} />
-        <meta name="twitter:image" content={ogImage} />
-
-        {/* JSON-LD Structured Data */}
-        <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(breadcrumbData)}
-        </script>
-        {/* FAQ Schema for AI/LLM extraction */}
-        {institutionFaqSchema && (
-          <script type="application/ld+json">
-            {JSON.stringify(institutionFaqSchema)}
-          </script>
-        )}
+        <meta property="og:image" content={institution.logo || `${siteUrl}/og-image.png`} />
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+        <script type="application/ld+json">{JSON.stringify(breadcrumbData)}</script>
       </Helmet>
 
-      {/* Header */}
-      <header className="bg-card border-b">
-        <div className="container mx-auto px-4 py-6">
-          <Breadcrumb data-testid="breadcrumb" className="mb-4">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/" data-testid="breadcrumb-home">
-                    <Home className="h-4 w-4" />
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/institutions" data-testid="breadcrumb-institutions">
-                    Institutions
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage data-testid="breadcrumb-current">{institution.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <InstitutionSectionNav visibleSections={visibleSections} institutionName={institution.name} />
 
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            <InstitutionLogo
-              src={institution.logo}
-              alt={institution.name}
-              size="xl"
-              testId="img-logo"
-            />
-            <div className="flex-1">
-              <div className="flex flex-wrap gap-2 mb-2">
-                {institution.providerType && (
-                  <Badge variant="secondary" data-testid="badge-provider-type">
-                    {institution.providerType}
-                  </Badge>
-                )}
-                {(institution.scholarshipPercentageMin !== null || institution.scholarshipPercentageMax !== null) && (
-                  <Badge className="bg-accent text-accent-foreground" data-testid="badge-scholarship">
-                    <Award className="h-3 w-3 mr-1" />
-                    {institution.scholarshipPercentageMin !== null && institution.scholarshipPercentageMax !== null
-                      ? `${institution.scholarshipPercentageMin}%-${institution.scholarshipPercentageMax}% Scholarship Available`
-                      : institution.scholarshipPercentageMin !== null
-                      ? `From ${institution.scholarshipPercentageMin}% Scholarship Available`
-                      : `Up to ${institution.scholarshipPercentageMax}% Scholarship Available`}
-                  </Badge>
-                )}
-              </div>
-              <h1 className="text-3xl font-bold mb-2" data-testid="text-name">
-                {institution.name}
-              </h1>
+      {/* Modern Hero Section */}
+      <div id="institution-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="container mx-auto px-4 py-12 relative">
+          {/* Breadcrumb with Favorite */}
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <nav className="flex flex-wrap items-center gap-2 text-sm" data-testid="breadcrumb">
+              <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-home">
+                <Home className="h-4 w-4" />
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <Link href="/institutions" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-institutions">
+                Institutions
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{institution.name}</span>
+            </nav>
+            
+            {isStudent && (
+              <Button
+                size="sm"
+                variant={isFavorited ? "destructive" : "outline"}
+                onClick={handleFavoriteToggle}
+                disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+                className={!isFavorited ? "text-destructive border-destructive" : ""}
+                data-testid="button-favorite-institution"
+              >
+                <Heart className={`h-4 w-4 mr-1.5 ${isFavorited ? "fill-current" : ""}`} />
+                {isFavorited ? "Saved" : "Save"}
+              </Button>
+            )}
+          </div>
+
+          {/* Mobile Quick Stats Strip */}
+          <div className="md:hidden overflow-x-auto -mx-4 px-4 py-3" data-testid="container-mobile-quick-stats">
+            <div className="flex gap-3 min-w-max">
+              {institution.providerType && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</span>
+                    <span className="text-sm font-semibold">{institution.providerType}</span>
+                  </div>
+                </div>
+              )}
+              {institution.establishedYear && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Est.</span>
+                    <span className="text-sm font-semibold">{institution.establishedYear}</span>
+                  </div>
+                </div>
+              )}
+              {institution.numberOfCampuses && (
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                  <MapPin className="h-4 w-4 text-accent" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Campuses</span>
+                    <span className="text-sm font-semibold">{institution.numberOfCampuses}</span>
+                  </div>
+                </div>
+              )}
               {institution.country && (
-                <div className="flex items-center gap-2 text-muted-foreground mb-4">
-                  <MapPin className="h-4 w-4" />
-                  <span data-testid="text-country">
-                    {institution.country}
-                  </span>
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Location</span>
+                    <span className="text-sm font-semibold">{institution.country}</span>
+                  </div>
                 </div>
               )}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Hero Content */}
+            <div className="lg:col-span-2">
+              <div className="flex flex-col gap-6">
+                {/* Institution Badge */}
+                <div className="flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit">
+                  <InstitutionLogo src={institution.logo} alt={institution.name} size="lg" testId="img-logo" />
+                  <div>
+                    {institution.country && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {institution.country}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Institution Title */}
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-name">
+                    {institution.name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {institution.providerType && (
+                      <Badge variant="secondary" className="text-sm" data-testid="badge-provider-type">
+                        <Building2 className="h-3 w-3 mr-1" />
+                        {institution.providerType}
+                      </Badge>
+                    )}
+                    {maxScholarshipPercentage > 0 && (
+                      <Badge className="bg-accent text-accent-foreground" data-testid="badge-scholarship">
+                        <Award className="h-3 w-3 mr-1" />
+                        Up to {maxScholarshipPercentage}% Scholarship
+                      </Badge>
+                    )}
+                    {institution.cricosProviderCode && (
+                      <Badge variant="outline" className="text-xs">CRICOS: {institution.cricosProviderCode}</Badge>
+                    )}
+                    {institution.rtoNumber && (
+                      <Badge variant="outline" className="text-xs">RTO: {institution.rtoNumber}</Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Institution Features Tags */}
+                {institutionTags.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" /> Institution Features
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {institutionTags.slice(0, 8).map(tag => (
+                        <Badge 
+                          key={tag.id} 
+                          variant="outline" 
+                          className="text-xs"
+                          style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: tag.color || '#666' }} />
+                          {tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Facts Sidebar */}
+            <div className="hidden md:block">
+              <Card className="bg-background/60 backdrop-blur-sm border-primary/20">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Quick Facts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 pb-4">
+                  {institution.providerType && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Building2 className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Provider Type</p>
+                        <p className="text-sm font-semibold" data-testid="quick-fact-type">{institution.providerType}</p>
+                      </div>
+                    </div>
+                  )}
+                  {institution.establishedYear && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md">
+                        <Calendar className="h-3.5 w-3.5 text-secondary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Established</p>
+                        <p className="text-sm font-semibold" data-testid="quick-fact-established">{institution.establishedYear}</p>
+                      </div>
+                    </div>
+                  )}
+                  {institution.numberOfCampuses && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-accent/10 rounded-md">
+                        <MapPin className="h-3.5 w-3.5 text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Campuses</p>
+                        <p className="text-sm font-semibold" data-testid="quick-fact-campuses">{institution.numberOfCampuses}</p>
+                      </div>
+                    </div>
+                  )}
+                  {institution.country && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded-md">
+                        <Globe className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Location</p>
+                        <p className="text-sm font-semibold" data-testid="quick-fact-location">{institution.country}</p>
+                      </div>
+                    </div>
+                  )}
+                  {institutionCourses.length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-secondary/10 rounded-md">
+                        <GraduationCap className="h-3.5 w-3.5 text-secondary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Available Courses</p>
+                        <p className="text-sm font-semibold" data-testid="quick-fact-courses">{institutionCourses.length}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* About (Full Description or Legacy Description) - moved to top */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About {institution.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-full-description">
-                  {institution.fullDescription || institution.description}
-                </div>
-              </CardContent>
-            </Card>
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* About Section */}
+            <ResponsiveSection
+              id="about"
+              icon={<Building2 className="h-5 w-5 text-primary" />}
+              title="About This Institution"
+              defaultOpen={true}
+            >
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="text-description">
+                {institution.fullDescription || institution.description || "No description available"}
+              </p>
+            </ResponsiveSection>
 
-            {/* Institution Gallery */}
-            {institution.institutionGallery && institution.institutionGallery.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Campus Gallery</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Explore our campus facilities and environment
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {institution.institutionGallery.map((image, index) => (
-                      <div 
-                        key={index} 
-                        className="group relative aspect-[3/2] rounded-md overflow-hidden border hover-elevate cursor-pointer"
-                        onClick={() => openLightbox(index)}
-                        data-testid={`gallery-item-${index}`}
-                      >
-                        <img
-                          src={image}
-                          alt={`${institution.name} campus ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          data-testid={`img-gallery-${index}`}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-white text-xs">
-                            <ZoomIn className="h-4 w-4" />
-                            <span>Click to enlarge</span>
-                          </div>
+            {/* Gallery Section */}
+            {galleryImages.length > 0 && (
+              <ResponsiveSection
+                id="gallery"
+                icon={<Image className="h-5 w-5 text-primary" />}
+                title="Campus Gallery"
+                defaultOpen={true}
+              >
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {galleryImages.map((image, index) => (
+                    <div 
+                      key={index} 
+                      className="group relative aspect-[3/2] rounded-md overflow-hidden border hover-elevate cursor-pointer"
+                      onClick={() => openLightbox(index)}
+                      data-testid={`gallery-item-${index}`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${institution.name} campus ${index + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1 text-white text-xs">
+                          <ZoomIn className="h-4 w-4" />
+                          <span>Click to enlarge</span>
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </ResponsiveSection>
+            )}
+
+            {/* Features Section - Tags by Category */}
+            {institutionTags.length > 0 && (
+              <ResponsiveSection
+                id="features"
+                icon={<Tag className="h-5 w-5 text-primary" />}
+                title="Institution Features"
+                defaultOpen={true}
+              >
+                <div className="space-y-4">
+                  {Object.entries(tagsByCategory).map(([category, tags]) => (
+                    <div key={category}>
+                      <p className="text-sm font-medium text-muted-foreground mb-2 capitalize">{category}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map(tag => (
+                          <Badge 
+                            key={tag.id} 
+                            variant="outline"
+                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: tag.color || '#666' }} />
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ResponsiveSection>
+            )}
+
+            {/* Scholarships Section */}
+            {activeScholarships.length > 0 && (
+              <ResponsiveSection
+                id="scholarships"
+                icon={<Award className="h-5 w-5 text-primary" />}
+                title={<>Available Scholarships<span className="text-muted-foreground font-normal text-base ml-1">• {activeScholarships.length} Active</span></>}
+                defaultOpen={true}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activeScholarships.map(scholarship => (
+                    <div 
+                      key={scholarship.id}
+                      className="relative overflow-hidden rounded-xl border p-6 bg-gradient-to-br from-accent/10 to-transparent"
+                      data-testid={`scholarship-${scholarship.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold">{scholarship.name}</h4>
+                        <Badge variant="default" className="bg-accent">
+                          {scholarship.valueType === 'percentage' 
+                            ? `${scholarship.value}%` 
+                            : `$${scholarship.value.toLocaleString()}`}
+                        </Badge>
+                      </div>
+                      {scholarship.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{scholarship.description}</p>
+                      )}
+                      {scholarship.applicationDeadline && (
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Deadline: {scholarship.applicationDeadline}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ResponsiveSection>
+            )}
+
+            {/* Courses Section */}
+            <ResponsiveSection
+              id="courses"
+              icon={<GraduationCap className="h-5 w-5 text-primary" />}
+              title={<>Courses Offered<span className="text-muted-foreground font-normal text-base ml-1">• {institutionCourses.length} Available</span></>}
+              defaultOpen={true}
+            >
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search courses..."
+                    value={courseSearch}
+                    onChange={(e) => { setCourseSearch(e.target.value); handleFilterChange(); }}
+                    className="pl-9"
+                    data-testid="input-course-search"
+                  />
+                </div>
+                <Select value={disciplineFilter} onValueChange={(value) => { setDisciplineFilter(value); handleFilterChange(); }}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-discipline">
+                    <SelectValue placeholder="All Disciplines" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Disciplines</SelectItem>
+                    {availableDisciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={levelFilter} onValueChange={(value) => { setLevelFilter(value); handleFilterChange(); }}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-level">
+                    <SelectValue placeholder="All Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    {availableLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {coursesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : filteredCourses.length === 0 ? (
+                <div className="text-center py-12">
+                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No courses found</h3>
+                  <p className="text-muted-foreground">Try adjusting your filters</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {displayedCourses.map(course => (
+                      <Link key={course.id} href={`/courses/${course.id}`}>
+                        <Card className="h-full hover-elevate cursor-pointer" data-testid={`course-card-${course.id}`}>
+                          <CardContent className="p-4">
+                            <h3 className="font-semibold text-sm line-clamp-2 mb-2">{course.title}</h3>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {course.level && <Badge variant="secondary" className="text-xs">{course.level}</Badge>}
+                              {course.discipline && <Badge variant="outline" className="text-xs">{course.discipline}</Badge>}
+                            </div>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {course.duration && (
+                                <div className="flex items-center gap-1"><Clock className="h-3 w-3" /><span>{course.duration}</span></div>
+                              )}
+                              {course.fees && (
+                                <div className="flex items-center gap-1"><DollarSign className="h-3 w-3" /><span>${Number(course.fees).toLocaleString()}/year</span></div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  {filteredCourses.length > coursesShown && (
+                    <div className="flex justify-center mt-6">
+                      <Button variant="outline" onClick={() => setCoursesShown(prev => prev + COURSES_PER_PAGE)} data-testid="button-show-more-courses">
+                        Show More Courses ({filteredCourses.length - coursesShown} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </ResponsiveSection>
 
-            {/* Overview (Small Description) */}
-            {institution.smallDescription && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed" data-testid="text-small-description">
-                    {institution.smallDescription}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Campuses Section - Below Gallery */}
+            {/* Campus Locations Section */}
             {campuses.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Campuses
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Click on a campus to view its location on the map
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {campuses.map((campus, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate cursor-pointer transition-all text-left w-full"
-                        onClick={() => openCampusMap(index)}
-                        data-testid={`campus-card-${index}`}
-                      >
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <MapPin className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate" data-testid={`text-campus-name-${index}`}>{campus.name}</p>
-                          <p className="text-xs text-muted-foreground truncate" data-testid={`text-campus-location-${index}`}>
-                            {[campus.city, campus.state].filter(Boolean).join(', ')}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <ResponsiveSection
+                id="campuses"
+                icon={<MapPin className="h-5 w-5 text-primary" />}
+                title="Campus Locations"
+                defaultOpen={true}
+              >
+                <CampusMapTabs campuses={campuses} />
+              </ResponsiveSection>
             )}
-
           </div>
 
-          {/* Sidebar Info */}
+          {/* Sticky Sidebar */}
           <div className="space-y-6">
-            {/* Institution Details - moved to top */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Institution Details</CardTitle>
+            {/* CTA Card */}
+            <Card className="sticky top-28 border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-accent" />
+                  Explore This Institution
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Take the first step towards your future education</p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {institution.establishedYear && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Established</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-established">
-                        {institution.establishedYear}
-                      </p>
-                    </div>
-                  </div>
+              <CardContent className="space-y-3">
+                <Button className="w-full" asChild data-testid="button-browse-courses">
+                  <Link href={`/courses?university=${institution.id}`}>
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Browse All Courses
+                  </Link>
+                </Button>
+                
+                <div className="text-center text-sm text-muted-foreground">or request more details first</div>
+                
+                <Button variant="outline" className="w-full text-accent border-accent hover:bg-accent/10" onClick={() => setLeadFormOpen(true)} data-testid="button-request-info">
+                  <Info className="h-4 w-4 mr-2" />
+                  Request More Information
+                </Button>
+
+                {institution.website && (
+                  <Button variant="ghost" className="w-full" asChild data-testid="button-visit-website">
+                    <a href={institution.website} target="_blank" rel="noopener noreferrer">
+                      <Globe className="h-4 w-4 mr-2" />
+                      View on Institution Website
+                      <ExternalLink className="h-3 w-3 ml-2" />
+                    </a>
+                  </Button>
                 )}
-
-                {institution.numberOfCampuses && (
-                  <div className="flex items-start gap-3">
-                    <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Number of Campuses</p>
-                      <p className="text-sm text-muted-foreground" data-testid="text-campuses">
-                        {institution.numberOfCampuses}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t pt-4 mt-4">
-                  <p className="text-sm font-medium mb-3">Contact Information</p>
-                  
-                  {institution.contactEmail && (
-                    <div className="flex items-start gap-3 mb-3">
-                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <a
-                        href={`mailto:${institution.contactEmail}`}
-                        className="text-sm text-primary hover:underline"
-                        data-testid="link-email"
-                      >
-                        {institution.contactEmail}
-                      </a>
-                    </div>
-                  )}
-
-                  {institution.contactPhone && (
-                    <div className="flex items-start gap-3 mb-3">
-                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <a
-                        href={`tel:${institution.contactPhone}`}
-                        className="text-sm text-primary hover:underline"
-                        data-testid="link-phone"
-                      >
-                        {institution.contactPhone}
-                      </a>
-                    </div>
-                  )}
-
-                  {institution.website && (
-                    <div className="flex items-start gap-3">
-                      <Globe className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <a
-                        href={institution.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                        data-testid="link-website"
-                      >
-                        Visit Website
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
 
-            {/* Top Disciplines - moved to sidebar */}
+            {/* Contact Info Card */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {institution.contactEmail && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${institution.contactEmail}`} className="text-sm text-primary hover:underline" data-testid="link-email">
+                      {institution.contactEmail}
+                    </a>
+                  </div>
+                )}
+                {institution.contactPhone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${institution.contactPhone}`} className="text-sm text-primary hover:underline" data-testid="link-phone">
+                      {institution.contactPhone}
+                    </a>
+                  </div>
+                )}
+                {institution.website && (
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={institution.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1" data-testid="link-website">
+                      Visit Website <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Disciplines Card */}
             {institution.topDisciplines && institution.topDisciplines.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle>Top Disciplines</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Top Disciplines</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {institution.topDisciplines.map((discipline, index) => (
-                      <Badge
-                        key={discipline}
-                        variant="secondary"
-                        className="text-sm"
-                        data-testid={`badge-discipline-${index}`}
-                      >
+                      <Badge key={discipline} variant="secondary" className="text-sm" data-testid={`badge-discipline-${index}`}>
                         <GraduationCap className="h-3 w-3 mr-1" />
                         {discipline}
                       </Badge>
@@ -663,326 +848,39 @@ export default function PublicInstitutionDetail() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Featured Courses - moved to sidebar */}
-            {institution.topCourses && institution.topCourses.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Featured Courses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {institution.topCourses.map((courseIdOrName, index) => {
-                      const linkedCourse = institutionCourses.find(c => c.id === courseIdOrName);
-                      if (linkedCourse) {
-                        return (
-                          <li key={index} className="flex items-start gap-2">
-                            <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                            <Link 
-                              href={`/courses/${linkedCourse.id}`}
-                              className="text-primary hover:underline cursor-pointer"
-                              data-testid={`link-course-${index}`}
-                            >
-                              {linkedCourse.title}
-                            </Link>
-                          </li>
-                        );
-                      }
-                      return (
-                        <li key={index} className="flex items-start gap-2">
-                          <GraduationCap className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                          <span className="text-muted-foreground" data-testid={`text-course-${index}`}>
-                            {courseIdOrName}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
           </div>
-        </div>
-
-        {/* Courses Section - Full Width */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5" />
-                    Courses Offered
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {institutionCourses.length} course{institutionCourses.length !== 1 ? 's' : ''} available
-                  </p>
-                </div>
-                <Button asChild variant="outline" size="sm" data-testid="button-view-all-courses">
-                  <Link href={`/courses?university=${institution.id}`}>
-                    View Full Catalog
-                    <ExternalLink className="h-3 w-3 ml-2" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search courses..."
-                    value={courseSearch}
-                    onChange={(e) => {
-                      setCourseSearch(e.target.value);
-                      handleFilterChange();
-                    }}
-                    className="pl-9"
-                    data-testid="input-course-search"
-                  />
-                </div>
-                <Select 
-                  value={disciplineFilter} 
-                  onValueChange={(value) => {
-                    setDisciplineFilter(value);
-                    handleFilterChange();
-                  }}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-discipline">
-                    <SelectValue placeholder="All Disciplines" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Disciplines</SelectItem>
-                    {availableDisciplines.map((discipline) => (
-                      <SelectItem key={discipline} value={discipline}>
-                        {discipline}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select 
-                  value={levelFilter} 
-                  onValueChange={(value) => {
-                    setLevelFilter(value);
-                    handleFilterChange();
-                  }}
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-level">
-                    <SelectValue placeholder="All Levels" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    {availableLevels.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(courseSearch || disciplineFilter !== "all" || levelFilter !== "all") && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setCourseSearch("");
-                      setDisciplineFilter("all");
-                      setLevelFilter("all");
-                      handleFilterChange();
-                    }}
-                    data-testid="button-clear-filters"
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-
-              {/* Course Loading State */}
-              {coursesLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : filteredCourses.length === 0 ? (
-                /* Empty State */
-                <div className="text-center py-12">
-                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  {institutionCourses.length === 0 ? (
-                    <>
-                      <h3 className="text-lg font-medium mb-2">No courses listed yet</h3>
-                      <p className="text-muted-foreground">
-                        Check back soon for available courses from {institution.name}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="text-lg font-medium mb-2">No matching courses</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Try adjusting your filters to see more courses
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setCourseSearch("");
-                          setDisciplineFilter("all");
-                          setLevelFilter("all");
-                          handleFilterChange();
-                        }}
-                      >
-                        Clear Filters
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {/* Results Count */}
-                  {(courseSearch || disciplineFilter !== "all" || levelFilter !== "all") && (
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Showing {displayedCourses.length} of {filteredCourses.length} matching course{filteredCourses.length !== 1 ? 's' : ''}
-                    </p>
-                  )}
-
-                  {/* Course Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayedCourses.map((course) => (
-                      <Link key={course.id} href={`/courses/${course.id}`}>
-                        <Card 
-                          className="h-full hover-elevate cursor-pointer transition-all duration-200"
-                          data-testid={`course-card-${course.id}`}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex flex-col h-full">
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-sm line-clamp-2 mb-2" data-testid={`course-title-${course.id}`}>
-                                  {course.title}
-                                </h3>
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {course.level && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {course.level}
-                                    </Badge>
-                                  )}
-                                  {course.discipline && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {course.discipline}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="space-y-1 text-xs text-muted-foreground mt-auto">
-                                {course.duration && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{course.duration}</span>
-                                  </div>
-                                )}
-                                {course.fees && (
-                                  <div className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3" />
-                                    <span>${Number(course.fees).toLocaleString()}/year</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Show More Button */}
-                  {filteredCourses.length > coursesShown && (
-                    <div className="flex justify-center mt-6">
-                      <Button 
-                        variant="outline"
-                        onClick={() => setCoursesShown(prev => prev + COURSES_PER_PAGE)}
-                        data-testid="button-show-more-courses"
-                      >
-                        Show More Courses ({filteredCourses.length - coursesShown} remaining)
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
 
+      {/* Lead Form Dialog */}
+      <LeadFormDialog 
+        open={leadFormOpen} 
+        onOpenChange={setLeadFormOpen}
+        prefilledData={{ institutionId: institutionId }}
+      />
+
       {/* Gallery Lightbox Modal */}
       {lightboxIndex !== null && galleryImages.length > 0 && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={closeLightbox}
-          data-testid="lightbox-overlay"
-        >
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20 z-10"
-            onClick={closeLightbox}
-            data-testid="button-close-lightbox"
-          >
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={closeLightbox} data-testid="lightbox-overlay">
+          <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-white hover:bg-white/20 z-10" onClick={closeLightbox} data-testid="button-close-lightbox">
             <X className="h-6 w-6" />
           </Button>
-
-          {/* Image Counter */}
           <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
             {lightboxIndex + 1} / {galleryImages.length}
           </div>
-
-          {/* Previous Button */}
           {galleryImages.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToPrevImage();
-              }}
-              data-testid="button-prev-image"
-            >
+            <Button variant="ghost" size="icon" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12" onClick={(e) => { e.stopPropagation(); goToPrevImage(); }} data-testid="button-prev-image">
               <ChevronLeft className="h-8 w-8" />
             </Button>
           )}
-
-          {/* Main Image */}
-          <div 
-            className="max-w-[90vw] max-h-[85vh] flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={galleryImages[lightboxIndex]}
-              alt={`${institution?.name || 'Institution'} campus ${lightboxIndex + 1}`}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg"
-              data-testid="lightbox-image"
-            />
+          <div className="max-w-[90vw] max-h-[85vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img src={galleryImages[lightboxIndex]} alt={`${institution.name} campus ${lightboxIndex + 1}`} className="max-w-full max-h-[85vh] object-contain rounded-lg" data-testid="lightbox-image" />
           </div>
-
-          {/* Next Button */}
           {galleryImages.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToNextImage();
-              }}
-              data-testid="button-next-image"
-            >
+            <Button variant="ghost" size="icon" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12" onClick={(e) => { e.stopPropagation(); goToNextImage(); }} data-testid="button-next-image">
               <ChevronRight className="h-8 w-8" />
             </Button>
           )}
-
-          {/* Keyboard Instructions */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs flex items-center gap-4">
-            <span>Use arrow keys to navigate</span>
-            <span>Press ESC to close</span>
-          </div>
         </div>
       )}
 
@@ -996,56 +894,14 @@ export default function PublicInstitutionDetail() {
             </DialogTitle>
           </DialogHeader>
           <div className="p-6 pt-4">
-            {/* Campus Address Details */}
-            <div className="mb-4 p-4 bg-muted/50 rounded-lg" data-testid="dialog-campus-address">
-              <div className="flex items-start gap-3">
-                <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  {campuses[mapDialogCampusIndex]?.street && (
-                    <p className="font-medium" data-testid="text-dialog-campus-street">{campuses[mapDialogCampusIndex].street}</p>
-                  )}
-                  <p className="text-muted-foreground" data-testid="text-dialog-campus-city">
-                    {[
-                      campuses[mapDialogCampusIndex]?.city,
-                      campuses[mapDialogCampusIndex]?.state,
-                      campuses[mapDialogCampusIndex]?.postcode
-                    ].filter(Boolean).join(', ')}
-                  </p>
-                  {campuses[mapDialogCampusIndex]?.country && (
-                    <p className="text-muted-foreground" data-testid="text-dialog-campus-country">{campuses[mapDialogCampusIndex].country}</p>
-                  )}
+            {campuses[mapDialogCampusIndex] && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  {campuses[mapDialogCampusIndex].address && <p>{campuses[mapDialogCampusIndex].address}</p>}
+                  <p>{[campuses[mapDialogCampusIndex].city, campuses[mapDialogCampusIndex].state, campuses[mapDialogCampusIndex].postcode].filter(Boolean).join(', ')}</p>
                 </div>
-              </div>
-            </div>
-            
-            {/* Map Component */}
-            {campuses.length > 0 && (
-              <div className="rounded-lg overflow-hidden border">
-                <GoogleCampusMap
-                  campuses={campuses}
-                  institutionName={institution?.name || ''}
-                  selectedCampusIndex={mapDialogCampusIndex}
-                  onMarkerClick={(index) => setMapDialogCampusIndex(index)}
-                />
-              </div>
-            )}
-
-            {/* Campus Navigation (if multiple campuses) */}
-            {campuses.length > 1 && (
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <p className="text-sm text-muted-foreground mr-2">Switch campus:</p>
-                <div className="flex flex-wrap gap-2">
-                  {campuses.map((campus, index) => (
-                    <Button
-                      key={index}
-                      variant={mapDialogCampusIndex === index ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setMapDialogCampusIndex(index)}
-                      data-testid={`button-switch-campus-${index}`}
-                    >
-                      {campus.name}
-                    </Button>
-                  ))}
+                <div className="h-[400px] rounded-lg overflow-hidden border">
+                  <GoogleCampusMap campuses={[campuses[mapDialogCampusIndex]]} selectedCampusIndex={0} onCampusSelect={() => {}} />
                 </div>
               </div>
             )}
