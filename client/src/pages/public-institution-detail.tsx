@@ -255,8 +255,8 @@ export default function PublicInstitutionDetail() {
     if (galleryImages.length > 0) sections.push("gallery");
     if (institutionTags.length > 0) sections.push("features");
     if (scholarships.length > 0) sections.push("scholarships");
-    sections.push("courses");
     if (campuses.length > 0) sections.push("campuses");
+    sections.push("courses");
     return sections;
   }, [galleryImages.length, institutionTags.length, scholarships.length, campuses.length]);
 
@@ -661,6 +661,18 @@ export default function PublicInstitutionDetail() {
               </ResponsiveSection>
             )}
 
+            {/* Campus Locations Section */}
+            {campuses.length > 0 && (
+              <ResponsiveSection
+                id="campuses"
+                icon={<MapPin className="h-5 w-5 text-primary" />}
+                title="Campus Locations"
+                defaultOpen={true}
+              >
+                <CampusMapTabs campuses={campuses} />
+              </ResponsiveSection>
+            )}
+
             {/* Courses Section */}
             <ResponsiveSection
               id="courses"
@@ -745,18 +757,6 @@ export default function PublicInstitutionDetail() {
                 </>
               )}
             </ResponsiveSection>
-
-            {/* Campus Locations Section */}
-            {campuses.length > 0 && (
-              <ResponsiveSection
-                id="campuses"
-                icon={<MapPin className="h-5 w-5 text-primary" />}
-                title="Campus Locations"
-                defaultOpen={true}
-              >
-                <CampusMapTabs campuses={campuses} />
-              </ResponsiveSection>
-            )}
           </div>
 
           {/* Sticky Sidebar */}

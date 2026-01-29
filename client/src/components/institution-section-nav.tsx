@@ -21,8 +21,8 @@ const sections: SectionConfig[] = [
   { id: "gallery", label: "Gallery", icon: <Image className="h-4 w-4" /> },
   { id: "features", label: "Features", icon: <Tag className="h-4 w-4" /> },
   { id: "scholarships", label: "Scholarships", icon: <Award className="h-4 w-4" /> },
-  { id: "courses", label: "Courses", icon: <GraduationCap className="h-4 w-4" /> },
   { id: "campuses", label: "Campuses", icon: <MapPin className="h-4 w-4" /> },
+  { id: "courses", label: "Courses", icon: <GraduationCap className="h-4 w-4" /> },
 ];
 
 interface InstitutionSectionNavProps {
