@@ -423,7 +423,7 @@ export default function PublicInstitutionDetail() {
 
                 {/* Institution Title */}
                 <div>
-                  <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3" data-testid="text-name">
+                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-name">
                     {institution.name}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3">
