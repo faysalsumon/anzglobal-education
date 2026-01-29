@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -308,22 +309,22 @@ export function InstitutionContactsPanel({ institutionId, institutionName }: Ins
                       data-testid="input-new-email"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Phone</Label>
-                      <Input
+                      <PhoneInput
                         placeholder="Phone number"
                         value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
+                        onChange={setNewPhone}
                         data-testid="input-new-phone"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Mobile</Label>
-                      <Input
+                      <PhoneInput
                         placeholder="Mobile number"
                         value={newMobile}
-                        onChange={(e) => setNewMobile(e.target.value)}
+                        onChange={setNewMobile}
                         data-testid="input-new-mobile"
                       />
                     </div>
