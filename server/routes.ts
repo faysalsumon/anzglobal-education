@@ -13147,12 +13147,13 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
       const systemPrompt = `You are an expert SEO copywriter for ANZ Global Education, an international education platform. 
 Generate optimized meta title and description for better search engine rankings and click-through rates.
 
-Rules:
-- Meta title: 50-60 characters, include primary keyword, brand name at end
-- Meta description: 150-160 characters, compelling, include call-to-action
+STRICT Rules:
+- Meta title: MUST be between 40-58 characters (NEVER exceed 58 characters). Count characters carefully before responding.
+- Meta description: MUST be between 120-155 characters (NEVER exceed 155 characters)
 - Focus on international students studying in Australia
 - Use action words and benefits
-- Include relevant keywords naturally`;
+- Include relevant keywords naturally
+- Do NOT include "| ANZ Global Education" in the title - keep it short and focused`;
 
       const userPrompt = entityType === 'course' 
         ? `Generate SEO metadata for this course:
@@ -13186,11 +13187,32 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
 
       const generatedContent = JSON.parse(completion.choices[0].message.content || '{}');
       
+      // Helper function to safely truncate text within character limit
+      const truncateWithEllipsis = (text: string, maxLength: number, minWordBoundary: number): string => {
+        if (text.length <= maxLength) return text;
+        
+        // Reserve 3 characters for "..."
+        const cutoff = maxLength - 3;
+        let truncated = text.substring(0, cutoff);
+        
+        // Try to cut at word boundary for cleaner result
+        const lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > minWordBoundary) {
+          truncated = truncated.substring(0, lastSpace);
+        }
+        
+        return truncated.trim() + '...';
+      };
+      
+      // Enforce character limits with truncation fallback
+      let metaTitle = truncateWithEllipsis((generatedContent.metaTitle || '').trim(), 60, 35);
+      let metaDescription = truncateWithEllipsis((generatedContent.metaDescription || '').trim(), 160, 100);
+      
       res.json({
         entityType,
         entityId,
-        metaTitle: generatedContent.metaTitle || '',
-        metaDescription: generatedContent.metaDescription || '',
+        metaTitle,
+        metaDescription,
         focusKeywords: generatedContent.focusKeywords || [],
         isAiGenerated: true,
         aiModel: 'gpt-4o-mini',
