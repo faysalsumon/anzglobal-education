@@ -914,7 +914,7 @@ export default function PublicInstitutions() {
 
           {/* Desktop Filter Sidebar */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
-            <div className="sticky top-4 space-y-4">
+            <div className="sticky top-4 space-y-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
               <Card className="overflow-hidden">
                 <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-accent/5">
                   <CardTitle className="flex items-center gap-2 text-lg">
