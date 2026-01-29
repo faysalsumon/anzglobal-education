@@ -45,6 +45,7 @@ export default function StudentDashboardPage() {
       <Helmet>
         <title>Student Dashboard | ANZ Global Education</title>
         <meta name="description" content="Your personalized student dashboard for managing applications, exploring courses, and tracking your education journey with ANZ Global Education." />
+        <meta name="robots" content="noindex, nofollow, noai, noimageai" />
       </Helmet>
       <StudentDashboard />
     </StudentLayout>

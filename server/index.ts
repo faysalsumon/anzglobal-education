@@ -6,8 +6,12 @@ import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
+import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
 
 const app = express();
+
+// Trust proxy for accurate client IP detection behind reverse proxy
+app.set('trust proxy', 1);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -15,6 +19,12 @@ declare module 'http' {
   }
 }
 app.use(cookieParser());
+
+// Bot protection and security headers (must be early in middleware chain)
+app.use(securityHeadersMiddleware);
+app.use(protectedPathsMiddleware);
+app.use(botProtectionMiddleware);
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;

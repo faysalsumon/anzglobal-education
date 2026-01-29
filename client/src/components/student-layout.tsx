@@ -1,5 +1,6 @@
 import { StudentSidebar, StudentSidebarProvider, useStudentSidebar } from "@/components/student-sidebar";
 import { ChatWidget } from "@/components/chat-widget";
+import { Helmet } from "react-helmet";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -15,8 +16,12 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   const marginLeft = isSubmenuOpen ? "18rem" : "4rem"; // 18rem = 64px + 224px, 4rem = 64px
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/30">
-      <StudentSidebar />
+    <>
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow, noai, noimageai" />
+      </Helmet>
+      <div className="flex min-h-screen w-full bg-muted/30">
+        <StudentSidebar />
 
       {/* Main content area - adjusts margin based on submenu state */}
       <div 
@@ -41,6 +46,7 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
 
       <ChatWidget />
     </div>
+    </>
   );
 }
 

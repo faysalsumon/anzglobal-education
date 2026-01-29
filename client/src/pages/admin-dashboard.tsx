@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Helmet } from "react-helmet";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1838,7 +1839,12 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+    <>
+      <Helmet>
+        <title>Admin Dashboard | ANZ Global Education</title>
+        <meta name="robots" content="noindex, nofollow, noai, noimageai" />
+      </Helmet>
+      <div className="flex h-screen w-full overflow-hidden bg-muted/30">
       {/* Left Mega Sidebar (3-column navigation) - Fixed height, no scroll */}
       <AdminMegaSidebar 
         activeTab={activeTab} 
@@ -4018,5 +4024,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
