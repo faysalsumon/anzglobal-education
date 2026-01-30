@@ -977,6 +977,8 @@ export const courses = pgTable("courses", {
   applicationDeadline: text("application_deadline"),
   prerequisites: text("prerequisites"),
   thumbnailUrl: text("thumbnail_url"),
+  thumbnailStatus: varchar("thumbnail_status", { length: 20 }).default("none"), // 'none', 'pending', 'generating', 'completed', 'failed'
+  thumbnailGeneratedAt: timestamp("thumbnail_generated_at"),
   
   // Additional course details
   courseCode: text("course_code"),

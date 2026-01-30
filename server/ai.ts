@@ -464,6 +464,55 @@ export async function generateInstitutionGalleryImages(
   return imageUrls;
 }
 
+export async function generateCourseThumbnail(
+  courseTitle: string,
+  discipline?: string,
+  level?: string,
+  universityName?: string
+): Promise<string | null> {
+  checkAIConfigured();
+  
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("DALL-E image generation requires OPENAI_API_KEY, skipping thumbnail generation");
+    return null;
+  }
+  
+  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  
+  const disciplineContext = discipline ? ` in ${discipline}` : "";
+  const levelContext = level ? ` (${level} level)` : "";
+  const uniContext = universityName ? ` at ${universityName}` : "";
+  
+  const prompt = `Create a professional, modern educational course thumbnail for "${courseTitle}"${disciplineContext}${levelContext}${uniContext}. 
+Style: Clean, corporate, abstract. Use blue and teal gradients with subtle geometric patterns. 
+Include symbolic icons related to the subject matter. 
+No text in the image. High quality, professional photography style with soft lighting.
+Suitable for an education platform course card.`;
+
+  try {
+    console.log(`[Thumbnail AI] Generating thumbnail for: ${courseTitle}`);
+    
+    const response = await openaiClient.images.generate({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+    
+    if (response.data?.[0]?.url) {
+      console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
+      return response.data[0].url;
+    }
+    
+    console.warn(`[Thumbnail AI] No URL returned for: ${courseTitle}`);
+    return null;
+  } catch (error) {
+    console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, error);
+    return null;
+  }
+}
+
 interface ExtractedInstitutionData {
   name: string | null;
   description: string | null;

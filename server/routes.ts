@@ -4194,6 +4194,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // COURSE THUMBNAIL GENERATION API
+  // ============================================
+  
+  app.post("/api/courses/:courseId/generate-thumbnail", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const courseId = req.params.courseId;
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const university = await storage.getUniversity(course.universityId);
+      
+      const { addThumbnailJob } = await import('./thumbnail-queue');
+      const { isRedisAvailable } = await import('./scraping-queue');
+      
+      if (!isRedisAvailable()) {
+        const { generateCourseThumbnail } = await import('./ai');
+        
+        await db.update(courses).set({ thumbnailStatus: "generating" }).where(eq(courses.id, courseId));
+        
+        const thumbnailUrl = await generateCourseThumbnail(
+          course.title,
+          course.discipline || undefined,
+          course.level || undefined,
+          university?.name || undefined
+        );
+        
+        if (thumbnailUrl) {
+          await db.update(courses).set({
+            thumbnailUrl,
+            thumbnailStatus: "completed",
+            thumbnailGeneratedAt: new Date(),
+          }).where(eq(courses.id, courseId));
+          
+          return res.json({ success: true, thumbnailUrl, mode: "sync" });
+        } else {
+          await db.update(courses).set({ thumbnailStatus: "failed" }).where(eq(courses.id, courseId));
+          return res.status(500).json({ message: "Failed to generate thumbnail" });
+        }
+      }
+      
+      await db.update(courses).set({ thumbnailStatus: "pending" }).where(eq(courses.id, courseId));
+      
+      const jobId = await addThumbnailJob({
+        courseId,
+        courseTitle: course.title,
+        discipline: course.discipline || undefined,
+        level: course.level || undefined,
+        universityName: university?.name || undefined,
+      });
+      
+      if (jobId) {
+        res.json({ success: true, jobId, mode: "async" });
+      } else {
+        res.status(500).json({ message: "Failed to queue thumbnail generation job" });
+      }
+    } catch (error) {
+      console.error("Error generating thumbnail:", error);
+      res.status(500).json({ message: "Failed to generate thumbnail" });
+    }
+  });
+  
+  app.get("/api/courses/:courseId/thumbnail-status", async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      res.json({
+        status: course.thumbnailStatus || "none",
+        thumbnailUrl: course.thumbnailUrl,
+        generatedAt: course.thumbnailGeneratedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching thumbnail status:", error);
+      res.status(500).json({ message: "Failed to fetch thumbnail status" });
+    }
+  });
+  
+  app.post("/api/admin/courses/bulk-generate-thumbnails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const { courseIds, filter } = req.body;
+      
+      const { isRedisAvailable } = await import('./scraping-queue');
+      if (!isRedisAvailable()) {
+        return res.status(503).json({ 
+          message: "Bulk thumbnail generation requires Redis. Generate thumbnails individually instead." 
+        });
+      }
+      
+      let coursesToProcess: any[] = [];
+      
+      if (courseIds && Array.isArray(courseIds)) {
+        for (const id of courseIds) {
+          const course = await storage.getCourse(id);
+          if (course) {
+            const university = await storage.getUniversity(course.universityId);
+            coursesToProcess.push({
+              courseId: course.id,
+              courseTitle: course.title,
+              discipline: course.discipline || undefined,
+              level: course.level || undefined,
+              universityName: university?.name || undefined,
+            });
+          }
+        }
+      } else if (filter === "missing") {
+        const allCourses = await db
+          .select()
+          .from(courses)
+          .where(and(
+            eq(courses.isActive, true),
+            or(
+              isNull(courses.thumbnailUrl),
+              eq(courses.thumbnailUrl, "")
+            )
+          ))
+          .limit(100);
+        
+        for (const course of allCourses) {
+          const university = await storage.getUniversity(course.universityId);
+          coursesToProcess.push({
+            courseId: course.id,
+            courseTitle: course.title,
+            discipline: course.discipline || undefined,
+            level: course.level || undefined,
+            universityName: university?.name || undefined,
+          });
+        }
+      }
+      
+      if (coursesToProcess.length === 0) {
+        return res.json({ success: true, queued: 0, message: "No courses to process" });
+      }
+      
+      for (const course of coursesToProcess) {
+        await db.update(courses).set({ thumbnailStatus: "pending" }).where(eq(courses.id, course.courseId));
+      }
+      
+      const { addBulkThumbnailJobs } = await import('./thumbnail-queue');
+      const queued = await addBulkThumbnailJobs(coursesToProcess);
+      
+      res.json({ success: true, queued, total: coursesToProcess.length });
+    } catch (error) {
+      console.error("Error bulk generating thumbnails:", error);
+      res.status(500).json({ message: "Failed to queue bulk thumbnail generation" });
+    }
+  });
+  
+  app.post("/api/courses/:courseId/thumbnail", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || !['platform_admin', 'admin', 'institution_admin', 'super_admin'].includes(user.userType)) {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      
+      const courseId = req.params.courseId;
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const { thumbnailUrl } = req.body;
+      if (!thumbnailUrl) {
+        return res.status(400).json({ message: "thumbnailUrl is required" });
+      }
+      
+      await db.update(courses).set({
+        thumbnailUrl,
+        thumbnailStatus: "completed",
+        thumbnailGeneratedAt: new Date(),
+      }).where(eq(courses.id, courseId));
+      
+      res.json({ success: true, thumbnailUrl });
+    } catch (error) {
+      console.error("Error updating thumbnail:", error);
+      res.status(500).json({ message: "Failed to update thumbnail" });
+    }
+  });
+  
+  // ============================================
+  // END COURSE THUMBNAIL GENERATION API
+  // ============================================
+
   // Course English Requirements routes (admin only)
   app.get("/api/courses/:courseId/english-requirements", async (req, res) => {
     try {
@@ -18308,7 +18520,9 @@ Sitemap: ${baseUrl}/sitemap.xml
   
   if (redisAvailable) {
     const { startScrapingWorker } = await import('./scraping-worker');
+    const { startThumbnailWorker } = await import('./thumbnail-worker');
     startScrapingWorker();
+    startThumbnailWorker();
     console.log('Background job processing enabled (Redis connected)');
   } else {
     console.log('Background job processing disabled (Redis not available)');
