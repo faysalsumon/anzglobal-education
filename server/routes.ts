@@ -3687,14 +3687,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         where: eq(profileSectionVerifications.studentProfileId, profile.id),
       });
       
+      // Collect all verifier IDs to fetch their details
+      const verifierIds = verifications
+        .filter(v => v.verifiedBy)
+        .map(v => v.verifiedBy as string);
+      
+      // Fetch verifier details if any exist
+      let verifierMap: Record<string, { firstName: string | null; lastName: string | null; profileImageUrl: string | null }> = {};
+      if (verifierIds.length > 0) {
+        const verifiers = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        }).from(users).where(inArray(users.id, verifierIds));
+        
+        verifierMap = verifiers.reduce((acc, v) => {
+          acc[v.id] = { firstName: v.firstName, lastName: v.lastName, profileImageUrl: v.profileImageUrl };
+          return acc;
+        }, {} as typeof verifierMap);
+      }
+      
       // Map to a structured response with all sections
       const sections = ['personal', 'passport', 'education', 'language', 'preferences', 'employment', 'funding', 'emergency', 'sop', 'bio'];
       const result = sections.map(section => {
         const verification = verifications.find(v => v.section === section);
+        const verifierId = verification?.verifiedBy;
+        const verifierDetails = verifierId ? verifierMap[verifierId] : null;
+        
         return {
           section,
           status: verification?.status || 'unverified',
           verifiedAt: verification?.verifiedAt || null,
+          verifierName: verifierDetails 
+            ? `${verifierDetails.firstName || ''} ${verifierDetails.lastName || ''}`.trim() || null 
+            : null,
+          verifierProfileImage: verifierDetails?.profileImageUrl || null,
           verifierNotes: verification?.verifierNotes || null,
           lastUpdatedAt: verification?.lastUpdatedAt || null,
         };
@@ -3744,14 +3772,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         where: eq(profileSectionVerifications.studentProfileId, profileId),
       });
       
+      // Collect all verifier IDs to fetch their details
+      const verifierIds = verifications
+        .filter(v => v.verifiedBy)
+        .map(v => v.verifiedBy as string);
+      
+      // Fetch verifier details if any exist
+      let verifierMap: Record<string, { firstName: string | null; lastName: string | null; profileImageUrl: string | null }> = {};
+      if (verifierIds.length > 0) {
+        const verifiers = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        }).from(users).where(inArray(users.id, verifierIds));
+        
+        verifierMap = verifiers.reduce((acc, v) => {
+          acc[v.id] = { firstName: v.firstName, lastName: v.lastName, profileImageUrl: v.profileImageUrl };
+          return acc;
+        }, {} as typeof verifierMap);
+      }
+      
       const sections = ['personal', 'passport', 'education', 'language', 'preferences', 'employment', 'funding', 'emergency', 'sop', 'bio'];
       const result = sections.map(section => {
         const verification = verifications.find(v => v.section === section);
+        const verifierId = verification?.verifiedBy;
+        const verifierDetails = verifierId ? verifierMap[verifierId] : null;
+        
         return {
           section,
           status: verification?.status || 'unverified',
           verifiedAt: verification?.verifiedAt || null,
           verifiedBy: verification?.verifiedBy || null,
+          verifierName: verifierDetails 
+            ? `${verifierDetails.firstName || ''} ${verifierDetails.lastName || ''}`.trim() || null 
+            : null,
+          verifierProfileImage: verifierDetails?.profileImageUrl || null,
           verifierNotes: verification?.verifierNotes || null,
           lastUpdatedAt: verification?.lastUpdatedAt || null,
         };
