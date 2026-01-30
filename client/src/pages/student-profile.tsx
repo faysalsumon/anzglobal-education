@@ -165,14 +165,57 @@ const emergencyContactSchema = z.object({
   emergencyContactAddress: z.string().optional().nullable(),
 });
 
+// Countries for education dropdown (common source countries)
+const EDUCATION_COUNTRIES = [
+  'Australia',
+  'Bangladesh',
+  'India',
+  'Nepal',
+  'Sri Lanka',
+  'Pakistan',
+  'China',
+  'Vietnam',
+  'Philippines',
+  'Malaysia',
+  'Indonesia',
+  'Thailand',
+  'United Kingdom',
+  'Canada',
+  'New Zealand',
+  'United States',
+  'Other',
+];
+
+// Disciplines for field of study dropdown
+const EDUCATION_DISCIPLINES = [
+  'Accounting, Business & Finance',
+  'Agriculture & Forestry',
+  'Applied Sciences & Professions',
+  'Arts, Design & Architecture',
+  'Computer Science & IT',
+  'Education & Training',
+  'Engineering & Technology',
+  'Environmental Studies & Earth Sciences',
+  'Hospitality, Leisure & Sports',
+  'Humanities',
+  'Journalism & Media',
+  'Law',
+  'Medicine & Health',
+  'Trade',
+  'Other',
+];
+
+// Year range for completion dropdown
+const EDUCATION_YEARS = Array.from({ length: 31 }, (_, i) => 2030 - i); // 2030 down to 2000
+
 const educationFormSchema = z.object({
-  level: z.string().min(1, "Education level is required"),
-  institution: z.string().min(1, "Institution is required"),
+  country: z.string().min(1, "Country is required"),
+  qualificationTypeId: z.string().optional(),
+  level: z.string().optional(), // Legacy field, kept for backward compatibility
+  yearCompleted: z.string().optional(),
+  institution: z.string().optional(),
   fieldOfStudy: z.string().optional(),
-  country: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  isCurrentlyStudying: z.boolean().default(false),
+  gradeResult: z.string().optional(),
   gpa: z.string().optional().refine(
     (val) => {
       if (!val || val === "") return true;
@@ -182,6 +225,9 @@ const educationFormSchema = z.object({
     { message: "GPA must be a valid number" }
   ),
   gradeScale: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  isCurrentlyStudying: z.boolean().default(false),
 });
 
 const languageScoreFormSchema = z.object({
@@ -458,17 +504,35 @@ function StudentProfileContent() {
   const educationForm = useForm<z.infer<typeof educationFormSchema>>({
     resolver: zodResolver(educationFormSchema),
     defaultValues: {
+      country: "",
+      qualificationTypeId: "",
       level: "",
+      yearCompleted: "",
       institution: "",
       fieldOfStudy: "",
-      country: "",
+      gradeResult: "",
+      gpa: "",
+      gradeScale: "",
       startDate: "",
       endDate: "",
       isCurrentlyStudying: false,
-      gpa: "",
-      gradeScale: "",
     },
   });
+  
+  // Watch country selection for cascading qualification type dropdown
+  const selectedEducationCountry = educationForm.watch("country");
+  const selectedQualificationTypeId = educationForm.watch("qualificationTypeId");
+
+  // Fetch qualification types for the selected country (for cascading dropdown)
+  const { data: qualificationTypes = [] } = useQuery<any[]>({
+    queryKey: ["/api/academic-qualifications", { country: selectedEducationCountry }],
+    enabled: !!selectedEducationCountry && selectedEducationCountry !== "Other",
+  });
+  
+  // Find the selected qualification type for dynamic grade options
+  const selectedQualificationType = qualificationTypes.find(
+    (q: any) => q.id === selectedQualificationTypeId
+  );
 
   const languageScoreForm = useForm<z.infer<typeof languageScoreFormSchema>>({
     resolver: zodResolver(languageScoreFormSchema),
@@ -1085,22 +1149,38 @@ function StudentProfileContent() {
   const handleEditEducation = (education: StudentEducation) => {
     setEditingEducation(education);
     educationForm.reset({
+      country: education.country || "",
+      qualificationTypeId: (education as any).qualificationTypeId || "",
       level: education.level || "",
+      yearCompleted: (education as any).yearCompleted ? String((education as any).yearCompleted) : "",
       institution: education.institution || "",
       fieldOfStudy: education.fieldOfStudy || "",
-      country: education.country || "",
+      gradeResult: (education as any).gradeResult || "",
+      gpa: education.gpa != null ? String(education.gpa) : "",
+      gradeScale: education.gradeScale || "",
       startDate: education.startDate || "",
       endDate: education.endDate || "",
       isCurrentlyStudying: education.isCurrentlyStudying || false,
-      gpa: education.gpa != null ? String(education.gpa) : "",
-      gradeScale: education.gradeScale || "",
     });
     setEducationDialogOpen(true);
   };
 
   const handleAddEducation = () => {
     setEditingEducation(null);
-    educationForm.reset();
+    educationForm.reset({
+      country: "",
+      qualificationTypeId: "",
+      level: "",
+      yearCompleted: "",
+      institution: "",
+      fieldOfStudy: "",
+      gradeResult: "",
+      gpa: "",
+      gradeScale: "",
+      startDate: "",
+      endDate: "",
+      isCurrentlyStudying: false,
+    });
     setEducationDialogOpen(true);
   };
 
@@ -2073,100 +2153,261 @@ function StudentProfileContent() {
                   </DialogHeader>
                   <Form {...educationForm}>
                     <form onSubmit={handleEducationSubmit} className="space-y-4">
+                      {/* Country Dropdown (Required - triggers cascading qualification dropdown) */}
                       <FormField
                         control={educationForm.control}
-                        name="level"
+                        name="country"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Education Level *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormLabel>Country of Study *</FormLabel>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Reset qualification type when country changes
+                                educationForm.setValue("qualificationTypeId", "");
+                              }} 
+                              value={field.value}
+                            >
                               <FormControl>
-                                <SelectTrigger data-testid="select-education-level">
-                                  <SelectValue placeholder="Select level" />
+                                <SelectTrigger data-testid="select-education-country">
+                                  <SelectValue placeholder="Select country" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="high_school">High School</SelectItem>
-                                <SelectItem value="diploma">Diploma</SelectItem>
-                                <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
-                                <SelectItem value="master">Master's Degree</SelectItem>
-                                <SelectItem value="phd">PhD</SelectItem>
-                                <SelectItem value="certificate">Certificate</SelectItem>
+                                {EDUCATION_COUNTRIES.map((country) => (
+                                  <SelectItem key={country} value={country}>{country}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={educationForm.control}
-                        name="institution"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Institution *</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="University/School name" data-testid="input-education-institution" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      
+                      {/* Qualification Type Dropdown (Cascading based on country) */}
                       <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={educationForm.control}
+                          name="qualificationTypeId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Qualification Type</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={!selectedEducationCountry || selectedEducationCountry === "Other"}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-qualification-type">
+                                    <SelectValue placeholder={
+                                      !selectedEducationCountry 
+                                        ? "Select country first" 
+                                        : selectedEducationCountry === "Other"
+                                        ? "Use legacy level below"
+                                        : qualificationTypes.length === 0 
+                                        ? "No qualifications found" 
+                                        : "Select qualification"
+                                    } />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {qualificationTypes.map((qual: any) => (
+                                    <SelectItem key={qual.id} value={qual.id}>
+                                      {qual.name} {qual.fullName && qual.fullName !== qual.name ? `(${qual.fullName})` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                {selectedEducationCountry === "Other" 
+                                  ? "For 'Other' countries, use the legacy education level field" 
+                                  : "Select your qualification type for smart course matching"}
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {/* Legacy Level Dropdown (shown when qualification types unavailable) */}
+                        {(selectedEducationCountry === "Other" || qualificationTypes.length === 0) && (
+                          <FormField
+                            control={educationForm.control}
+                            name="level"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Education Level</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-education-level">
+                                      <SelectValue placeholder="Select level" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="primary">Primary School</SelectItem>
+                                    <SelectItem value="secondary">Secondary School</SelectItem>
+                                    <SelectItem value="high_school">High School</SelectItem>
+                                    <SelectItem value="certificate">Certificate</SelectItem>
+                                    <SelectItem value="diploma">Diploma</SelectItem>
+                                    <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
+                                    <SelectItem value="master">Master's Degree</SelectItem>
+                                    <SelectItem value="phd">PhD/Doctorate</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                      
+                      {/* Year Completed and Field of Study */}
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={educationForm.control}
+                          name="yearCompleted"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Year Completed</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-year-completed">
+                                    <SelectValue placeholder="Select year" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {EDUCATION_YEARS.map((year) => (
+                                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
                         <FormField
                           control={educationForm.control}
                           name="fieldOfStudy"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Field of Study</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., Computer Science" data-testid="input-education-field" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={educationForm.control}
-                          name="country"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Country</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., Australia" data-testid="input-education-country" />
-                              </FormControl>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-field-of-study">
+                                    <SelectValue placeholder="Select field" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {EDUCATION_DISCIPLINES.map((discipline) => (
+                                    <SelectItem key={discipline} value={discipline}>{discipline}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
+                      
+                      {/* Institution Name */}
+                      <FormField
+                        control={educationForm.control}
+                        name="institution"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Institution Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g., Dhaka University, Sydney University" data-testid="input-education-institution" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Grade/Result (dynamic based on qualification grading type) */}
                       <div className="grid gap-4 md:grid-cols-2">
                         <FormField
                           control={educationForm.control}
-                          name="startDate"
+                          name="gradeResult"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Start Date</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} type="date" data-testid="input-education-start-date" />
-                              </FormControl>
+                              <FormLabel>Grade/Result</FormLabel>
+                              {selectedQualificationType?.gradingType === "division" ? (
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-grade-result">
+                                      <SelectValue placeholder="Select grade" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="First Division">First Division</SelectItem>
+                                    <SelectItem value="Second Division">Second Division</SelectItem>
+                                    <SelectItem value="Third Division">Third Division</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : selectedQualificationType?.gradingType === "letter" ? (
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-grade-result">
+                                      <SelectValue placeholder="Select grade" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="A+">A+</SelectItem>
+                                    <SelectItem value="A">A</SelectItem>
+                                    <SelectItem value="A-">A-</SelectItem>
+                                    <SelectItem value="B+">B+</SelectItem>
+                                    <SelectItem value="B">B</SelectItem>
+                                    <SelectItem value="B-">B-</SelectItem>
+                                    <SelectItem value="C+">C+</SelectItem>
+                                    <SelectItem value="C">C</SelectItem>
+                                    <SelectItem value="C-">C-</SelectItem>
+                                    <SelectItem value="D">D</SelectItem>
+                                    <SelectItem value="F">F</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    value={field.value || ""} 
+                                    placeholder={
+                                      selectedQualificationType?.gradingType === "percentage" 
+                                        ? "e.g., 85%" 
+                                        : selectedQualificationType?.gradingType === "gpa" 
+                                        ? `e.g., 3.5 out of ${selectedQualificationType?.gradingScale || "4.0"}` 
+                                        : "e.g., 85%, 3.5 GPA, First Class"
+                                    } 
+                                    data-testid="input-grade-result" 
+                                  />
+                                </FormControl>
+                              )}
+                              <FormDescription>
+                                {selectedQualificationType 
+                                  ? `Grading: ${selectedQualificationType.gradingType || "Standard"} (${selectedQualificationType.gradingScale || "varies"})`
+                                  : "Enter your grade or result"}
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+                        
                         <FormField
                           control={educationForm.control}
-                          name="endDate"
+                          name="gpa"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>End Date</FormLabel>
+                              <FormLabel>GPA (if applicable)</FormLabel>
                               <FormControl>
-                                <Input {...field} value={field.value || ""} type="date" data-testid="input-education-end-date" />
+                                <Input {...field} value={field.value || ""} placeholder="e.g., 3.8" data-testid="input-education-gpa" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
+                      
+                      {/* Currently Studying Checkbox */}
                       <FormField
                         control={educationForm.control}
                         name="isCurrentlyStudying"
@@ -2185,34 +2426,6 @@ function StudentProfileContent() {
                           </FormItem>
                         )}
                       />
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          control={educationForm.control}
-                          name="gpa"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>GPA/Grade</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 3.8" data-testid="input-education-gpa" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={educationForm.control}
-                          name="gradeScale"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Grade Scale</FormLabel>
-                              <FormControl>
-                                <Input {...field} value={field.value || ""} placeholder="e.g., 4.0, 100" data-testid="input-education-grade-scale" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
                       <DialogFooter>
                         <Button
                           type="button"
@@ -2257,29 +2470,44 @@ function StudentProfileContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Level</TableHead>
+                      <TableHead>Qualification</TableHead>
                       <TableHead>Institution</TableHead>
                       <TableHead>Field of Study</TableHead>
-                      <TableHead>Dates</TableHead>
-                      <TableHead>GPA</TableHead>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Grade</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {educations.map((edu: StudentEducation) => (
+                    {educations.map((edu: StudentEducation) => {
+                      const qualName = (edu as any).qualificationType?.name || edu.level;
+                      const displayLevel = qualName === "high_school" ? "High School" 
+                        : qualName === "bachelor" ? "Bachelor's" 
+                        : qualName === "master" ? "Master's" 
+                        : qualName === "phd" ? "PhD" 
+                        : qualName === "diploma" ? "Diploma" 
+                        : qualName === "certificate" ? "Certificate"
+                        : qualName || "N/A";
+                      
+                      return (
                       <TableRow key={edu.id} data-testid={`row-education-${edu.id}`}>
                         <TableCell data-testid={`text-education-level-${edu.id}`}>
-                          <Badge variant="secondary">
-                            {edu.level === "high_school" ? "High School" : edu.level === "bachelor" ? "Bachelor's" : edu.level === "master" ? "Master's" : edu.level === "phd" ? "PhD" : edu.level === "diploma" ? "Diploma" : "Certificate"}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="secondary">{displayLevel}</Badge>
+                            {edu.country && <span className="text-xs text-muted-foreground">{edu.country}</span>}
+                          </div>
                         </TableCell>
-                        <TableCell data-testid={`text-education-institution-${edu.id}`}>{edu.institution}</TableCell>
+                        <TableCell data-testid={`text-education-institution-${edu.id}`}>{edu.institution || "-"}</TableCell>
                         <TableCell data-testid={`text-education-field-${edu.id}`}>{edu.fieldOfStudy || "-"}</TableCell>
                         <TableCell data-testid={`text-education-dates-${edu.id}`}>
-                          {edu.startDate || "N/A"} - {edu.isCurrentlyStudying ? "Present" : edu.endDate || "N/A"}
+                          {(edu as any).yearCompleted 
+                            ? `${(edu as any).yearCompleted}` 
+                            : edu.startDate 
+                            ? `${edu.startDate} - ${edu.isCurrentlyStudying ? "Present" : edu.endDate || "N/A"}`
+                            : "-"}
                         </TableCell>
                         <TableCell data-testid={`text-education-gpa-${edu.id}`}>
-                          {edu.gpa ? `${edu.gpa}${edu.gradeScale ? `/${edu.gradeScale}` : ""}` : "-"}
+                          {(edu as any).gradeResult || (edu.gpa ? `${edu.gpa}${edu.gradeScale ? `/${edu.gradeScale}` : ""}` : "-")}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -2307,7 +2535,8 @@ function StudentProfileContent() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

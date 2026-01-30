@@ -2228,15 +2228,33 @@ export const referrals = pgTable("referrals", {
 export const studentEducations = pgTable("student_educations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
-  level: varchar("level", { length: 50 }).notNull(), // 'high_school', 'bachelor', 'master', 'phd', 'diploma', 'certificate'
-  institution: text("institution").notNull(),
+  
+  // Country-specific qualification type (links to academic_qualification_types for smart matching)
+  qualificationTypeId: varchar("qualification_type_id").references(() => academicQualificationTypes.id, { onDelete: "set null" }),
+  
+  // Legacy level field (kept for backward compatibility, prefer qualificationTypeId)
+  level: varchar("level", { length: 50 }), // 'high_school', 'bachelor', 'master', 'phd', 'diploma', 'certificate'
+  
+  // Country where education was completed
   country: text("country"),
-  fieldOfStudy: text("field_of_study"),
+  
+  // Institution details
+  institution: text("institution"),
+  fieldOfStudy: text("field_of_study"), // Maps to disciplines for course matching
+  
+  // Completion year (dropdown: 2000-2030)
+  yearCompleted: integer("year_completed"),
+  
+  // Legacy date fields (kept for detailed records)
   startDate: date("start_date"),
   endDate: date("end_date"),
   isCurrentlyStudying: boolean("is_currently_studying").default(false),
+  
+  // Grade/Result (dynamic based on qualification's grading type)
   gpa: decimal("gpa", { precision: 5, scale: 2 }),
-  gradeScale: varchar("grade_scale", { length: 20 }), // e.g., '4.0', '5.0', '100'
+  gradeScale: varchar("grade_scale", { length: 20 }), // e.g., '4.0', '5.0', '100', 'percentage', 'division'
+  gradeResult: varchar("grade_result", { length: 50 }), // e.g., 'First Class', 'A+', '85%', '3.8'
+  
   documentId: varchar("document_id").references(() => documents.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -2914,6 +2932,10 @@ export const studentEducationsRelations = relations(studentEducations, ({ one })
   document: one(documents, {
     fields: [studentEducations.documentId],
     references: [documents.id],
+  }),
+  qualificationType: one(academicQualificationTypes, {
+    fields: [studentEducations.qualificationTypeId],
+    references: [academicQualificationTypes.id],
   }),
 }));
 
