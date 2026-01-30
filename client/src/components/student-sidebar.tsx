@@ -122,6 +122,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       icon: LayoutDashboard,
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
+        { icon: LayoutDashboard, label: "Dashboard", path: "/student" },
         { icon: User, label: "My Profile", path: "/student/profile" },
       ],
     },
