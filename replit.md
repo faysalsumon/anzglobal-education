@@ -43,7 +43,21 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 ### Feature Specifications
 - **Institution Portal**: Course, application, and team management with AI-powered content generation and DALL-E integration.
 - **Student Experience**: Intelligent course discovery, AI-assisted profile creation, and streamlined applications.
-- **Student Profile**: Tab-based profile management (Personal, Education, Language, Preferences, Employment, Emergency, Bio) with visa status fields (conditional on Australia location), study preferences with budget slider and intake month selection, and PR pathway interest toggle.
+- **Student Profile / Universal Smart Application Form**: Accordion-based profile management with 10 organized sections designed as a reusable application form:
+  1. **Personal Information** - Name, contact, nationality, DOB (required)
+  2. **Passport & Visa Details** - Passport number, expiry, visa status (required)
+  3. **Education History** - Academic qualifications with institution, dates, GPA (required - min 1)
+  4. **English Proficiency** - IELTS/PTE/TOEFL scores (required - min 1)
+  5. **Study Preferences** - Preferred country, course level, intake, budget (required)
+  6. **Work Experience** - Employment history (optional, improves AI content)
+  7. **Financial/Sponsor Information** - Funding source with conditional sponsor fields (required)
+  8. **Emergency Contact** - Contact name and phone (required)
+  9. **Statement of Purpose** - 300-500 word SOP (recommended)
+  10. **Bio & Career Goals** - AI-assisted biography (optional)
+  - Dynamic completion badges showing Complete/Incomplete/Optional/Recommended per section
+  - Progress bar showing overall completion percentage based on 7 required sections
+  - Conditional sponsor fields visibility (hidden when funding is "self" or "loan")
+  - Visa status fields conditional on Australia location preference
 - **Public Pages**: Landing page, "Study in Australia" page, course/institution detail pages, lead generation forms.
 - **Dashboards**: CTO, Student, University, and Platform Admin dashboards with consistent UI/UX and overview statistics.
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
