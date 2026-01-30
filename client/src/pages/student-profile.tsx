@@ -522,6 +522,7 @@ function StudentProfileContent() {
   // Watch country selection for cascading qualification type dropdown
   const selectedEducationCountry = educationForm.watch("country");
   const selectedQualificationTypeId = educationForm.watch("qualificationTypeId");
+  const isCurrentlyStudying = educationForm.watch("isCurrentlyStudying");
 
   // Fetch qualification types for the selected country (for cascading dropdown)
   const { data: qualificationTypes = [] } = useQuery<any[]>({
@@ -2264,8 +2265,32 @@ function StudentProfileContent() {
                         )}
                       </div>
                       
-                      {/* Year Completed and Field of Study */}
-                      <div className="grid gap-4 md:grid-cols-2">
+                      {/* Field of Study */}
+                      <FormField
+                        control={educationForm.control}
+                        name="fieldOfStudy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Field of Study</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-field-of-study">
+                                  <SelectValue placeholder="Select field" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {EDUCATION_DISCIPLINES.map((discipline) => (
+                                  <SelectItem key={discipline} value={discipline}>{discipline}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Year Completed - hidden when currently studying */}
+                      {!isCurrentlyStudying && (
                         <FormField
                           control={educationForm.control}
                           name="yearCompleted"
@@ -2288,30 +2313,32 @@ function StudentProfileContent() {
                             </FormItem>
                           )}
                         />
-                        
-                        <FormField
-                          control={educationForm.control}
-                          name="fieldOfStudy"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Field of Study</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-field-of-study">
-                                    <SelectValue placeholder="Select field" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {EDUCATION_DISCIPLINES.map((discipline) => (
-                                    <SelectItem key={discipline} value={discipline}>{discipline}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      )}
+                      
+                      {/* Currently Studying Checkbox - placed below Year Completed */}
+                      <FormField
+                        control={educationForm.control}
+                        name="isCurrentlyStudying"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  if (checked) {
+                                    educationForm.setValue("yearCompleted", "");
+                                  }
+                                }}
+                                data-testid="checkbox-currently-studying"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>I am currently studying here</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
                       
                       {/* Institution Name */}
                       <FormField
@@ -2411,25 +2438,6 @@ function StudentProfileContent() {
                         />
                       </div>
                       
-                      {/* Currently Studying Checkbox */}
-                      <FormField
-                        control={educationForm.control}
-                        name="isCurrentlyStudying"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                data-testid="checkbox-currently-studying"
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>I am currently studying here</FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
                       <DialogFooter>
                         <Button
                           type="button"
