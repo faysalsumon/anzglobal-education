@@ -33,7 +33,7 @@ export interface ProfileCompletionRequirements {
     minimumRecords: number;
   };
   preferences: {
-    required: string[];
+    optional: boolean;
   };
   employment: {
     optional: boolean;
@@ -67,7 +67,7 @@ const DEFAULT_REQUIREMENTS: ProfileCompletionRequirements = {
     minimumRecords: 1,
   },
   preferences: {
-    required: ['preferredCountry', 'preferredCourseLevel'],
+    optional: true,
   },
   employment: {
     optional: true,
@@ -133,9 +133,11 @@ export function calculateProfileCompletion(
 
   completedSections.personalInfo = checkFields(requirements.personalInfo.required, 'Personal Info');
   completedSections.passport = checkFields(requirements.passport.required, 'Passport');
-  completedSections.preferences = checkFields(requirements.preferences.required, 'Preferences');
   completedSections.funding = checkFields(requirements.funding.required, 'Funding');
   completedSections.emergency = checkFields(requirements.emergency.required, 'Emergency Contact');
+  
+  // Preferences is optional - for smart recommendations, not required for profile completion
+  completedSections.preferences = !!(profile.destinationCountry || profile.preferredCourseLevel) || requirements.preferences.optional;
 
   if (educations.length >= requirements.education.minimumRecords) {
     completedSections.education = true;
@@ -153,7 +155,7 @@ export function calculateProfileCompletion(
   completedSections.sop = !!(profile.statementOfPurpose && profile.statementOfPurpose.trim().length > 0) || requirements.sop.optional;
   completedSections.bio = !!(profile.bio && profile.bio.trim().length > 0) || requirements.bio.optional;
 
-  const requiredSections = ['personalInfo', 'passport', 'education', 'languageTest', 'preferences', 'funding', 'emergency'] as const;
+  const requiredSections = ['personalInfo', 'passport', 'education', 'languageTest', 'funding', 'emergency'] as const;
   const totalRequiredSections = requiredSections.length;
   const completedRequiredCount = requiredSections.filter(s => completedSections[s]).length;
   const percentage = Math.round((completedRequiredCount / totalRequiredSections) * 100);
