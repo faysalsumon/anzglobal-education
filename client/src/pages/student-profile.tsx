@@ -906,7 +906,7 @@ function StudentProfileContent() {
         }
         if (data.passportCountry) {
           passportForm.setValue("passportCountry", data.passportCountry);
-          fieldsExtracted.push("country");
+          fieldsExtracted.push("country of issue");
         }
         
         const normalizedIssuedDate = normalizeDate(data.passportIssuedDate);
@@ -919,6 +919,25 @@ function StudentProfileContent() {
         if (normalizedExpiryDate) {
           passportForm.setValue("passportExpiryDate", normalizedExpiryDate);
           fieldsExtracted.push("expiry date");
+        }
+        
+        // Extract date of birth
+        const normalizedDob = normalizeDate(data.dateOfBirth);
+        if (normalizedDob) {
+          passportForm.setValue("dateOfBirth", normalizedDob);
+          fieldsExtracted.push("date of birth");
+        }
+        
+        // Extract nationality
+        if (data.nationality) {
+          passportForm.setValue("nationality", data.nationality);
+          fieldsExtracted.push("nationality");
+        }
+        
+        // Extract issuing authority
+        if (data.issuingAuthority) {
+          passportForm.setValue("passportIssuingAuthority", data.issuingAuthority);
+          fieldsExtracted.push("issuing authority");
         }
         
         if (fieldsExtracted.length > 0) {

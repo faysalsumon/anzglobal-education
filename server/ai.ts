@@ -1474,6 +1474,7 @@ export interface ExtractedPassportData {
   passportCountry: string | null;
   passportIssuedDate: string | null;
   passportExpiryDate: string | null;
+  issuingAuthority: string | null;
   fullName: string | null;
   dateOfBirth: string | null;
   nationality: string | null;
@@ -1493,12 +1494,13 @@ export async function extractPassportFromImage(imageBase64: string, mimeType: st
 2. passportCountry - The full country name of the issuing country (e.g., "Australia", "Bangladesh", "India")
 3. passportIssuedDate - Issue date in YYYY-MM-DD format
 4. passportExpiryDate - Expiry date in YYYY-MM-DD format
-5. fullName - Full name as shown on passport (given names + surname)
-6. dateOfBirth - Date of birth in YYYY-MM-DD format
-7. nationality - Nationality as shown on passport
-8. gender - "male" or "female"
-9. confidence - A number between 0 and 1 indicating how confident you are in the extraction (1 = very confident, 0 = unable to read)
-10. errors - Array of any issues encountered (e.g., "Could not read passport number", "Image quality too low")
+5. issuingAuthority - The authority that issued the passport (e.g., "Department of Immigration", "Passport Office", "Ministry of Foreign Affairs")
+6. fullName - Full name as shown on passport (given names + surname)
+7. dateOfBirth - Date of birth in YYYY-MM-DD format
+8. nationality - Nationality as shown on passport
+9. gender - "male" or "female"
+10. confidence - A number between 0 and 1 indicating how confident you are in the extraction (1 = very confident, 0 = unable to read)
+11. errors - Array of any issues encountered (e.g., "Could not read passport number", "Image quality too low")
 
 Important notes:
 - For dates, convert to YYYY-MM-DD format (e.g., "1990-05-15")
@@ -1549,6 +1551,7 @@ Return ONLY a valid JSON object with these fields.`;
       passportCountry: parsed.passportCountry || null,
       passportIssuedDate: parsed.passportIssuedDate || null,
       passportExpiryDate: parsed.passportExpiryDate || null,
+      issuingAuthority: parsed.issuingAuthority || null,
       fullName: parsed.fullName || null,
       dateOfBirth: parsed.dateOfBirth || null,
       nationality: parsed.nationality || null,
@@ -1563,6 +1566,7 @@ Return ONLY a valid JSON object with these fields.`;
       passportCountry: null,
       passportIssuedDate: null,
       passportExpiryDate: null,
+      issuingAuthority: null,
       fullName: null,
       dateOfBirth: null,
       nationality: null,
