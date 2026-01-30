@@ -357,6 +357,28 @@ export const australianVisaTypeEnum = pgEnum('australian_visa_type', [
   'other',                 // Other visa types
 ]);
 
+// Profile section enum for verification tracking
+export const profileSectionEnum = pgEnum('profile_section', [
+  'personal',      // Personal Information
+  'passport',      // Passport & Visa Details
+  'education',     // Education History
+  'language',      // English Proficiency
+  'preferences',   // Study Preferences
+  'employment',    // Work Experience
+  'funding',       // Financial/Sponsor Information
+  'emergency',     // Emergency Contact
+  'sop',           // Statement of Purpose
+  'bio',           // Bio & Career Goals
+]);
+
+// Verification status enum for profile sections
+export const verificationStatusEnum = pgEnum('verification_status', [
+  'unverified',           // Never verified
+  'pending_verification', // Awaiting initial verification
+  'verified',             // Verified by consultant
+  'needs_reverification', // Changed after verification, needs re-review
+]);
+
 // English test type enum
 export const englishTestTypeEnum = pgEnum('english_test_type', [
   'ielts_academic',
@@ -5011,3 +5033,82 @@ export interface ResolvedCourseData {
   localizedTitle?: string;
   localizedDescription?: string;
 }
+
+// ============================================
+// Profile Section Verification System
+// ============================================
+
+// Profile Section Verifications - tracks verification status per section
+export const profileSectionVerifications = pgTable("profile_section_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  section: profileSectionEnum("section").notNull(),
+  status: verificationStatusEnum("status").notNull().default("unverified"),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by").references(() => users.id, { onDelete: "set null" }),
+  verifierNotes: text("verifier_notes"),
+  lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueSectionPerProfile: unique().on(table.studentProfileId, table.section),
+}));
+
+// Profile Change History - tracks all changes to profile fields
+export const profileChangeHistory = pgTable("profile_change_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  section: profileSectionEnum("section").notNull(),
+  fieldName: text("field_name").notNull(),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  changedAt: timestamp("changed_at").defaultNow(),
+  changedBy: varchar("changed_by").references(() => users.id, { onDelete: "set null" }),
+  changeReason: text("change_reason"),
+});
+
+// Application Profile Snapshots - preserves profile data at application submission time
+export const applicationProfileSnapshots = pgTable("application_profile_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: varchar("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  studentProfileId: varchar("student_profile_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  
+  // Snapshot of all profile data as JSON
+  profileData: jsonb("profile_data").notNull(),
+  educationData: jsonb("education_data"),
+  languageData: jsonb("language_data"),
+  employmentData: jsonb("employment_data"),
+  
+  // Verification status at time of snapshot
+  verificationStatusSnapshot: jsonb("verification_status_snapshot"),
+  
+  snapshotAt: timestamp("snapshot_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Types for verification system
+export type ProfileSectionVerification = typeof profileSectionVerifications.$inferSelect;
+export type InsertProfileSectionVerification = typeof profileSectionVerifications.$inferInsert;
+
+export type ProfileChangeHistoryRecord = typeof profileChangeHistory.$inferSelect;
+export type InsertProfileChangeHistory = typeof profileChangeHistory.$inferInsert;
+
+export type ApplicationProfileSnapshot = typeof applicationProfileSnapshots.$inferSelect;
+export type InsertApplicationProfileSnapshot = typeof applicationProfileSnapshots.$inferInsert;
+
+// Profile section names as const for type safety
+export const PROFILE_SECTIONS = [
+  'personal',
+  'passport',
+  'education',
+  'language',
+  'preferences',
+  'employment',
+  'funding',
+  'emergency',
+  'sop',
+  'bio',
+] as const;
+
+export type ProfileSection = typeof PROFILE_SECTIONS[number];
+
+export type VerificationStatus = 'unverified' | 'pending_verification' | 'verified' | 'needs_reverification';
