@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { FormDescription } from "@/components/ui/form";
 import { Target } from "lucide-react";
+import { SectionDocumentUpload } from "@/components/section-document-upload";
 
 const personalDetailsSchema = insertStudentProfileSchema.pick({
   firstName: true,
@@ -2294,6 +2295,10 @@ function StudentProfileContent() {
                 </CardContent>
               </Card>
 
+              <div className="mt-4">
+                <SectionDocumentUpload section="passport_visa" compact />
+              </div>
+
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
@@ -2744,6 +2749,10 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-4">
+            <SectionDocumentUpload section="education" compact />
+          </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -3122,6 +3131,10 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-4">
+            <SectionDocumentUpload section="english_proficiency" compact />
+          </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -3681,6 +3694,10 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-4">
+            <SectionDocumentUpload section="work_experience" compact />
+          </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -3824,6 +3841,11 @@ function StudentProfileContent() {
                   )}
                 </CardContent>
               </Card>
+
+              <div className="mt-4">
+                <SectionDocumentUpload section="financial" compact />
+              </div>
+
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
@@ -4023,6 +4045,11 @@ function StudentProfileContent() {
                   />
                 </CardContent>
               </Card>
+
+              <div className="mt-4">
+                <SectionDocumentUpload section="sop" compact />
+              </div>
+
               <div className="flex justify-end">
                 <Button 
                   type="submit" 

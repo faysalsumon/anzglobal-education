@@ -100,6 +100,7 @@ const documentTypes = [
   { value: "cv", label: "CV/Resume" },
   { value: "recommendation", label: "Letter of Recommendation" },
   { value: "financial", label: "Financial Document" },
+  { value: "sop", label: "Statement of Purpose" },
   { value: "other", label: "Other" },
 ];
 
