@@ -96,6 +96,10 @@ import {
   // Course pricing imports
   coursePricingConfig,
   coursePricingTiers,
+  // Profile verification imports
+  profileSectionVerifications,
+  profileChangeHistory,
+  applicationProfileSnapshots,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -3228,6 +3232,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { userId: _, ...sanitizedBody } = req.body;
       const data = insertStudentProfileSchema.partial().parse(sanitizedBody);
+      
+      // Track changes for verification system
+      const { detectChanges, trackProfileChanges } = await import("./verificationService");
+      const changes = detectChanges(existing as any, data);
+      if (changes.length > 0) {
+        await trackProfileChanges(existing.id, changes, userId);
+      }
+      
       const profile = await storage.updateStudentProfile(existing.id, data);
 
       // Real-time sync: Update linked CRM contact with profile changes
@@ -3274,6 +3286,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         profile = await storage.createStudentProfile(newProfileData);
       } else {
+        // Track changes for verification system before updating
+        const { detectChanges, trackProfileChanges } = await import("./verificationService");
+        const changes = detectChanges(profile as any, data);
+        if (changes.length > 0) {
+          await trackProfileChanges(profile.id, changes, userId);
+        }
+        
         // Update existing profile
         profile = await storage.updateStudentProfile(profile.id, data);
       }
@@ -3645,6 +3664,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================================================
+  // Profile Section Verification API
+  // ================================================
+
+  // GET /api/student/profile/verification - Get all section verification statuses for current student
+  app.get("/api/student/profile/verification", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+      
+      const verifications = await db.query.profileSectionVerifications.findMany({
+        where: eq(profileSectionVerifications.studentProfileId, profile.id),
+      });
+      
+      // Map to a structured response with all sections
+      const sections = ['personal', 'passport', 'education', 'language', 'preferences', 'employment', 'funding', 'emergency', 'sop', 'bio'];
+      const result = sections.map(section => {
+        const verification = verifications.find(v => v.section === section);
+        return {
+          section,
+          status: verification?.status || 'unverified',
+          verifiedAt: verification?.verifiedAt || null,
+          verifierNotes: verification?.verifierNotes || null,
+          lastUpdatedAt: verification?.lastUpdatedAt || null,
+        };
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching verification status:", error);
+      res.status(500).json({ message: "Failed to fetch verification status" });
+    }
+  });
+
+  // GET /api/student/profile/change-history - Get change history for current student
+  app.get("/api/student/profile/change-history", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+      
+      const history = await db.query.profileChangeHistory.findMany({
+        where: eq(profileChangeHistory.studentProfileId, profile.id),
+        orderBy: [desc(profileChangeHistory.changedAt)],
+        limit: 50,
+      });
+      
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching change history:", error);
+      res.status(500).json({ message: "Failed to fetch change history" });
+    }
+  });
+
+  // GET /api/admin/student-profiles/:profileId/verification - Get verification status for a specific student (admin)
+  app.get("/api/admin/student-profiles/:profileId/verification", isAuthenticated, async (req: any, res) => {
+    try {
+      const { profileId } = req.params;
+      const userType = req.user.claims.userType;
+      
+      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const verifications = await db.query.profileSectionVerifications.findMany({
+        where: eq(profileSectionVerifications.studentProfileId, profileId),
+      });
+      
+      const sections = ['personal', 'passport', 'education', 'language', 'preferences', 'employment', 'funding', 'emergency', 'sop', 'bio'];
+      const result = sections.map(section => {
+        const verification = verifications.find(v => v.section === section);
+        return {
+          section,
+          status: verification?.status || 'unverified',
+          verifiedAt: verification?.verifiedAt || null,
+          verifiedBy: verification?.verifiedBy || null,
+          verifierNotes: verification?.verifierNotes || null,
+          lastUpdatedAt: verification?.lastUpdatedAt || null,
+        };
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching verification status:", error);
+      res.status(500).json({ message: "Failed to fetch verification status" });
+    }
+  });
+
+  // POST /api/admin/student-profiles/:profileId/verification/:section - Verify a section (admin/consultant)
+  app.post("/api/admin/student-profiles/:profileId/verification/:section", isAuthenticated, async (req: any, res) => {
+    try {
+      const { profileId, section } = req.params;
+      const { status, notes } = req.body;
+      const userId = req.user.claims.sub;
+      const userType = req.user.claims.userType;
+      
+      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const validSections = ['personal', 'passport', 'education', 'language', 'preferences', 'employment', 'funding', 'emergency', 'sop', 'bio'];
+      if (!validSections.includes(section)) {
+        return res.status(400).json({ message: "Invalid section" });
+      }
+      
+      const validStatuses = ['unverified', 'pending_verification', 'verified', 'needs_reverification'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      // Upsert verification record
+      const existingVerification = await db.query.profileSectionVerifications.findFirst({
+        where: and(
+          eq(profileSectionVerifications.studentProfileId, profileId),
+          eq(profileSectionVerifications.section, section as any)
+        ),
+      });
+      
+      if (existingVerification) {
+        await db.update(profileSectionVerifications)
+          .set({
+            status: status as any,
+            verifiedAt: status === 'verified' ? new Date() : null,
+            verifiedBy: status === 'verified' ? userId : null,
+            verifierNotes: notes || null,
+            lastUpdatedAt: new Date(),
+          })
+          .where(eq(profileSectionVerifications.id, existingVerification.id));
+      } else {
+        await db.insert(profileSectionVerifications).values({
+          studentProfileId: profileId,
+          section: section as any,
+          status: status as any,
+          verifiedAt: status === 'verified' ? new Date() : null,
+          verifiedBy: status === 'verified' ? userId : null,
+          verifierNotes: notes || null,
+        });
+      }
+      
+      res.json({ success: true, message: `Section ${section} verification updated to ${status}` });
+    } catch (error) {
+      console.error("Error updating verification status:", error);
+      res.status(500).json({ message: "Failed to update verification status" });
+    }
+  });
+
+  // GET /api/admin/student-profiles/:profileId/change-history - Get change history for a student (admin)
+  app.get("/api/admin/student-profiles/:profileId/change-history", isAuthenticated, async (req: any, res) => {
+    try {
+      const { profileId } = req.params;
+      const userType = req.user.claims.userType;
+      
+      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const history = await db.query.profileChangeHistory.findMany({
+        where: eq(profileChangeHistory.studentProfileId, profileId),
+        orderBy: [desc(profileChangeHistory.changedAt)],
+        limit: 100,
+      });
+      
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching change history:", error);
+      res.status(500).json({ message: "Failed to fetch change history" });
+    }
+  });
+
   // GET /api/student/application-slots - Check available application slots
   app.get("/api/student/application-slots", isAuthenticated, async (req: any, res) => {
     try {
@@ -3704,6 +3899,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const education = await storage.createEducation(data);
+      
+      // Track education creation for verification system
+      const { trackEducationChange } = await import("./verificationService");
+      await trackEducationChange(profile.id, 'create', null, education, userId);
+      
       res.json(education);
     } catch (error: any) {
       console.error("Error creating education:", error);
@@ -3728,6 +3928,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { studentProfileId, ...sanitizedBody } = req.body;
       const data = insertStudentEducationSchema.partial().parse(sanitizedBody);
       const updated = await storage.updateEducation(req.params.id, data);
+      
+      // Track education update for verification system
+      const { trackEducationChange } = await import("./verificationService");
+      await trackEducationChange(profile.id, 'update', education, updated, userId);
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating education:", error);
@@ -3750,6 +3955,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteEducation(req.params.id);
+      
+      // Track education deletion for verification system
+      const { trackEducationChange } = await import("./verificationService");
+      await trackEducationChange(profile.id, 'delete', education, null, userId);
+      
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting education:", error);
@@ -3790,6 +4000,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const score = await storage.createLanguageScore(data);
+      
+      // Track language score creation for verification system
+      const { trackLanguageChange } = await import("./verificationService");
+      await trackLanguageChange(profile.id, 'create', null, score, userId);
+      
       res.json(score);
     } catch (error: any) {
       console.error("Error creating language score:", error);
@@ -3814,6 +4029,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { studentProfileId, ...sanitizedBody } = req.body;
       const data = insertStudentLanguageScoreSchema.partial().parse(sanitizedBody);
       const updated = await storage.updateLanguageScore(req.params.id, data);
+      
+      // Track language score update for verification system
+      const { trackLanguageChange } = await import("./verificationService");
+      await trackLanguageChange(profile.id, 'update', score, updated, userId);
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating language score:", error);
@@ -3836,6 +4056,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteLanguageScore(req.params.id);
+      
+      // Track language score deletion for verification system
+      const { trackLanguageChange } = await import("./verificationService");
+      await trackLanguageChange(profile.id, 'delete', score, null, userId);
+      
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting language score:", error);
@@ -4196,6 +4421,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const employment = await storage.createEmployment(data);
+      
+      // Track employment creation for verification system
+      const { trackEmploymentChange } = await import("./verificationService");
+      await trackEmploymentChange(profile.id, 'create', null, employment, userId);
+      
       res.json(employment);
     } catch (error: any) {
       console.error("Error creating employment:", error);
@@ -4220,6 +4450,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { studentProfileId, ...sanitizedBody } = req.body;
       const data = insertStudentEmploymentSchema.partial().parse(sanitizedBody);
       const updated = await storage.updateEmployment(req.params.id, data);
+      
+      // Track employment update for verification system
+      const { trackEmploymentChange } = await import("./verificationService");
+      await trackEmploymentChange(profile.id, 'update', employment, updated, userId);
+      
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating employment:", error);
@@ -4242,6 +4477,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteEmployment(req.params.id);
+      
+      // Track employment deletion for verification system
+      const { trackEmploymentChange } = await import("./verificationService");
+      await trackEmploymentChange(profile.id, 'delete', employment, null, userId);
+      
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting employment:", error);
