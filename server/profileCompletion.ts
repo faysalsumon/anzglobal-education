@@ -76,7 +76,7 @@ const DEFAULT_REQUIREMENTS: ProfileCompletionRequirements = {
     required: ['fundingSource'],
   },
   emergency: {
-    required: ['emergencyContactName', 'emergencyContactPhone'],
+    required: ['emergencyContactName', 'emergencyContactMobile'],
   },
   sop: {
     optional: true,
