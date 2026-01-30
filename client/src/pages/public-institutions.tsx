@@ -1146,7 +1146,7 @@ export default function PublicInstitutions() {
                           
                           {institution.description && (
                             <p 
-                              className="text-sm text-muted-foreground mb-1 line-clamp-1"
+                              className="text-sm text-muted-foreground mb-1 line-clamp-2"
                               data-testid={`text-description-${institution.id}`}
                             >
                               {institution.description}
