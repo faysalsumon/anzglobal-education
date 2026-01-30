@@ -73,6 +73,7 @@ const passportFormSchema = z.object({
   passportCountry: z.string().optional().nullable(),
   passportIssuedDate: z.string().optional().nullable(),
   passportExpiryDate: z.string().optional().nullable(),
+  passportIssuingAuthority: z.string().optional().nullable(),
 });
 
 const VISA_TYPES = [
@@ -429,6 +430,7 @@ function StudentProfileContent() {
       passportCountry: "",
       passportIssuedDate: "",
       passportExpiryDate: "",
+      passportIssuingAuthority: "",
     },
   });
 
@@ -576,6 +578,7 @@ function StudentProfileContent() {
         passportCountry: profile.passportCountry || "",
         passportIssuedDate: profile.passportIssuedDate || "",
         passportExpiryDate: profile.passportExpiryDate || "",
+        passportIssuingAuthority: profile.passportIssuingAuthority || "",
       });
       preferencesForm.reset({
         preferredDiscipline: profile.preferredDiscipline || "",
@@ -1999,6 +2002,25 @@ function StudentProfileContent() {
                           </FormControl>
                           <FormDescription>
                             Ensure your passport is valid for at least 6 months beyond your intended travel dates
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={passportForm.control}
+                      name="passportIssuingAuthority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Issuing Authority</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder="e.g., Department of Immigration" data-testid="input-passport-issuing-authority" />
+                          </FormControl>
+                          <FormDescription>
+                            The government body or agency that issued your passport
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

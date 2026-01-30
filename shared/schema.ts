@@ -1846,6 +1846,7 @@ export const studentProfiles = pgTable("student_profiles", {
   passportCountry: text("passport_country"),
   passportIssuedDate: date("passport_issued_date"),
   passportExpiryDate: date("passport_expiry_date"),
+  passportIssuingAuthority: text("passport_issuing_authority"),
   
   // Destination study preference
   destinationCountry: text("destination_country"),
