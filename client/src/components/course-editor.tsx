@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages, Save } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Tag, X, Plus, Trash2, Star, Edit, CalendarIcon, Sparkles, Monitor, Briefcase, Target, Factory, Users, ChevronDown, Check, GraduationCap, DollarSign, FileCheck, ExternalLink, Building2, BookOpen, HelpCircle, AlertCircle, Info, Languages, Save, Image } from "lucide-react";
 import { 
   FRAMEWORK_CONFIGS, 
   ALL_FRAMEWORKS, 
@@ -419,6 +419,9 @@ interface Course {
   careerOutcomes?: string[] | null;
   careerPath?: string | null;
   campusLocations?: string[] | null;
+  thumbnailUrl?: string | null;
+  thumbnailStatus?: string | null;
+  thumbnailGeneratedAt?: string | null;
   isActive: boolean;
   approvalStatus: string;
   publishStatus?: string | null;
@@ -599,6 +602,11 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     studyModes?: string[];
     deliveryMode?: string;
   } | null>(null);
+
+  // Thumbnail state
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const [thumbnailStatus, setThumbnailStatus] = useState<string>(course?.thumbnailStatus || "none");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(course?.thumbnailUrl || null);
 
   // Pricing configuration state
   const [pricingConfig, setPricingConfig] = useState<{
@@ -1241,6 +1249,36 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     },
   });
 
+  // Thumbnail generation mutation
+  const generateThumbnailMutation = useMutation({
+    mutationFn: async () => {
+      if (!course?.id) throw new Error("Course ID required");
+      const response = await apiRequest("POST", `/api/courses/${course.id}/generate-thumbnail`);
+      return response.json();
+    },
+    onMutate: () => {
+      setIsGeneratingThumbnail(true);
+      setThumbnailStatus("generating");
+    },
+    onSuccess: (data: any) => {
+      if (data.thumbnailUrl) {
+        setThumbnailUrl(data.thumbnailUrl);
+        setThumbnailStatus("completed");
+      } else if (data.mode === "async") {
+        setThumbnailStatus("pending");
+        toast({ title: "Thumbnail generation queued", description: "Your thumbnail is being generated in the background." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", course?.id] });
+    },
+    onError: (error: any) => {
+      setThumbnailStatus("failed");
+      toast({ title: "Error", description: error.message || "Failed to generate thumbnail", variant: "destructive" });
+    },
+    onSettled: () => {
+      setIsGeneratingThumbnail(false);
+    },
+  });
+
   // AI Course Data Extraction mutation
   const extractCourseDataMutation = useMutation({
     mutationFn: async (url: string) => {
@@ -1660,6 +1698,64 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         </FormItem>
                       )}
                     />
+
+                    {/* Course Thumbnail Section */}
+                    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Image className="h-4 w-4" />
+                          <span className="font-medium text-sm">Course Thumbnail</span>
+                        </div>
+                        <Badge variant={
+                          thumbnailStatus === "completed" ? "default" :
+                          thumbnailStatus === "generating" || thumbnailStatus === "pending" ? "secondary" :
+                          thumbnailStatus === "failed" ? "destructive" : "outline"
+                        }>
+                          {thumbnailStatus === "completed" ? "Ready" :
+                           thumbnailStatus === "generating" ? "Generating..." :
+                           thumbnailStatus === "pending" ? "Queued" :
+                           thumbnailStatus === "failed" ? "Failed" : "No thumbnail"}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-32 h-20 rounded-md border bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          {thumbnailUrl ? (
+                            <img src={thumbnailUrl} alt="Course thumbnail" className="w-full h-full object-cover" />
+                          ) : (
+                            <Image className="h-8 w-8 text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            AI-generated thumbnail based on course title and discipline. Click generate to create a new one.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => generateThumbnailMutation.mutate()}
+                              disabled={isGeneratingThumbnail || !course?.id}
+                              data-testid="button-generate-thumbnail"
+                            >
+                              {isGeneratingThumbnail ? (
+                                <>
+                                  <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3 mr-1" />
+                                  {thumbnailUrl ? "Regenerate" : "Generate with AI"}
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     <FormField
                       control={form.control}
