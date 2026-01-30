@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CheckCircle2, AlertCircle, Clock, History, Eye, Check, X } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, History, Eye, Check, X, User } from "lucide-react";
 import { format } from "date-fns";
 
 type VerificationStatus = 'unverified' | 'pending_verification' | 'verified' | 'needs_reverification';
@@ -19,6 +20,8 @@ interface SectionVerification {
   status: VerificationStatus;
   verifiedAt: string | null;
   verifiedBy: string | null;
+  verifierName: string | null;
+  verifierProfileImage: string | null;
   verifierNotes: string | null;
   lastUpdatedAt: string | null;
 }
@@ -171,6 +174,7 @@ export function StudentVerificationPanel({ profileId, studentName, onClose }: St
               <TableRow>
                 <TableHead>Section</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Verified By</TableHead>
                 <TableHead>Verified At</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -182,6 +186,21 @@ export function StudentVerificationPanel({ profileId, studentName, onClose }: St
                   <TableCell className="font-medium">{SECTION_LABELS[v.section] || v.section}</TableCell>
                   <TableCell>
                     <VerificationStatusBadge status={v.status} />
+                  </TableCell>
+                  <TableCell>
+                    {v.verifierName ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={v.verifierProfileImage || undefined} alt={v.verifierName} />
+                          <AvatarFallback className="text-xs">
+                            {v.verifierName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{v.verifierName}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {v.verifiedAt ? format(new Date(v.verifiedAt), "MMM d, yyyy") : "-"}

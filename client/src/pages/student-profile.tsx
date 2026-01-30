@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -489,21 +490,43 @@ interface SectionVerification {
   section: string;
   status: VerificationStatus;
   verifiedAt: string | null;
+  verifierName: string | null;
+  verifierProfileImage: string | null;
   verifierNotes: string | null;
   lastUpdatedAt: string | null;
 }
 
-function VerificationBadge({ status }: { status?: VerificationStatus }) {
+interface VerificationBadgeProps {
+  status?: VerificationStatus;
+  verifierName?: string | null;
+  verifierProfileImage?: string | null;
+}
+
+function VerificationBadge({ status, verifierName, verifierProfileImage }: VerificationBadgeProps) {
   if (!status || status === 'unverified') {
     return null;
   }
   
   if (status === 'verified') {
     return (
-      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200" data-testid="badge-verified">
-        <CheckCircle2 className="h-3 w-3 mr-1" />
-        Verified
-      </Badge>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200" data-testid="badge-verified">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Verified
+        </Badge>
+        {verifierName && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>by</span>
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={verifierProfileImage || undefined} alt={verifierName} />
+              <AvatarFallback className="text-[10px]">
+                {verifierName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="font-medium">{verifierName}</span>
+          </div>
+        )}
+      </div>
     );
   }
   
@@ -569,9 +592,8 @@ function StudentProfileContent() {
     queryKey: ["/api/student/profile/verification"],
   });
   
-  const getVerificationStatus = (sectionName: string): VerificationStatus | undefined => {
-    const section = verificationStatus.find(v => v.section === sectionName);
-    return section?.status;
+  const getVerification = (sectionName: string): SectionVerification | undefined => {
+    return verificationStatus.find(v => v.section === sectionName);
   };
 
   const personalForm = useForm<z.infer<typeof personalDetailsSchema>>({
@@ -1597,7 +1619,7 @@ function StudentProfileContent() {
               <User className="h-5 w-5 text-primary" />
               <span className="font-semibold">Personal Information</span>
               <CompletionBadge isComplete={completion?.completedSections?.personalInfo || false} />
-              <VerificationBadge status={getVerificationStatus('personal')} />
+              <VerificationBadge status={getVerification('personal')?.status} verifierName={getVerification('personal')?.verifierName} verifierProfileImage={getVerification('personal')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -2068,7 +2090,7 @@ function StudentProfileContent() {
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Passport & Visa Details</span>
               <CompletionBadge isComplete={completion?.completedSections?.passport || false} />
-              <VerificationBadge status={getVerificationStatus('passport')} />
+              <VerificationBadge status={getVerification('passport')?.status} verifierName={getVerification('passport')?.verifierName} verifierProfileImage={getVerification('passport')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -2327,7 +2349,7 @@ function StudentProfileContent() {
               <GraduationCap className="h-5 w-5 text-primary" />
               <span className="font-semibold">Education History</span>
               <CompletionBadge isComplete={completion?.completedSections?.education || false} />
-              <VerificationBadge status={getVerificationStatus('education')} />
+              <VerificationBadge status={getVerification('education')?.status} verifierName={getVerification('education')?.verifierName} verifierProfileImage={getVerification('education')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -2763,7 +2785,7 @@ function StudentProfileContent() {
               <Languages className="h-5 w-5 text-primary" />
               <span className="font-semibold">English Proficiency</span>
               <CompletionBadge isComplete={completion?.completedSections?.languageTest || false} />
-              <VerificationBadge status={getVerificationStatus('language')} />
+              <VerificationBadge status={getVerification('language')?.status} verifierName={getVerification('language')?.verifierName} verifierProfileImage={getVerification('language')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3145,7 +3167,7 @@ function StudentProfileContent() {
               <Target className="h-5 w-5 text-primary" />
               <span className="font-semibold">Study Preferences</span>
               <CompletionBadge isComplete={completion?.completedSections?.preferences || false} />
-              <VerificationBadge status={getVerificationStatus('preferences')} />
+              <VerificationBadge status={getVerification('preferences')?.status} verifierName={getVerification('preferences')?.verifierName} verifierProfileImage={getVerification('preferences')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3379,7 +3401,7 @@ function StudentProfileContent() {
               <Briefcase className="h-5 w-5 text-primary" />
               <span className="font-semibold">Work Experience</span>
               <CompletionBadge isComplete={completion?.completedSections?.employment || false} isOptional />
-              <VerificationBadge status={getVerificationStatus('employment')} />
+              <VerificationBadge status={getVerification('employment')?.status} verifierName={getVerification('employment')?.verifierName} verifierProfileImage={getVerification('employment')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3708,7 +3730,7 @@ function StudentProfileContent() {
               <Wallet className="h-5 w-5 text-primary" />
               <span className="font-semibold">Financial / Sponsor Information</span>
               <CompletionBadge isComplete={completion?.completedSections?.funding || false} />
-              <VerificationBadge status={getVerificationStatus('funding')} />
+              <VerificationBadge status={getVerification('funding')?.status} verifierName={getVerification('funding')?.verifierName} verifierProfileImage={getVerification('funding')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3874,7 +3896,7 @@ function StudentProfileContent() {
               <Phone className="h-5 w-5 text-primary" />
               <span className="font-semibold">Emergency Contact</span>
               <CompletionBadge isComplete={completion?.completedSections?.emergency || false} />
-              <VerificationBadge status={getVerificationStatus('emergency')} />
+              <VerificationBadge status={getVerification('emergency')?.status} verifierName={getVerification('emergency')?.verifierName} verifierProfileImage={getVerification('emergency')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -4009,7 +4031,7 @@ function StudentProfileContent() {
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Statement of Purpose</span>
               <CompletionBadge isComplete={completion?.completedSections?.sop || false} isRecommended />
-              <VerificationBadge status={getVerificationStatus('sop')} />
+              <VerificationBadge status={getVerification('sop')?.status} verifierName={getVerification('sop')?.verifierName} verifierProfileImage={getVerification('sop')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -4078,7 +4100,7 @@ function StudentProfileContent() {
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-semibold">Bio & Career Goals</span>
               <CompletionBadge isComplete={completion?.completedSections?.bio || false} isOptional />
-              <VerificationBadge status={getVerificationStatus('bio')} />
+              <VerificationBadge status={getVerification('bio')?.status} verifierName={getVerification('bio')?.verifierName} verifierProfileImage={getVerification('bio')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
