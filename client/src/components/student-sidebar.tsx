@@ -84,7 +84,7 @@ interface StudentSidebarProps {
 
 export function StudentSidebar({ className }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
-  const [activeSection, setActiveSection] = useState<string | null>("discover");
+  const [activeSection, setActiveSection] = useState<string | null>("dashboard");
   const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
   const { user } = useAuth();
 
@@ -116,6 +116,15 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
   const isProfileComplete = completion?.isComplete || false;
 
   const navConfig: NavSection[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
+      routes: [
+        { icon: User, label: "My Profile", path: "/student/profile" },
+      ],
+    },
     {
       id: "discover",
       label: "Discover",
@@ -157,19 +166,8 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     },
   ];
 
-  // Profile section (shown via bottom avatar, not in main nav)
-  const profileSection: NavSection = {
-    id: "profile",
-    label: "Profile",
-    icon: User,
-    color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
-    routes: [
-      { icon: User, label: "My Profile", path: "/student/profile" },
-    ],
-  };
-
-  // All sections including profile for lookups
-  const allSections = [...navConfig, profileSection];
+  // All sections for lookups
+  const allSections = navConfig;
 
   const findSectionForPath = (path: string) => {
     for (const section of allSections) {
@@ -297,15 +295,11 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <button
-                onClick={() => handleSectionClick("profile")}
-                className={cn(
-                  "relative rounded-full transition-all",
-                  activeSection === "profile" && "ring-2 ring-purple-500"
-                )}
+              <div
+                className="relative rounded-full"
                 data-testid="nav-profile-avatar"
               >
-                <Avatar className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                <Avatar className="h-10 w-10">
                   {profileImageUrl && (
                     <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
                   )}
@@ -320,7 +314,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
                 ) : (
                   <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-background" data-testid="badge-profile-incomplete" />
                 )}
-              </button>
+              </div>
             </TooltipTrigger>
             <TooltipContent side="right">
               <div className="text-sm">
