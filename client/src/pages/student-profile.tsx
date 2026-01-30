@@ -14,11 +14,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone, FileText } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, User, GraduationCap, Languages, Plus, Pencil, Trash2, Heart, MapPin, Eye, Briefcase, Mail, Phone, FileText, Wallet, Upload, Globe, Contact } from "lucide-react";
 import { insertStudentProfileSchema, insertStudentEducationSchema, insertStudentLanguageScoreSchema, insertStudentEmploymentSchema, type StudentProfile, type StudentEducation, type StudentLanguageScore, type StudentEmployment, type University, type Course } from "@shared/schema";
 import { z } from "zod";
 import { StudentLayout } from "@/components/student-layout";
@@ -164,6 +165,42 @@ const emergencyContactSchema = z.object({
   emergencyContactRelationship: z.string().optional().nullable(),
   emergencyContactAddress: z.string().optional().nullable(),
 });
+
+const fundingSchema = z.object({
+  fundingSource: z.string().optional().nullable(),
+  sponsorName: z.string().optional().nullable(),
+  sponsorRelationship: z.string().optional().nullable(),
+  sponsorOccupation: z.string().optional().nullable(),
+  sponsorPhone: z.string().optional().nullable(),
+  sponsorEmail: z.string().optional().nullable(),
+  sponsorAddress: z.string().optional().nullable(),
+});
+
+const sopSchema = z.object({
+  statementOfPurpose: z.string().optional().nullable(),
+});
+
+const FUNDING_SOURCES = [
+  { value: "self", label: "Self-Funded" },
+  { value: "family", label: "Family Sponsored" },
+  { value: "scholarship", label: "Scholarship/Grant" },
+  { value: "employer", label: "Employer Sponsored" },
+  { value: "loan", label: "Education Loan" },
+  { value: "government", label: "Government Funding" },
+  { value: "mixed", label: "Mixed/Multiple Sources" },
+];
+
+const SPONSOR_RELATIONSHIPS = [
+  "Parent",
+  "Spouse",
+  "Sibling",
+  "Grandparent",
+  "Uncle/Aunt",
+  "Employer",
+  "Other Relative",
+  "Guardian",
+  "Other",
+];
 
 // Countries for education dropdown (common source countries)
 const EDUCATION_COUNTRIES = [
@@ -404,9 +441,6 @@ interface ProfileCompletionResult {
 
 function StudentProfileContent() {
   const { toast } = useToast();
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = urlParams.get('tab') || "personal";
-  const [activeTab, setActiveTab] = useState(initialTab);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiField, setAiField] = useState<"bio" | "careerGoals" | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -498,6 +532,26 @@ function StudentProfileContent() {
       emergencyContactMobile: "",
       emergencyContactRelationship: "",
       emergencyContactAddress: "",
+    },
+  });
+
+  const fundingForm = useForm<z.infer<typeof fundingSchema>>({
+    resolver: zodResolver(fundingSchema),
+    defaultValues: {
+      fundingSource: "",
+      sponsorName: "",
+      sponsorRelationship: "",
+      sponsorOccupation: "",
+      sponsorPhone: "",
+      sponsorEmail: "",
+      sponsorAddress: "",
+    },
+  });
+
+  const sopForm = useForm<z.infer<typeof sopSchema>>({
+    resolver: zodResolver(sopSchema),
+    defaultValues: {
+      statementOfPurpose: "",
     },
   });
 
@@ -644,6 +698,18 @@ function StudentProfileContent() {
         passportIssuedDate: profile.passportIssuedDate || "",
         passportExpiryDate: profile.passportExpiryDate || "",
         passportIssuingAuthority: profile.passportIssuingAuthority || "",
+      });
+      fundingForm.reset({
+        fundingSource: profile.fundingSource || "",
+        sponsorName: profile.sponsorName || "",
+        sponsorRelationship: profile.sponsorRelationship || "",
+        sponsorOccupation: profile.sponsorOccupation || "",
+        sponsorPhone: profile.sponsorPhone || "",
+        sponsorEmail: profile.sponsorEmail || "",
+        sponsorAddress: profile.sponsorAddress || "",
+      });
+      sopForm.reset({
+        statementOfPurpose: profile.statementOfPurpose || "",
       });
       preferencesForm.reset({
         preferredDiscipline: profile.preferredDiscipline || "",
@@ -1321,6 +1387,18 @@ function StudentProfileContent() {
     });
   });
 
+  const handleFundingSubmit = fundingForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate(data);
+  });
+
+  const handleSopSubmit = sopForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate(data);
+  });
+
+  // Watch funding source to conditionally show sponsor fields
+  const watchedFundingSource = fundingForm.watch("fundingSource");
+  const showSponsorFields = watchedFundingSource && watchedFundingSource !== "self" && watchedFundingSource !== "loan";
+
   const isLoading = profileLoading || completionLoading;
 
   return (
@@ -1395,43 +1473,21 @@ function StudentProfileContent() {
       )}
 
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8" data-testid="tabs-profile-sections">
-          <TabsTrigger value="personal" data-testid="tab-personal" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Personal</span>
-          </TabsTrigger>
-          <TabsTrigger value="passport" data-testid="tab-passport" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Passport</span>
-          </TabsTrigger>
-          <TabsTrigger value="education" data-testid="tab-education" className="flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            <span className="hidden sm:inline">Education</span>
-          </TabsTrigger>
-          <TabsTrigger value="language" data-testid="tab-language" className="flex items-center gap-2">
-            <Languages className="h-4 w-4" />
-            <span className="hidden sm:inline">Language</span>
-          </TabsTrigger>
-          <TabsTrigger value="preferences" data-testid="tab-preferences" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            <span className="hidden sm:inline">Preferences</span>
-          </TabsTrigger>
-          <TabsTrigger value="employment" data-testid="tab-employment" className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
-            <span className="hidden sm:inline">Employment</span>
-          </TabsTrigger>
-          <TabsTrigger value="emergency" data-testid="tab-emergency" className="flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            <span className="hidden sm:inline">Emergency</span>
-          </TabsTrigger>
-          <TabsTrigger value="bio" data-testid="tab-bio" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="hidden sm:inline">Bio</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="personal">
+      <Accordion type="multiple" defaultValue={["personal"]} className="space-y-4">
+        {/* Section 1: Personal Information */}
+        <AccordionItem value="personal" className="border rounded-lg px-4" data-testid="accordion-personal">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-personal">
+            <div className="flex items-center gap-3">
+              <User className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Personal Information</span>
+              {completion?.completedSections?.personalInfo ? (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              ) : (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
+              )}
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Form {...personalForm}>
             <form onSubmit={handlePersonalSubmit} className="space-y-6">
               <Card>
@@ -1889,9 +1945,18 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="passport">
+        {/* Section 2: Passport & Visa */}
+        <AccordionItem value="passport" className="border rounded-lg px-4" data-testid="accordion-passport">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-passport">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Passport & Visa Details</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Form {...passportForm}>
             <form onSubmit={handlePassportSubmit} className="space-y-6">
               <Card>
@@ -2133,9 +2198,23 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="education">
+        {/* Section 3: Education History */}
+        <AccordionItem value="education" className="border rounded-lg px-4" data-testid="accordion-education">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-education">
+            <div className="flex items-center gap-3">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Education History</span>
+              {completion?.completedSections?.education ? (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              ) : (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
+              )}
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
@@ -2554,9 +2633,23 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="language">
+        {/* Section 4: English Proficiency */}
+        <AccordionItem value="language" className="border rounded-lg px-4" data-testid="accordion-language">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-language">
+            <div className="flex items-center gap-3">
+              <Languages className="h-5 w-5 text-primary" />
+              <span className="font-semibold">English Proficiency</span>
+              {completion?.completedSections?.languageTest ? (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
+              ) : (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
+              )}
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
@@ -2921,9 +3014,18 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="preferences">
+        {/* Section 5: Study Preferences */}
+        <AccordionItem value="preferences" className="border rounded-lg px-4" data-testid="accordion-preferences">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-preferences">
+            <div className="flex items-center gap-3">
+              <Target className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Study Preferences</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Form {...preferencesForm}>
             <form onSubmit={handlePreferencesSubmit} className="space-y-6">
               <Card>
@@ -3144,9 +3246,19 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="employment">
+        {/* Section 6: Work Experience */}
+        <AccordionItem value="employment" className="border rounded-lg px-4" data-testid="accordion-employment">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-employment">
+            <div className="flex items-center gap-3">
+              <Briefcase className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Work Experience</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Optional</Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
@@ -3458,9 +3570,177 @@ function StudentProfileContent() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="emergency">
+        {/* Section 7: Financial/Sponsor Information */}
+        <AccordionItem value="funding" className="border rounded-lg px-4" data-testid="accordion-funding">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-funding">
+            <div className="flex items-center gap-3">
+              <Wallet className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Financial / Sponsor Information</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+          <Form {...fundingForm}>
+            <form onSubmit={handleFundingSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Funding Details</CardTitle>
+                  <CardDescription>How will you fund your studies?</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={fundingForm.control}
+                    name="fundingSource"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Funding Source</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-funding-source">
+                              <SelectValue placeholder="Select funding source" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {FUNDING_SOURCES.map((source) => (
+                              <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {showSponsorFields && (
+                    <>
+                      <div className="border-t pt-4 mt-4">
+                        <h4 className="font-medium mb-4">Sponsor Details</h4>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <FormField
+                            control={fundingForm.control}
+                            name="sponsorName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Sponsor Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} placeholder="Full name of sponsor" data-testid="input-sponsor-name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={fundingForm.control}
+                            name="sponsorRelationship"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Relationship</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-sponsor-relationship">
+                                      <SelectValue placeholder="Select relationship" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {SPONSOR_RELATIONSHIPS.map((rel) => (
+                                      <SelectItem key={rel} value={rel}>{rel}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={fundingForm.control}
+                            name="sponsorOccupation"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Occupation</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} placeholder="Sponsor's occupation" data-testid="input-sponsor-occupation" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={fundingForm.control}
+                            name="sponsorPhone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} placeholder="Sponsor's phone" data-testid="input-sponsor-phone" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={fundingForm.control}
+                            name="sponsorEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email Address</FormLabel>
+                                <FormControl>
+                                  <Input {...field} value={field.value || ""} type="email" placeholder="Sponsor's email" data-testid="input-sponsor-email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={fundingForm.control}
+                          name="sponsorAddress"
+                          render={({ field }) => (
+                            <FormItem className="mt-4">
+                              <FormLabel>Address</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} value={field.value || ""} placeholder="Sponsor's full address" data-testid="input-sponsor-address" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <div className="flex justify-end">
+                <Button 
+                  type="submit" 
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-funding"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Section 8: Emergency Contact */}
+        <AccordionItem value="emergency" className="border rounded-lg px-4" data-testid="accordion-emergency">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-emergency">
+            <div className="flex items-center gap-3">
+              <Phone className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Emergency Contact</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Form {...emergencyForm}>
             <form onSubmit={handleEmergencySubmit} className="space-y-6">
               <Card>
@@ -3582,9 +3862,81 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
-        </TabsContent>
+          </AccordionContent>
+        </AccordionItem>
 
-        <TabsContent value="bio">
+        {/* Section 9: Statement of Purpose */}
+        <AccordionItem value="sop" className="border rounded-lg px-4" data-testid="accordion-sop">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-sop">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Statement of Purpose</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Recommended</Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+          <Form {...sopForm}>
+            <form onSubmit={handleSopSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Statement of Purpose</CardTitle>
+                  <CardDescription>Tell institutions about yourself and why you want to study abroad</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={sopForm.control}
+                    name="statementOfPurpose"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Your Statement</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            value={field.value || ""} 
+                            placeholder="Write about your educational background, career goals, why you chose this field, and what you hope to achieve..."
+                            className="min-h-[200px]"
+                            data-testid="textarea-sop"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          This statement will be included with your applications. Aim for 300-500 words.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+              <div className="flex justify-end">
+                <Button 
+                  type="submit" 
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-sop"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Section 10: Bio & Career Goals (Legacy) */}
+        <AccordionItem value="bio" className="border rounded-lg px-4" data-testid="accordion-bio">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-bio">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Bio & Career Goals</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
           <Form {...bioForm}>
             <form onSubmit={handleBioSubmit} className="space-y-6">
               <Card>
@@ -3711,8 +4063,9 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
-        </TabsContent>
-      </Tabs>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
