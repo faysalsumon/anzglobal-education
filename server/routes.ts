@@ -3736,7 +3736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { profileId } = req.params;
       const userType = req.user.claims.userType;
       
-      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+      if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
@@ -3772,7 +3772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const userType = req.user.claims.userType;
       
-      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+      if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
@@ -3828,7 +3828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { profileId } = req.params;
       const userType = req.user.claims.userType;
       
-      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+      if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
@@ -3851,7 +3851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { profileId } = req.params;
       const userType = req.user.claims.userType;
       
-      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+      if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
