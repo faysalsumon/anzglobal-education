@@ -35,6 +35,7 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   lastName: true,
   preferredName: true,
   gender: true,
+  maritalStatus: true,
   phone: true,
   whatsapp: true,
   dateOfBirth: true,
@@ -52,6 +53,7 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   lastName: z.string().min(1, "Last name is required"),
   preferredName: z.string().optional().nullable(),
   gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional().nullable(),
+  maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated", "prefer_not_to_say"]).optional().nullable(),
   phone: z.string().min(1, "Phone number is required"),
   whatsapp: z.string().optional().nullable(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
@@ -403,6 +405,7 @@ function StudentProfileContent() {
       lastName: "",
       preferredName: "",
       gender: undefined,
+      maritalStatus: undefined,
       phone: "",
       whatsapp: "",
       dateOfBirth: "",
@@ -540,6 +543,7 @@ function StudentProfileContent() {
         lastName: profile.lastName || "",
         preferredName: profile.preferredName || "",
         gender: profile.gender || undefined,
+        maritalStatus: (profile.maritalStatus as "single" | "married" | "divorced" | "widowed" | "separated" | "prefer_not_to_say") || undefined,
         phone: profile.phone || "",
         whatsapp: profile.whatsapp || "",
         dateOfBirth: profile.dateOfBirth || "",
@@ -1427,6 +1431,32 @@ function StudentProfileContent() {
                               <SelectItem value="male">Male</SelectItem>
                               <SelectItem value="female">Female</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={personalForm.control}
+                      name="maritalStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Marital Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-marital-status">
+                                <SelectValue placeholder="Select marital status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="single">Single</SelectItem>
+                              <SelectItem value="married">Married</SelectItem>
+                              <SelectItem value="divorced">Divorced</SelectItem>
+                              <SelectItem value="widowed">Widowed</SelectItem>
+                              <SelectItem value="separated">Separated</SelectItem>
                               <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                             </SelectContent>
                           </Select>

@@ -1812,6 +1812,7 @@ export const studentProfiles = pgTable("student_profiles", {
   lastName: text("last_name"),
   preferredName: text("preferred_name"),
   gender: genderEnum("gender"),
+  maritalStatus: text("marital_status"),
   phone: varchar("phone", { length: 20 }),
   whatsapp: varchar("whatsapp", { length: 20 }),
   dateOfBirth: date("date_of_birth"),
