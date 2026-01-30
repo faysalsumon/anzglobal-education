@@ -3734,7 +3734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/student-profiles/:profileId/verification", isAuthenticated, async (req: any, res) => {
     try {
       const { profileId } = req.params;
-      const userType = req.user.claims.userType;
+      const userType = req.user.supabaseUser?.userType || req.user.claims?.userType;
       
       if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -3770,7 +3770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { profileId, section } = req.params;
       const { status, notes } = req.body;
       const userId = req.user.claims.sub;
-      const userType = req.user.claims.userType;
+      const userType = req.user.supabaseUser?.userType || req.user.claims?.userType;
       
       if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -3826,7 +3826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/student-profiles/:profileId/change-history", isAuthenticated, async (req: any, res) => {
     try {
       const { profileId } = req.params;
-      const userType = req.user.claims.userType;
+      const userType = req.user.supabaseUser?.userType || req.user.claims?.userType;
       
       if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -3849,7 +3849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/student-profiles/:profileId", isAuthenticated, async (req: any, res) => {
     try {
       const { profileId } = req.params;
-      const userType = req.user.claims.userType;
+      const userType = req.user.supabaseUser?.userType || req.user.claims?.userType;
       
       if (!['admin', 'platform_admin'].includes(userType)) {
         return res.status(403).json({ message: "Unauthorized" });
