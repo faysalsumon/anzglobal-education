@@ -1895,6 +1895,18 @@ export const studentProfiles = pgTable("student_profiles", {
   bankBsbCode: varchar("bank_bsb_code", { length: 10 }),
   bankAccountNumber: varchar("bank_account_number", { length: 20 }),
   
+  // Funding/Sponsor Information (for universal application)
+  fundingSource: varchar("funding_source", { length: 30 }), // 'self', 'family', 'scholarship', 'employer', 'loan', 'government', 'mixed'
+  sponsorName: text("sponsor_name"),
+  sponsorRelationship: text("sponsor_relationship"),
+  sponsorOccupation: text("sponsor_occupation"),
+  sponsorPhone: varchar("sponsor_phone", { length: 50 }),
+  sponsorEmail: text("sponsor_email"),
+  sponsorAddress: text("sponsor_address"),
+  
+  // Statement of Purpose (universal for applications)
+  statementOfPurpose: text("statement_of_purpose"),
+  
   // Emergency Contact fields (syncs to CRM contacts)
   emergencyContactName: text("emergency_contact_name"),
   emergencyContactMobile: varchar("emergency_contact_mobile", { length: 50 }),
