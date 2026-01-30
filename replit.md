@@ -70,6 +70,13 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
 - **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction from URLs.
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval and AI-powered course detection.
+- **AI Course Thumbnail Generation**: Automatic thumbnail creation using OpenAI DALL-E 3:
+  - Database fields: `thumbnailUrl`, `thumbnailStatus` (none/pending/generating/completed/failed), `thumbnailGeneratedAt`
+  - Async processing via BullMQ queue with Redis, sync fallback when Redis unavailable
+  - API endpoints: Single generation, bulk generation, custom upload, status check
+  - Admin-only access control for generation endpoints
+  - CourseThumbnail component with lazy loading (IntersectionObserver) and placeholder fallback
+  - Course cards display thumbnails on public courses page and institution detail pages
 - **Activity Logging**: CRM-style audit trail tracking admin actions.
 - **Content & SEO**: Course pages with scholarship/career pathway info, markdown-based blog with admin CMS, and dynamic SEO.
 - **AI-Driven SEO Management**: Comprehensive SEO infrastructure with:
