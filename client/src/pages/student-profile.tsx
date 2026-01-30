@@ -13,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -434,9 +433,53 @@ interface ProfileCompletionResult {
   missingFields: string[];
   completedSections: {
     personalInfo: boolean;
+    passport: boolean;
     education: boolean;
     languageTest: boolean;
+    preferences: boolean;
+    employment: boolean;
+    funding: boolean;
+    emergency: boolean;
+    sop: boolean;
+    bio: boolean;
   };
+}
+
+function CompletionBadge({ 
+  isComplete, 
+  isOptional = false,
+  isRecommended = false 
+}: { 
+  isComplete: boolean; 
+  isOptional?: boolean;
+  isRecommended?: boolean;
+}) {
+  if (isComplete) {
+    return (
+      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200" data-testid="badge-complete">
+        Complete
+      </Badge>
+    );
+  }
+  if (isOptional) {
+    return (
+      <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200" data-testid="badge-optional">
+        Optional
+      </Badge>
+    );
+  }
+  if (isRecommended) {
+    return (
+      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200" data-testid="badge-recommended">
+        Recommended
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200" data-testid="badge-incomplete">
+      Incomplete
+    </Badge>
+  );
 }
 
 function StudentProfileContent() {
@@ -1480,11 +1523,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <User className="h-5 w-5 text-primary" />
               <span className="font-semibold">Personal Information</span>
-              {completion?.completedSections?.personalInfo ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
-              ) : (
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
-              )}
+              <CompletionBadge isComplete={completion?.completedSections?.personalInfo || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -1954,6 +1993,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Passport & Visa Details</span>
+              <CompletionBadge isComplete={completion?.completedSections?.passport || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -2207,11 +2247,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <GraduationCap className="h-5 w-5 text-primary" />
               <span className="font-semibold">Education History</span>
-              {completion?.completedSections?.education ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
-              ) : (
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
-              )}
+              <CompletionBadge isComplete={completion?.completedSections?.education || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -2642,11 +2678,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Languages className="h-5 w-5 text-primary" />
               <span className="font-semibold">English Proficiency</span>
-              {completion?.completedSections?.languageTest ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Complete</Badge>
-              ) : (
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Incomplete</Badge>
-              )}
+              <CompletionBadge isComplete={completion?.completedSections?.languageTest || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3023,6 +3055,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Target className="h-5 w-5 text-primary" />
               <span className="font-semibold">Study Preferences</span>
+              <CompletionBadge isComplete={completion?.completedSections?.preferences || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3255,7 +3288,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Briefcase className="h-5 w-5 text-primary" />
               <span className="font-semibold">Work Experience</span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Optional</Badge>
+              <CompletionBadge isComplete={completion?.completedSections?.employment || false} isOptional />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3579,6 +3612,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Wallet className="h-5 w-5 text-primary" />
               <span className="font-semibold">Financial / Sponsor Information</span>
+              <CompletionBadge isComplete={completion?.completedSections?.funding || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3738,6 +3772,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Phone className="h-5 w-5 text-primary" />
               <span className="font-semibold">Emergency Contact</span>
+              <CompletionBadge isComplete={completion?.completedSections?.emergency || false} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3871,7 +3906,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Statement of Purpose</span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Recommended</Badge>
+              <CompletionBadge isComplete={completion?.completedSections?.sop || false} isRecommended />
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -3934,6 +3969,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Sparkles className="h-5 w-5 text-primary" />
               <span className="font-semibold">Bio & Career Goals</span>
+              <CompletionBadge isComplete={completion?.completedSections?.bio || false} isOptional />
             </div>
           </AccordionTrigger>
           <AccordionContent>

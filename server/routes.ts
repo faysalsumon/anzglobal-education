@@ -3629,13 +3629,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let educations: any[] = [];
       let languageScores: any[] = [];
+      let employments: any[] = [];
       
       if (profile) {
         educations = await storage.getEducationsByStudentProfileId(profile.id);
         languageScores = await storage.getLanguageScoresByStudentProfileId(profile.id);
+        employments = await storage.getEmploymentsByStudentProfileId(profile.id);
       }
       
-      const completionResult = calculateProfileCompletion(profile, educations, languageScores);
+      const completionResult = calculateProfileCompletion(profile, educations, languageScores, employments);
       res.json(completionResult);
     } catch (error) {
       console.error("Error checking profile completion:", error);

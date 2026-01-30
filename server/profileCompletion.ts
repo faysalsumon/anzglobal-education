@@ -1,4 +1,4 @@
-import type { StudentProfile, StudentEducation, StudentLanguageScore } from "@shared/schema";
+import type { StudentProfile, StudentEducation, StudentLanguageScore, StudentEmployment } from "@shared/schema";
 
 export interface ProfileCompletionResult {
   isComplete: boolean;
@@ -6,8 +6,15 @@ export interface ProfileCompletionResult {
   missingFields: string[];
   completedSections: {
     personalInfo: boolean;
+    passport: boolean;
     education: boolean;
     languageTest: boolean;
+    preferences: boolean;
+    employment: boolean;
+    funding: boolean;
+    emergency: boolean;
+    sop: boolean;
+    bio: boolean;
   };
 }
 
@@ -16,11 +23,32 @@ export interface ProfileCompletionRequirements {
     required: string[];
     optional: string[];
   };
+  passport: {
+    required: string[];
+  };
   education: {
     minimumRecords: number;
   };
   languageTest: {
     minimumRecords: number;
+  };
+  preferences: {
+    required: string[];
+  };
+  employment: {
+    optional: boolean;
+  };
+  funding: {
+    required: string[];
+  };
+  emergency: {
+    required: string[];
+  };
+  sop: {
+    optional: boolean;
+  };
+  bio: {
+    optional: boolean;
   };
 }
 
@@ -29,11 +57,32 @@ const DEFAULT_REQUIREMENTS: ProfileCompletionRequirements = {
     required: ['firstName', 'lastName', 'phone', 'dateOfBirth', 'nationality', 'country'],
     optional: ['bio', 'profileImageUrl'],
   },
+  passport: {
+    required: ['passportNumber', 'passportExpiryDate', 'passportCountry'],
+  },
   education: {
     minimumRecords: 1,
   },
   languageTest: {
     minimumRecords: 1,
+  },
+  preferences: {
+    required: ['preferredCountry', 'preferredCourseLevel'],
+  },
+  employment: {
+    optional: true,
+  },
+  funding: {
+    required: ['fundingSource'],
+  },
+  emergency: {
+    required: ['emergencyContactName', 'emergencyContactPhone'],
+  },
+  sop: {
+    optional: true,
+  },
+  bio: {
+    optional: true,
   },
 };
 
@@ -41,13 +90,21 @@ export function calculateProfileCompletion(
   profile: StudentProfile | undefined,
   educations: StudentEducation[],
   languageScores: StudentLanguageScore[],
+  employments: StudentEmployment[] = [],
   requirements: ProfileCompletionRequirements = DEFAULT_REQUIREMENTS
 ): ProfileCompletionResult {
   const missingFields: string[] = [];
   const completedSections = {
     personalInfo: false,
+    passport: false,
     education: false,
     languageTest: false,
+    preferences: false,
+    employment: false,
+    funding: false,
+    emergency: false,
+    sop: false,
+    bio: false,
   };
 
   if (!profile) {
@@ -59,19 +116,26 @@ export function calculateProfileCompletion(
     };
   }
 
-  const personalInfoMissing: string[] = [];
-  requirements.personalInfo.required.forEach((field) => {
-    const value = profile[field as keyof StudentProfile];
-    if (!value || (typeof value === 'string' && value.trim() === '')) {
-      personalInfoMissing.push(field);
+  const checkFields = (fields: string[], sectionName: string): boolean => {
+    const missing: string[] = [];
+    fields.forEach((field) => {
+      const value = profile[field as keyof StudentProfile];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        missing.push(field);
+      }
+    });
+    if (missing.length > 0) {
+      missingFields.push(...missing.map(f => `${sectionName}: ${formatFieldName(f)}`));
+      return false;
     }
-  });
+    return true;
+  };
 
-  if (personalInfoMissing.length === 0) {
-    completedSections.personalInfo = true;
-  } else {
-    missingFields.push(...personalInfoMissing.map(f => `Personal Info: ${formatFieldName(f)}`));
-  }
+  completedSections.personalInfo = checkFields(requirements.personalInfo.required, 'Personal Info');
+  completedSections.passport = checkFields(requirements.passport.required, 'Passport');
+  completedSections.preferences = checkFields(requirements.preferences.required, 'Preferences');
+  completedSections.funding = checkFields(requirements.funding.required, 'Funding');
+  completedSections.emergency = checkFields(requirements.emergency.required, 'Emergency Contact');
 
   if (educations.length >= requirements.education.minimumRecords) {
     completedSections.education = true;
@@ -85,10 +149,15 @@ export function calculateProfileCompletion(
     missingFields.push(`At least ${requirements.languageTest.minimumRecords} language test score(s) required`);
   }
 
-  const totalSections = 3;
-  const completedCount = Object.values(completedSections).filter(Boolean).length;
-  const percentage = Math.round((completedCount / totalSections) * 100);
-  const isComplete = completedCount === totalSections;
+  completedSections.employment = employments.length > 0 || requirements.employment.optional;
+  completedSections.sop = !!(profile.statementOfPurpose && profile.statementOfPurpose.trim().length > 0) || requirements.sop.optional;
+  completedSections.bio = !!(profile.bio && profile.bio.trim().length > 0) || requirements.bio.optional;
+
+  const requiredSections = ['personalInfo', 'passport', 'education', 'languageTest', 'preferences', 'funding', 'emergency'] as const;
+  const totalRequiredSections = requiredSections.length;
+  const completedRequiredCount = requiredSections.filter(s => completedSections[s]).length;
+  const percentage = Math.round((completedRequiredCount / totalRequiredSections) * 100);
+  const isComplete = completedRequiredCount === totalRequiredSections;
 
   return {
     isComplete,
