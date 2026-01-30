@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, 
   AlertCircle, 
@@ -20,7 +21,9 @@ import {
   Globe,
   DollarSign,
   FileCheck,
-  MessageSquare
+  MessageSquare,
+  FolderOpen,
+  ClipboardList
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
@@ -28,6 +31,8 @@ import { ApplicationDetailsPanel } from "@/components/application-details-panel"
 import { ApplicationProgressBar } from "@/components/application-progress-bar";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { StudentVerificationPanel } from "@/components/admin/student-verification-panel";
+import { StudentProfileViewer } from "@/components/admin/student-profile-viewer";
+import { StudentDocumentOrganizer } from "@/components/admin/student-document-organizer";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
@@ -121,7 +126,6 @@ function AdminApplicationDetailContent() {
   const applicationId = params?.id;
   const { user } = useAuth();
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
-  const [showVerificationPanel, setShowVerificationPanel] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery<AdminApplicationDetail>({
     queryKey: ["/api/admin/applications", applicationId],
@@ -275,16 +279,6 @@ function AdminApplicationDetailContent() {
                 <Calendar className="h-4 w-4" />
                 Applied: {format(new Date(application.createdAt), 'MMM d, yyyy')}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3"
-                onClick={() => setShowVerificationPanel(!showVerificationPanel)}
-                data-testid="button-toggle-verification"
-              >
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                {showVerificationPanel ? 'Hide' : 'View'} Profile Verification
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -329,7 +323,7 @@ function AdminApplicationDetailContent() {
                 <p className="text-xs text-muted-foreground">Tuition Fees</p>
                 <p className="text-sm font-medium flex items-center gap-1">
                   <DollarSign className="h-3 w-3" />
-                  {course.fees != null ? (typeof course.fees === 'number' ? `$${course.fees.toLocaleString()}` : course.fees) : 'Not specified'}
+                  {course.fees ?? 'Not specified'}
                 </p>
               </div>
               <div>
@@ -351,75 +345,121 @@ function AdminApplicationDetailContent() {
         </Card>
       </div>
 
-      {/* Student Profile Verification Panel */}
-      {showVerificationPanel && (
-        <StudentVerificationPanel 
-          profileId={student.id}
-          studentName={`${student.firstName} ${student.lastName}`}
-          onClose={() => setShowVerificationPanel(false)}
-        />
-      )}
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-application-detail">
+          <TabsTrigger value="overview" className="flex items-center gap-2" data-testid="tab-overview">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2" data-testid="tab-profile">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Profile Data</span>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-2" data-testid="tab-documents">
+            <FolderOpen className="h-4 w-4" />
+            <span className="hidden sm:inline">Documents</span>
+          </TabsTrigger>
+          <TabsTrigger value="verification" className="flex items-center gap-2" data-testid="tab-verification">
+            <ShieldCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Verification</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Document Progress Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileCheck className="h-5 w-5" />
-            Document Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="flex justify-between text-sm mb-1">
-                <span>Required Documents</span>
-                <span className="font-medium">{progress}%</span>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4 mt-4">
+          {/* Document Progress Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Document Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Required Documents</span>
+                    <span className="font-medium">{progress}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all" 
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-center px-4 border-l">
+                  <p className="text-2xl font-bold" data-testid="text-doc-uploaded">{documentProgress.requiredUploaded}</p>
+                  <p className="text-xs text-muted-foreground">of {documentProgress.requiredDocs} required</p>
+                </div>
+                <div className="text-center px-4 border-l">
+                  <p className="text-2xl font-bold">{documentProgress.totalDocs}</p>
+                  <p className="text-xs text-muted-foreground">total docs</p>
+                </div>
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all" 
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-            <div className="text-center px-4 border-l">
-              <p className="text-2xl font-bold" data-testid="text-doc-uploaded">{documentProgress.requiredUploaded}</p>
-              <p className="text-xs text-muted-foreground">of {documentProgress.requiredDocs} required</p>
-            </div>
-            <div className="text-center px-4 border-l">
-              <p className="text-2xl font-bold">{documentProgress.totalDocs}</p>
-              <p className="text-xs text-muted-foreground">total docs</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Application Details Panel with all features */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Application Management
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Process application, manage documents, and communicate with the student
-          </p>
-        </CardHeader>
-        <CardContent>
-          <ApplicationDetailsPanel
-            application={application as any}
-            course={course}
-            university={university}
-            student={student}
-            consultant={consultant}
-            currentUserId={user?.id}
+          {/* Application Details Panel with all features */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Application Management
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Process application, manage documents, and communicate with the student
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ApplicationDetailsPanel
+                application={application as any}
+                course={course}
+                university={university}
+                student={student}
+                consultant={consultant}
+                currentUserId={user?.id}
+                onClose={() => {}}
+                onDeleted={() => {
+                  window.location.href = "/admin";
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Profile Data Tab */}
+        <TabsContent value="profile" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              <StudentProfileViewer 
+                profileId={student.id}
+                studentName={`${student.firstName} ${student.lastName}`}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              <StudentDocumentOrganizer studentProfileId={student.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Verification Tab */}
+        <TabsContent value="verification" className="mt-4">
+          <StudentVerificationPanel 
+            profileId={student.id}
+            studentName={`${student.firstName} ${student.lastName}`}
             onClose={() => {}}
-            onDeleted={() => {
-              window.location.href = "/admin";
-            }}
           />
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       <CreateReminderModal
         open={reminderDialogOpen}

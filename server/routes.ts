@@ -100,6 +100,11 @@ import {
   profileSectionVerifications,
   profileChangeHistory,
   applicationProfileSnapshots,
+  // Student profile related imports
+  studentEducations,
+  studentLanguageScores,
+  studentEmployments,
+  documents,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -3837,6 +3842,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching change history:", error);
       res.status(500).json({ message: "Failed to fetch change history" });
+    }
+  });
+
+  // GET /api/admin/student-profiles/:profileId - Get complete student profile data (admin)
+  app.get("/api/admin/student-profiles/:profileId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { profileId } = req.params;
+      const userType = req.user.claims.userType;
+      
+      if (!['admin', 'platform_admin', 'employee'].includes(userType)) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Get main profile
+      const profile = await db.query.studentProfiles.findFirst({
+        where: eq(studentProfiles.id, profileId),
+      });
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+      
+      // Get education history
+      const education = await db.query.studentEducations.findMany({
+        where: eq(studentEducations.studentProfileId, profileId),
+        orderBy: [desc(studentEducations.endDate)],
+      });
+      
+      // Get language scores
+      const languageScores = await db.query.studentLanguageScores.findMany({
+        where: eq(studentLanguageScores.studentProfileId, profileId),
+        orderBy: [desc(studentLanguageScores.testDate)],
+      });
+      
+      // Get employment history
+      const employment = await db.query.studentEmployments.findMany({
+        where: eq(studentEmployments.studentProfileId, profileId),
+        orderBy: [desc(studentEmployments.endDate)],
+      });
+      
+      // Get documents count by type
+      const userDocs = await db.select({
+        id: documents.id,
+        type: documents.type,
+        title: documents.title,
+        status: documents.status,
+        createdAt: documents.createdAt,
+      }).from(documents).where(eq(documents.senderId, profile.userId));
+      
+      res.json({
+        profile,
+        education,
+        languageScores,
+        employment,
+        documentsSummary: {
+          total: userDocs.length,
+          byType: userDocs.reduce((acc: Record<string, number>, doc) => {
+            acc[doc.type] = (acc[doc.type] || 0) + 1;
+            return acc;
+          }, {}),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching student profile:", error);
+      res.status(500).json({ message: "Failed to fetch student profile" });
     }
   });
 
