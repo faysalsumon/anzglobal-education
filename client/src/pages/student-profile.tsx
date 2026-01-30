@@ -821,8 +821,8 @@ function StudentProfileContent() {
     mutationFn: async (data: z.infer<typeof educationFormSchema>) => {
       // Transform form data to match backend schema
       const payload = {
-        level: data.level,
-        institution: data.institution,
+        level: data.level || undefined,
+        institution: data.institution || undefined,
         fieldOfStudy: data.fieldOfStudy || undefined,
         country: data.country || undefined,
         startDate: data.startDate || undefined,
@@ -830,6 +830,10 @@ function StudentProfileContent() {
         isCurrentlyStudying: data.isCurrentlyStudying,
         gpa: data.gpa && data.gpa !== "" ? data.gpa : undefined,
         gradeScale: data.gradeScale || undefined,
+        // New smart matching fields
+        qualificationTypeId: data.qualificationTypeId || undefined,
+        yearCompleted: data.yearCompleted ? parseInt(data.yearCompleted, 10) : undefined,
+        gradeResult: data.gradeResult || undefined,
       };
       
       if (editingEducation) {
