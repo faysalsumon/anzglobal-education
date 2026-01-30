@@ -455,21 +455,54 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
         </AccordionItem>
 
         {/* Statement of Purpose */}
+        {/* Emergency Contact Section */}
+        <AccordionItem value="emergency" className="border rounded-lg px-4">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-emergency">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-primary" />
+              <span>Emergency Contact</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 py-2">
+              <DataRow label="Contact Name" value={profile.emergencyContactName} icon={User} />
+              <DataRow label="Contact Phone" value={profile.emergencyContactPhone} icon={Phone} />
+              {!profile.emergencyContactName && !profile.emergencyContactPhone && (
+                <p className="text-sm text-muted-foreground col-span-2">No emergency contact provided</p>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Statement of Purpose Section */}
         <AccordionItem value="sop" className="border rounded-lg px-4">
           <AccordionTrigger className="hover:no-underline" data-testid="accordion-sop">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              <span>Statement of Purpose & Bio</span>
+              <span>Statement of Purpose</span>
             </div>
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-4 py-2">
-              {profile.statementOfPurpose && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Statement of Purpose</p>
-                  <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-lg">{profile.statementOfPurpose}</p>
-                </div>
+              {profile.statementOfPurpose ? (
+                <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-lg">{profile.statementOfPurpose}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">No statement of purpose provided</p>
               )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Bio & Career Goals Section */}
+        <AccordionItem value="bio" className="border rounded-lg px-4">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-bio">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              <span>Bio & Career Goals</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-4 py-2">
               {profile.bio && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Bio</p>
@@ -482,8 +515,8 @@ export function StudentProfileViewer({ profileId, studentName }: StudentProfileV
                   <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-lg">{profile.careerGoals}</p>
                 </div>
               )}
-              {!profile.statementOfPurpose && !profile.bio && !profile.careerGoals && (
-                <p className="text-sm text-muted-foreground">No statement of purpose or bio provided</p>
+              {!profile.bio && !profile.careerGoals && (
+                <p className="text-sm text-muted-foreground">No bio or career goals provided</p>
               )}
             </div>
           </AccordionContent>
