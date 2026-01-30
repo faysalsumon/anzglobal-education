@@ -38,8 +38,6 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   maritalStatus: true,
   phone: true,
   whatsapp: true,
-  dateOfBirth: true,
-  nationality: true,
   country: true,
   profileImageUrl: true,
   unitNo: true,
@@ -56,8 +54,6 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated", "prefer_not_to_say"]).optional().nullable(),
   phone: z.string().min(1, "Phone number is required"),
   whatsapp: z.string().optional().nullable(),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
-  nationality: z.string().min(1, "Nationality is required"),
   country: z.string().min(1, "Country is required"),
   unitNo: z.string().optional().nullable(),
   street: z.string().optional().nullable(),
@@ -71,6 +67,8 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
 });
 
 const passportFormSchema = z.object({
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  nationality: z.string().min(1, "Nationality is required"),
   passportNumber: z.string().optional().nullable(),
   passportCountry: z.string().optional().nullable(),
   passportIssuedDate: z.string().optional().nullable(),
@@ -408,8 +406,6 @@ function StudentProfileContent() {
       maritalStatus: undefined,
       phone: "",
       whatsapp: "",
-      dateOfBirth: "",
-      nationality: "",
       country: "",
       profileImageUrl: "",
       unitNo: "",
@@ -427,6 +423,8 @@ function StudentProfileContent() {
   const passportForm = useForm<z.infer<typeof passportFormSchema>>({
     resolver: zodResolver(passportFormSchema),
     defaultValues: {
+      dateOfBirth: "",
+      nationality: "",
       passportNumber: "",
       passportCountry: "",
       passportIssuedDate: "",
@@ -546,8 +544,6 @@ function StudentProfileContent() {
         maritalStatus: (profile.maritalStatus as "single" | "married" | "divorced" | "widowed" | "separated" | "prefer_not_to_say") || undefined,
         phone: profile.phone || "",
         whatsapp: profile.whatsapp || "",
-        dateOfBirth: profile.dateOfBirth || "",
-        nationality: profile.nationality || "",
         country: profile.country || "",
         profileImageUrl: profile.profileImageUrl || "",
         unitNo: profile.unitNo || "",
@@ -574,6 +570,8 @@ function StudentProfileContent() {
         emergencyContactAddress: profile.emergencyContactAddress || "",
       });
       passportForm.reset({
+        dateOfBirth: profile.dateOfBirth || "",
+        nationality: profile.nationality || "",
         passportNumber: profile.passportNumber || "",
         passportCountry: profile.passportCountry || "",
         passportIssuedDate: profile.passportIssuedDate || "",
@@ -984,7 +982,7 @@ function StudentProfileContent() {
     const personalInfo = {
       firstName: profile?.firstName || personalForm.getValues("firstName"),
       lastName: profile?.lastName || personalForm.getValues("lastName"),
-      nationality: profile?.nationality || personalForm.getValues("nationality"),
+      nationality: profile?.nationality || passportForm.getValues("nationality"),
       countryOfResidence: profile?.currentCountry || profile?.country,
       preferredStudyDestination: profile?.destinationCountry,
       intakePreference: profile?.preferredIntakes?.[0],
@@ -1509,73 +1507,6 @@ function StudentProfileContent() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={personalForm.control}
-                      name="dateOfBirth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date of Birth *</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} type="date" data-testid="input-date-of-birth" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={personalForm.control}
-                      name="nationality"
-                      render={({ field }) => {
-                        const selectedCountry = getCountryByNationality(field.value || "");
-                        return (
-                          <FormItem>
-                            <FormLabel>Nationality *</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              value={selectedCountry?.nationality || field.value || ""}
-                            >
-                              <FormControl>
-                                <SelectTrigger data-testid="select-nationality">
-                                  <SelectValue placeholder="Select nationality">
-                                    {selectedCountry ? (
-                                      <span className="flex items-center gap-2">
-                                        <img 
-                                          src={getFlagUrl(selectedCountry.code)} 
-                                          alt={selectedCountry.name} 
-                                          className="w-5 h-auto"
-                                        />
-                                        {selectedCountry.nationality}
-                                      </span>
-                                    ) : field.value ? (
-                                      <span>{field.value}</span>
-                                    ) : null}
-                                  </SelectValue>
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-[300px]">
-                                {NATIONALITIES_SORTED.map((country) => (
-                                  <SelectItem key={`nat-${country.code}`} value={country.nationality}>
-                                    <span className="flex items-center gap-2">
-                                      <img 
-                                        src={getFlagUrl(country.code)} 
-                                        alt={country.name}
-                                        className="w-5 h-auto"
-                                      />
-                                      {country.nationality}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-
-                    <FormField
-                      control={personalForm.control}
                       name="country"
                       render={({ field }) => {
                         const selectedCountry = getCountryByName(field.value || "");
@@ -1908,6 +1839,73 @@ function StudentProfileContent() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={passportForm.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Birth *</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} type="date" data-testid="input-date-of-birth" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={passportForm.control}
+                      name="nationality"
+                      render={({ field }) => {
+                        const selectedCountry = getCountryByNationality(field.value || "");
+                        return (
+                          <FormItem>
+                            <FormLabel>Nationality *</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              value={selectedCountry?.nationality || field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-nationality">
+                                  <SelectValue placeholder="Select nationality">
+                                    {selectedCountry ? (
+                                      <span className="flex items-center gap-2">
+                                        <img 
+                                          src={getFlagUrl(selectedCountry.code)} 
+                                          alt={selectedCountry.name} 
+                                          className="w-5 h-auto"
+                                        />
+                                        {selectedCountry.nationality}
+                                      </span>
+                                    ) : field.value ? (
+                                      <span>{field.value}</span>
+                                    ) : null}
+                                  </SelectValue>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[300px]">
+                                {NATIONALITIES_SORTED.map((country) => (
+                                  <SelectItem key={`nat-${country.code}`} value={country.nationality}>
+                                    <span className="flex items-center gap-2">
+                                      <img 
+                                        src={getFlagUrl(country.code)} 
+                                        alt={country.name}
+                                        className="w-5 h-auto"
+                                      />
+                                      {country.nationality}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={passportForm.control}
