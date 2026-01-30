@@ -58,6 +58,13 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
   - Progress bar showing overall completion percentage based on 7 required sections
   - Conditional sponsor fields visibility (hidden when funding is "self" or "loan")
   - Visa status fields conditional on Australia location preference
+  - **Field-Level Verification System**: Track verification status per profile section with:
+    - Verification statuses: unverified, pending_verification, verified, needs_reverification
+    - Automatic change detection that sets sections to "needs_reverification" when fields are updated
+    - Change history logging with field-level diff tracking (old value, new value, timestamp)
+    - Verification badges displayed alongside completion badges in student profile
+    - Admin StudentVerificationPanel in application detail page for reviewing and approving section changes
+    - Application profile snapshots created at submission time to preserve verified profile data
 - **Public Pages**: Landing page, "Study in Australia" page, course/institution detail pages, lead generation forms.
 - **Dashboards**: CTO, Student, University, and Platform Admin dashboards with consistent UI/UX and overview statistics.
 - **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.

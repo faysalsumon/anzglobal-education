@@ -27,8 +27,10 @@ import { AdminLayout } from "@/components/admin-layout";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { ApplicationProgressBar } from "@/components/application-progress-bar";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
+import { StudentVerificationPanel } from "@/components/admin/student-verification-panel";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 
 type ApplicationStage = 
@@ -119,6 +121,7 @@ function AdminApplicationDetailContent() {
   const applicationId = params?.id;
   const { user } = useAuth();
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [showVerificationPanel, setShowVerificationPanel] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery<AdminApplicationDetail>({
     queryKey: ["/api/admin/applications", applicationId],
@@ -272,6 +275,16 @@ function AdminApplicationDetailContent() {
                 <Calendar className="h-4 w-4" />
                 Applied: {format(new Date(application.createdAt), 'MMM d, yyyy')}
               </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-3"
+                onClick={() => setShowVerificationPanel(!showVerificationPanel)}
+                data-testid="button-toggle-verification"
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                {showVerificationPanel ? 'Hide' : 'View'} Profile Verification
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -337,6 +350,15 @@ function AdminApplicationDetailContent() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Student Profile Verification Panel */}
+      {showVerificationPanel && (
+        <StudentVerificationPanel 
+          profileId={student.id}
+          studentName={`${student.firstName} ${student.lastName}`}
+          onClose={() => setShowVerificationPanel(false)}
+        />
+      )}
 
       {/* Document Progress Card */}
       <Card>

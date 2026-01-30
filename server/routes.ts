@@ -6509,6 +6509,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Create profile snapshot to preserve profile data at application submission time
+      try {
+        const employments = await storage.getEmploymentsByStudentProfileId(profile.id);
+        const verifications = await db.query.profileSectionVerifications.findMany({
+          where: eq(profileSectionVerifications.studentProfileId, profile.id),
+        });
+        
+        await db.insert(applicationProfileSnapshots).values({
+          applicationId: application.id,
+          studentProfileId: profile.id,
+          profileData: profile as any,
+          educationData: educations as any,
+          languageData: languageScores as any,
+          employmentData: employments as any,
+          verificationStatusSnapshot: verifications.map(v => ({ 
+            section: v.section, 
+            status: v.status,
+            verifiedAt: v.verifiedAt 
+          })) as any,
+        });
+      } catch (snapshotError) {
+        console.error("Error creating profile snapshot:", snapshotError);
+        // Don't fail the application creation if snapshot creation fails
+      }
+      
       // Send notification to university
       try {
         const course = await storage.getCourseById(application.courseId);
