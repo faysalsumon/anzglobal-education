@@ -1050,12 +1050,12 @@ export default function PublicInstitutions() {
                 No institutions found matching your criteria.
               </div>
             ) : viewMode === "list" ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Institution Cards - Single Row Design */}
                 {institutions.map((institution) => (
                   <Card
                     key={institution.id}
-                    className="hover-elevate"
+                    className="hover-elevate shadow-md"
                     data-testid={`card-institution-${institution.id}`}
                   >
                     <CardContent className="p-4">
