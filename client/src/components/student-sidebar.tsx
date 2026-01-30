@@ -84,7 +84,7 @@ interface StudentSidebarProps {
 
 export function StudentSidebar({ className }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
-  const [activeSection, setActiveSection] = useState<string | null>("dashboard");
+  const [activeSection, setActiveSection] = useState<string | null>("profile");
   const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
   const { user } = useAuth();
 
@@ -117,9 +117,9 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
 
   const navConfig: NavSection[] = [
     {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
+      id: "profile",
+      label: "My Profile",
+      icon: User,
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
         { icon: User, label: "My Profile", path: "/student/profile" },
