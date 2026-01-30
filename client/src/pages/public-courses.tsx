@@ -1630,7 +1630,7 @@ export default function PublicCourses() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                 {/* Course Cards - Single Column Horizontal Design */}
                 {paginatedCourses.map((course) => {
                   const isHighlighted = highlightedCourseId !== null && Number(course.id) === highlightedCourseId;
@@ -1646,7 +1646,7 @@ export default function PublicCourses() {
                     <Card 
                       key={course.id} 
                       ref={isHighlighted ? highlightedRef : null}
-                      className={`hover-elevate transition-all duration-300 cursor-pointer ${
+                      className={`hover-elevate shadow-md transition-all duration-300 cursor-pointer ${
                         isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
                       }`}
                       onClick={() => navigate(`/courses/${course.id}`)}
