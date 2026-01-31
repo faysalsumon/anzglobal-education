@@ -1647,20 +1647,24 @@ export default function PublicCourses() {
                     <Card 
                       key={course.id} 
                       ref={isHighlighted ? highlightedRef : null}
-                      className={`hover-elevate shadow-md transition-all duration-300 cursor-pointer ${
+                      className={`hover-elevate shadow-md transition-all duration-300 cursor-pointer overflow-hidden ${
                         isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
                       }`}
                       onClick={() => navigate(`/courses/${course.id}`)}
                       data-testid={`course-card-${course.id}`}
                     >
-                      {/* Course Thumbnail */}
-                      <CourseThumbnail
-                        src={course.thumbnailUrl}
-                        alt={course.title}
-                        status={course.thumbnailStatus}
-                        testId={`img-thumbnail-${course.id}`}
-                      />
-                      <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row">
+                        {/* Course Thumbnail - Left side on desktop, top on mobile */}
+                        <div className="sm:w-48 sm:flex-shrink-0">
+                          <CourseThumbnail
+                            src={course.thumbnailUrl}
+                            alt={course.title}
+                            status={course.thumbnailStatus}
+                            testId={`img-thumbnail-${course.id}`}
+                            className="sm:h-full sm:rounded-l-md sm:rounded-t-none"
+                          />
+                        </div>
+                        <CardContent className="p-4 flex-1">
                         {/* Top Row: Favorite and Compare in top right */}
                         <div className="flex justify-between items-start mb-3 gap-2">
                           {/* Top Left: Search Highlight Badge */}
@@ -1859,6 +1863,7 @@ export default function PublicCourses() {
                           </div>
                         </div>
                       </CardContent>
+                      </div>
                     </Card>
                   );
                 })}
