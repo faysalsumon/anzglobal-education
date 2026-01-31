@@ -865,6 +865,7 @@ export default function PublicCourseDetail() {
                           // Format payment option label
                           const paymentLabels: Record<string, string> = {
                             'upfront': 'Upfront',
+                            'installment': 'Installment',
                             'payment_plan': 'Payment Plan',
                             'per_term': 'Per Term',
                             'per_unit': 'Per Unit',
@@ -872,6 +873,8 @@ export default function PublicCourseDetail() {
                           // Format location label
                           const locationLabels: Record<string, string> = {
                             'all': '',
+                            'onshore': 'Onshore',
+                            'offshore': 'Offshore',
                             'domestic': 'Domestic',
                             'international': 'International',
                             'country': tier.country || '',
