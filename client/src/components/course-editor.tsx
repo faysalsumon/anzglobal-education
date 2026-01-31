@@ -2071,6 +2071,31 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                     <CardDescription>Course costs and pricing configuration</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Fee Period Selector - At top since it applies to all fees */}
+                    <div className="flex items-center justify-between py-2 border-b pb-4">
+                      <div>
+                        <span className="text-sm font-medium">Fee Period</span>
+                        <p className="text-xs text-muted-foreground">How all tuition fees are quoted</p>
+                      </div>
+                      <Select
+                        value={pricingConfig.feePeriod}
+                        onValueChange={(value: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total') => {
+                          setPricingConfig(prev => ({ ...prev, feePeriod: value }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px]" data-testid="select-fee-period">
+                          <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="annual">Annual (Per Year)</SelectItem>
+                          <SelectItem value="per_semester">Per Semester</SelectItem>
+                          <SelectItem value="per_trimester">Per Trimester</SelectItem>
+                          <SelectItem value="per_term">Per Term</SelectItem>
+                          <SelectItem value="total">Total Course Fee</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -2148,31 +2173,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             }}
                           />
                         </div>
-                      </div>
-
-                      {/* Fee Period Selector - Always visible */}
-                      <div className="mt-4 flex items-center justify-between py-2">
-                        <div>
-                          <span className="text-sm font-medium">Fee Period</span>
-                          <p className="text-xs text-muted-foreground">How the tuition fee is quoted</p>
-                        </div>
-                        <Select
-                          value={pricingConfig.feePeriod}
-                          onValueChange={(value: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total') => {
-                            setPricingConfig(prev => ({ ...prev, feePeriod: value }));
-                          }}
-                        >
-                          <SelectTrigger className="w-[180px]" data-testid="select-fee-period">
-                            <SelectValue placeholder="Select period" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="annual">Annual (Per Year)</SelectItem>
-                            <SelectItem value="per_semester">Per Semester</SelectItem>
-                            <SelectItem value="per_trimester">Per Trimester</SelectItem>
-                            <SelectItem value="per_term">Per Term</SelectItem>
-                            <SelectItem value="total">Total Course Fee</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
 
                       {pricingConfig.pricingModel === 'dynamic' && (
