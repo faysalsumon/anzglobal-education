@@ -4569,6 +4569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Pricing config validation schema (with coercion for numeric fields from form inputs)
   const pricingConfigSchema = z.object({
     pricingModel: z.enum(['fixed', 'dynamic']).default('fixed'),
+    feePeriod: z.enum(['annual', 'per_semester', 'per_trimester', 'per_term', 'total']).optional().default('annual'),
     enablePaymentOptions: z.boolean().optional().default(false),
     enableStudyModes: z.boolean().optional().default(false),
     enableLocationPricing: z.boolean().optional().default(false),
@@ -4605,7 +4606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate request body with Zod schema
       const validatedData = pricingConfigSchema.parse(req.body);
-      const { pricingModel, enablePaymentOptions, enableStudyModes, enableLocationPricing, 
+      const { pricingModel, feePeriod, enablePaymentOptions, enableStudyModes, enableLocationPricing, 
               installmentCount, firstPaymentAmount, installmentFee, admissionFeeIncluded } = validatedData;
 
       // Check if config already exists
@@ -4619,6 +4620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         [result] = await db.update(coursePricingConfig)
           .set({
             pricingModel: pricingModel || 'fixed',
+            feePeriod: feePeriod || 'annual',
             enablePaymentOptions: enablePaymentOptions ?? false,
             enableStudyModes: enableStudyModes ?? false,
             enableLocationPricing: enableLocationPricing ?? false,
@@ -4636,6 +4638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .values({
             courseId: req.params.courseId,
             pricingModel: pricingModel || 'fixed',
+            feePeriod: feePeriod || 'annual',
             enablePaymentOptions: enablePaymentOptions ?? false,
             enableStudyModes: enableStudyModes ?? false,
             enableLocationPricing: enableLocationPricing ?? false,

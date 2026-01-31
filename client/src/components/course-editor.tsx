@@ -611,6 +611,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   // Pricing configuration state
   const [pricingConfig, setPricingConfig] = useState<{
     pricingModel: 'fixed' | 'dynamic';
+    feePeriod: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total';
     enablePaymentOptions: boolean;
     enableStudyModes: boolean;
     enableLocationPricing: boolean;
@@ -620,6 +621,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     admissionFeeIncluded: string;
   }>({
     pricingModel: 'fixed',
+    feePeriod: 'annual',
     enablePaymentOptions: false,
     enableStudyModes: false,
     enableLocationPricing: false,
@@ -678,6 +680,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   // Pricing config query
   const { data: fetchedPricingConfig } = useQuery<{
     pricingModel: 'fixed' | 'dynamic';
+    feePeriod: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total';
     enablePaymentOptions: boolean;
     enableStudyModes: boolean;
     enableLocationPricing: boolean;
@@ -712,6 +715,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     if (fetchedPricingConfig) {
       setPricingConfig({
         pricingModel: fetchedPricingConfig.pricingModel || 'fixed',
+        feePeriod: fetchedPricingConfig.feePeriod || 'annual',
         enablePaymentOptions: fetchedPricingConfig.enablePaymentOptions || false,
         enableStudyModes: fetchedPricingConfig.enableStudyModes || false,
         enableLocationPricing: fetchedPricingConfig.enableLocationPricing || false,
@@ -2144,6 +2148,31 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                             }}
                           />
                         </div>
+                      </div>
+
+                      {/* Fee Period Selector - Always visible */}
+                      <div className="mt-4 flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm font-medium">Fee Period</span>
+                          <p className="text-xs text-muted-foreground">How the tuition fee is quoted</p>
+                        </div>
+                        <Select
+                          value={pricingConfig.feePeriod}
+                          onValueChange={(value: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total') => {
+                            setPricingConfig(prev => ({ ...prev, feePeriod: value }));
+                          }}
+                        >
+                          <SelectTrigger className="w-[180px]" data-testid="select-fee-period">
+                            <SelectValue placeholder="Select period" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="annual">Annual (Per Year)</SelectItem>
+                            <SelectItem value="per_semester">Per Semester</SelectItem>
+                            <SelectItem value="per_trimester">Per Trimester</SelectItem>
+                            <SelectItem value="per_term">Per Term</SelectItem>
+                            <SelectItem value="total">Total Course Fee</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {pricingConfig.pricingModel === 'dynamic' && (

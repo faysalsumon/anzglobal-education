@@ -101,13 +101,26 @@ export default function PublicCourseDetail() {
     enabled: !!courseId,
   });
 
+  // Fetch pricing config for the course (includes feePeriod)
+  interface PricingConfig {
+    pricingModel: 'fixed' | 'dynamic';
+    feePeriod: 'annual' | 'per_semester' | 'per_trimester' | 'per_term' | 'total';
+    enablePaymentOptions: boolean;
+    enableStudyModes: boolean;
+    enableLocationPricing: boolean;
+  }
+  const { data: pricingConfig } = useQuery<PricingConfig | null>({
+    queryKey: ["/api/courses", courseId, "pricing-config"],
+    enabled: !!courseId,
+  });
+
   // Fetch dynamic pricing tiers for the course
   interface PricingTier {
     id: string;
     courseId: string;
-    paymentOption: 'upfront' | 'payment_plan' | 'per_term' | 'per_unit';
-    studyMode: 'full_time' | 'part_time' | 'weekend' | 'evening' | 'online' | 'all';
-    locationType: 'all' | 'domestic' | 'international' | 'country';
+    paymentOption: 'upfront' | 'installment';
+    studyMode: 'full_time' | 'part_time' | 'weekend' | 'evening' | 'online' | 'all' | 'weekday';
+    locationType: 'all' | 'onshore' | 'offshore' | 'country';
     country: string | null;
     isDefaultPrice: boolean;
     amount: string;
@@ -853,10 +866,21 @@ export default function PublicCourseDetail() {
                     <div className="space-y-4 mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {pricingTiers.map((tier) => {
+                          // Format fee period label
+                          const feePeriodLabels: Record<string, string> = {
+                            'annual': 'Per Year',
+                            'per_semester': 'Per Semester',
+                            'per_trimester': 'Per Trimester',
+                            'per_term': 'Per Term',
+                            'total': 'Total Course Fee',
+                          };
+                          const feePeriodLabel = pricingConfig?.feePeriod ? feePeriodLabels[pricingConfig.feePeriod] : 'Per Year';
+                          
                           // Format study mode label
                           const studyModeLabels: Record<string, string> = {
                             'full_time': 'Full-Time',
                             'part_time': 'Part-Time',
+                            'weekday': 'Weekday',
                             'weekend': 'Weekend',
                             'evening': 'Evening',
                             'online': 'Online',
@@ -916,8 +940,9 @@ export default function PublicCourseDetail() {
                               <p className="text-3xl font-bold text-primary" data-testid={`text-tier-amount-${tier.id}`}>
                                 {tier.currency} {Number(tier.amount).toLocaleString()}
                               </p>
+                              <p className="text-xs text-muted-foreground mt-1">{feePeriodLabel}</p>
                               {tier.description && (
-                                <p className="text-xs text-muted-foreground mt-2">{tier.description}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{tier.description}</p>
                               )}
                             </div>
                           );
@@ -929,18 +954,36 @@ export default function PublicCourseDetail() {
                   {/* Static Fees - Show only when NO dynamic pricing exists */}
                   {pricingTiers.length === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {course.fees && (
-                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-annual-tuition">
-                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span className="text-sm text-muted-foreground">Annual Tuition</span>
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                              <GraduationCap className="h-4 w-4 text-primary" />
+                      {course.fees && (() => {
+                        const feePeriodTitles: Record<string, string> = {
+                          'annual': 'Annual Tuition',
+                          'per_semester': 'Semester Tuition',
+                          'per_trimester': 'Trimester Tuition',
+                          'per_term': 'Term Tuition',
+                          'total': 'Total Course Tuition',
+                        };
+                        const feePeriodLabels: Record<string, string> = {
+                          'annual': 'Per Year',
+                          'per_semester': 'Per Semester',
+                          'per_trimester': 'Per Trimester',
+                          'per_term': 'Per Term',
+                          'total': 'Full Course Fee',
+                        };
+                        const feePeriodTitle = pricingConfig?.feePeriod ? feePeriodTitles[pricingConfig.feePeriod] : 'Annual Tuition';
+                        const feePeriodLabel = pricingConfig?.feePeriod ? feePeriodLabels[pricingConfig.feePeriod] : 'Per Year';
+                        return (
+                          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-tuition">
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                              <span className="text-sm text-muted-foreground">{feePeriodTitle}</span>
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <GraduationCap className="h-4 w-4 text-primary" />
+                              </div>
                             </div>
+                            <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{feePeriodLabel}</p>
                           </div>
-                          <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Per year</p>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
 

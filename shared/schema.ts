@@ -1180,11 +1180,22 @@ export const pricingLocationTypeEnum = pgEnum('pricing_location_type', [
   'country',   // Country-specific pricing
 ]);
 
+// Fee period enum - indicates billing cycle (display vs billing may differ in Australian unis)
+export const feePeriodEnum = pgEnum('fee_period', [
+  'annual',       // Per year (most common display format)
+  'per_semester', // Per semester (typically 2 per year)
+  'per_trimester', // Per trimester (typically 3 per year)
+  'per_term',     // Per term (typically 4 per year)
+  'total',        // Total course fee
+]);
+
 // Course pricing configuration - stores the pricing model for each course
 export const coursePricingConfig = pgTable("course_pricing_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   pricingModel: pricingModelEnum("pricing_model").notNull().default('fixed'),
+  // Fee period - how the fee is quoted (annual, per semester, etc.)
+  feePeriod: feePeriodEnum("fee_period").default('annual'),
   // Dimension toggles for dynamic pricing
   enablePaymentOptions: boolean("enable_payment_options").default(false), // Upfront vs Installment
   enableStudyModes: boolean("enable_study_modes").default(false),        // Weekday/Weekend/Online
