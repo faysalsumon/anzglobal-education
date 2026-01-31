@@ -63,7 +63,7 @@ export function CourseThumbnail({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden bg-muted ${aspectClasses[aspectRatio]} ${className.includes('rounded') ? '' : 'rounded-t-md'} ${className}`}
+      className={`relative overflow-hidden rounded-t-md bg-muted ${aspectClasses[aspectRatio]} ${className}`}
       data-testid={testId}
     >
       {showSkeleton && (

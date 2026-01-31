@@ -4211,12 +4211,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const courseId = req.params.courseId;
-      const course = await storage.getCourseById(courseId);
+      const course = await storage.getCourse(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const university = await storage.getUniversityById(course.universityId);
+      const university = await storage.getUniversity(course.universityId);
       
       const { addThumbnailJob } = await import('./thumbnail-queue');
       const { isRedisAvailable } = await import('./scraping-queue');
@@ -4270,7 +4270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/courses/:courseId/thumbnail-status", async (req, res) => {
     try {
-      const course = await storage.getCourseById(req.params.courseId);
+      const course = await storage.getCourse(req.params.courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
@@ -4311,9 +4311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (courseIds && Array.isArray(courseIds)) {
         for (const id of courseIds) {
-          const course = await storage.getCourseById(id);
+          const course = await storage.getCourse(id);
           if (course) {
-            const university = await storage.getUniversityById(course.universityId);
+            const university = await storage.getUniversity(course.universityId);
             coursesToProcess.push({
               courseId: course.id,
               courseTitle: course.title,
@@ -4337,7 +4337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(100);
         
         for (const course of allCourses) {
-          const university = await storage.getUniversityById(course.universityId);
+          const university = await storage.getUniversity(course.universityId);
           coursesToProcess.push({
             courseId: course.id,
             courseTitle: course.title,
@@ -4379,7 +4379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const courseId = req.params.courseId;
-      const course = await storage.getCourseById(courseId);
+      const course = await storage.getCourse(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
