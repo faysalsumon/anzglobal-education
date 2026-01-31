@@ -4211,7 +4211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const courseId = req.params.courseId;
-      const course = await storage.getCourse(courseId);
+      const course = await storage.getCourseById(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
@@ -4270,7 +4270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get("/api/courses/:courseId/thumbnail-status", async (req, res) => {
     try {
-      const course = await storage.getCourse(req.params.courseId);
+      const course = await storage.getCourseById(req.params.courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
@@ -4311,7 +4311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (courseIds && Array.isArray(courseIds)) {
         for (const id of courseIds) {
-          const course = await storage.getCourse(id);
+          const course = await storage.getCourseById(id);
           if (course) {
             const university = await storage.getUniversity(course.universityId);
             coursesToProcess.push({
@@ -4379,7 +4379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const courseId = req.params.courseId;
-      const course = await storage.getCourse(courseId);
+      const course = await storage.getCourseById(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }

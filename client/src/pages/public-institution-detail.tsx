@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
-import { CourseThumbnail } from "@/components/course-thumbnail";
 import { GoogleCampusMap } from "@/components/google-campus-map";
 import { ResponsiveSection } from "@/components/responsive-section";
 import { InstitutionSectionNav } from "@/components/institution-section-nav";
@@ -744,12 +743,6 @@ export default function PublicInstitutionDetail() {
                     {displayedCourses.map(course => (
                       <Link key={course.id} href={`/courses/${course.id}`}>
                         <Card className="h-full hover-elevate cursor-pointer overflow-hidden" data-testid={`course-card-${course.id}`}>
-                          <CourseThumbnail
-                            src={course.thumbnailUrl}
-                            alt={course.title}
-                            status={course.thumbnailStatus}
-                            testId={`img-thumbnail-${course.id}`}
-                          />
                           <CardContent className="p-4">
                             <h3 className="font-semibold text-sm line-clamp-2 mb-2">{course.title}</h3>
                             <div className="flex flex-wrap gap-1 mb-3">

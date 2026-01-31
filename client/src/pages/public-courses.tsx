@@ -52,7 +52,6 @@ import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { ListPagination } from "@/components/list-pagination";
 import { InstitutionLogo } from "@/components/institution-logo";
-import { CourseThumbnail } from "@/components/course-thumbnail";
 import { getCountryByName, getFlagUrl } from "@/lib/countries";
 import { Slider } from "@/components/ui/slider";
 import { TagMarquee } from "@/components/ui/tag-marquee";
@@ -1653,13 +1652,6 @@ export default function PublicCourses() {
                       onClick={() => navigate(`/courses/${course.id}`)}
                       data-testid={`course-card-${course.id}`}
                     >
-                      {/* Course Thumbnail */}
-                      <CourseThumbnail
-                        src={course.thumbnailUrl}
-                        alt={course.title}
-                        status={course.thumbnailStatus}
-                        testId={`img-thumbnail-${course.id}`}
-                      />
                       <CardContent className="p-4">
                         {/* Top Row: Favorite and Compare in top right */}
                         <div className="flex justify-between items-start mb-3 gap-2">
