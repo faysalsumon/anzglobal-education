@@ -47,6 +47,7 @@ import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getFeePeriodLabel } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { useQueryParams } from "@/hooks/useQueryParams";
@@ -1140,7 +1141,7 @@ export default function PublicCourses() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 space-y-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">Annual tuition fee</span>
+                            <span className="text-sm">Tuition fee range</span>
                             <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
                               <SelectTrigger data-testid="select-currency-mobile" className="h-7 w-20 text-xs text-primary font-medium border-0 p-0 focus:ring-0">
                                 <SelectValue placeholder="Any" />
@@ -1504,7 +1505,7 @@ export default function PublicCourses() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 pb-3 px-1 space-y-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">Annual tuition fee</span>
+                            <span className="text-sm">Tuition fee range</span>
                             <Select value={feeCurrency || "all"} onValueChange={(val) => setFeeCurrency(val === "all" ? "" : val)}>
                               <SelectTrigger data-testid="select-currency" className="h-7 w-20 text-xs text-primary font-medium border-0 p-0 focus:ring-0">
                                 <SelectValue placeholder="Any" />
@@ -1798,6 +1799,7 @@ export default function PublicCourses() {
                                 <div className="flex items-center gap-1.5">
                                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                                   <span className="font-medium text-primary" data-testid={`text-fees-${course.id}`}>{course.currency} {Number(course.fees).toLocaleString()}</span>
+                                  <span className="text-xs text-muted-foreground">{getFeePeriodLabel((course as any).feePeriod)}</span>
                                 </div>
                               )}
                             </div>

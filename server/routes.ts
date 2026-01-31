@@ -2587,11 +2587,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Attach tags and university to each course
+      // Fetch pricing configs for all courses to get feePeriod
+      let coursePricingConfigMap: Record<string, string> = {};
+      if (courseIds.length > 0) {
+        const pricingConfigs = await db
+          .select({
+            courseId: coursePricingConfig.courseId,
+            feePeriod: coursePricingConfig.feePeriod,
+          })
+          .from(coursePricingConfig)
+          .where(inArray(coursePricingConfig.courseId, courseIds));
+        
+        pricingConfigs.forEach(pc => {
+          coursePricingConfigMap[pc.courseId] = pc.feePeriod || 'annual';
+        });
+      }
+      
+      // Attach tags, university, and feePeriod to each course
       const coursesWithTags = courses.map(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
         return {
           ...course,
+          feePeriod: coursePricingConfigMap[course.id] || 'annual',
           tags: courseTagsMap[course.id] || [],
           university: university ? {
             id: university.id,

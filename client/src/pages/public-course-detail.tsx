@@ -24,6 +24,7 @@ import { CourseSectionNav } from "@/components/course-section-nav";
 import { ResponsiveSection } from "@/components/responsive-section";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getFeePeriodTitle, getFeePeriodFullLabel } from "@/lib/utils";
 
 type CourseWithUniversity = Course & { university?: University };
 
@@ -866,15 +867,8 @@ export default function PublicCourseDetail() {
                     <div className="space-y-4 mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {pricingTiers.map((tier) => {
-                          // Format fee period label
-                          const feePeriodLabels: Record<string, string> = {
-                            'annual': 'Per Year',
-                            'per_semester': 'Per Semester',
-                            'per_trimester': 'Per Trimester',
-                            'per_term': 'Per Term',
-                            'total': 'Total Course Fee',
-                          };
-                          const feePeriodLabel = pricingConfig?.feePeriod ? feePeriodLabels[pricingConfig.feePeriod] : 'Per Year';
+                          // Use shared helper for fee period label
+                          const feePeriodLabel = getFeePeriodFullLabel(pricingConfig?.feePeriod);
                           
                           // Format study mode label
                           const studyModeLabels: Record<string, string> = {
@@ -954,36 +948,18 @@ export default function PublicCourseDetail() {
                   {/* Static Fees - Show only when NO dynamic pricing exists */}
                   {pricingTiers.length === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {course.fees && (() => {
-                        const feePeriodTitles: Record<string, string> = {
-                          'annual': 'Annual Tuition',
-                          'per_semester': 'Semester Tuition',
-                          'per_trimester': 'Trimester Tuition',
-                          'per_term': 'Term Tuition',
-                          'total': 'Total Course Tuition',
-                        };
-                        const feePeriodLabels: Record<string, string> = {
-                          'annual': 'Per Year',
-                          'per_semester': 'Per Semester',
-                          'per_trimester': 'Per Trimester',
-                          'per_term': 'Per Term',
-                          'total': 'Full Course Fee',
-                        };
-                        const feePeriodTitle = pricingConfig?.feePeriod ? feePeriodTitles[pricingConfig.feePeriod] : 'Annual Tuition';
-                        const feePeriodLabel = pricingConfig?.feePeriod ? feePeriodLabels[pricingConfig.feePeriod] : 'Per Year';
-                        return (
-                          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-tuition">
-                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                              <span className="text-sm text-muted-foreground">{feePeriodTitle}</span>
-                              <div className="p-2 bg-primary/10 rounded-lg">
-                                <GraduationCap className="h-4 w-4 text-primary" />
-                              </div>
+                      {course.fees && (
+                        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-transparent p-6" data-testid="card-tuition">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span className="text-sm text-muted-foreground">{getFeePeriodTitle(pricingConfig?.feePeriod)}</span>
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <GraduationCap className="h-4 w-4 text-primary" />
                             </div>
-                            <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{feePeriodLabel}</p>
                           </div>
-                        );
-                      })()}
+                          <p className="text-3xl font-bold" data-testid="text-tuition-amount">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{getFeePeriodFullLabel(pricingConfig?.feePeriod)}</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
