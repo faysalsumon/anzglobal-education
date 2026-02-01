@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Search,
   FileText,
@@ -21,9 +20,6 @@ import {
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
-import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import type { StudentProfile } from "@shared/schema";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -83,7 +79,6 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("profile");
   const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
-  const { user } = useAuth();
 
   // Close submenu when mobile menu closes
   const prevMobileMenuOpen = useRef(isMobileMenuOpen);
@@ -103,33 +98,6 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Fetch student profile for profile picture
-  const { data: studentProfile } = useQuery<StudentProfile>({
-    queryKey: ["/api/student/profile"],
-  });
-
-  // Fetch profile completion from API (same source as profile page)
-  interface ProfileCompletionResult {
-    isComplete: boolean;
-    percentage: number;
-    missingFields: string[];
-    completedSections: {
-      personalInfo: boolean;
-      education: boolean;
-      languageTest: boolean;
-    };
-  }
-  
-  const { data: completion } = useQuery<ProfileCompletionResult>({
-    queryKey: ["/api/student/profile/completion"],
-  });
-
-  // Get the profile image URL - prefer student profile picture
-  const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
-
-  const profileCompletion = completion?.percentage || 0;
-  const isProfileComplete = completion?.isComplete || false;
 
   const navConfig: NavSection[] = [
     {
@@ -222,16 +190,6 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
   const currentSection = allSections.find(s => s.id === activeSection);
   const visibleRoutes = currentSection?.routes || [];
 
-  const getUserInitials = () => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
-    }
-    return "ST";
-  };
-
   // On mobile, sidebar visibility is controlled by isMobileMenuOpen prop
   const isSidebarVisible = isMobile ? (isMobileMenuOpen ?? false) : true;
   
@@ -314,51 +272,6 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
           </div>
         </ScrollArea>
 
-        {/* Profile completion indicator at bottom */}
-        <div className="mt-auto flex flex-col items-center gap-2 pt-4 border-t w-full px-2">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <div
-                className="relative rounded-full cursor-pointer"
-                onClick={() => setLocation("/student/profile")}
-                data-testid="nav-profile-avatar"
-              >
-                <Avatar className="h-10 w-10">
-                  {profileImageUrl && (
-                    <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
-                  )}
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                {isProfileComplete ? (
-                  <span className="absolute -top-1 -right-1 flex items-center justify-center h-4 min-w-4 px-0.5 rounded-full bg-green-500 text-[8px] font-bold text-white" data-testid="badge-profile-complete">
-                    100%
-                  </span>
-                ) : (
-                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-background" data-testid="badge-profile-incomplete" />
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <div className="text-sm">
-                <p className="font-medium">
-                  {user?.firstName && user?.lastName 
-                    ? `${user.firstName} ${user.lastName}`
-                    : user?.email?.split('@')[0]}
-                </p>
-                <p className={cn(
-                  "text-xs",
-                  isProfileComplete ? "text-green-500" : "text-muted-foreground"
-                )}>
-                  {isProfileComplete 
-                    ? "Profile Complete" 
-                    : `Profile ${profileCompletion}% complete`}
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </div>
       </div>
 
       {/* Submenu panel - slides in from left of icon panel */}

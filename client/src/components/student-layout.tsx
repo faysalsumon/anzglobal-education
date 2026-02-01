@@ -67,6 +67,25 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   // Get the profile image URL - prefer student profile picture
   const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
 
+  // Fetch profile completion from API
+  interface ProfileCompletionResult {
+    isComplete: boolean;
+    percentage: number;
+    missingFields: string[];
+    completedSections: {
+      personalInfo: boolean;
+      education: boolean;
+      languageTest: boolean;
+    };
+  }
+  
+  const { data: completion } = useQuery<ProfileCompletionResult>({
+    queryKey: ["/api/student/profile/completion"],
+  });
+
+  const profileCompletion = completion?.percentage || 0;
+  const isProfileComplete = completion?.isComplete || false;
+
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
@@ -177,6 +196,14 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
                           {getUserInitials()}
                         </AvatarFallback>
                       </Avatar>
+                      {/* Profile completion badge */}
+                      {isProfileComplete ? (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center h-4 min-w-4 px-0.5 rounded-full bg-green-500 text-[8px] font-bold text-white" data-testid="badge-profile-complete">
+                          100%
+                        </span>
+                      ) : (
+                        <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-background" data-testid="badge-profile-incomplete" />
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
