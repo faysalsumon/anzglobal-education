@@ -1522,6 +1522,7 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
