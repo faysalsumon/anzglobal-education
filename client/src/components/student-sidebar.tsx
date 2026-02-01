@@ -324,7 +324,7 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-16 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-background border shadow-sm z-10"
+            className="absolute left-16 top-4 h-6 w-6 rounded-full bg-background border shadow-sm z-10 lg:top-4"
             onClick={() => setIsSubmenuOpen(true)}
             data-testid="button-expand-submenu"
           >
