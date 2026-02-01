@@ -5,7 +5,7 @@ import { db } from './db';
 import { users, roles, branches, studentProfiles, referrals } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { sendWelcomeEmail } from './email-service';
+import { sendWelcomeEmail, sendReferralRegistrationConfirmation } from './email-service';
 import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
 
@@ -774,7 +774,6 @@ router.post('/sync-user', async (req: Request, res: Response) => {
               userId: newUser.id,
               firstName: firstName || null,
               lastName: lastName || null,
-              email: email,
               referralCode: newReferralCode,
             });
           }
@@ -797,6 +796,32 @@ router.post('/sync-user', async (req: Request, res: Response) => {
                 status: 'pending',
               });
               console.log(`[Referral] Created referral: ${referrer.id} -> ${newStudentProfile.id} with code ${referralCode}`);
+              
+              // Mark the referral invitation as registered (update status from 'invited' to 'registered')
+              const updatedInvitation = await storage.markInvitationAsRegistered(email, newStudentProfile.id);
+              if (updatedInvitation) {
+                console.log(`[Referral] Updated invitation status to 'registered' for ${email}`);
+              }
+              
+              // Send confirmation email to the referrer (non-blocking)
+              const referrerUser = await storage.getUser(referrer.userId);
+              if (referrerUser?.email) {
+                const referredName = firstName || newStudentProfile.firstName || 'A friend';
+                sendReferralRegistrationConfirmation({
+                  referrerEmail: referrerUser.email,
+                  referrerName: referrer.firstName || referrerUser.firstName || 'there',
+                  inviteeName: referredName,
+                  inviteeEmail: email,
+                }).then((sent: boolean) => {
+                  if (sent) {
+                    console.log(`[Referral] Confirmation email sent to referrer ${referrerUser.email}`);
+                  } else {
+                    console.warn(`[Referral] Failed to send confirmation email to referrer`);
+                  }
+                }).catch((err: Error) => {
+                  console.error(`[Referral] Error sending confirmation email:`, err);
+                });
+              }
             } else {
               console.log(`[Referral] Referral already exists for student ${newStudentProfile.id}`);
             }

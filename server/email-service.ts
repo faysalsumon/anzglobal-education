@@ -1691,20 +1691,30 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
               <!-- Content -->
               <tr>
                 <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hi ${data.referrerName}!</h2>
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.referrerName}!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Exciting news! <strong>${data.inviteeName || data.inviteeEmail}</strong> has just registered on ANZ Global Education using your referral invitation!
+                    Woohoo! <strong>${data.inviteeName || data.inviteeEmail}</strong> just joined ANZ Global Education thanks to you! You're amazing!
                   </p>
                   
                   <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
                     <p style="color: #166534; font-size: 16px; margin: 0;">
-                      <strong>Next Step:</strong> Once they successfully enrol in a course, you'll earn your referral bonus!
+                      <strong>You're one step closer to earning!</strong> Once they enrol in a course, your referral bonus will be on its way. Cha-ching!
                     </p>
                   </div>
                   
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
+                    Why stop there? The more friends you invite, the more you earn! Share your referral link with:
+                  </p>
+                  
+                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 20px; padding: 0;">
+                    <li>Friends who want to study abroad</li>
+                    <li>Colleagues looking for new opportunities</li>
+                    <li>Family members pursuing education goals</li>
+                  </ul>
+                  
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Keep sharing your referral link to earn more bonuses. Every successful enrolment puts money in your pocket!
+                    Every successful referral puts money in your pocket. There's no limit to how much you can earn!
                   </p>
                   
                   <!-- CTA Button -->
@@ -1712,11 +1722,15 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
                     <tr>
                       <td align="center">
                         <a href="${affiliateUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                          View Your Affiliate Dashboard
+                          Invite More Friends Now
                         </a>
                       </td>
                     </tr>
                   </table>
+                  
+                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
+                    Thank you for spreading the word about ANZ Global Education!
+                  </p>
                 </td>
               </tr>
               
@@ -1749,7 +1763,7 @@ export async function sendReferralRegistrationConfirmation(data: ReferralRegistr
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.referrerEmail,
-      subject: `Great news! ${data.inviteeName || 'Your friend'} just registered!`,
+      subject: `Woohoo! ${data.inviteeName || 'Your friend'} just joined - keep inviting to earn more!`,
       html: getReferralRegistrationConfirmationHtml(data),
     });
 
