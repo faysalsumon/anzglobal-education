@@ -12,6 +12,7 @@ import {
   studentEmployments,
   courseEnglishRequirements,
   referrals,
+  referralInvitations,
   type User,
   type UpsertUser,
   type University,
@@ -42,6 +43,8 @@ import {
   type InsertCourseEnglishRequirement,
   type Referral,
   type InsertReferral,
+  type ReferralInvitation,
+  type InsertReferralInvitation,
   studentLeads,
   type StudentLead,
   type InsertStudentLead,
@@ -1067,6 +1070,57 @@ export class DatabaseStorage implements IStorage {
       .update(referrals)
       .set(updateData)
       .where(eq(referrals.id, referralId))
+      .returning();
+    
+    return updated;
+  }
+  
+  // Referral invitation operations
+  async createReferralInvitation(data: InsertReferralInvitation): Promise<ReferralInvitation> {
+    const [invitation] = await db.insert(referralInvitations).values(data).returning();
+    return invitation;
+  }
+  
+  async getInvitationsByReferrerId(referrerId: string): Promise<ReferralInvitation[]> {
+    return await db
+      .select()
+      .from(referralInvitations)
+      .where(eq(referralInvitations.referrerId, referrerId))
+      .orderBy(desc(referralInvitations.createdAt));
+  }
+  
+  async getInvitationByEmail(email: string): Promise<ReferralInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(referralInvitations)
+      .where(eq(referralInvitations.inviteeEmail, email.toLowerCase()))
+      .orderBy(desc(referralInvitations.createdAt))
+      .limit(1);
+    return invitation;
+  }
+  
+  async updateReferralInvitation(id: string, data: Partial<InsertReferralInvitation>): Promise<ReferralInvitation> {
+    const [updated] = await db
+      .update(referralInvitations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(referralInvitations.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async markInvitationAsRegistered(email: string, registeredStudentId: string): Promise<ReferralInvitation | null> {
+    const invitation = await this.getInvitationByEmail(email);
+    if (!invitation) return null;
+    
+    const [updated] = await db
+      .update(referralInvitations)
+      .set({
+        status: 'registered',
+        registeredAt: new Date(),
+        registeredStudentId,
+        updatedAt: new Date(),
+      })
+      .where(eq(referralInvitations.id, invitation.id))
       .returning();
     
     return updated;
