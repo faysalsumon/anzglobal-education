@@ -283,7 +283,7 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
           <div className="w-56 h-full flex flex-col">
             {/* Section Header - Fixed height to match main header */}
             {currentSection && (
-              <div className="h-14 flex-shrink-0 px-3 flex items-center justify-between border-b border-border">
+              <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
                 <div className="flex items-center gap-2">
                   <currentSection.icon className="h-4 w-4" />
                   <span className="font-semibold text-sm">{currentSection.label}</span>
