@@ -3235,6 +3235,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check if this email was invited and update invitation status (non-blocking)
+      // Use verified email from auth claims if available, otherwise fall back to profile email
+      const verifiedEmail = req.user.claims.email || data.email;
+      if (verifiedEmail) {
+        // Run invitation update in background to not block registration
+        (async () => {
+          try {
+            const invitation = await storage.markInvitationAsRegistered(verifiedEmail, profile.id);
+            if (invitation) {
+              const referrerProfile = await storage.getStudentProfileById(invitation.referrerId);
+              if (referrerProfile && referrerProfile.email) {
+                const { sendReferralRegistrationConfirmation } = await import('./email-service');
+                const referrerName = `${referrerProfile.firstName || ''} ${referrerProfile.lastName || ''}`.trim() || 'there';
+                await sendReferralRegistrationConfirmation({
+                  referrerEmail: referrerProfile.email,
+                  referrerName,
+                  inviteeName: invitation.inviteeName || '',
+                  inviteeEmail: verifiedEmail,
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error processing invitation registration (non-blocking):", error);
+          }
+        })();
+      }
+
       res.json(profile);
     } catch (error: any) {
       console.error("Error creating student profile:", error);

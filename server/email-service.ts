@@ -1613,3 +1613,119 @@ export async function sendReferralInvitationEmail(data: ReferralInvitationEmailD
     return false;
   }
 }
+
+// ============================================
+// REFERRAL REGISTRATION CONFIRMATION EMAIL
+// ============================================
+
+interface ReferralRegistrationConfirmationData {
+  referrerEmail: string;
+  referrerName: string;
+  inviteeName: string;
+  inviteeEmail: string;
+}
+
+function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfirmationData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const affiliateUrl = `${baseUrl}/affiliate`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Your Friend Just Registered!</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Great News!</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Referral Just Registered</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hi ${data.referrerName}!</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Exciting news! <strong>${data.inviteeName || data.inviteeEmail}</strong> has just registered on ANZ Global Education using your referral invitation!
+                  </p>
+                  
+                  <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #166534; font-size: 16px; margin: 0;">
+                      <strong>Next Step:</strong> Once they successfully enrol in a course, you'll earn your referral bonus!
+                    </p>
+                  </div>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Keep sharing your referral link to earn more bonuses. Every successful enrolment puts money in your pocket!
+                  </p>
+                  
+                  <!-- CTA Button -->
+                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${affiliateUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                          View Your Affiliate Dashboard
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
+                  <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
+                    ANZ Global Education | Connecting Students with Global Opportunities
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+export async function sendReferralRegistrationConfirmation(data: ReferralRegistrationConfirmationData): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping referral registration confirmation email');
+    return false;
+  }
+
+  try {
+    console.log(`[Email] Sending referral registration confirmation to ${data.referrerEmail}`);
+    
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.referrerEmail,
+      subject: `Great news! ${data.inviteeName || 'Your friend'} just registered!`,
+      html: getReferralRegistrationConfirmationHtml(data),
+    });
+
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
+    console.log(`Referral registration confirmation email sent to ${data.referrerEmail}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending referral registration confirmation email:', error.message);
+    return false;
+  }
+}
