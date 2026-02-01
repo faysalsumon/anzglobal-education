@@ -230,25 +230,28 @@ export function StudentDashboard() {
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-6">
-          {!profile && (
-            <Card className="border-2 cursor-pointer group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
-              <Link href="/student/profile" data-testid="link-create-profile">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <CardHeader className="py-4 md:py-5 relative min-h-[60px] md:min-h-[72px]">
-                  <div className="flex items-center gap-2.5 md:gap-3">
-                    <div className="p-2.5 md:p-3 bg-primary/10 rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shrink-0">
-                      <User className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:text-white transition-colors duration-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base md:text-lg group-hover:text-primary transition-colors duration-300">Create Profile</CardTitle>
-                      <CardDescription className="text-xs md:text-sm">Set up your student profile</CardDescription>
-                    </div>
-                    <ArrowRight className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+          {/* Smart Form - prominent access card */}
+          <Card className="border-2 cursor-pointer group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+            <Link href="/student/profile" data-testid="link-smart-form">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <CardHeader className="py-4 md:py-5 relative min-h-[60px] md:min-h-[72px]">
+                <div className="flex items-center gap-2.5 md:gap-3">
+                  <div className="p-2.5 md:p-3 bg-primary/10 rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shrink-0">
+                    <User className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:text-white transition-colors duration-300" />
                   </div>
-                </CardHeader>
-              </Link>
-            </Card>
-          )}
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base md:text-lg group-hover:text-primary transition-colors duration-300">
+                      {profile ? "Smart Form" : "Create Profile"}
+                    </CardTitle>
+                    <CardDescription className="text-xs md:text-sm">
+                      {profile ? "View & edit your profile" : "Set up your student profile"}
+                    </CardDescription>
+                  </div>
+                  <ArrowRight className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+                </div>
+              </CardHeader>
+            </Link>
+          </Card>
           
           <Card className="border-2 cursor-pointer group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
             <Link href="/student/courses" data-testid="link-browse-courses">

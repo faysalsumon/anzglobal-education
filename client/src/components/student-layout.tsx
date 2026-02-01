@@ -21,7 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { LogOut, User, Settings, Home, Menu } from "lucide-react";
+import { LogOut, User, Settings, Home, Menu, LayoutDashboard } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -192,11 +192,11 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => setLocation("/student/profile")}
-                  data-testid="menu-profile"
+                  onClick={() => setLocation("/student/dashboard")}
+                  data-testid="menu-dashboard"
                 >
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Smart Form</span>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/student/account")}
