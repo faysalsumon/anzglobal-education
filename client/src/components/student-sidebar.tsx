@@ -19,6 +19,7 @@ import {
   MessageSquare,
   LayoutDashboard,
   Link2,
+  Settings,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
@@ -123,6 +124,7 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
         { icon: User, label: "Smart Form", path: "/student/profile" },
+        { icon: Settings, label: "My Account", path: "/student/account" },
       ],
     },
     {
