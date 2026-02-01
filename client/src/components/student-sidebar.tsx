@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -198,21 +197,15 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
       {/* Sidebar Container - Fixed on mobile, relative on desktop */}
       <div 
         className={cn(
-          "flex flex-shrink-0 transition-all duration-200 ease-out h-screen",
-          "fixed left-0 top-0 z-40 lg:relative lg:z-auto",
+          "flex flex-shrink-0 transition-all duration-200 ease-out",
+          "fixed left-0 top-14 z-40 h-[calc(100vh-3.5rem)]",
+          "lg:relative lg:top-0 lg:z-auto lg:h-full",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
         data-testid="student-sidebar"
       >
-        {/* Icon Rail */}
+        {/* Icon Rail - No header, starts directly with navigation */}
         <div className="w-16 bg-card border-r border-border flex flex-col h-full">
-          {/* Logo - Fixed header height to match main header */}
-          <div className="h-14 flex-shrink-0 flex items-center justify-center border-b border-border">
-            <Link href="/" aria-label="Go to homepage" data-testid="link-logo">
-              <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
-            </Link>
-          </div>
-
           {/* Navigation Icons */}
           <div className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center py-2 gap-1">
