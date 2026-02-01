@@ -219,8 +219,8 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Content Area: Sidebar + Main */}
-        <div className="flex flex-1">
+        {/* Content Area: Sidebar + Main - Fixed height on desktop to allow sidebar to stretch */}
+        <div className="flex flex-1 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
           <StudentSidebar 
             isMobileMenuOpen={isMobileMenuOpen}
             onMobileMenuClose={() => setIsMobileMenuOpen(false)}
