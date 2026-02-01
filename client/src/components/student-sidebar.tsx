@@ -90,15 +90,6 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
     prevMobileMenuOpen.current = isMobileMenuOpen;
   }, [isMobileMenuOpen, setIsSubmenuOpen]);
 
-  // Check if we're on mobile
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   const navConfig: NavSection[] = [
     {
       id: "profile",
@@ -190,16 +181,11 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
   const currentSection = allSections.find(s => s.id === activeSection);
   const visibleRoutes = currentSection?.routes || [];
 
-  // On mobile, sidebar visibility is controlled by isMobileMenuOpen prop
-  const isSidebarVisible = isMobile ? (isMobileMenuOpen ?? false) : true;
-  
-  // Submenu visibility: on desktop follows isSubmenuOpen, on mobile requires sidebar to be visible too
-  const showSubmenu = isSubmenuOpen && (isMobile ? isSidebarVisible : true);
 
   return (
     <>
-      {/* Overlay for mobile when sidebar or submenu is open */}
-      {(isSidebarVisible || isSubmenuOpen) && (
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => {
@@ -209,126 +195,150 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
         />
       )}
 
-      {/* Icon panel - hidden on mobile unless menu is open, always visible on desktop */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background transition-transform duration-300",
-        "lg:translate-x-0",
-        isSidebarVisible ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <Link href="/" className="mb-4" aria-label="Go to homepage" data-testid="link-logo">
-          <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
-        </Link>
-
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-10 w-10 rounded-lg transition-all",
-                location === "/student/dashboard" && "text-primary bg-primary/10"
-              )}
-              onClick={() => {
-                setIsSubmenuOpen(false);
-                setActiveSection(null);
-                setLocation("/student/dashboard");
-              }}
-              data-testid="nav-dashboard"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            Dashboard
-          </TooltipContent>
-        </Tooltip>
-
-        <ScrollArea className="flex-1 w-full">
-          <div className="flex flex-col items-center gap-2 px-2">
-            {navConfig.map((section) => {
-              const isActive = activeSection === section.id;
-              return (
-                <Tooltip key={section.id} delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "h-10 w-10 rounded-lg transition-all",
-                        isActive && section.color
-                      )}
-                      onClick={() => handleSectionClick(section.id)}
-                      data-testid={`nav-section-${section.id}`}
-                    >
-                      <section.icon className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="font-medium">
-                    {section.label}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
+      {/* Sidebar Container - Fixed on mobile, relative on desktop */}
+      <div 
+        className={cn(
+          "flex flex-shrink-0 transition-all duration-200 ease-out h-full",
+          "fixed left-0 top-0 z-40 lg:relative lg:z-auto",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+        data-testid="student-sidebar"
+      >
+        {/* Icon Rail */}
+        <div className="w-16 bg-card border-r border-border flex flex-col h-full">
+          {/* Logo - Fixed header height to match main header */}
+          <div className="h-14 flex-shrink-0 flex items-center justify-center border-b border-border">
+            <Link href="/" aria-label="Go to homepage" data-testid="link-logo">
+              <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
+            </Link>
           </div>
-        </ScrollArea>
 
-      </div>
-
-      {/* Submenu panel - slides in from left of icon panel */}
-      <aside className={cn(
-        "fixed inset-y-0 left-16 z-40 w-56 flex flex-col bg-background border-r transition-transform duration-300",
-        showSubmenu ? "translate-x-0" : "-translate-x-full",
-        className
-      )}>
-          {currentSection && (
-            <div className="px-3 py-2 border-b">
-              <h3 className={cn(
-                "text-xs font-semibold uppercase tracking-wider flex items-center gap-2",
-                currentSection.color.split(' ')[0]
-              )}>
-                <currentSection.icon className="h-3.5 w-3.5" />
-                {currentSection.label}
-              </h3>
-            </div>
-          )}
-
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {visibleRoutes.map((route) => {
-                const isActive = location === route.path || location.startsWith(route.path.split('#')[0]);
-                return (
+          {/* Navigation Icons */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="flex flex-col items-center py-2 gap-1">
+              {/* Dashboard Button */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
                   <Button
-                    key={route.path}
-                    variant={isActive ? "secondary" : "ghost"}
+                    variant="ghost"
+                    size="icon"
                     className={cn(
-                      "w-full justify-start gap-3 h-10",
-                      isActive && "bg-secondary"
+                      "w-12 h-12 rounded-xl transition-all",
+                      location === "/student/dashboard" && "text-primary bg-primary/10"
                     )}
-                    onClick={() => handleRouteClick(route.path)}
-                    data-testid={`nav-${route.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    onClick={() => {
+                      setIsSubmenuOpen(false);
+                      setActiveSection(null);
+                      setLocation("/student/dashboard");
+                    }}
+                    data-testid="nav-dashboard"
                   >
-                    <route.icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{route.label}</span>
+                    <LayoutDashboard className="h-5 w-5" />
                   </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-medium">
+                  Dashboard
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Separator */}
+              <div className="w-8 h-px bg-border my-1" />
+
+              {/* Section Icons */}
+              {navConfig.map((section) => {
+                const isActive = activeSection === section.id;
+                return (
+                  <Tooltip key={section.id} delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "w-12 h-12 rounded-xl transition-all",
+                          isActive && section.color
+                        )}
+                        onClick={() => handleSectionClick(section.id)}
+                        data-testid={`nav-section-${section.id}`}
+                      >
+                        <section.icon className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="font-medium">
+                      {section.label}
+                    </TooltipContent>
+                  </Tooltip>
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
+        </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-background border shadow-sm"
-          onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
-          data-testid="button-toggle-submenu"
-        >
-          {isSubmenuOpen ? (
-            <ChevronLeft className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
+        {/* Submenu Panel */}
+        <div 
+          className={cn(
+            "bg-background border-r border-border transition-all duration-200 ease-out overflow-hidden h-full",
+            isSubmenuOpen && activeSection ? "w-56" : "w-0"
           )}
-        </Button>
-      </aside>
+        >
+          <div className="w-56 h-full flex flex-col">
+            {/* Section Header - Fixed height to match main header */}
+            {currentSection && (
+              <div className="h-14 flex-shrink-0 px-3 flex items-center justify-between border-b border-border">
+                <div className="flex items-center gap-2">
+                  <currentSection.icon className="h-4 w-4" />
+                  <span className="font-semibold text-sm">{currentSection.label}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setIsSubmenuOpen(false)}
+                  data-testid="button-close-submenu"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Route List - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-2 space-y-0.5">
+                {visibleRoutes.map((route) => {
+                  const isActive = location === route.path || location.startsWith(route.path.split('#')[0]);
+                  return (
+                    <Button
+                      key={route.path}
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start h-9 px-3 text-sm font-normal",
+                        isActive && "font-medium bg-primary/10 text-primary"
+                      )}
+                      onClick={() => handleRouteClick(route.path)}
+                      data-testid={`nav-${route.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <route.icon className="h-4 w-4 mr-2 shrink-0" />
+                      <span className="truncate">{route.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Expand Button (when submenu is closed) */}
+        {!isSubmenuOpen && activeSection && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-16 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-background border shadow-sm z-10"
+            onClick={() => setIsSubmenuOpen(true)}
+            data-testid="button-expand-submenu"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
     </>
   );
 }

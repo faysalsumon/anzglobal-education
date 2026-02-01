@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { StudentSidebar, StudentSidebarProvider, useStudentSidebar } from "@/components/student-sidebar";
+import { useState } from "react";
+import { StudentSidebar, StudentSidebarProvider } from "@/components/student-sidebar";
 import { ChatWidget } from "@/components/chat-widget";
 import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
@@ -53,7 +53,6 @@ const getBreadcrumbTitle = (pathname: string): string => {
 };
 
 function StudentLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isSubmenuOpen, closeSubmenu, setIsSubmenuOpen } = useStudentSidebar();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
@@ -100,22 +99,6 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
     performLogout(signOut);
   };
 
-  // Calculate margin based on submenu state (desktop only)
-  // Icon panel: 64px (w-16)
-  // Submenu panel: 224px (w-56) when open
-  // On mobile (< lg), no left margin as sidebar slides over content
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Desktop: margin based on submenu state, Mobile: no margin (sidebar overlays)
-  const marginLeft = isMobile ? "0" : (isSubmenuOpen ? "18rem" : "4rem");
-
   const breadcrumbTitle = getBreadcrumbTitle(location);
 
   return (
@@ -123,28 +106,16 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
       <Helmet>
         <meta name="robots" content="noindex, nofollow, noai, noimageai" />
       </Helmet>
-      <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+      <div className="flex min-h-screen w-full bg-muted/30">
         <StudentSidebar 
           isMobileMenuOpen={isMobileMenuOpen}
           onMobileMenuClose={() => setIsMobileMenuOpen(false)}
         />
 
-        {/* Main Content Area - Flex column with fixed header and scrollable content */}
-        <div 
-          className="flex flex-col flex-1 min-w-0 h-full transition-all duration-300"
-          style={{ marginLeft }}
-          onClick={(e) => {
-            // Close submenu when clicking on main content on mobile/tablet
-            if (window.innerWidth < 1024 && isSubmenuOpen) {
-              const target = e.target as HTMLElement;
-              if (!target.closest('button, a, input, select, textarea, [role="button"]')) {
-                closeSubmenu();
-              }
-            }
-          }}
-        >
-          {/* Top Header with Breadcrumb - Fixed height, never scrolls */}
-          <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
+        {/* Main Content Area */}
+        <div className="flex flex-col flex-1 lg:ml-0">
+          {/* Top Header with Breadcrumb */}
+          <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
             {/* Mobile menu toggle - only visible on mobile */}
             <Button
               variant="ghost"
@@ -156,7 +127,7 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             
-            <div className="flex flex-1 items-center justify-between gap-4">
+            <div className="flex flex-1 items-center justify-between gap-4 lg:pl-0 pl-10">
               {/* Breadcrumb */}
               <Breadcrumb data-testid="breadcrumb">
                 <BreadcrumbList>
