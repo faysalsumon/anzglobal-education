@@ -21,7 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Menu, X, LogOut, User, Settings, Home } from "lucide-react";
+import { LogOut, User, Settings, Home, Menu } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -116,17 +116,16 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col flex-1 lg:ml-0">
           {/* Top Header with Breadcrumb */}
           <header className="sticky top-0 z-30 flex items-center gap-4 border-b bg-background px-4 md:px-6 py-3">
-            {/* Mobile menu toggle - only visible on mobile */}
+            {/* Mobile menu toggle - fixed position, doesn't affect layout */}
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden flex-shrink-0"
+              className="fixed left-2 top-3 z-50 lg:hidden h-9 w-9"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               data-testid="button-mobile-menu-toggle"
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <Menu className="h-5 w-5" />
             </Button>
-            
             <div className="flex flex-1 items-center justify-between gap-4 lg:pl-0 pl-10">
               {/* Breadcrumb */}
               <Breadcrumb data-testid="breadcrumb">
