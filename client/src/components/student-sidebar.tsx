@@ -198,7 +198,7 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
       {/* Sidebar Container - Fixed on mobile, relative on desktop */}
       <div 
         className={cn(
-          "flex flex-shrink-0 transition-all duration-200 ease-out h-full",
+          "flex flex-shrink-0 transition-all duration-200 ease-out h-screen",
           "fixed left-0 top-0 z-40 lg:relative lg:z-auto",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
