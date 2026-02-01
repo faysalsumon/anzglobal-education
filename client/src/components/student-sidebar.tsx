@@ -207,8 +207,8 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
         {/* Icon Rail - No header, starts directly with navigation */}
         <div className="w-16 bg-card border-r border-border flex flex-col h-full">
           {/* Navigation Icons */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="flex flex-col items-center py-2 gap-1">
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            <div className="flex flex-col items-center py-2 gap-1 flex-1">
               {/* Dashboard Button */}
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
