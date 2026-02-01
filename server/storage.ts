@@ -135,7 +135,7 @@ import {
   type InsertAiSetting,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull, sql, lt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -180,6 +180,17 @@ export interface IStorage {
   getStudentProfileByEmail(email: string): Promise<StudentProfile | undefined>;
   createStudentProfile(profile: InsertStudentProfile): Promise<StudentProfile>;
   updateStudentProfile(id: string, data: Partial<InsertStudentProfile>): Promise<StudentProfile>;
+  markWelcomeEmailSent(profileId: string): Promise<void>;
+  updateReminderTracking(profileId: string): Promise<void>;
+  getStudentsNeedingReminders(): Promise<Array<{
+    id: string;
+    email: string;
+    firstName: string | null;
+    profileCompletionPercentage: number | null;
+    reminderCount: number | null;
+    lastReminderSentAt: Date | null;
+    createdAt: Date | null;
+  }>>;
   
   // Application operations
   getApplicationById(id: string): Promise<Application | undefined>;
@@ -824,6 +835,92 @@ export class DatabaseStorage implements IStorage {
       .where(eq(studentProfiles.id, id))
       .returning();
     return profile;
+  }
+
+  async markWelcomeEmailSent(profileId: string): Promise<void> {
+    await db
+      .update(studentProfiles)
+      .set({ welcomeEmailSent: true, updatedAt: new Date() })
+      .where(eq(studentProfiles.id, profileId));
+  }
+
+  async updateReminderTracking(profileId: string): Promise<void> {
+    const profile = await this.getStudentProfileById(profileId);
+    if (!profile) return;
+    
+    await db
+      .update(studentProfiles)
+      .set({
+        reminderCount: (profile.reminderCount || 0) + 1,
+        lastReminderSentAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(studentProfiles.id, profileId));
+  }
+
+  async getStudentsNeedingReminders(): Promise<Array<{
+    id: string;
+    email: string;
+    firstName: string | null;
+    profileCompletionPercentage: number | null;
+    reminderCount: number | null;
+    lastReminderSentAt: Date | null;
+    createdAt: Date | null;
+  }>> {
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    
+    // Get students with incomplete profiles (< 100%) who haven't hit max reminders (3)
+    // and are eligible based on their signup date and last reminder
+    const result = await db
+      .select({
+        id: studentProfiles.id,
+        email: users.email,
+        firstName: studentProfiles.firstName,
+        profileCompletionPercentage: studentProfiles.profileCompletionPercentage,
+        reminderCount: studentProfiles.reminderCount,
+        lastReminderSentAt: studentProfiles.lastReminderSentAt,
+        createdAt: studentProfiles.createdAt,
+      })
+      .from(studentProfiles)
+      .innerJoin(users, eq(studentProfiles.userId, users.id))
+      .where(
+        and(
+          lt(studentProfiles.profileCompletionPercentage, 100),
+          or(
+            isNull(studentProfiles.reminderCount),
+            lt(studentProfiles.reminderCount, 3)
+          ),
+          // Only users who signed up at least 3 days ago
+          lt(studentProfiles.createdAt, threeDaysAgo)
+        )
+      );
+    
+    // Filter based on reminder logic:
+    // - Reminder 1: 3+ days after signup, no previous reminder
+    // - Reminder 2: 7+ days after signup, 4+ days since last reminder
+    // - Reminder 3: 14+ days after signup, 7+ days since last reminder
+    return result.filter(student => {
+      const reminderCount = student.reminderCount || 0;
+      const signupDate = student.createdAt ? new Date(student.createdAt) : now;
+      const lastReminder = student.lastReminderSentAt ? new Date(student.lastReminderSentAt) : null;
+      
+      if (reminderCount === 0) {
+        // First reminder: 3+ days after signup
+        return signupDate <= threeDaysAgo;
+      } else if (reminderCount === 1) {
+        // Second reminder: 7+ days after signup, 4+ days since last
+        const fourDaysAfterLast = lastReminder ? new Date(lastReminder.getTime() + 4 * 24 * 60 * 60 * 1000) : now;
+        return signupDate <= sevenDaysAgo && now >= fourDaysAfterLast;
+      } else if (reminderCount === 2) {
+        // Third reminder: 14+ days after signup, 7+ days since last
+        const sevenDaysAfterLast = lastReminder ? new Date(lastReminder.getTime() + 7 * 24 * 60 * 60 * 1000) : now;
+        return signupDate <= fourteenDaysAgo && now >= sevenDaysAfterLast;
+      }
+      return false;
+    });
   }
 
   // Application operations

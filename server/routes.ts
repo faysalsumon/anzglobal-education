@@ -165,7 +165,7 @@ import {
   notifyDocumentRequested,
   notifyDocumentUploadedToAdmin,
 } from "./notifications";
-import { sendContactInquiryEmails } from "./email-service";
+import { sendContactInquiryEmails, sendProfileCompletionReminder } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
@@ -18645,6 +18645,155 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END ACADEMIC QUALIFICATION API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // PROFILE COMPLETION REMINDER API ENDPOINTS
+  // ============================================
+
+  // POST /api/admin/send-profile-reminders - Trigger profile completion reminder emails
+  app.post("/api/admin/send-profile-reminders", isAuthenticated, async (req: any, res) => {
+    try {
+      // Check admin/consultant access
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'consultant'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Admin or consultant access required" });
+      }
+
+      // Get students needing reminders
+      const studentsNeedingReminders = await storage.getStudentsNeedingReminders();
+      
+      if (studentsNeedingReminders.length === 0) {
+        return res.json({ 
+          message: "No students need reminders at this time",
+          sent: 0,
+          eligible: 0
+        });
+      }
+
+      // Define profile sections for determining incomplete ones
+      const getIncompleteSections = (profile: any): string[] => {
+        const sections: string[] = [];
+        
+        // Check personal info
+        if (!profile.firstName || !profile.lastName || !profile.dateOfBirth) {
+          sections.push("Personal Information");
+        }
+        // Check education
+        if (!profile.educationLevel) {
+          sections.push("Education History");
+        }
+        // Check English proficiency
+        if (!profile.englishProficiencyStatus) {
+          sections.push("English Proficiency");
+        }
+        // Check study preferences
+        if (!profile.preferredDiscipline || !profile.preferredCourseLevel) {
+          sections.push("Study Preferences");
+        }
+        // Check funding
+        if (!profile.fundingSource) {
+          sections.push("Financial/Sponsor Information");
+        }
+        // Check emergency contact
+        if (!profile.emergencyContactName || !profile.emergencyContactMobile) {
+          sections.push("Emergency Contact");
+        }
+        // Check passport
+        if (!profile.passportNumber) {
+          sections.push("Passport & Visa Details");
+        }
+        
+        return sections;
+      };
+
+      let sentCount = 0;
+      const errors: string[] = [];
+
+      // Send reminders to eligible students
+      for (const student of studentsNeedingReminders) {
+        try {
+          // Get full student profile to determine incomplete sections
+          const fullProfile = await storage.getStudentProfileById(student.id);
+          const incompleteSections = fullProfile ? getIncompleteSections(fullProfile) : [];
+          const reminderNumber = (student.reminderCount || 0) + 1;
+          
+          // Send the reminder email
+          const sent = await sendProfileCompletionReminder({
+            email: student.email,
+            firstName: student.firstName || 'there',
+            completionPercentage: student.profileCompletionPercentage || 0,
+            incompleteSections,
+            reminderNumber,
+          });
+
+          if (sent) {
+            // Update reminder tracking
+            await storage.updateReminderTracking(student.id);
+            sentCount++;
+            console.log(`[Profile Reminder] Sent reminder #${reminderNumber} to ${student.email}`);
+          } else {
+            errors.push(`Failed to send to ${student.email}`);
+          }
+        } catch (err: any) {
+          console.error(`[Profile Reminder] Error sending to ${student.email}:`, err.message);
+          errors.push(`Error for ${student.email}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        message: `Profile completion reminders sent successfully`,
+        sent: sentCount,
+        eligible: studentsNeedingReminders.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Error sending profile reminders:", error);
+      res.status(500).json({ message: "Failed to send profile reminders" });
+    }
+  });
+
+  // GET /api/admin/profile-reminder-stats - Get stats about students needing reminders
+  app.get("/api/admin/profile-reminder-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      // Check admin/consultant access
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'consultant'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Admin or consultant access required" });
+      }
+
+      const studentsNeedingReminders = await storage.getStudentsNeedingReminders();
+      
+      // Group by reminder count
+      const byReminderCount = {
+        firstReminder: studentsNeedingReminders.filter(s => (s.reminderCount || 0) === 0).length,
+        secondReminder: studentsNeedingReminders.filter(s => (s.reminderCount || 0) === 1).length,
+        thirdReminder: studentsNeedingReminders.filter(s => (s.reminderCount || 0) === 2).length,
+      };
+
+      res.json({
+        totalEligible: studentsNeedingReminders.length,
+        byReminderCount,
+        students: studentsNeedingReminders.map(s => ({
+          id: s.id,
+          email: s.email,
+          firstName: s.firstName,
+          completionPercentage: s.profileCompletionPercentage,
+          reminderCount: s.reminderCount || 0,
+          lastReminderAt: s.lastReminderSentAt,
+          signedUpAt: s.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error fetching profile reminder stats:", error);
+      res.status(500).json({ message: "Failed to fetch profile reminder stats" });
+    }
+  });
+
+  // ============================================
+  // END PROFILE COMPLETION REMINDER API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available
