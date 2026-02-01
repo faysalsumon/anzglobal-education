@@ -1488,3 +1488,128 @@ export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Pr
     return false;
   }
 }
+
+// ============================================
+// REFERRAL INVITATION EMAIL
+// ============================================
+
+interface ReferralInvitationEmailData {
+  to: string;
+  inviteeName: string;
+  referrerName: string;
+  referralCode: string;
+}
+
+function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const signupUrl = `${baseUrl}/student/register?ref=${data.referralCode}`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Your Friend Invited You to ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hi ${data.inviteeName}!</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    <strong>${data.referrerName}</strong> thinks you'd love ANZ Global Education and has invited you to join!
+                  </p>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    ANZ Global Education helps international students discover and apply to universities in Australia and beyond. 
+                    With our AI-powered platform, you can:
+                  </p>
+                  
+                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 30px 0; padding-left: 20px;">
+                    <li>Browse thousands of courses from top institutions</li>
+                    <li>Get personalized course recommendations</li>
+                    <li>Apply to multiple universities with one profile</li>
+                    <li>Track your application status in real-time</li>
+                  </ul>
+                  
+                  <!-- CTA Button -->
+                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${signupUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                          Create Your Free Account
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <p style="color: #777777; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                    By signing up through your friend's invitation, you'll both receive special benefits!
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
+                  <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
+                    ANZ Global Education | Connecting Students with Global Opportunities
+                  </p>
+                  <p style="color: #aaaaaa; font-size: 11px; margin: 10px 0 0 0; text-align: center;">
+                    This email was sent because ${data.referrerName} invited you to join.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+export async function sendReferralInvitationEmail(data: ReferralInvitationEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping referral invitation email');
+    return false;
+  }
+
+  try {
+    console.log(`[Email] Sending referral invitation to ${data.to}`);
+    
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.to,
+      subject: `${data.referrerName} invited you to join ANZ Global Education!`,
+      html: getReferralInvitationEmailHtml(data),
+    });
+
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
+    console.log(`Referral invitation email sent to ${data.to}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending referral invitation email:', error.message);
+    return false;
+  }
+}
