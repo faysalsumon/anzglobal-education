@@ -1504,7 +1504,7 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
   const baseUrl = process.env.REPLIT_DEV_DOMAIN 
     ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
     : (process.env.REPL_URL || 'https://anzglobal.com.au');
-  const signupUrl = `${baseUrl}/student/register?ref=${data.referralCode}`;
+  const signupUrl = `${baseUrl}/auth?ref=${data.referralCode}&mode=signup`;
 
   return `
     <!DOCTYPE html>
