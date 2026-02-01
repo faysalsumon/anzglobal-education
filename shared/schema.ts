@@ -2271,6 +2271,22 @@ export const referrals = pgTable("referrals", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Referral Invitations table - for students to actively invite friends
+export const referralInvitations = pgTable("referral_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull().references(() => studentProfiles.id, { onDelete: "cascade" }),
+  inviteeName: text("invitee_name").notNull(),
+  inviteeEmail: text("invitee_email").notNull(),
+  referralCode: varchar("referral_code", { length: 10 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("invited"), // 'invited', 'registered', 'enrolled', 'expired'
+  emailSentAt: timestamp("email_sent_at"),
+  registeredAt: timestamp("registered_at"),
+  registeredStudentId: varchar("registered_student_id").references(() => studentProfiles.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at"), // Optional expiry for invitation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Student Education History table
 export const studentEducations = pgTable("student_educations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3065,6 +3081,17 @@ export const referralsRelations = relations(referrals, ({ one }) => ({
   }),
 }));
 
+export const referralInvitationsRelations = relations(referralInvitations, ({ one }) => ({
+  referrer: one(studentProfiles, {
+    fields: [referralInvitations.referrerId],
+    references: [studentProfiles.id],
+  }),
+  registeredStudent: one(studentProfiles, {
+    fields: [referralInvitations.registeredStudentId],
+    references: [studentProfiles.id],
+  }),
+}));
+
 export const universityTeamMembersRelations = relations(universityTeamMembers, ({ one }) => ({
   university: one(universities, {
     fields: [universityTeamMembers.universityId],
@@ -3625,6 +3652,12 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({
   updatedAt: true,
 });
 
+export const insertReferralInvitationSchema = createInsertSchema(referralInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCourseRecommendationSchema = createInsertSchema(courseRecommendations).omit({
   id: true,
   createdAt: true,
@@ -3744,6 +3777,9 @@ export type InsertDocumentRequest = z.infer<typeof insertDocumentRequestSchema>;
 
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+export type ReferralInvitation = typeof referralInvitations.$inferSelect;
+export type InsertReferralInvitation = z.infer<typeof insertReferralInvitationSchema>;
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
