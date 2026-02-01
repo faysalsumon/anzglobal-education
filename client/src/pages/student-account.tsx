@@ -381,19 +381,18 @@ export default function StudentAccount() {
                                   <Input
                                     type={showCurrentPassword ? "text" : "password"}
                                     placeholder="Enter current password"
+                                    className="pr-10"
                                     {...field}
                                     data-testid="input-current-password"
                                   />
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full px-3"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                     data-testid="button-toggle-current-password"
                                   >
                                     {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
+                                  </button>
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -412,19 +411,18 @@ export default function StudentAccount() {
                                   <Input
                                     type={showNewPassword ? "text" : "password"}
                                     placeholder="Enter new password (min. 6 characters)"
+                                    className="pr-10"
                                     {...field}
                                     data-testid="input-new-password"
                                   />
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full px-3"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowNewPassword(!showNewPassword)}
                                     data-testid="button-toggle-new-password"
                                   >
                                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
+                                  </button>
                                 </div>
                               </FormControl>
                               <FormMessage />
@@ -443,19 +441,18 @@ export default function StudentAccount() {
                                   <Input
                                     type={showConfirmPassword ? "text" : "password"}
                                     placeholder="Confirm new password"
+                                    className="pr-10"
                                     {...field}
                                     data-testid="input-confirm-password"
                                   />
-                                  <Button
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute right-0 top-0 h-full px-3"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                     data-testid="button-toggle-confirm-password"
                                   >
                                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
+                                  </button>
                                 </div>
                               </FormControl>
                               <FormMessage />
