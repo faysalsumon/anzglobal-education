@@ -235,7 +235,7 @@ export function DisciplineCards() {
                   
                   <Badge 
                     variant="secondary" 
-                    className="text-xs font-medium px-3 py-1 bg-background/80 backdrop-blur-sm"
+                    className="text-xs font-medium px-3 py-1 bg-gray-800 dark:bg-gray-700 text-white"
                     data-testid={`badge-count-${disciplineSlug}`}
                   >
                     {discipline.count} {discipline.count === 1 ? 'course' : 'courses'}
