@@ -710,6 +710,60 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       if (Object.keys(updateData).length > 0) {
         await storage.updateUser(existingUser.id, updateData);
       }
+      
+      // IMPORTANT: Ensure student profile exists for student users
+      // This handles the case where user exists but profile was never created
+      if (existingUser.userType === 'student') {
+        let existingProfile = await storage.getStudentProfileByUserId(existingUser.id);
+        
+        if (!existingProfile) {
+          try {
+            const newReferralCode = await storage.generateReferralCode();
+            existingProfile = await storage.createStudentProfile({
+              userId: existingUser.id,
+              firstName: existingUser.firstName || firstName || null,
+              lastName: existingUser.lastName || lastName || null,
+              referralCode: newReferralCode,
+            });
+            console.log(`[Supabase Auth] Created missing student profile for existing user ${email}`);
+            
+            // Send welcome email (they never got one since profile wasn't created)
+            sendWelcomeEmail({
+              email,
+              firstName: existingUser.firstName || firstName || 'there',
+              userType: 'student',
+            }).catch(err => console.error('[Email] Failed to send welcome email for existing user:', err));
+            
+            // Check for any pending invitations by email
+            if (existingProfile) {
+              const updatedInvitation = await storage.markInvitationAsRegistered(email, existingProfile.id);
+              if (updatedInvitation) {
+                console.log(`[Referral] Auto-matched invitation for existing user ${email}`);
+                
+                // Send confirmation email to the original referrer
+                const referrerProfile = await storage.getStudentProfileById(updatedInvitation.referrerId);
+                if (referrerProfile) {
+                  const referrerUser = await storage.getUser(referrerProfile.userId);
+                  if (referrerUser?.email) {
+                    const referredName = existingUser.firstName || firstName || existingProfile.firstName || 'A friend';
+                    sendReferralRegistrationConfirmation({
+                      referrerEmail: referrerUser.email,
+                      referrerName: referrerProfile.firstName || referrerUser.firstName || 'there',
+                      inviteeName: referredName,
+                      inviteeEmail: email,
+                    }).catch((err: Error) => {
+                      console.error(`[Referral] Error sending confirmation email:`, err);
+                    });
+                  }
+                }
+              }
+            }
+          } catch (profileErr) {
+            console.error('[Supabase Auth] Failed to create missing student profile:', profileErr);
+          }
+        }
+      }
+      
       return res.json({ 
         message: 'User already exists', 
         user: { 
@@ -757,29 +811,30 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       userType: welcomeUserType,
     }).catch(err => console.error('[Email] Failed to send welcome email:', err));
 
-    // Handle referral code for students
-    if (referralCode && safeUserType === 'student' && newUser) {
+    // ALWAYS create student profile for new student users
+    if (safeUserType === 'student' && newUser) {
       try {
-        // Validate the referral code and get the referrer
-        const referrer = await storage.validateReferralCode(referralCode);
+        // Get or create student profile for the new user
+        let newStudentProfile = await storage.getStudentProfileByUserId(newUser.id);
 
-        if (referrer) {
-          // Get or create student profile for the new user
-          let newStudentProfile = await storage.getStudentProfileByUserId(newUser.id);
+        // If no profile exists, create one with its own referral code
+        if (!newStudentProfile) {
+          const newReferralCode = await storage.generateReferralCode();
+          newStudentProfile = await storage.createStudentProfile({
+            userId: newUser.id,
+            firstName: firstName || null,
+            lastName: lastName || null,
+            referralCode: newReferralCode,
+          });
+          console.log(`[Supabase Auth] Created student profile for ${email}`);
+        }
 
-          // If no profile exists, create one with its own referral code
-          if (!newStudentProfile) {
-            const newReferralCode = await storage.generateReferralCode();
-            newStudentProfile = await storage.createStudentProfile({
-              userId: newUser.id,
-              firstName: firstName || null,
-              lastName: lastName || null,
-              referralCode: newReferralCode,
-            });
-          }
+        // Handle referral code if provided
+        if (referralCode && newStudentProfile) {
+          // Validate the referral code and get the referrer
+          const referrer = await storage.validateReferralCode(referralCode);
 
-          // Create the referral record (only if not already exists)
-          if (newStudentProfile && referrer.id !== newStudentProfile.id) {
+          if (referrer && referrer.id !== newStudentProfile.id) {
             // Check for existing referral to prevent duplicates
             const existingReferral = await db
               .select()
@@ -825,13 +880,48 @@ router.post('/sync-user', async (req: Request, res: Response) => {
             } else {
               console.log(`[Referral] Referral already exists for student ${newStudentProfile.id}`);
             }
+          } else if (!referrer) {
+            console.warn(`[Referral] Invalid referral code: ${referralCode}`);
           }
-        } else {
-          console.warn(`[Referral] Invalid referral code: ${referralCode}`);
+        }
+
+        // Check for any pending invitations by email (even without referral code)
+        // This handles the case where user signed up without using the referral link
+        if (newStudentProfile && !referralCode) {
+          try {
+            const updatedInvitation = await storage.markInvitationAsRegistered(email, newStudentProfile.id);
+            if (updatedInvitation) {
+              console.log(`[Referral] Auto-matched invitation for ${email} (signed up without referral link)`);
+              
+              // Send confirmation email to the original referrer
+              const referrerProfile = await storage.getStudentProfileById(updatedInvitation.referrerId);
+              if (referrerProfile) {
+                const referrerUser = await storage.getUser(referrerProfile.userId);
+                if (referrerUser?.email) {
+                  const referredName = firstName || newStudentProfile.firstName || 'A friend';
+                  sendReferralRegistrationConfirmation({
+                    referrerEmail: referrerUser.email,
+                    referrerName: referrerProfile.firstName || referrerUser.firstName || 'there',
+                    inviteeName: referredName,
+                    inviteeEmail: email,
+                  }).then((sent: boolean) => {
+                    if (sent) {
+                      console.log(`[Referral] Auto-match confirmation email sent to referrer ${referrerUser.email}`);
+                    }
+                  }).catch((err: Error) => {
+                    console.error(`[Referral] Error sending auto-match confirmation email:`, err);
+                  });
+                }
+              }
+            }
+          } catch (inviteErr) {
+            // Don't fail if invitation matching fails
+            console.error('[Referral] Failed to auto-match invitation:', inviteErr);
+          }
         }
       } catch (refErr) {
-        // Don't fail the whole sync if referral creation fails
-        console.error('[Referral] Failed to create referral record:', refErr);
+        // Don't fail the whole sync if profile/referral creation fails
+        console.error('[Referral] Failed to create student profile or referral:', refErr);
       }
     }
 
