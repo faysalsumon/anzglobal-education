@@ -36,6 +36,9 @@ interface ContactInquiryEmailData {
 function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
   const name = data.inquiryType === 'student' ? data.studentName : data.contactPerson;
   const isStudent = data.inquiryType === 'student';
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   
   return `
     <!DOCTYPE html>
@@ -53,6 +56,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
@@ -172,6 +176,9 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
 // HTML email template for admin notification
 function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: string }): string {
   const isStudent = data.inquiryType === 'student';
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   
   return `
     <!DOCTYPE html>
@@ -188,7 +195,8 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background-color: ${isStudent ? '#3465A5' : '#FF5000'}; padding: 30px; border-radius: 12px 12px 0 0;">
+                <td style="background-color: ${isStudent ? '#3465A5' : '#FF5000'}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Inquiry ID: ${data.id}</p>
                 </td>
@@ -398,6 +406,9 @@ interface ApplicationEmailData {
 
 // Stage transition notification HTML
 function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   return `
     <!DOCTYPE html>
     <html>
@@ -413,6 +424,7 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Update</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your application has been updated</p>
                 </td>
@@ -450,6 +462,9 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
 
 // Document request notification HTML
 function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   return `
     <!DOCTYPE html>
     <html>
@@ -465,7 +480,8 @@ function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background-color: #FF5000; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">📄 Document Request</h1>
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Document Request</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Action Required</p>
                 </td>
               </tr>
@@ -580,6 +596,9 @@ interface ApplicationSubmittedEmailData {
 
 // Welcome email HTML template
 function getWelcomeEmailHtml(data: WelcomeEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   const userTypeMessages = {
     student: {
       title: 'Welcome to Your Study Journey!',
@@ -618,6 +637,7 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
@@ -669,6 +689,9 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
 
 // Profile completion reminder email HTML template
 function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   const missingFieldsList = data.missingFields.map(field => `<li>${field}</li>`).join('');
   
   return `
@@ -686,6 +709,7 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Complete Your Profile</p>
                 </td>
@@ -732,6 +756,9 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
 
 // Application submitted confirmation email HTML template
 function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   return `
     <!DOCTYPE html>
     <html>
@@ -747,6 +774,7 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Submitted!</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Congratulations on taking this step</p>
                 </td>
@@ -864,6 +892,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Account Has Been Created</p>
                 </td>
@@ -1274,6 +1303,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're Invited to Join Our Team!</p>
                 </td>
@@ -1340,6 +1370,9 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
 
 // Password changed confirmation email HTML template
 function getPasswordChangedEmailHtml(data: { email: string; firstName?: string | null }): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
   const name = data.firstName || 'there';
   const changedAt = new Date().toLocaleString('en-AU', { 
     dateStyle: 'full', 
@@ -1363,6 +1396,7 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Account Security Notification</p>
                 </td>
@@ -1648,6 +1682,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Great News!</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Referral Just Registered</p>
                 </td>
