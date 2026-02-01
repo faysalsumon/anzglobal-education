@@ -12,7 +12,6 @@ import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
-import { CourseLevelCards } from "@/components/course-level-cards";
 
 interface PlatformStats {
   institutionCount: number;
@@ -400,21 +399,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Browse by Course Level Section */}
-      <section className="py-20 md:py-32 bg-card/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Browse by Qualification Level
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Find courses at your desired qualification level, from certificates to doctoral degrees
-            </p>
-          </div>
-          
-          <CourseLevelCards />
-        </div>
-      </section>
 
       {/* Your Journey Starts Here */}
       <section className="py-20 md:py-32 bg-gradient-to-b from-background to-card/50">
