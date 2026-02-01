@@ -5040,18 +5040,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
+      const referrerName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'A student';
+      const referralCode = profile.referralCode || '';
+
       const invitation = await storage.createReferralInvitation({
         referrerId: profile.id,
         inviteeEmail: email.toLowerCase(),
-        inviteeName: inviteeName || null,
+        inviteeName: inviteeName || 'Friend',
+        referralCode: referralCode,
         status: 'invited',
         expiresAt,
       });
 
       // Send invitation email
       const { sendReferralInvitationEmail } = await import('./email-service');
-      const referrerName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'A student';
-      const referralCode = profile.referralCode || '';
       
       await sendReferralInvitationEmail({
         to: email,
