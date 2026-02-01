@@ -31,6 +31,7 @@ const StudentAIAssistant = lazy(() => import("@/pages/student-ai-assistant"));
 const StudentReferrals = lazy(() => import("@/pages/student-referrals"));
 const StudentDocuments = lazy(() => import("@/pages/student-documents"));
 const StudentFavorites = lazy(() => import("@/pages/student-favorites"));
+const StudentAccount = lazy(() => import("@/pages/student-account"));
 const StudentDashboardPage = lazy(() => import("@/pages/student-dashboard-page"));
 const DashboardRedirect = lazy(() => import("@/pages/dashboard-redirect"));
 const PublicCourses = lazy(() => import("@/pages/public-courses"));
@@ -145,6 +146,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/student/courses" component={StudentCourses} />
         <Route path="/student/courses/:id" component={CourseDetail} />
         <Route path="/student/profile" component={StudentProfilePage} />
+        <Route path="/student/account" component={StudentAccount} />
         <Route path="/student/applications" component={StudentApplications} />
         <Route path="/student/documents" component={StudentDocuments} />
         <Route path="/student/favorites" component={StudentFavorites} />
