@@ -4977,6 +4977,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Referral invitation routes
+  app.post("/api/student/referral/invite", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const { email, inviteeName } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Check if email is already invited by this user
+      const existingInvitations = await storage.getInvitationsByReferrerId(profile.id);
+      const alreadyInvited = existingInvitations.find(
+        inv => inv.inviteeEmail.toLowerCase() === email.toLowerCase() && inv.status !== 'expired'
+      );
+
+      if (alreadyInvited) {
+        return res.status(400).json({ message: "This email has already been invited" });
+      }
+
+      // Check if email is already registered as a student
+      const existingStudent = await storage.getStudentProfileByEmail(email.toLowerCase());
+      if (existingStudent) {
+        return res.status(400).json({ message: "This email is already registered as a student" });
+      }
+
+      // Create the invitation
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
+
+      const invitation = await storage.createReferralInvitation({
+        referrerId: profile.id,
+        inviteeEmail: email.toLowerCase(),
+        inviteeName: inviteeName || null,
+        status: 'invited',
+        expiresAt,
+      });
+
+      // Send invitation email
+      const { sendReferralInvitationEmail } = await import('./email-service');
+      const referrerName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'A student';
+      const referralCode = profile.referralCode || '';
+      
+      await sendReferralInvitationEmail({
+        to: email,
+        inviteeName: inviteeName || 'Friend',
+        referrerName,
+        referralCode,
+      });
+
+      res.json({ 
+        success: true, 
+        invitation,
+        message: "Invitation sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending referral invitation:", error);
+      res.status(500).json({ message: "Failed to send invitation" });
+    }
+  });
+
+  app.get("/api/student/referral/invitations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getStudentProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ message: "Student profile not found" });
+      }
+
+      const invitations = await storage.getInvitationsByReferrerId(profile.id);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
   // Bank details for affiliate payouts
   app.get("/api/student/bank-details", isAuthenticated, async (req: any, res) => {
     try {
