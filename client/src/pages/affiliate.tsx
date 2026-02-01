@@ -30,8 +30,11 @@ import {
   Send,
   Clock,
   UserPlus,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Smartphone
 } from "lucide-react";
+import { SiFacebook, SiX, SiLinkedin, SiWhatsapp } from "react-icons/si";
 import type { User, StudentProfile, Referral, ReferralInvitation } from "@shared/schema";
 
 interface ReferralWithStudent extends Referral {
@@ -481,6 +484,107 @@ function AffiliateDashboard() {
                   <code className="text-lg font-bold text-primary" data-testid="text-referral-code">
                     {referralData?.referralCode || "Loading..."}
                   </code>
+                </div>
+
+                {/* Social Share Buttons */}
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium mb-3">Share Now:</p>
+                  <div className="flex flex-wrap gap-3">
+                    {/* WhatsApp */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share on WhatsApp"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        const message = `Join ANZ Global Education and start your study abroad journey! Use my referral link: ${referralData?.referralLink}`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                      }}
+                      data-testid="button-share-whatsapp"
+                    >
+                      <SiWhatsapp className="h-5 w-5 text-[#25D366]" />
+                    </Button>
+
+                    {/* Facebook */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share on Facebook"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralData?.referralLink || '')}`, '_blank');
+                      }}
+                      data-testid="button-share-facebook"
+                    >
+                      <SiFacebook className="h-5 w-5 text-[#1877F2]" />
+                    </Button>
+
+                    {/* Twitter/X */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share on X"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        const text = `Start your study abroad journey with ANZ Global Education! Use my referral link:`;
+                        window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralData?.referralLink || '')}`, '_blank');
+                      }}
+                      data-testid="button-share-twitter"
+                    >
+                      <SiX className="h-4 w-4" />
+                    </Button>
+
+                    {/* LinkedIn */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share on LinkedIn"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralData?.referralLink || '')}`, '_blank');
+                      }}
+                      data-testid="button-share-linkedin"
+                    >
+                      <SiLinkedin className="h-5 w-5 text-[#0A66C2]" />
+                    </Button>
+
+                    {/* SMS */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share via SMS"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        const message = `Join ANZ Global Education! Use my referral link: ${referralData?.referralLink}`;
+                        window.open(`sms:?&body=${encodeURIComponent(message)}`, '_self');
+                      }}
+                      data-testid="button-share-sms"
+                    >
+                      <Smartphone className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </Button>
+
+                    {/* Email */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      aria-label="Share via Email"
+                      disabled={!referralData?.referralLink}
+                      onClick={() => {
+                        const subject = "Study Abroad with ANZ Global Education";
+                        const body = `Hi!\n\nI wanted to share this great opportunity with you. ANZ Global Education helps international students find the perfect course and university.\n\nUse my referral link to get started: ${referralData?.referralLink}\n\nLooking forward to seeing you there!`;
+                        window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_self');
+                      }}
+                      data-testid="button-share-email"
+                    >
+                      <Mail className="h-5 w-5 text-primary" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
