@@ -1951,6 +1951,11 @@ export const studentProfiles = pgTable("student_profiles", {
   // Application slots (default 3, can be increased by consultant)
   maxApplicationSlots: integer("max_application_slots").default(3).notNull(),
   
+  // Email notification tracking
+  welcomeEmailSent: boolean("welcome_email_sent").default(false),
+  lastReminderSentAt: timestamp("last_reminder_sent_at"),
+  reminderCount: integer("reminder_count").default(0),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

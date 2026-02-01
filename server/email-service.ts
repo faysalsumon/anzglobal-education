@@ -1751,6 +1751,316 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
   `;
 }
 
+// =====================================================
+// STUDENT WELCOME EMAIL
+// =====================================================
+
+interface StudentWelcomeEmailData {
+  email: string;
+  firstName: string;
+  lastName?: string;
+}
+
+function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const profileUrl = `${baseUrl}/student/profile`;
+  const coursesUrl = `${baseUrl}/courses`;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Welcome to ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Your Journey Starts Here</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Welcome to ANZ Global Education</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.firstName}!</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Welcome to ANZ Global Education! We're thrilled to have you join thousands of students pursuing their dream of studying abroad.
+                  </p>
+                  
+                  <div style="background-color: #f0f7ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
+                    <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                      <li>Complete your profile to get personalized course matches</li>
+                      <li>Browse 1000+ courses across top Australian universities</li>
+                      <li>Get AI-powered recommendations based on your goals</li>
+                    </ul>
+                  </div>
+                  
+                  <!-- CTA Button -->
+                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                          Complete Your Profile
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    Need help? Our friendly Zan assistant is available 24/7 to guide you!
+                  </p>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
+                    Or explore our course catalog:
+                    <a href="${coursesUrl}" style="color: #3465A5; text-decoration: none; font-weight: 600;">Browse Courses</a>
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
+                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
+                    © 2026 ANZ Global Education
+                  </p>
+                  <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
+                    You're receiving this because you signed up at anzglobal.com.au
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+export async function sendStudentWelcomeEmail(data: StudentWelcomeEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping student welcome email');
+    return false;
+  }
+
+  try {
+    console.log(`[Email] Sending welcome email to ${data.email}`);
+    
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject: `Welcome to ANZ Global Education, ${data.firstName}!`,
+      html: getStudentWelcomeEmailHtml(data),
+    });
+
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
+    console.log(`Welcome email sent to ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending welcome email:', error.message);
+    return false;
+  }
+}
+
+// =====================================================
+// PROFILE COMPLETION REMINDER EMAIL
+// =====================================================
+
+interface ProfileCompletionReminderData {
+  email: string;
+  firstName: string;
+  completionPercentage: number;
+  incompleteSections: string[];
+  reminderNumber: number; // 1, 2, or 3
+}
+
+function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): string {
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const profileUrl = `${baseUrl}/student/profile`;
+  
+  // Different messaging based on reminder number
+  let greeting = '';
+  let message = '';
+  
+  switch (data.reminderNumber) {
+    case 1:
+      greeting = `Hey ${data.firstName}!`;
+      message = `You're ${data.completionPercentage}% of the way there! Complete your profile to unlock personalized course recommendations.`;
+      break;
+    case 2:
+      greeting = `Hi ${data.firstName}!`;
+      message = `Don't miss out on personalized course matches! Your profile is ${data.completionPercentage}% complete - just a few more details to go.`;
+      break;
+    case 3:
+      greeting = `We miss you, ${data.firstName}!`;
+      message = `Your profile is still waiting at ${data.completionPercentage}% complete. Take 5 minutes to finish and unlock all the benefits!`;
+      break;
+    default:
+      greeting = `Hey ${data.firstName}!`;
+      message = `Complete your profile to get the most out of ANZ Global Education.`;
+  }
+  
+  const sectionsHtml = data.incompleteSections.length > 0 
+    ? `
+      <div style="background-color: #fef3cd; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 16px;">Sections to Complete:</h3>
+        <ul style="color: #856404; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+          ${data.incompleteSections.map(section => `<li>${section}</li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Complete Your Profile - ANZ Global Education</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Complete Your Profile</h1>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're ${data.completionPercentage}% there!</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">${greeting}</h2>
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    ${message}
+                  </p>
+                  
+                  <!-- Progress Bar -->
+                  <div style="background-color: #e9ecef; border-radius: 10px; height: 20px; margin: 20px 0; overflow: hidden;">
+                    <div style="background: linear-gradient(90deg, #3465A5 0%, #FF5000 100%); height: 100%; width: ${data.completionPercentage}%; border-radius: 10px;"></div>
+                  </div>
+                  <p style="color: #888888; font-size: 14px; text-align: center; margin: 0 0 20px 0;">
+                    ${data.completionPercentage}% Complete
+                  </p>
+                  
+                  <div style="background-color: #d4edda; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3 style="color: #155724; margin: 0 0 10px 0; font-size: 16px;">What you'll unlock:</h3>
+                    <ul style="color: #155724; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                      <li>Personalized course recommendations</li>
+                      <li>AI-powered application assistance</li>
+                      <li>Faster application processing</li>
+                    </ul>
+                  </div>
+                  
+                  ${sectionsHtml}
+                  
+                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    It only takes 5-10 minutes to complete!
+                  </p>
+                  
+                  <!-- CTA Button -->
+                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                          Complete My Profile
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
+                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
+                    © 2026 ANZ Global Education
+                  </p>
+                  <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
+                    <a href="${baseUrl}/unsubscribe" style="color: #888888; text-decoration: underline;">Unsubscribe</a> from reminder emails
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+export async function sendProfileCompletionReminder(data: ProfileCompletionReminderData): Promise<boolean> {
+  if (!resend) {
+    console.log('Resend not configured - skipping profile completion reminder');
+    return false;
+  }
+
+  try {
+    // Different subjects based on reminder number
+    let subject = '';
+    switch (data.reminderNumber) {
+      case 1:
+        subject = `${data.firstName}, you're almost there! Complete your profile`;
+        break;
+      case 2:
+        subject = `${data.firstName}, don't miss out on personalized course matches!`;
+        break;
+      case 3:
+        subject = `${data.firstName}, we miss you! Your profile is waiting`;
+        break;
+      default:
+        subject = `Complete your profile - ANZ Global Education`;
+    }
+    
+    console.log(`[Email] Sending profile completion reminder #${data.reminderNumber} to ${data.email}`);
+    
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.email,
+      subject,
+      html: getProfileCompletionReminderHtml(data),
+    });
+
+    if (result.error) {
+      console.error(`[Email] Resend error:`, result.error);
+      return false;
+    }
+
+    console.log(`Profile completion reminder #${data.reminderNumber} sent to ${data.email}, ID: ${result.data?.id}`);
+    return true;
+  } catch (error: any) {
+    console.error('Error sending profile completion reminder:', error.message);
+    return false;
+  }
+}
+
 export async function sendReferralRegistrationConfirmation(data: ReferralRegistrationConfirmationData): Promise<boolean> {
   if (!resend) {
     console.log('Resend not configured - skipping referral registration confirmation email');
