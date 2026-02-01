@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,12 +11,9 @@ import {
   FolderOpen,
   Heart,
   Sparkles,
-  Users,
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  LogOut,
-  MessageSquare,
   LayoutDashboard,
   Link2,
   Settings,
@@ -26,10 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { NotificationBell } from "@/components/NotificationBell";
 import type { StudentProfile } from "@shared/schema";
-import { performLogout } from "@/lib/logout";
-import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -81,13 +75,34 @@ export function StudentSidebarProvider({ children }: StudentSidebarProviderProps
 
 interface StudentSidebarProps {
   className?: string;
+  isMobileMenuOpen?: boolean;
+  onMobileMenuClose?: () => void;
 }
 
-export function StudentSidebar({ className }: StudentSidebarProps) {
+export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose }: StudentSidebarProps) {
   const [location, setLocation] = useLocation();
   const [activeSection, setActiveSection] = useState<string | null>("profile");
   const { isSubmenuOpen, setIsSubmenuOpen } = useStudentSidebar();
   const { user } = useAuth();
+
+  // Close submenu when mobile menu closes
+  const prevMobileMenuOpen = useRef(isMobileMenuOpen);
+  useEffect(() => {
+    if (prevMobileMenuOpen.current === true && isMobileMenuOpen === false) {
+      // Mobile menu just closed, also close submenu
+      setIsSubmenuOpen(false);
+    }
+    prevMobileMenuOpen.current = isMobileMenuOpen;
+  }, [isMobileMenuOpen, setIsSubmenuOpen]);
+
+  // Check if we're on mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch student profile for profile picture
   const { data: studentProfile } = useQuery<StudentProfile>({
@@ -217,24 +232,31 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
     return "ST";
   };
 
-  const { signOut } = useSupabaseAuth();
-
-  const handleLogout = () => {
-    performLogout(signOut);
-  };
+  // On mobile, sidebar visibility is controlled by isMobileMenuOpen prop
+  const isSidebarVisible = isMobile ? (isMobileMenuOpen ?? false) : true;
+  
+  // Submenu visibility: on desktop follows isSubmenuOpen, on mobile requires sidebar to be visible too
+  const showSubmenu = isSubmenuOpen && (isMobile ? isSidebarVisible : true);
 
   return (
     <>
-      {/* Overlay for mobile when submenu is open */}
-      {isSubmenuOpen && (
+      {/* Overlay for mobile when sidebar or submenu is open */}
+      {(isSidebarVisible || isSubmenuOpen) && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsSubmenuOpen(false)}
+          onClick={() => {
+            setIsSubmenuOpen(false);
+            onMobileMenuClose?.();
+          }}
         />
       )}
 
-      {/* Icon panel - always visible */}
-      <div className="fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background">
+      {/* Icon panel - hidden on mobile unless menu is open, always visible on desktop */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-50 w-16 flex flex-col items-center py-4 border-r bg-background transition-transform duration-300",
+        "lg:translate-x-0",
+        isSidebarVisible ? "translate-x-0" : "-translate-x-full"
+      )}>
         <Link href="/" className="mb-4" aria-label="Go to homepage" data-testid="link-logo">
           <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
         </Link>
@@ -292,13 +314,13 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
           </div>
         </ScrollArea>
 
+        {/* Profile completion indicator at bottom */}
         <div className="mt-auto flex flex-col items-center gap-2 pt-4 border-t w-full px-2">
-          <NotificationBell />
-          
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <div
-                className="relative rounded-full"
+                className="relative rounded-full cursor-pointer"
+                onClick={() => setLocation("/student/profile")}
                 data-testid="nav-profile-avatar"
               >
                 <Avatar className="h-10 w-10">
@@ -336,28 +358,13 @@ export function StudentSidebar({ className }: StudentSidebarProps) {
               </div>
             </TooltipContent>
           </Tooltip>
-          
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="destructive"
-                size="icon"
-                className="h-10 w-10 rounded-lg"
-                onClick={handleLogout}
-                data-testid="button-logout"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Logout</TooltipContent>
-          </Tooltip>
         </div>
       </div>
 
       {/* Submenu panel - slides in from left of icon panel */}
       <aside className={cn(
         "fixed inset-y-0 left-16 z-40 w-56 flex flex-col bg-background border-r transition-transform duration-300",
-        isSubmenuOpen ? "translate-x-0" : "-translate-x-full",
+        showSubmenu ? "translate-x-0" : "-translate-x-full",
         className
       )}>
           {currentSection && (

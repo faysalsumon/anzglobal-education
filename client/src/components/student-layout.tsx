@@ -1,51 +1,235 @@
+import { useState, useEffect } from "react";
 import { StudentSidebar, StudentSidebarProvider, useStudentSidebar } from "@/components/student-sidebar";
 import { ChatWidget } from "@/components/chat-widget";
 import { Helmet } from "react-helmet";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Menu, X, LogOut, User, Settings, Home } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import type { StudentProfile } from "@shared/schema";
+import { performLogout } from "@/lib/logout";
+import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { Link } from "wouter";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
   breadcrumbTitle?: string;
 }
 
-function StudentLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isSubmenuOpen, closeSubmenu } = useStudentSidebar();
+const getBreadcrumbTitle = (pathname: string): string => {
+  const routes: Record<string, string> = {
+    "/student/dashboard": "Dashboard",
+    "/student/profile": "Smart Form",
+    "/student/account": "My Account",
+    "/student/courses": "Browse Courses",
+    "/student/applications": "My Applications",
+    "/student/documents": "My Documents",
+    "/student/favorites": "My Favourites",
+    "/student/ai-assistant": "AI Assistant",
+    "/student/referrals": "Referrals",
+    "/compare-courses": "Compare Courses",
+    "/affiliate": "Affiliate Program",
+  };
+  return routes[pathname] || "Dashboard";
+};
 
-  // Calculate margin based on submenu state
+function StudentLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isSubmenuOpen, closeSubmenu, setIsSubmenuOpen } = useStudentSidebar();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [location, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { signOut } = useSupabaseAuth();
+
+  // Fetch student profile for profile picture
+  const { data: studentProfile } = useQuery<StudentProfile>({
+    queryKey: ["/api/student/profile"],
+  });
+
+  // Get the profile image URL - prefer student profile picture
+  const profileImageUrl = studentProfile?.profileImageUrl || user?.profileImageUrl || null;
+
+  const getUserInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "ST";
+  };
+
+  const handleLogout = () => {
+    performLogout(signOut);
+  };
+
+  // Calculate margin based on submenu state (desktop only)
   // Icon panel: 64px (w-16)
   // Submenu panel: 224px (w-56) when open
-  const marginLeft = isSubmenuOpen ? "18rem" : "4rem"; // 18rem = 64px + 224px, 4rem = 64px
+  // On mobile (< lg), no left margin as sidebar slides over content
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Desktop: margin based on submenu state, Mobile: no margin (sidebar overlays)
+  const marginLeft = isMobile ? "0" : (isSubmenuOpen ? "18rem" : "4rem");
+
+  const breadcrumbTitle = getBreadcrumbTitle(location);
 
   return (
     <>
       <Helmet>
         <meta name="robots" content="noindex, nofollow, noai, noimageai" />
       </Helmet>
-      <div className="flex min-h-screen w-full bg-muted/30">
-        <StudentSidebar />
+      <div className="flex h-screen w-full overflow-hidden bg-muted/30">
+        <StudentSidebar 
+          isMobileMenuOpen={isMobileMenuOpen}
+          onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+        />
 
-      {/* Main content area - adjusts margin based on submenu state */}
-      <div 
-        className="flex flex-col flex-1 transition-all duration-300 min-w-0"
-        style={{ marginLeft }}
-        onClick={(e) => {
-          // Close submenu when clicking on main content on mobile/tablet
-          // Only close if clicking directly on the main area, not on interactive elements
-          if (window.innerWidth < 1024 && isSubmenuOpen) {
-            const target = e.target as HTMLElement;
-            // Don't close if clicking on buttons, inputs, or other interactive elements
-            if (!target.closest('button, a, input, select, textarea, [role="button"]')) {
-              closeSubmenu();
+        {/* Main Content Area - Flex column with fixed header and scrollable content */}
+        <div 
+          className="flex flex-col flex-1 min-w-0 h-full transition-all duration-300"
+          style={{ marginLeft }}
+          onClick={(e) => {
+            // Close submenu when clicking on main content on mobile/tablet
+            if (window.innerWidth < 1024 && isSubmenuOpen) {
+              const target = e.target as HTMLElement;
+              if (!target.closest('button, a, input, select, textarea, [role="button"]')) {
+                closeSubmenu();
+              }
             }
-          }
-        }}
-      >
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
-          {children}
-        </main>
-      </div>
+          }}
+        >
+          {/* Top Header with Breadcrumb - Fixed height, never scrolls */}
+          <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
+            {/* Mobile menu toggle - only visible on mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden flex-shrink-0"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              data-testid="button-mobile-menu-toggle"
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            
+            <div className="flex flex-1 items-center justify-between gap-4">
+              {/* Breadcrumb */}
+              <Breadcrumb data-testid="breadcrumb">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/student/dashboard" data-testid="breadcrumb-home">
+                        <Home className="h-4 w-4" />
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage data-testid="breadcrumb-current">
+                      {breadcrumbTitle}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
 
-      <ChatWidget />
-    </div>
+              {/* Right side - Notifications and User Menu */}
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                
+                {/* User Dropdown Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="relative h-9 w-9 rounded-full"
+                      data-testid="button-user-menu"
+                    >
+                      <Avatar className="h-9 w-9">
+                        {profileImageUrl && (
+                          <AvatarImage src={profileImageUrl} alt={user?.email || "Student"} />
+                        )}
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none" data-testid="user-name">
+                          {user?.firstName && user?.lastName 
+                            ? `${user.firstName} ${user.lastName}`
+                            : "Student"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground" data-testid="user-email">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => setLocation("/student/profile")}
+                      data-testid="menu-profile"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Smart Form</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setLocation("/student/account")}
+                      data-testid="menu-account"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>My Account</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="text-destructive focus:text-destructive"
+                      data-testid="menu-logout"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </header>
+
+          {/* Main scrollable content */}
+          <main className="flex-1 p-4 lg:p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
+
+        <ChatWidget />
+      </div>
     </>
   );
 }
