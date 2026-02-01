@@ -24,9 +24,14 @@ import {
   ArrowRight,
   Star,
   Zap,
-  Shield
+  Shield,
+  Mail,
+  Send,
+  Clock,
+  UserPlus,
+  Loader2
 } from "lucide-react";
-import type { User, StudentProfile, Referral } from "@shared/schema";
+import type { User, StudentProfile, Referral, ReferralInvitation } from "@shared/schema";
 
 interface ReferralWithStudent extends Referral {
   referredStudent: StudentProfile;
@@ -204,6 +209,8 @@ function AffiliateLanding() {
 
 function AffiliateDashboard() {
   const [copied, setCopied] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteeName, setInviteeName] = useState("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -230,6 +237,65 @@ function AffiliateDashboard() {
     queryKey: ["/api/student/referral/stats"],
     enabled: !!profile,
   });
+
+  const { data: invitations = [], isLoading: invitationsLoading } = useQuery<ReferralInvitation[]>({
+    queryKey: ["/api/student/referral/invitations"],
+    enabled: !!profile,
+  });
+
+  const sendInvitationMutation = useMutation({
+    mutationFn: async (data: { email: string; inviteeName?: string }) => {
+      const res = await apiRequest("POST", "/api/student/referral/invite", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/student/referral/invitations"] });
+      setInviteEmail("");
+      setInviteeName("");
+      toast({
+        title: "Invitation Sent!",
+        description: "Your friend will receive an email invitation to join ANZ Global Education.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Invitation",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendInvitation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your friend's email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendInvitationMutation.mutate({ 
+      email: inviteEmail.trim(), 
+      inviteeName: inviteeName.trim() || undefined 
+    });
+  };
+
+  const getInvitationStatusBadge = (status: string) => {
+    switch (status) {
+      case "invited":
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case "registered":
+        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20"><Check className="w-3 h-3 mr-1" />Registered</Badge>;
+      case "enrolled":
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/20"><Star className="w-3 h-3 mr-1" />Enrolled</Badge>;
+      case "expired":
+        return <Badge variant="outline" className="text-muted-foreground">Expired</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   const handleCopyLink = () => {
     if (referralData?.referralLink) {
@@ -373,6 +439,10 @@ function AffiliateDashboard() {
               <CreditCard className="h-4 w-4 mr-2" />
               Payout Details
             </TabsTrigger>
+            <TabsTrigger value="invite" data-testid="tab-invite">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite a Friend
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="referral-link">
@@ -481,6 +551,119 @@ function AffiliateDashboard() {
                 <BankDetailsForm profileId={profile.id} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="invite">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Invite a Friend
+                  </CardTitle>
+                  <CardDescription>
+                    Send an email invitation to your friends and earn bonuses when they register and enrol!
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSendInvitation} className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteEmail">Friend's Email *</Label>
+                        <Input
+                          id="inviteEmail"
+                          type="email"
+                          placeholder="friend@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          required
+                          data-testid="input-invite-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteeName">Friend's Name (Optional)</Label>
+                        <Input
+                          id="inviteeName"
+                          type="text"
+                          placeholder="John"
+                          value={inviteeName}
+                          onChange={(e) => setInviteeName(e.target.value)}
+                          data-testid="input-invitee-name"
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={sendInvitationMutation.isPending}
+                      data-testid="button-send-invitation"
+                    >
+                      {sendInvitationMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Invitation
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    Sent Invitations
+                  </CardTitle>
+                  <CardDescription>
+                    Track the status of your sent invitations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {invitationsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : invitations.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No invitations sent yet</p>
+                      <p className="text-sm text-muted-foreground">Use the form above to invite your friends!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {invitations.map((invitation) => (
+                        <div 
+                          key={invitation.id} 
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-lg"
+                          data-testid={`invitation-item-${invitation.id}`}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">{invitation.inviteeEmail}</span>
+                            </div>
+                            {invitation.inviteeName && (
+                              <p className="text-sm text-muted-foreground ml-6">{invitation.inviteeName}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground ml-6 mt-1">
+                              Sent {invitation.createdAt ? new Date(invitation.createdAt).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getInvitationStatusBadge(invitation.status)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
     </div>
