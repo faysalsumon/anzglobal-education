@@ -177,6 +177,7 @@ export interface IStorage {
   // Student profile operations
   getStudentProfileById(id: string): Promise<StudentProfile | undefined>;
   getStudentProfileByUserId(userId: string): Promise<StudentProfile | undefined>;
+  getStudentProfileByEmail(email: string): Promise<StudentProfile | undefined>;
   createStudentProfile(profile: InsertStudentProfile): Promise<StudentProfile>;
   updateStudentProfile(id: string, data: Partial<InsertStudentProfile>): Promise<StudentProfile>;
   
@@ -797,6 +798,15 @@ export class DatabaseStorage implements IStorage {
       .from(studentProfiles)
       .where(eq(studentProfiles.userId, userId));
     return profile;
+  }
+
+  async getStudentProfileByEmail(email: string): Promise<StudentProfile | undefined> {
+    const result = await db
+      .select({ studentProfile: studentProfiles })
+      .from(studentProfiles)
+      .innerJoin(users, eq(studentProfiles.userId, users.id))
+      .where(eq(users.email, email.toLowerCase()));
+    return result[0]?.studentProfile;
   }
 
   async createStudentProfile(profileData: InsertStudentProfile): Promise<StudentProfile> {
