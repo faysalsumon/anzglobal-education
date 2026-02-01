@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { StudentLayout } from "@/components/student-layout";
@@ -211,6 +212,7 @@ function AffiliateDashboard() {
   const [copied, setCopied] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteeName, setInviteeName] = useState("");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -252,6 +254,7 @@ function AffiliateDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/student/referral/invitations"] });
       setInviteEmail("");
       setInviteeName("");
+      setInviteDialogOpen(false);
       toast({
         title: "Invitation Sent!",
         description: "Your friend will receive an email invitation to join ANZ Global Education.",
@@ -439,10 +442,6 @@ function AffiliateDashboard() {
               <CreditCard className="h-4 w-4 mr-2" />
               Payout Details
             </TabsTrigger>
-            <TabsTrigger value="invite" data-testid="tab-invite">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite a Friend
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="referral-link">
@@ -488,12 +487,77 @@ function AffiliateDashboard() {
           </TabsContent>
 
           <TabsContent value="referrals">
+            <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Your Referrals</CardTitle>
-                <CardDescription>
-                  Track all students you've referred and their application status
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+                <div className="space-y-1">
+                  <CardTitle>Your Referrals</CardTitle>
+                  <CardDescription>
+                    Track all students you've referred and their application status
+                  </CardDescription>
+                </div>
+                <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-invite-friend">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite a Friend
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Mail className="h-5 w-5" />
+                        Invite a Friend
+                      </DialogTitle>
+                      <DialogDescription>
+                        Send an email invitation to your friends and earn bonuses when they register and enrol!
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSendInvitation} className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteEmail">Friend's Email *</Label>
+                        <Input
+                          id="inviteEmail"
+                          type="email"
+                          placeholder="friend@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          required
+                          data-testid="input-invite-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteeName">Friend's Name (Optional)</Label>
+                        <Input
+                          id="inviteeName"
+                          type="text"
+                          placeholder="John"
+                          value={inviteeName}
+                          onChange={(e) => setInviteeName(e.target.value)}
+                          data-testid="input-invitee-name"
+                        />
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={sendInvitationMutation.isPending}
+                        data-testid="button-send-invitation"
+                      >
+                        {sendInvitationMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Invitation
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent>
                 {referrals.length === 0 ? (
@@ -534,6 +598,59 @@ function AffiliateDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Sent Invitations Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Sent Invitations
+                </CardTitle>
+                <CardDescription>
+                  Track the status of your sent invitations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {invitationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : invitations.length === 0 ? (
+                  <div className="text-center py-8">
+                    <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No invitations sent yet</p>
+                    <p className="text-sm text-muted-foreground">Click "Invite a Friend" above to get started!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {invitations.map((invitation) => (
+                      <div 
+                        key={invitation.id} 
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-lg"
+                        data-testid={`invitation-item-${invitation.id}`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{invitation.inviteeEmail}</span>
+                          </div>
+                          {invitation.inviteeName && (
+                            <p className="text-sm text-muted-foreground ml-6">{invitation.inviteeName}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground ml-6 mt-1">
+                            Sent {invitation.createdAt ? new Date(invitation.createdAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getInvitationStatusBadge(invitation.status)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="payout">
@@ -551,119 +668,6 @@ function AffiliateDashboard() {
                 <BankDetailsForm profileId={profile.id} />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="invite">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="h-5 w-5" />
-                    Invite a Friend
-                  </CardTitle>
-                  <CardDescription>
-                    Send an email invitation to your friends and earn bonuses when they register and enrol!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSendInvitation} className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="inviteEmail">Friend's Email *</Label>
-                        <Input
-                          id="inviteEmail"
-                          type="email"
-                          placeholder="friend@example.com"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                          required
-                          data-testid="input-invite-email"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="inviteeName">Friend's Name (Optional)</Label>
-                        <Input
-                          id="inviteeName"
-                          type="text"
-                          placeholder="John"
-                          value={inviteeName}
-                          onChange={(e) => setInviteeName(e.target.value)}
-                          data-testid="input-invitee-name"
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      type="submit" 
-                      disabled={sendInvitationMutation.isPending}
-                      data-testid="button-send-invitation"
-                    >
-                      {sendInvitationMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send Invitation
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Sent Invitations
-                  </CardTitle>
-                  <CardDescription>
-                    Track the status of your sent invitations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {invitationsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : invitations.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No invitations sent yet</p>
-                      <p className="text-sm text-muted-foreground">Use the form above to invite your friends!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {invitations.map((invitation) => (
-                        <div 
-                          key={invitation.id} 
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-lg"
-                          data-testid={`invitation-item-${invitation.id}`}
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{invitation.inviteeEmail}</span>
-                            </div>
-                            {invitation.inviteeName && (
-                              <p className="text-sm text-muted-foreground ml-6">{invitation.inviteeName}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground ml-6 mt-1">
-                              Sent {invitation.createdAt ? new Date(invitation.createdAt).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getInvitationStatusBadge(invitation.status)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
     </div>
