@@ -62,6 +62,7 @@ export default function AuthPage() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [redirectingToAdmin, setRedirectingToAdmin] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
@@ -71,7 +72,7 @@ export default function AuthPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-    const referralCode = urlParams.get('ref');
+    const urlReferralCode = urlParams.get('ref');
     
     if (mode === 'signup') {
       setIsSignup(true);
@@ -79,11 +80,18 @@ export default function AuthPage() {
       setIsSignup(false);
     }
     
-    // Store referral code in localStorage for use during signup
-    if (referralCode) {
-      localStorage.setItem('referral_code', referralCode);
+    // Store referral code in localStorage and set the state for use during signup
+    if (urlReferralCode) {
+      localStorage.setItem('referral_code', urlReferralCode);
+      setReferralCode(urlReferralCode);
       // Auto-set to signup mode when coming from a referral link
       setIsSignup(true);
+    } else {
+      // Check if there's a referral code in localStorage from a previous visit
+      const storedCode = localStorage.getItem('referral_code');
+      if (storedCode) {
+        setReferralCode(storedCode);
+      }
     }
   }, []);
 
@@ -717,6 +725,33 @@ export default function AuthPage() {
                       >
                         Forgot password?
                       </button>
+                    </div>
+                  )}
+
+                  {isSignup && (
+                    <div className="space-y-2">
+                      <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                      <Input 
+                        id="referralCode"
+                        type="text"
+                        placeholder="Enter referral code if you have one"
+                        value={referralCode}
+                        onChange={(e) => {
+                          const newCode = e.target.value.toUpperCase();
+                          setReferralCode(newCode);
+                          // Update localStorage when user manually enters a code
+                          if (newCode) {
+                            localStorage.setItem('referral_code', newCode);
+                          } else {
+                            localStorage.removeItem('referral_code');
+                          }
+                        }}
+                        disabled={isLoading}
+                        data-testid="input-referral-code"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Were you referred by a friend? Enter their referral code to earn rewards!
+                      </p>
                     </div>
                   )}
 
