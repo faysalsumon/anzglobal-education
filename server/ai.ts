@@ -482,15 +482,28 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     const { Client } = await import("@replit/object-storage");
     const storageClient = new Client();
     
-    // Extract the base64 content and mime type
-    const matches = base64DataUrl.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+    // Log the input for debugging (first 100 chars)
+    console.log(`[Thumbnail AI] Processing base64 data URL, length: ${base64DataUrl.length}, prefix: ${base64DataUrl.substring(0, 100)}...`);
+    
+    // Extract the base64 content and mime type - trim whitespace and handle multi-line
+    const cleanedDataUrl = base64DataUrl.trim().replace(/\s+/g, '');
+    const matches = cleanedDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
     if (!matches) {
-      console.warn("[Thumbnail AI] Invalid base64 data URL format");
+      console.warn("[Thumbnail AI] Invalid base64 data URL format, cleaned prefix:", cleanedDataUrl.substring(0, 100));
       return null;
     }
     
     const [, imageType, base64Data] = matches;
+    console.log(`[Thumbnail AI] Extracted image type: ${imageType}, base64 length: ${base64Data.length}`);
+    
     const buffer = Buffer.from(base64Data, 'base64');
+    console.log(`[Thumbnail AI] Created buffer with size: ${buffer.length} bytes`);
+    
+    if (buffer.length < 100) {
+      console.error(`[Thumbnail AI] Buffer too small (${buffer.length} bytes), likely invalid base64 data`);
+      return null;
+    }
+    
     const ext = imageType === 'jpeg' ? 'jpg' : imageType.replace('+xml', '');
     
     // Upload to public folder for CDN access
@@ -502,7 +515,7 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     if (result.ok) {
       // Return public URL for the uploaded file - matches the serving endpoint
       const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
-      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${filePath}`);
+      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${filePath}, size: ${buffer.length} bytes`);
       return publicUrl;
     } else {
       console.warn("[Thumbnail AI] Failed to upload to object storage:", result.error);
@@ -579,20 +592,35 @@ No artificial graphics, no text overlays, no logos. Just natural, candid educati
     
     const data = await response.json();
     
+    // Log the full response structure for debugging
+    console.log(`[Thumbnail AI] OpenRouter response keys:`, Object.keys(data));
+    console.log(`[Thumbnail AI] Message structure:`, data.choices?.[0]?.message ? Object.keys(data.choices[0].message) : 'no message');
+    
     // Extract base64 image from response - Nano Banana Pro returns images in message
     const message = data.choices?.[0]?.message;
     let imageUrl: string | null = null;
     
-    // Check for inline image in content parts
+    // Check for inline image in content parts (array format)
     if (message?.content && Array.isArray(message.content)) {
+      console.log(`[Thumbnail AI] Content is array with ${message.content.length} parts`);
       for (const part of message.content) {
+        console.log(`[Thumbnail AI] Part type:`, part.type, 'keys:', Object.keys(part));
         if (part.type === "image_url" && part.image_url?.url) {
           imageUrl = part.image_url.url;
+          console.log(`[Thumbnail AI] Found image_url, length: ${imageUrl.length}`);
           break;
         }
-        // Also check for inline_data format
+        // Also check for inline_data format (Gemini style)
         if (part.inline_data?.data && part.inline_data?.mime_type) {
           imageUrl = `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
+          console.log(`[Thumbnail AI] Found inline_data, constructed data URL length: ${imageUrl.length}`);
+          break;
+        }
+        // Check for data field directly on part (some models)
+        if (part.type === "image" && part.data) {
+          const mimeType = part.mime_type || 'image/png';
+          imageUrl = `data:${mimeType};base64,${part.data}`;
+          console.log(`[Thumbnail AI] Found image part with data, constructed data URL length: ${imageUrl.length}`);
           break;
         }
       }
@@ -601,20 +629,30 @@ No artificial graphics, no text overlays, no logos. Just natural, candid educati
     // Check for images array in message
     if (!imageUrl && message?.images?.[0]?.image_url?.url) {
       imageUrl = message.images[0].image_url.url;
+      console.log(`[Thumbnail AI] Found in images array, length: ${imageUrl.length}`);
     }
     
     // Check if image data is embedded in content string
-    if (!imageUrl && typeof message?.content === "string" && message.content.includes("data:image")) {
-      const match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-      if (match) {
-        imageUrl = match[0];
+    if (!imageUrl && typeof message?.content === "string") {
+      console.log(`[Thumbnail AI] Content is string, length: ${message.content.length}`);
+      if (message.content.includes("data:image")) {
+        // Use more permissive regex that captures the full base64
+        const match = message.content.match(/data:image\/[a-zA-Z0-9+]+;base64,[A-Za-z0-9+/=]+/);
+        if (match) {
+          imageUrl = match[0];
+          console.log(`[Thumbnail AI] Extracted from string content, length: ${imageUrl.length}`);
+        }
       }
     }
     
     if (!imageUrl) {
-      console.warn(`[Thumbnail AI] No image in response for: ${courseTitle}`, JSON.stringify(data).substring(0, 500));
+      console.warn(`[Thumbnail AI] No image in response for: ${courseTitle}`);
+      console.warn(`[Thumbnail AI] Response preview:`, JSON.stringify(data).substring(0, 1000));
       return { success: false, error: "No image returned from Nano Banana Pro model" };
     }
+    
+    console.log(`[Thumbnail AI] Found image URL, total length: ${imageUrl.length}, starts with: ${imageUrl.substring(0, 50)}`);
+    
     
     // If it's a base64 data URL, upload to object storage for a proper URL
     if (imageUrl.startsWith('data:image')) {
