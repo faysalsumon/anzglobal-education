@@ -552,6 +552,321 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
   }
 }
 
+// Discipline-specific visual contexts for unique, authentic thumbnails
+const DISCIPLINE_VISUALS: Record<string, {
+  settings: string[];
+  activities: string[];
+  props: string[];
+  atmosphere: string[];
+}> = {
+  // TRADES & CONSTRUCTION
+  "carpentry": {
+    settings: ["workshop with sawdust and wood planks", "construction site with timber framing", "woodworking studio with workbenches"],
+    activities: ["measuring and cutting timber with precision tools", "building wooden furniture frames", "operating power saws safely"],
+    props: ["power drills, saws, measuring tapes, safety goggles", "wooden beams, lumber, construction blueprints", "tool belts, hard hats, work gloves"],
+    atmosphere: ["industrial workshop lighting", "morning sunlight through dusty workshop windows", "busy construction site ambiance"]
+  },
+  "plumbing": {
+    settings: ["plumbing workshop with pipe systems", "bathroom renovation site", "industrial pipe fitting area"],
+    activities: ["connecting copper pipes with precision", "installing modern fixtures", "troubleshooting water systems"],
+    props: ["pipe wrenches, soldering equipment, copper tubing", "valve systems, faucets, plumbing blueprints", "safety equipment, work lights"],
+    atmosphere: ["clean workshop environment", "residential renovation setting", "hands-on learning atmosphere"]
+  },
+  "electrical": {
+    settings: ["electrical training lab with wiring panels", "industrial control room", "residential electrical installation"],
+    activities: ["wiring electrical panels", "testing circuits with multimeters", "installing lighting systems"],
+    props: ["wire strippers, multimeters, circuit breakers", "electrical panels, conduit, safety switches", "insulated tools, voltage testers"],
+    atmosphere: ["well-lit technical lab", "industrial facility setting", "safety-focused environment"]
+  },
+  "automotive": {
+    settings: ["modern auto repair garage", "automotive workshop with lifted cars", "engine diagnostic bay"],
+    activities: ["diagnosing engine problems", "working under vehicle hoods", "using computerized diagnostic tools"],
+    props: ["diagnostic scanners, wrenches, car parts", "engine blocks, tires, hydraulic lifts", "mechanic's toolbox, oil equipment"],
+    atmosphere: ["busy garage with natural light", "professional auto shop", "hands-on mechanical environment"]
+  },
+  "construction": {
+    settings: ["active construction site with scaffolding", "building foundation site", "commercial construction project"],
+    activities: ["operating heavy equipment", "reading blueprints on site", "coordinating building work"],
+    props: ["hard hats, high-visibility vests, blueprints", "concrete forms, steel beams, cranes", "surveying equipment, safety barriers"],
+    atmosphere: ["outdoor construction environment", "morning light on building site", "professional construction setting"]
+  },
+  "welding": {
+    settings: ["welding workshop with sparks flying", "metal fabrication facility", "industrial welding bay"],
+    activities: ["arc welding metal joints", "inspecting weld quality", "preparing metal surfaces"],
+    props: ["welding masks, torches, metal sheets", "grinders, clamps, welding rods", "protective gear, ventilation systems"],
+    atmosphere: ["dramatic welding sparks", "industrial manufacturing setting", "skilled craftsmanship environment"]
+  },
+
+  // HEALTHCARE & NURSING
+  "nursing": {
+    settings: ["modern hospital ward", "clinical simulation lab", "patient care unit"],
+    activities: ["checking patient vital signs", "administering medications carefully", "practicing on medical mannequins"],
+    props: ["stethoscopes, blood pressure monitors, medical charts", "IV equipment, hospital beds, monitors", "nursing uniforms, medical gloves"],
+    atmosphere: ["bright hospital lighting", "caring clinical environment", "professional healthcare setting"]
+  },
+  "healthcare": {
+    settings: ["medical examination room", "healthcare facility", "clinical practice area"],
+    activities: ["performing health assessments", "using medical equipment", "consulting with patients"],
+    props: ["medical instruments, examination tables", "health monitoring devices, medical records", "professional medical attire"],
+    atmosphere: ["clean clinical setting", "patient-focused environment", "modern healthcare facility"]
+  },
+  "aged care": {
+    settings: ["aged care facility lounge", "residential care home", "elderly care center"],
+    activities: ["assisting elderly residents with activities", "providing compassionate care", "engaging seniors in activities"],
+    props: ["mobility aids, comfortable seating", "activity materials, care equipment", "warm home-like furnishings"],
+    atmosphere: ["warm and homely environment", "compassionate care setting", "peaceful residential atmosphere"]
+  },
+  "dental": {
+    settings: ["modern dental clinic", "dental treatment room", "oral health practice"],
+    activities: ["performing dental examinations", "using dental instruments", "explaining procedures to patients"],
+    props: ["dental chairs, x-ray equipment", "dental tools, oral hygiene supplies", "treatment computers, lighting"],
+    atmosphere: ["bright clean dental office", "professional clinic setting", "patient comfort focused"]
+  },
+  "pharmacy": {
+    settings: ["pharmacy dispensary", "hospital pharmacy", "pharmaceutical lab"],
+    activities: ["preparing prescriptions accurately", "checking medication interactions", "consulting with customers"],
+    props: ["prescription bottles, medications", "pharmacy computers, weighing scales", "lab coats, safety equipment"],
+    atmosphere: ["organized pharmacy environment", "precise scientific setting", "healthcare retail space"]
+  },
+
+  // INFORMATION TECHNOLOGY
+  "information technology": {
+    settings: ["modern tech office with multiple monitors", "server room with racks", "software development workspace"],
+    activities: ["coding on large screens", "troubleshooting network issues", "collaborating on software projects"],
+    props: ["laptops, dual monitors, keyboards", "server equipment, networking cables", "whiteboards with diagrams"],
+    atmosphere: ["modern tech startup vibe", "focused coding environment", "innovative workspace"]
+  },
+  "computer science": {
+    settings: ["computer lab with rows of workstations", "AI research facility", "software engineering office"],
+    activities: ["programming complex algorithms", "analyzing data visualizations", "debugging code collaboratively"],
+    props: ["high-end computers, coding screens", "AI robots, research equipment", "technical books, coffee cups"],
+    atmosphere: ["academic computing environment", "cutting-edge research facility", "collaborative tech space"]
+  },
+  "cybersecurity": {
+    settings: ["security operations center", "network monitoring room", "ethical hacking lab"],
+    activities: ["monitoring security dashboards", "analyzing threat data", "testing system vulnerabilities"],
+    props: ["multiple security monitors, dark screens", "network diagrams, security tools", "hoodies, dim lighting"],
+    atmosphere: ["high-tech security environment", "focused monitoring setting", "cyber defense atmosphere"]
+  },
+  "data science": {
+    settings: ["data analytics workspace", "machine learning lab", "business intelligence center"],
+    activities: ["visualizing large datasets", "building predictive models", "presenting data insights"],
+    props: ["data dashboards, charts on screens", "statistical software, notebooks", "presentation screens"],
+    atmosphere: ["data-driven office space", "analytical work environment", "insight-focused setting"]
+  },
+
+  // BUSINESS & MANAGEMENT
+  "business": {
+    settings: ["modern corporate boardroom", "startup office space", "business conference room"],
+    activities: ["presenting to stakeholders", "analyzing business reports", "strategic planning sessions"],
+    props: ["presentation screens, laptops", "business reports, charts, coffee", "professional attire, notepads"],
+    atmosphere: ["professional business environment", "dynamic startup atmosphere", "executive meeting setting"]
+  },
+  "accounting": {
+    settings: ["accounting firm office", "finance department", "audit workspace"],
+    activities: ["analyzing financial spreadsheets", "reviewing tax documents", "preparing financial reports"],
+    props: ["calculators, financial documents", "accounting software on screens", "organized desk setup"],
+    atmosphere: ["organized professional office", "detail-oriented workspace", "financial precision environment"]
+  },
+  "marketing": {
+    settings: ["creative marketing agency", "digital marketing workspace", "brand strategy room"],
+    activities: ["brainstorming campaign ideas", "analyzing social media metrics", "designing marketing materials"],
+    props: ["creative mood boards, brand mockups", "social media dashboards", "marketing presentations"],
+    atmosphere: ["creative agency environment", "dynamic brainstorming setting", "colorful creative space"]
+  },
+  "hospitality": {
+    settings: ["luxury hotel lobby", "restaurant kitchen", "event management venue"],
+    activities: ["greeting guests professionally", "preparing gourmet dishes", "coordinating events"],
+    props: ["hotel uniforms, reception desk", "chef attire, cooking equipment", "event decorations, table settings"],
+    atmosphere: ["welcoming hospitality setting", "bustling kitchen energy", "elegant venue atmosphere"]
+  },
+  "tourism": {
+    settings: ["travel agency office", "airport terminal", "tourist information center"],
+    activities: ["planning travel itineraries", "assisting travelers", "promoting destinations"],
+    props: ["travel brochures, maps, globes", "booking systems, luggage", "destination displays"],
+    atmosphere: ["exciting travel environment", "international airport setting", "wanderlust-inspiring space"]
+  },
+
+  // CREATIVE ARTS & DESIGN
+  "design": {
+    settings: ["creative design studio", "graphic design workspace", "industrial design lab"],
+    activities: ["sketching design concepts", "working on digital design software", "creating prototypes"],
+    props: ["drawing tablets, design software", "color swatches, mood boards", "3D models, design samples"],
+    atmosphere: ["artistic creative space", "modern design studio", "innovative design environment"]
+  },
+  "media": {
+    settings: ["video production studio", "podcast recording booth", "media editing suite"],
+    activities: ["filming with professional cameras", "editing video on large screens", "recording audio content"],
+    props: ["cameras, lighting rigs, microphones", "editing software, sound boards", "green screens, monitors"],
+    atmosphere: ["professional studio lighting", "creative media environment", "production-ready setting"]
+  },
+  "music": {
+    settings: ["recording studio with instruments", "music practice room", "concert hall backstage"],
+    activities: ["playing instruments collaboratively", "mixing audio tracks", "rehearsing performances"],
+    props: ["guitars, pianos, drums, microphones", "mixing consoles, headphones", "sheet music, instruments"],
+    atmosphere: ["acoustic studio environment", "creative music space", "performance-ready setting"]
+  },
+  "photography": {
+    settings: ["photography studio with lighting", "outdoor photo shoot location", "photo editing workspace"],
+    activities: ["setting up professional shots", "editing photos on calibrated monitors", "directing photo subjects"],
+    props: ["DSLR cameras, studio lights, backdrops", "tripods, reflectors, lenses", "editing tablets, color calibrators"],
+    atmosphere: ["professional studio lighting", "creative outdoor setting", "artistic workspace"]
+  },
+  "fashion": {
+    settings: ["fashion design atelier", "textile workshop", "fashion runway backstage"],
+    activities: ["draping fabric on mannequins", "sewing garments carefully", "fitting models for shows"],
+    props: ["sewing machines, fabric rolls, mannequins", "fashion sketches, measuring tapes", "garment racks, accessories"],
+    atmosphere: ["creative fashion studio", "bustling atelier environment", "glamorous backstage setting"]
+  },
+
+  // ENGINEERING & SCIENCES
+  "engineering": {
+    settings: ["engineering lab with equipment", "CAD design workspace", "prototype workshop"],
+    activities: ["testing mechanical prototypes", "designing on CAD software", "building engineering models"],
+    props: ["engineering drawings, 3D printers", "mechanical components, testing equipment", "precision tools, safety gear"],
+    atmosphere: ["innovative engineering lab", "technical workspace", "hands-on building environment"]
+  },
+  "science": {
+    settings: ["chemistry laboratory", "research facility", "biology lab with microscopes"],
+    activities: ["conducting experiments carefully", "analyzing samples under microscopes", "recording research data"],
+    props: ["lab coats, safety goggles, beakers", "microscopes, test tubes, pipettes", "scientific equipment, lab notebooks"],
+    atmosphere: ["bright laboratory lighting", "precise scientific environment", "research-focused setting"]
+  },
+  "agriculture": {
+    settings: ["modern farm with crops", "agricultural research facility", "greenhouse with plants"],
+    activities: ["analyzing soil samples", "operating farm equipment", "studying plant growth"],
+    props: ["farming equipment, soil testing kits", "greenhouse plants, irrigation systems", "agricultural technology"],
+    atmosphere: ["outdoor farm environment", "sustainable agriculture setting", "green growing spaces"]
+  },
+  "environmental": {
+    settings: ["environmental research station", "outdoor field study site", "sustainability lab"],
+    activities: ["collecting water samples", "monitoring ecosystems", "analyzing environmental data"],
+    props: ["field equipment, water testing kits", "GPS devices, specimen containers", "environmental monitoring tools"],
+    atmosphere: ["natural outdoor setting", "conservation-focused environment", "eco-research atmosphere"]
+  },
+
+  // EDUCATION & SOCIAL SERVICES
+  "education": {
+    settings: ["vibrant classroom with students", "teacher training center", "early childhood education space"],
+    activities: ["leading interactive lessons", "preparing teaching materials", "engaging children in activities"],
+    props: ["whiteboards, educational materials", "children's books, learning toys", "teaching resources, lesson plans"],
+    atmosphere: ["bright educational environment", "nurturing classroom setting", "inspiring learning space"]
+  },
+  "social work": {
+    settings: ["community center", "counseling office", "family support facility"],
+    activities: ["meeting with community members", "providing support counseling", "organizing community programs"],
+    props: ["comfortable seating, private spaces", "resource materials, community boards", "welcoming reception areas"],
+    atmosphere: ["warm supportive environment", "safe counseling space", "community-focused setting"]
+  },
+  "psychology": {
+    settings: ["psychology practice office", "research observation room", "counseling suite"],
+    activities: ["conducting therapy sessions", "performing psychological assessments", "analyzing behavioral data"],
+    props: ["comfortable therapy chairs, notes", "assessment materials, research data", "calming office decor"],
+    atmosphere: ["calming therapeutic space", "professional practice setting", "confidential counseling environment"]
+  },
+
+  // LANGUAGES & ENGLISH
+  "english": {
+    settings: ["language learning classroom", "conversation practice lounge", "IELTS test preparation center"],
+    activities: ["practicing English conversation", "studying grammar and vocabulary", "taking language assessments"],
+    props: ["English textbooks, dictionaries", "language learning apps, headphones", "writing materials, flashcards"],
+    atmosphere: ["multicultural classroom setting", "interactive language environment", "focused study atmosphere"]
+  },
+  "languages": {
+    settings: ["multilingual learning center", "cultural exchange classroom", "language lab with booths"],
+    activities: ["practicing foreign languages", "cultural immersion activities", "translation exercises"],
+    props: ["multilingual books, translation tools", "cultural artifacts, world maps", "language software, recordings"],
+    atmosphere: ["diverse cultural environment", "international learning setting", "language-focused space"]
+  },
+
+  // DEFAULT FALLBACK
+  "default": {
+    settings: ["modern university campus", "collaborative learning space", "academic library"],
+    activities: ["studying together in groups", "working on projects collaboratively", "engaging in academic discussions"],
+    props: ["laptops, textbooks, notebooks", "study materials, coffee cups", "university branded items"],
+    atmosphere: ["inspiring academic environment", "collaborative learning setting", "intellectual campus atmosphere"]
+  }
+};
+
+// Check if word exists as whole word (not substring) using word boundaries
+function hasWholeWord(text: string, word: string): boolean {
+  const regex = new RegExp(`\\b${word}\\b`, 'i');
+  return regex.test(text);
+}
+
+// Get discipline visual context with improved matching
+function getDisciplineVisuals(discipline?: string, courseTitle?: string): typeof DISCIPLINE_VISUALS["default"] {
+  if (!discipline && !courseTitle) return DISCIPLINE_VISUALS["default"];
+  
+  const searchText = `${discipline || ""} ${courseTitle || ""}`.toLowerCase();
+  
+  // Priority order for matching - use substring match unless pattern starts with ^ (whole word)
+  const matchPatterns: [string[], string][] = [
+    // Trades
+    [["carpentry", "woodwork", "timber", "joinery", "cabinet"], "carpentry"],
+    [["plumb", "pipe", "sanitation"], "plumbing"],
+    [["electr", "wiring", "circuit"], "electrical"],
+    [["automotive", "mechanic", "vehicle", "car repair", "motor"], "automotive"],
+    [["construction", "building", "civil", "bricklaying"], "construction"],
+    [["weld", "fabricat", "metal work"], "welding"],
+    // Healthcare
+    [["nurs", "midwif", "patient care"], "nursing"],
+    [["aged care", "elderly", "disability", "community service"], "aged care"],
+    [["dental", "oral health", "dentist"], "dental"],
+    [["pharmac", "dispens", "medication"], "pharmacy"],
+    [["health", "medical", "clinical", "pathology"], "healthcare"],
+    // IT - Use ^word for whole-word matching on short terms like "IT"
+    [["cyber", "network security", "ethical hack"], "cybersecurity"],
+    [["data science", "machine learning", "analytics", "big data"], "data science"],
+    [["computer science", "software engineer", "programming", "algorithm", "developer"], "computer science"],
+    [["information tech", "^it", "^ict", "network admin", "system admin", "cloud computing", "tech support"], "information technology"],
+    // Business
+    [["account", "bookkeep", "tax", "audit", "finance"], "accounting"],
+    [["market", "digital market", "brand", "advertis"], "marketing"],
+    [["hospit", "hotel", "resort", "food service"], "hospitality"],
+    [["tour", "travel", "aviation", "event"], "tourism"],
+    [["business", "^mba", "management", "commerce", "entrepreneur"], "business"],
+    // Creative
+    [["design", "graphic", "ux", "ui", "visual"], "design"],
+    [["media", "film", "video", "broadcast", "journalism"], "media"],
+    [["music", "audio", "sound"], "music"],
+    [["photo", "camera", "imaging"], "photography"],
+    [["fashion", "textile", "apparel", "garment"], "fashion"],
+    // Engineering & Science
+    [["engineer", "mechanical", "aerospace", "civil eng"], "engineering"],
+    [["science", "chemistry", "biology", "physics", "lab"], "science"],
+    [["agricult", "farm", "horticulture", "viticulture"], "agriculture"],
+    [["environment", "sustainab", "ecology", "conservation"], "environmental"],
+    // Education & Social
+    [["education", "teaching", "early childhood", "tesol"], "education"],
+    [["social work", "community", "welfare", "youth work"], "social work"],
+    [["psych", "counsel", "therapy", "mental health"], "psychology"],
+    // Languages
+    [["english", "ielts", "pte", "esl", "elicos"], "english"],
+    [["language", "translation", "interpreter", "naati"], "languages"],
+  ];
+  
+  for (const [patterns, key] of matchPatterns) {
+    const matched = patterns.some(p => {
+      if (p.startsWith('^')) {
+        // Whole word match for patterns like ^it, ^mba
+        return hasWholeWord(searchText, p.slice(1));
+      }
+      return searchText.includes(p);
+    });
+    if (matched) {
+      return DISCIPLINE_VISUALS[key] || DISCIPLINE_VISUALS["default"];
+    }
+  }
+  
+  return DISCIPLINE_VISUALS["default"];
+}
+
+// Random selection helper
+function randomChoice<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 export async function generateCourseThumbnail(
   courseTitle: string,
   discipline?: string,
@@ -564,17 +879,29 @@ export async function generateCourseThumbnail(
     return { success: false, error: msg };
   }
   
-  const disciplineContext = discipline ? ` studying ${discipline}` : "";
-  const levelContext = level ? ` at ${level} level` : "";
-  const uniContext = universityName ? ` at ${universityName}` : "";
+  // Get discipline-specific visual context
+  const visuals = getDisciplineVisuals(discipline, courseTitle);
   
-  // Create realistic, student-centric prompt for Nano Banana Pro
-  const prompt = `A realistic photograph of diverse international students${disciplineContext}${levelContext}${uniContext}. 
-The scene shows engaged students in a modern university setting - could be a library, lecture hall, campus grounds, or study area.
-Natural lighting, warm and inviting atmosphere. Students appear focused, collaborative, and enthusiastic about learning.
-Professional stock photography style, high quality, authentic feel.
-Subject context: ${courseTitle}.
-No artificial graphics, no text overlays, no logos. Just natural, candid educational photography.`;
+  // Randomly select specific elements for variety
+  const setting = randomChoice(visuals.settings);
+  const activity = randomChoice(visuals.activities);
+  const props = randomChoice(visuals.props);
+  const atmosphere = randomChoice(visuals.atmosphere);
+  
+  // Level-specific context
+  const levelDescriptor = level?.toLowerCase().includes("master") 
+    ? "mature graduate students"
+    : level?.toLowerCase().includes("certificate") 
+      ? "young adult vocational students"
+      : "university students";
+  
+  // Create environment-first prompt with students as natural participants
+  const prompt = `A realistic professional photograph in a ${setting}. 
+${atmosphere}, showing diverse international ${levelDescriptor} ${activity}.
+The scene includes ${props}. Students appear engaged, skilled, and professional.
+Authentic educational photography capturing real hands-on learning. 
+Course context: "${courseTitle}"${universityName ? ` at ${universityName}` : ""}.
+High quality stock photo style. No text, no watermarks, no logos, no artificial elements.`;
 
   try {
     console.log(`[Thumbnail AI] Generating thumbnail via OpenRouter Nano Banana Pro for: ${courseTitle}`);
