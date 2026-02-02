@@ -508,23 +508,41 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     
     // Upload to public folder for CDN access
     const fullFileName = `${fileName}.${ext}`;
-    const filePath = `public/thumbnails/${fullFileName}`;
+    const objectPath = `public/thumbnails/${fullFileName}`;
     
-    console.log(`[Thumbnail AI] Uploading to object storage: ${filePath}`);
-    const result = await storageClient.uploadFromBytes(filePath, buffer);
+    // Write to temp file first, then upload (uploadFromBytes has issues)
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const os = await import('os');
+    
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, fullFileName);
+    
+    console.log(`[Thumbnail AI] Writing to temp file: ${tempFilePath}`);
+    await fs.writeFile(tempFilePath, buffer);
+    
+    // Verify temp file was written correctly
+    const stats = await fs.stat(tempFilePath);
+    console.log(`[Thumbnail AI] Temp file size: ${stats.size} bytes`);
+    
+    console.log(`[Thumbnail AI] Uploading from file to object storage: ${objectPath}`);
+    const result = await storageClient.uploadFromFilename(objectPath, tempFilePath);
     console.log(`[Thumbnail AI] Upload result: ok=${result.ok}, error=${JSON.stringify(result.error || null)}`);
     
+    // Clean up temp file
+    await fs.unlink(tempFilePath).catch(() => {});
+    
     // Verify upload by downloading immediately
-    const verifyResult = await storageClient.downloadAsBytes(filePath);
+    const verifyResult = await storageClient.downloadAsBytes(objectPath);
     console.log(`[Thumbnail AI] Verify download: ok=${verifyResult.ok}, size=${verifyResult.value?.length || 0}`);
     
-    if (result.ok) {
+    if (result.ok && verifyResult.value && verifyResult.value.length > 100) {
       // Return public URL for the uploaded file - matches the serving endpoint
       const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
-      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${filePath}, size: ${buffer.length} bytes`);
+      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${objectPath}, verified size: ${verifyResult.value.length} bytes`);
       return publicUrl;
     } else {
-      console.warn("[Thumbnail AI] Failed to upload to object storage:", result.error);
+      console.warn("[Thumbnail AI] Failed to upload to object storage or verify failed:", result.error);
       return null;
     }
   } catch (error: any) {
