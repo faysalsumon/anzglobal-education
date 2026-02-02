@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -39,7 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -624,6 +624,26 @@ export default function AdminDashboard() {
   // Logo upload state
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const coursesTableScrollRef = useRef<HTMLDivElement>(null);
+  const [showCourseScrollLeft, setShowCourseScrollLeft] = useState(false);
+  const [showCourseScrollRight, setShowCourseScrollRight] = useState(true);
+
+  // Handle courses table horizontal scroll
+  const handleCoursesTableScroll = useCallback(() => {
+    const el = coursesTableScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const hasOverflow = scrollWidth > clientWidth;
+    setShowCourseScrollLeft(hasOverflow && scrollLeft > 10);
+    setShowCourseScrollRight(hasOverflow && scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+
+  const scrollCoursesTable = (direction: 'left' | 'right') => {
+    const el = coursesTableScrollRef.current;
+    if (!el) return;
+    const scrollAmount = 300;
+    el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
 
   // Forms
   const institutionForm = useForm<z.infer<typeof institutionSchema>>({
@@ -1602,6 +1622,13 @@ export default function AdminDashboard() {
     (coursePage - 1) * coursePageSize,
     coursePage * coursePageSize
   );
+
+  // Initialize scroll indicators on data load and resize
+  useEffect(() => {
+    handleCoursesTableScroll();
+    window.addEventListener('resize', handleCoursesTableScroll);
+    return () => window.removeEventListener('resize', handleCoursesTableScroll);
+  }, [handleCoursesTableScroll, paginatedCourses]);
 
   // Reset course page when filters change
   useEffect(() => {
@@ -2878,9 +2905,46 @@ export default function AdminDashboard() {
                 </Select>
               </div>
 
-              {/* Courses Table - Compact */}
-              <div className="overflow-x-auto border rounded-md">
-                <Table className="min-w-full">
+              {/* Courses Table - Compact with scroll indicators and navigation */}
+              <div className="relative">
+                {/* Left scroll button */}
+                {showCourseScrollLeft && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-30 rounded-full shadow-md bg-background/95 backdrop-blur-sm"
+                    onClick={() => scrollCoursesTable('left')}
+                    data-testid="button-scroll-courses-left"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                {/* Right scroll button */}
+                {showCourseScrollRight && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-30 rounded-full shadow-md bg-background/95 backdrop-blur-sm"
+                    onClick={() => scrollCoursesTable('right')}
+                    data-testid="button-scroll-courses-right"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+                {/* Left gradient indicator */}
+                {showCourseScrollLeft && (
+                  <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-20" />
+                )}
+                {/* Right gradient indicator */}
+                {showCourseScrollRight && (
+                  <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-20" />
+                )}
+                <div 
+                  ref={coursesTableScrollRef}
+                  onScroll={handleCoursesTableScroll}
+                  className="overflow-x-auto border rounded-md scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40"
+                >
+                  <Table className="min-w-[1200px]">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="w-10 py-2">
@@ -3200,7 +3264,8 @@ export default function AdminDashboard() {
                       </TableRow>
                     )}
                   </TableBody>
-                </Table>
+                  </Table>
+                </div>
               </div>
               
               {/* Pagination */}
