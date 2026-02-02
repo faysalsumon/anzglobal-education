@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,7 +60,16 @@ const leadFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().min(1, "Phone number is required"),
   country: z.string().min(1, "Please select your country"),
-  visaStatus: z.string().min(1, "Please select your visa status"),
+  visaStatus: z.string().optional(),
+}).refine((data) => {
+  // Visa status is required only when country is Australia
+  if (data.country === "Australia" && (!data.visaStatus || data.visaStatus.length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select your visa status",
+  path: ["visaStatus"],
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -104,6 +113,17 @@ export function LeadFormDialog({
     },
   });
 
+  // Watch country field to conditionally show visa status
+  const selectedCountry = form.watch("country");
+  const isAustralia = selectedCountry === "Australia";
+
+  // Clear visa status when country changes away from Australia
+  useEffect(() => {
+    if (!isAustralia) {
+      form.setValue("visaStatus", "");
+    }
+  }, [isAustralia, form]);
+
   const createLeadMutation = useMutation({
     mutationFn: async (data: LeadFormValues) => {
       const response = await apiRequest("POST", "/api/public/leads", {
@@ -140,8 +160,8 @@ export function LeadFormDialog({
         <DialogTrigger asChild>
           <Button 
             size="sm" 
-            variant={buttonVariant} 
-            className="w-full border-accent text-accent hover:bg-accent hover:text-white" 
+            variant="outline" 
+            className="w-full" 
             data-testid="button-request-info"
           >
             <Info className="h-3.5 w-3.5 mr-1.5" />
@@ -253,33 +273,35 @@ export function LeadFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="visaStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Visa Status *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-visa-status">
-                        <SelectValue placeholder="Select your visa status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {VISA_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isAustralia && (
+              <FormField
+                control={form.control}
+                name="visaStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Visa Status *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-visa-status">
+                          <SelectValue placeholder="Select your visa status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {VISA_STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button
