@@ -98,26 +98,6 @@ Write in a professional, welcoming tone suitable for prospective students.`;
   return createAiCompletion(prompt, { maxTokens: 500 });
 }
 
-export async function generateCourseDescription(
-  title: string,
-  subject: string,
-  level: string
-): Promise<string> {
-  const prompt = `Generate a detailed course description for "${title}", a ${level} level course in ${subject}.
-The description should be 2-3 paragraphs and include:
-- Course overview and learning objectives
-- Key topics and curriculum highlights
-- Skills and knowledge students will gain
-- Career opportunities and real-world applications
-
-Write in an engaging, informative tone that attracts prospective students.`;
-
-  console.log("Generating course description with configured AI model");
-  const content = await createAiCompletion(prompt, { maxTokens: 500 });
-  console.log("Generated content length:", content.length);
-
-  return content;
-}
 
 interface StudentProfileData {
   personalInfo?: {
@@ -417,6 +397,114 @@ ${htmlContent}
 Generate a professional institution description:`;
 
   return createAiCompletion(prompt, { maxTokens: 600 });
+}
+
+/**
+ * Course description generation input
+ */
+export interface CourseDescriptionInput {
+  title: string;
+  discipline?: string;
+  level?: string;
+  institutionName?: string;
+  duration?: string;
+  careerOutcomes?: string[];
+  fees?: number;
+  currency?: string;
+  deliveryMode?: string;
+  intakes?: string[];
+  prerequisites?: string;
+  existingDescription?: string; // From web scraping - used as base info
+}
+
+/**
+ * Generate a marketing-quality course description for SEO and student engagement
+ * Uses course data (potentially from web scraping) to create compelling copy
+ */
+export async function generateCourseDescription(input: CourseDescriptionInput): Promise<string> {
+  checkAIConfigured();
+  
+  // Build context from available course data
+  const contextParts: string[] = [];
+  
+  contextParts.push(`Course Title: ${input.title}`);
+  
+  if (input.discipline) {
+    contextParts.push(`Discipline/Field: ${input.discipline}`);
+  }
+  
+  if (input.level) {
+    contextParts.push(`Qualification Level: ${input.level}`);
+  }
+  
+  if (input.institutionName) {
+    contextParts.push(`Institution: ${input.institutionName}`);
+  }
+  
+  if (input.duration) {
+    contextParts.push(`Duration: ${input.duration}`);
+  }
+  
+  if (input.deliveryMode) {
+    contextParts.push(`Delivery Mode: ${input.deliveryMode}`);
+  }
+  
+  if (input.fees && input.currency) {
+    contextParts.push(`Tuition Fee: ${input.currency} ${input.fees.toLocaleString()}`);
+  }
+  
+  if (input.intakes && input.intakes.length > 0) {
+    contextParts.push(`Available Intakes: ${input.intakes.join(", ")}`);
+  }
+  
+  if (input.careerOutcomes && input.careerOutcomes.length > 0) {
+    contextParts.push(`Career Outcomes: ${input.careerOutcomes.join(", ")}`);
+  }
+  
+  if (input.prerequisites) {
+    contextParts.push(`Prerequisites: ${input.prerequisites}`);
+  }
+  
+  if (input.existingDescription) {
+    contextParts.push(`\nExisting Description (from source website):\n${input.existingDescription}`);
+  }
+
+  const prompt = `You are an expert education marketing copywriter creating compelling course descriptions for international students considering studying abroad.
+
+COURSE INFORMATION:
+${contextParts.join("\n")}
+
+WRITING REQUIREMENTS:
+1. Write a marketing-quality description of 250-400 words
+2. Use a professional yet engaging tone that speaks directly to prospective students
+3. Structure with:
+   - An attention-grabbing opening that highlights the value proposition
+   - Key benefits and skills students will gain
+   - Career pathways and job opportunities after graduation
+   - Why this course/institution stands out
+   - A motivating closing that encourages action
+
+4. Include relevant SEO keywords naturally:
+   - Course discipline keywords (e.g., "business management", "IT skills", "healthcare training")
+   - Career-related terms (e.g., "career opportunities", "graduate employment", "industry experience")
+   - International student terms (e.g., "study in Australia", "international qualifications", "global recognition")
+
+5. Highlight benefits for international students:
+   - Practical skills and hands-on experience
+   - Industry connections and work placement opportunities
+   - Pathway to further study or employment
+   - Support services (if relevant)
+
+6. IMPORTANT RULES:
+   - Base content on the provided information - do NOT invent specific statistics or facts
+   - If limited information is available, focus on general benefits of this type of qualification
+   - Write in present tense and active voice
+   - Use "you" to address the prospective student directly
+   - Include a call to action at the end
+
+Generate the course description now:`;
+
+  return createAiCompletion(prompt, { maxTokens: 800 });
 }
 
 export async function generateInstitutionGalleryImages(

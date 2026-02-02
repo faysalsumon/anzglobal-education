@@ -7501,13 +7501,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ai/generate-course-description", isAuthenticated, async (req, res) => {
     try {
-      const { title, subject, level } = req.body;
+      const { 
+        title, 
+        discipline, 
+        level, 
+        institutionName,
+        duration,
+        careerOutcomes,
+        fees,
+        currency,
+        deliveryMode,
+        intakes,
+        prerequisites,
+        existingDescription
+      } = req.body;
 
-      if (!title || !subject || !level) {
-        return res.status(400).json({ message: "Title, subject, and level are required" });
+      if (!title) {
+        return res.status(400).json({ message: "Course title is required" });
       }
 
-      const description = await generateCourseDescription(title, subject, level);
+      const description = await generateCourseDescription({
+        title,
+        discipline,
+        level,
+        institutionName,
+        duration,
+        careerOutcomes,
+        fees,
+        currency,
+        deliveryMode,
+        intakes,
+        prerequisites,
+        existingDescription
+      });
       res.json({ description });
     } catch (error: any) {
       console.error("Error generating description:", error);

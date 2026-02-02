@@ -603,6 +603,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     deliveryMode?: string;
   } | null>(null);
 
+  // AI Description generation state
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  
   // Thumbnail state
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [thumbnailStatus, setThumbnailStatus] = useState<string>(course?.thumbnailStatus || "none");
@@ -957,7 +960,8 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   }, [courseScholarships]);
 
   // Get institution country for default framework selection
-  const initialInstitutionCountry = course?.university?.campusAddresses?.[0]?.country || "";
+  const courseInstitution = institutions.find(i => i.id === course?.universityId);
+  const initialInstitutionCountry = courseInstitution?.campusAddresses?.[0]?.country || "";
   
   const form = useForm<z.infer<typeof courseSchema>>({
     resolver: zodResolver(courseSchema),
@@ -1694,10 +1698,87 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       name="description"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Description</FormLabel>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <FormLabel>Description</FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isGeneratingDescription || !form.watch("title")}
+                              onClick={async () => {
+                                const title = form.watch("title");
+                                if (!title) {
+                                  toast({
+                                    title: "Course title required",
+                                    description: "Please enter the course title first",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                
+                                setIsGeneratingDescription(true);
+                                try {
+                                  // Parse careerOutcomes string into array (comma-separated)
+                                  const careerOutcomesStr = form.watch("careerOutcomes") || "";
+                                  const careerOutcomesArr = careerOutcomesStr ? careerOutcomesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                                  
+                                  // Parse intakes string into array
+                                  const intakesStr = form.watch("intakes") || "";
+                                  const intakesArr = intakesStr ? intakesStr.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                                  
+                                  const response = await apiRequest("POST", "/api/ai/generate-course-description", {
+                                    title,
+                                    discipline: form.watch("discipline"),
+                                    level: form.watch("level"),
+                                    institutionName: selectedInstitution?.name,
+                                    duration: form.watch("duration"),
+                                    careerOutcomes: careerOutcomesArr,
+                                    fees: form.watch("fees"),
+                                    currency: form.watch("currency"),
+                                    intakes: intakesArr,
+                                    prerequisites: form.watch("prerequisites"),
+                                    existingDescription: field.value, // Use existing description as context
+                                  });
+                                  const data = await response.json();
+                                  if (data.description) {
+                                    form.setValue("description", data.description);
+                                    toast({
+                                      title: "Description generated",
+                                      description: "AI has created a marketing-quality course description",
+                                    });
+                                  }
+                                } catch (error: any) {
+                                  const errorMessage = error.message || "Failed to generate description";
+                                  toast({
+                                    title: "Generation failed",
+                                    description: errorMessage,
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setIsGeneratingDescription(false);
+                                }
+                              }}
+                              data-testid="button-ai-generate-description"
+                            >
+                              {isGeneratingDescription ? (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-1 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-1" />
+                                  AI Generate
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <FormControl>
-                            <Textarea {...field} placeholder="Course description..." rows={4} data-testid="input-course-description" />
+                            <Textarea {...field} placeholder="Course description..." rows={6} data-testid="input-course-description" />
                           </FormControl>
+                          <FormDescription className="text-xs">
+                            Click "AI Generate" to create a marketing-quality description based on course details
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
