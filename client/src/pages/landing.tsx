@@ -19,7 +19,7 @@ interface PlatformStats {
 }
 
 interface FeaturedCourse {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   description: string | null;
@@ -33,13 +33,11 @@ interface FeaturedCourse {
   universityId: string;
   universityName: string;
   universityLogo: string | null;
-  universitySlug: string;
 }
 
 interface FeaturedInstitution {
   id: string;
   name: string;
-  slug: string | null;
   logoUrl: string | null;
   country: string | null;
   description: string | null;
@@ -333,7 +331,7 @@ export default function Landing() {
               {featuredInstitutions.slice(0, 6).map((institution) => (
                 <Link 
                   key={institution.id} 
-                  href={`/institutions/${institution.slug || institution.id}`}
+                  href={`/institutions/${institution.id}`}
                   data-testid={`link-featured-institution-${institution.id}`}
                 >
                   <Card className="h-full hover-elevate cursor-pointer group overflow-hidden">

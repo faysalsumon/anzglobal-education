@@ -108,7 +108,7 @@ import {
   studentEmployments,
   documents,
 } from "@shared/schema";
-import { eq, and, or, desc, not, inArray, sql as dsql, isNull, ne } from "drizzle-orm";
+import { eq, and, or, desc, not, inArray, sql as dsql, isNull, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
@@ -17360,16 +17360,18 @@ Sitemap: ${baseUrl}/sitemap.xml
       const featuredInstitutionIds = await db
         .select({ institutionId: institutionTags.institutionId })
         .from(institutionTags)
-        .where(eq(institutionTags.tagId, featuredTag.id));
+        .where(and(
+          eq(institutionTags.tagId, featuredTag.id),
+          isNotNull(institutionTags.institutionId)
+        ));
       
       let featuredInstitutions: any[] = [];
-      if (featuredInstitutionIds.length > 0) {
-        const instIds = featuredInstitutionIds.map(i => i.institutionId);
+      const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
+      if (instIds.length > 0) {
         const rawInstitutions = await db
           .select({
             id: universities.id,
             name: universities.name,
-            slug: universities.slug,
             logoUrl: universities.logo,
             country: universities.country,
             description: universities.smallDescription,
@@ -17378,9 +17380,9 @@ Sitemap: ${baseUrl}/sitemap.xml
           .from(universities)
           .where(and(
             inArray(universities.id, instIds),
-            eq(universities.isApproved, true),
-            eq(universities.isPublished, true),
-            eq(universities.isPubliclyVisible, true),
+            eq(universities.approvalStatus, 'approved'),
+            eq(universities.publishStatus, 'published'),
+            eq(universities.visibility, 'public'),
             eq(universities.isActive, true)
           ))
           .limit(limit);
@@ -17392,7 +17394,6 @@ Sitemap: ${baseUrl}/sitemap.xml
           return {
             id: inst.id,
             name: inst.name,
-            slug: inst.slug,
             logoUrl: inst.logoUrl,
             country: inst.country,
             description: inst.description,
@@ -17406,11 +17407,14 @@ Sitemap: ${baseUrl}/sitemap.xml
       const featuredCourseIds = await db
         .select({ courseId: courseTags.courseId })
         .from(courseTags)
-        .where(eq(courseTags.tagId, featuredTag.id));
+        .where(and(
+          eq(courseTags.tagId, featuredTag.id),
+          isNotNull(courseTags.courseId)
+        ));
       
       let featuredCourses: any[] = [];
-      if (featuredCourseIds.length > 0) {
-        const courseIds = featuredCourseIds.map(c => c.courseId);
+      const courseIds = featuredCourseIds.map(c => c.courseId).filter((id): id is string => id !== null);
+      if (courseIds.length > 0) {
         featuredCourses = await db
           .select({
             id: courses.id,
@@ -17427,17 +17431,16 @@ Sitemap: ${baseUrl}/sitemap.xml
             universityId: courses.universityId,
             universityName: universities.name,
             universityLogo: universities.logo,
-            universitySlug: universities.slug,
           })
           .from(courses)
           .innerJoin(universities, eq(courses.universityId, universities.id))
           .where(and(
             inArray(courses.id, courseIds),
-            eq(courses.isApproved, true),
-            eq(courses.isPublished, true),
-            eq(universities.isApproved, true),
-            eq(universities.isPublished, true),
-            eq(universities.isPubliclyVisible, true),
+            eq(courses.approvalStatus, 'approved'),
+            eq(courses.publishStatus, 'published'),
+            eq(universities.approvalStatus, 'approved'),
+            eq(universities.publishStatus, 'published'),
+            eq(universities.visibility, 'public'),
             eq(universities.isActive, true)
           ))
           .limit(limit);
