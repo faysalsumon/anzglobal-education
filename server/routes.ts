@@ -17347,7 +17347,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Public endpoint - get featured institutions and courses (by "featured" tag)
   app.get("/api/public/featured", async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 6, 20);
+      const limit = Math.min(parseInt(req.query.limit as string) || 12, 20);
       
       // Find the "featured" tag
       const [featuredTag] = await db.select().from(tags).where(eq(tags.slug, 'featured')).limit(1);

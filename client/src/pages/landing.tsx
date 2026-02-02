@@ -83,7 +83,7 @@ export default function Landing() {
     queryKey: ["/api/public/testimonials"],
   });
 
-  // Fetch featured institutions and courses
+  // Fetch featured institutions and courses (12 institutions for 4x3 grid)
   const { data: featuredData } = useQuery<FeaturedData>({
     queryKey: ["/api/public/featured"],
   });
@@ -327,45 +327,44 @@ export default function Landing() {
               </p>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredInstitutions.slice(0, 6).map((institution) => (
+            <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {featuredInstitutions.slice(0, 12).map((institution) => (
                 <Link 
                   key={institution.id} 
                   href={`/institutions/${institution.id}`}
                   data-testid={`link-featured-institution-${institution.id}`}
+                  className="group text-center"
                 >
-                  <Card className="h-full hover-elevate cursor-pointer group overflow-hidden">
-                    <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3 p-4 rounded-lg hover-elevate cursor-pointer">
+                    <div className="w-20 h-20 rounded-full bg-white dark:bg-white border border-border/50 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md transition-shadow">
                       {institution.logoUrl ? (
                         <img 
                           src={institution.logoUrl} 
                           alt={institution.name}
-                          className="h-20 w-auto object-contain group-hover:scale-105 transition-transform"
+                          className="w-14 h-14 object-contain"
                           data-testid={`img-featured-institution-logo-${institution.id}`}
                         />
                       ) : (
-                        <Building2 className="h-16 w-16 text-primary/40" />
+                        <Building2 className="h-8 w-8 text-primary/40" />
                       )}
                     </div>
-                    <CardHeader className="pb-2">
-                      <CardTitle 
-                        className="text-lg line-clamp-2 group-hover:text-primary transition-colors"
+                    <div className="space-y-1">
+                      <h3 
+                        className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors"
                         data-testid={`text-featured-institution-name-${institution.id}`}
                       >
                         {institution.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                      </h3>
+                      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate" data-testid={`text-featured-institution-location-${institution.id}`}>
                           {[institution.city, institution.state, institution.country]
                             .filter(Boolean)
                             .join(', ')}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
