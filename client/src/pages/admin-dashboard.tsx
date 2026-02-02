@@ -2988,6 +2988,17 @@ export default function AdminDashboard() {
                                 <AvatarFallback className="text-xs">{course.institutionName?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
                               </Avatar>
                               <span className="font-medium text-sm" data-testid={`text-course-title-${course.id}`}>{course.title}</span>
+                              {(hasFullAdminAccess || isMarketingExecutive) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                                  onClick={() => handleEditCourse(course)}
+                                  data-testid={`button-quick-edit-course-${course.id}`}
+                                >
+                                  <Edit className="h-4 w-4 text-primary" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="py-2 text-sm text-muted-foreground hidden md:table-cell">{course.institutionName}</TableCell>
@@ -3206,43 +3217,6 @@ export default function AdminDashboard() {
                               >
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               </Button>
-                              {/* Edit button (for full admins or marketing executives) */}
-                              {(hasFullAdminAccess || isMarketingExecutive) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditCourse(course)}
-                                  data-testid={`button-edit-course-${course.id}`}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              )}
-                              {/* Transfer button (for admins to reassign courses) */}
-                              {(hasFullAdminAccess || isMarketingExecutive) && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => setTransferringCourse(course)}
-                                      title="Transfer to another user"
-                                      data-testid={`button-transfer-course-${course.id}`}
-                                    >
-                                      {(course as any).assignedToProfileImage ? (
-                                        <Avatar className="h-6 w-6">
-                                          <AvatarImage src={(course as any).assignedToProfileImage} alt={(course as any).assignedToName || 'Assigned'} />
-                                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{(course as any).assignedToName?.[0]?.toUpperCase() || 'A'}</AvatarFallback>
-                                        </Avatar>
-                                      ) : (
-                                        <UserPlus className="h-4 w-4 text-primary" />
-                                      )}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{(course as any).assignedToName ? `Assigned to ${(course as any).assignedToName}` : 'Transfer to another user'}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
                               {/* Delete button (only for full admins) */}
                               {hasFullAdminAccess && (
                                 <Button
