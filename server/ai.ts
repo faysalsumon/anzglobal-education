@@ -476,55 +476,99 @@ export async function generateCourseThumbnail(
   level?: string,
   universityName?: string
 ): Promise<ThumbnailResult> {
-  try {
-    checkAIConfigured();
-  } catch (e: any) {
-    return { success: false, error: e.message || "AI not configured" };
-  }
-  
-  if (!process.env.OPENAI_API_KEY) {
-    const msg = "DALL-E image generation requires OPENAI_API_KEY";
+  if (!process.env.OPENROUTER_API_KEY) {
+    const msg = "Image generation requires OPENROUTER_API_KEY";
     console.warn(msg);
     return { success: false, error: msg };
   }
   
-  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  
-  const disciplineContext = discipline ? ` in ${discipline}` : "";
-  const levelContext = level ? ` (${level} level)` : "";
+  const disciplineContext = discipline ? ` studying ${discipline}` : "";
+  const levelContext = level ? ` at ${level} level` : "";
   const uniContext = universityName ? ` at ${universityName}` : "";
   
-  const prompt = `Create a professional, modern educational course thumbnail for "${courseTitle}"${disciplineContext}${levelContext}${uniContext}. 
-Style: Clean, corporate, abstract. Use blue and teal gradients with subtle geometric patterns. 
-Include symbolic icons related to the subject matter. 
-No text in the image. High quality, professional photography style with soft lighting.
-Suitable for an education platform course card.`;
+  // Create realistic, student-centric prompt for Nano Banana Pro
+  const prompt = `A realistic photograph of diverse international students${disciplineContext}${levelContext}${uniContext}. 
+The scene shows engaged students in a modern university setting - could be a library, lecture hall, campus grounds, or study area.
+Natural lighting, warm and inviting atmosphere. Students appear focused, collaborative, and enthusiastic about learning.
+Professional stock photography style, high quality, authentic feel.
+Subject context: ${courseTitle}.
+No artificial graphics, no text overlays, no logos. Just natural, candid educational photography.`;
 
   try {
-    console.log(`[Thumbnail AI] Generating thumbnail for: ${courseTitle}`);
+    console.log(`[Thumbnail AI] Generating thumbnail via OpenRouter Nano Banana Pro for: ${courseTitle}`);
     
-    const response = await openaiClient.images.generate({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.REPLIT_DOMAINS?.split(",")[0] || "https://anzglobal.edu",
+        "X-Title": "ANZ Global Education"
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-pro-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        modalities: ["image", "text"],
+        image_config: {
+          aspect_ratio: "16:9"
+        }
+      })
     });
     
-    if (response.data?.[0]?.url) {
-      console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
-      return { success: true, url: response.data[0].url };
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `OpenRouter API error: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      console.error(`[Thumbnail AI] OpenRouter error:`, errorMessage);
+      return { success: false, error: errorMessage };
     }
     
-    console.warn(`[Thumbnail AI] No URL returned for: ${courseTitle}`);
-    return { success: false, error: "No image URL returned from OpenAI" };
-  } catch (error: any) {
-    const errorMessage = error?.message || error?.error?.message || "Unknown error generating thumbnail";
-    const errorCode = error?.code || error?.status || "";
-    const fullError = errorCode ? `${errorCode}: ${errorMessage}` : errorMessage;
+    const data = await response.json();
     
-    console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, fullError);
-    return { success: false, error: fullError };
+    // Extract base64 image from response - Nano Banana Pro returns images in message
+    const message = data.choices?.[0]?.message;
+    
+    // Check for inline image in content parts
+    if (message?.content && Array.isArray(message.content)) {
+      for (const part of message.content) {
+        if (part.type === "image_url" && part.image_url?.url) {
+          console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
+          return { success: true, url: part.image_url.url };
+        }
+      }
+    }
+    
+    // Check for images array in message
+    if (message?.images?.[0]?.image_url?.url) {
+      console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
+      return { success: true, url: message.images[0].image_url.url };
+    }
+    
+    // Check if image data is embedded in content string
+    if (typeof message?.content === "string" && message.content.includes("data:image")) {
+      const match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+      if (match) {
+        console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
+        return { success: true, url: match[0] };
+      }
+    }
+    
+    console.warn(`[Thumbnail AI] No image in response for: ${courseTitle}`, JSON.stringify(data).substring(0, 500));
+    return { success: false, error: "No image returned from Nano Banana Pro model" };
+  } catch (error: any) {
+    const errorMessage = error?.message || "Unknown error generating thumbnail";
+    console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, errorMessage);
+    return { success: false, error: errorMessage };
   }
 }
 
