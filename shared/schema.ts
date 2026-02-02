@@ -1052,6 +1052,36 @@ export const courses = pgTable("courses", {
 }));
 
 // ============================================
+// COURSE INTAKE TEMPLATES
+// Recurring intake patterns that auto-calculate dates each year
+// ============================================
+
+export const courseIntakeTemplates = pgTable("course_intake_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  month: integer("month").notNull(), // 1-12 (January = 1, December = 12)
+  startDay: integer("start_day").notNull().default(1), // Day of month when classes start (1-31)
+  deadlineWeeksBefore: integer("deadline_weeks_before").notNull().default(8), // Application closes X weeks before start
+  openMonthsBefore: integer("open_months_before").notNull().default(6), // Applications open X months before start
+  intakeName: text("intake_name"), // Custom name like "Semester 1", "Fall", "Term 2" (optional)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  courseMonthIdx: index("course_intake_templates_course_month_idx").on(table.courseId, table.month),
+  courseIdx: index("course_intake_templates_course_idx").on(table.courseId),
+}));
+
+export const insertCourseIntakeTemplateSchema = createInsertSchema(courseIntakeTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCourseIntakeTemplate = z.infer<typeof insertCourseIntakeTemplateSchema>;
+export type CourseIntakeTemplate = typeof courseIntakeTemplates.$inferSelect;
+
+// ============================================
 // COURSE TAGS SYSTEM
 // E-commerce style tagging for course categorization and filtering
 // ============================================
@@ -2952,6 +2982,14 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   applications: many(applications),
   courseComparisons: many(courseComparisons),
   englishRequirements: many(courseEnglishRequirements),
+  intakeTemplates: many(courseIntakeTemplates),
+}));
+
+export const courseIntakeTemplatesRelations = relations(courseIntakeTemplates, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseIntakeTemplates.courseId],
+    references: [courses.id],
+  }),
 }));
 
 // Course English Requirements relations

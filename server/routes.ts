@@ -92,6 +92,7 @@ import {
   qualificationEquivalencies,
   courseLevelRequirementTemplates,
   courseEntryRequirements,
+  courseIntakeTemplates,
   insertAcademicQualificationTypeSchema,
   insertCourseLevelRequirementTemplateSchema,
   insertCourseEntryRequirementSchema,
@@ -18920,6 +18921,149 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END ACADEMIC QUALIFICATION API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // COURSE INTAKE TEMPLATES API ENDPOINTS
+  // ============================================
+
+  // Get intake templates for a course
+  app.get("/api/courses/:courseId/intake-templates", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      
+      const templates = await db
+        .select()
+        .from(courseIntakeTemplates)
+        .where(eq(courseIntakeTemplates.courseId, courseId))
+        .orderBy(courseIntakeTemplates.month);
+      
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching intake templates:", error);
+      res.status(500).json({ message: "Failed to fetch intake templates" });
+    }
+  });
+
+  // Update all intake templates for a course (replace all)
+  app.put("/api/admin/courses/:courseId/intake-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { templates } = req.body; // Array of { month, startDay, deadlineWeeksBefore, openMonthsBefore, intakeName, isActive }
+      
+      // Delete existing templates
+      await db
+        .delete(courseIntakeTemplates)
+        .where(eq(courseIntakeTemplates.courseId, courseId));
+      
+      // Insert new templates
+      if (templates && templates.length > 0) {
+        const toInsert = templates.map((t: any) => ({
+          courseId,
+          month: t.month,
+          startDay: t.startDay || 1,
+          deadlineWeeksBefore: t.deadlineWeeksBefore || 8,
+          openMonthsBefore: t.openMonthsBefore || 6,
+          intakeName: t.intakeName || null,
+          isActive: t.isActive !== false,
+        }));
+        
+        await db.insert(courseIntakeTemplates).values(toInsert);
+      }
+      
+      // Return updated templates
+      const updated = await db
+        .select()
+        .from(courseIntakeTemplates)
+        .where(eq(courseIntakeTemplates.courseId, courseId))
+        .orderBy(courseIntakeTemplates.month);
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating intake templates:", error);
+      res.status(500).json({ message: "Failed to update intake templates" });
+    }
+  });
+
+  // Add a single intake template to a course
+  app.post("/api/admin/courses/:courseId/intake-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const { courseId } = req.params;
+      const { month, startDay, deadlineWeeksBefore, openMonthsBefore, intakeName } = req.body;
+      
+      // Check if already exists for this month
+      const existing = await db
+        .select()
+        .from(courseIntakeTemplates)
+        .where(
+          and(
+            eq(courseIntakeTemplates.courseId, courseId),
+            eq(courseIntakeTemplates.month, month)
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing
+        await db
+          .update(courseIntakeTemplates)
+          .set({
+            startDay: startDay || 1,
+            deadlineWeeksBefore: deadlineWeeksBefore || 8,
+            openMonthsBefore: openMonthsBefore || 6,
+            intakeName: intakeName || null,
+            isActive: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(courseIntakeTemplates.id, existing[0].id));
+        
+        const updated = await db
+          .select()
+          .from(courseIntakeTemplates)
+          .where(eq(courseIntakeTemplates.id, existing[0].id));
+        
+        return res.json(updated[0]);
+      }
+      
+      // Insert new
+      const [inserted] = await db
+        .insert(courseIntakeTemplates)
+        .values({
+          courseId,
+          month,
+          startDay: startDay || 1,
+          deadlineWeeksBefore: deadlineWeeksBefore || 8,
+          openMonthsBefore: openMonthsBefore || 6,
+          intakeName: intakeName || null,
+          isActive: true,
+        })
+        .returning();
+      
+      res.json(inserted);
+    } catch (error: any) {
+      console.error("Error adding intake template:", error);
+      res.status(500).json({ message: "Failed to add intake template" });
+    }
+  });
+
+  // Delete a single intake template
+  app.delete("/api/admin/courses/:courseId/intake-templates/:templateId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { templateId } = req.params;
+      
+      await db
+        .delete(courseIntakeTemplates)
+        .where(eq(courseIntakeTemplates.id, templateId));
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting intake template:", error);
+      res.status(500).json({ message: "Failed to delete intake template" });
+    }
+  });
+
+  // ============================================
+  // END COURSE INTAKE TEMPLATES API ENDPOINTS
   // ============================================
 
   // ============================================
