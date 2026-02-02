@@ -30,14 +30,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { CountrySelect } from "@/components/ui/country-select";
 import { Info } from "lucide-react";
+
+// Expanded visa status options for Australian immigration
+const VISA_STATUS_OPTIONS = [
+  { value: 'no_visa', label: 'No Visa' },
+  { value: 'student_visa_500', label: 'Student Visa (Subclass 500)' },
+  { value: 'graduate_visa_485', label: 'Graduate Visa (Subclass 485)' },
+  { value: 'tourist_visa_600', label: 'Tourist/Visitor Visa (Subclass 600)' },
+  { value: 'working_holiday_417', label: 'Working Holiday Visa (Subclass 417)' },
+  { value: 'work_holiday_462', label: 'Work and Holiday Visa (Subclass 462)' },
+  { value: 'skilled_worker_482', label: 'Skilled Worker Visa (Subclass 482)' },
+  { value: 'skilled_independent_189', label: 'Skilled Independent Visa (Subclass 189)' },
+  { value: 'skilled_nominated_190', label: 'Skilled Nominated Visa (Subclass 190)' },
+  { value: 'partner_visa_820', label: 'Partner Visa (Subclass 820/801)' },
+  { value: 'bridging_visa_a', label: 'Bridging Visa A' },
+  { value: 'bridging_visa_b', label: 'Bridging Visa B' },
+  { value: 'bridging_visa_c', label: 'Bridging Visa C' },
+  { value: 'bridging_visa_e', label: 'Bridging Visa E' },
+  { value: 'pr', label: 'Permanent Resident' },
+  { value: 'citizen', label: 'Australian Citizen' },
+  { value: 'other', label: 'Other Visa' },
+] as const;
 
 const leadFormSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100),
   lastName: z.string().min(1, "Last name is required").max(100),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(1, "Phone number is required"),
-  visaStatus: z.enum(['no_visa', 'student_visa', 'work_visa', 'pr', 'citizen']),
+  country: z.string().min(1, "Please select your country"),
+  visaStatus: z.string().min(1, "Please select your visa status"),
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
@@ -76,7 +99,8 @@ export function LeadFormDialog({
       lastName: "",
       email: "",
       phone: "",
-      visaStatus: "no_visa",
+      country: "",
+      visaStatus: "",
     },
   });
 
@@ -212,13 +236,32 @@ export function LeadFormDialog({
 
             <FormField
               control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country *</FormLabel>
+                  <FormControl>
+                    <CountrySelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select your country"
+                      data-testid="select-country"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="visaStatus"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Current Visa Status *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-visa-status">
@@ -226,11 +269,11 @@ export function LeadFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="no_visa">No Visa</SelectItem>
-                      <SelectItem value="student_visa">Student Visa</SelectItem>
-                      <SelectItem value="work_visa">Work Visa</SelectItem>
-                      <SelectItem value="pr">Permanent Resident</SelectItem>
-                      <SelectItem value="citizen">Citizen</SelectItem>
+                      {VISA_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

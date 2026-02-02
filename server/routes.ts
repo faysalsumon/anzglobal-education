@@ -2971,10 +2971,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: req.body.phone?.trim() || '',
         firstName: req.body.firstName?.trim() || '',
         lastName: req.body.lastName?.trim() || '',
+        country: req.body.country?.trim() || undefined,
       };
       
       // Validate normalized input
       const leadData = insertStudentLeadSchema.parse(normalizedInput);
+      
+      // Auto-assign region based on country if available
+      let regionId: string | undefined;
+      if (leadData.country) {
+        const regions = await db.select().from(adminRegions);
+        const matchingRegion = regions.find(r => 
+          r.countries?.some(c => c.toLowerCase() === leadData.country?.toLowerCase())
+        );
+        if (matchingRegion) {
+          regionId = matchingRegion.id;
+        }
+      }
       
       // Validate that course exists and belongs to the specified university
       const course = await storage.getCourseById(leadData.courseId);
@@ -2992,7 +3005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create CRM contact for unified lead management (replaces legacy crmLeads)
       try {
         // Build notes with course inquiry context
-        const notes = `Course Inquiry via Course Page\n\nCourse: ${course.title}\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`;
+        const notes = `Course Inquiry via Course Page\n\nCourse: ${course.title}\nCountry: ${leadData.country || 'Not specified'}\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`;
         
         // Create CRM contact entry for course inquiry
         const [crmContact] = await db.insert(crmContacts).values({
@@ -3000,6 +3013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: leadData.lastName,
           email: leadData.email,
           mobile: leadData.phone || undefined,
+          country: leadData.country || undefined,
           contactType: "clients" as const,
           clientStatus: "lead" as const,
           entrySource: "website" as const,
@@ -3013,6 +3027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           referrer: req.headers["referer"] as string || undefined,
           firstPageVisited: `/courses/${course.id}`,
           firstVisit: new Date(),
+          regionId,
         }).returning();
         
         // Create initial status history

@@ -2542,6 +2542,7 @@ export const studentLeads = pgTable("student_leads", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
+  country: text("country"), // Student's home country
   visaStatus: text("visa_status").notNull(), // Current visa information/status
   courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
