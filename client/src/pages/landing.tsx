@@ -312,10 +312,16 @@ export default function Landing() {
 
       {/* Featured Partners Section */}
       {featuredInstitutions.length > 0 && (
-        <section className="py-16 md:py-24 bg-card">
-          <div className="container mx-auto px-4">
+        <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
+          {/* Decorative floating shapes */}
+          <div className="absolute top-0 left-0 w-72 h-72 bg-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl translate-x-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-secondary/10 rounded-full blur-3xl translate-y-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-primary/8 rounded-full blur-3xl translate-x-1/3 translate-y-1/3 pointer-events-none" />
+          
+          <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20 backdrop-blur-sm">
                 <Award className="h-4 w-4" />
                 <span className="text-sm font-semibold">Our Partners</span>
               </div>
