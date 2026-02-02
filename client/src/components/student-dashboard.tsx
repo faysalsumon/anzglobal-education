@@ -46,11 +46,13 @@ export function StudentDashboard() {
   const { data: referralStats } = useQuery<ReferralStats>({
     queryKey: ["/api/student/referral/stats"],
     enabled: !!profile,
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
   const { data: referralData } = useQuery<ReferralCodeData>({
     queryKey: ["/api/student/referral/code"],
     enabled: !!profile,
+    staleTime: 1000 * 60 * 5, // Referral code rarely changes, cache for 5 minutes
   });
 
   const stats = {

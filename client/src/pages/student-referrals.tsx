@@ -21,10 +21,12 @@ interface ReferralStats {
 function StudentReferralsContent() {
   const { data: referrals = [], isLoading } = useQuery<ReferralWithStudent[]>({
     queryKey: ["/api/student/referral/list"],
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
   const { data: stats } = useQuery<ReferralStats>({
     queryKey: ["/api/student/referral/stats"],
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
 
   return (
