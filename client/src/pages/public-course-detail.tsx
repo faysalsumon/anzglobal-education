@@ -596,7 +596,7 @@ export default function PublicCourseDetail() {
                 </div>
               )}
               {nextIntake && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-start-date">
+                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-next-intake">
                   <Calendar className="h-4 w-4 text-secondary" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Next Intake</span>
@@ -840,12 +840,12 @@ export default function PublicCourseDetail() {
                     </div>
                   )}
                   {computedIntakes.length > 0 && (
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3" data-testid="available-intakes-section">
                       <div className="p-1.5 bg-secondary/10 rounded-md mt-0.5">
                         <Calendar className="h-3.5 w-3.5 text-secondary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">Available Intakes</p>
+                        <p className="text-xs text-muted-foreground mb-1" data-testid="available-intakes-label">Available Intakes</p>
                         <div className="flex flex-wrap gap-1.5">
                           {computedIntakes.map((intake, index) => {
                             const statusColors = {
