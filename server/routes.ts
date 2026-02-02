@@ -642,11 +642,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { Client } = await import("@replit/object-storage");
       const storageClient = new Client();
       
-      const { ok, value: fileBuffer } = await storageClient.downloadAsBytes(filePath);
+      console.log(`[Public Storage] Attempting to download: ${filePath}`);
+      const result = await storageClient.downloadAsBytes(filePath);
+      console.log(`[Public Storage] Download result ok: ${result.ok}, buffer type: ${typeof result.value}, buffer length: ${result.value?.length || 0}`);
       
-      if (!ok || !fileBuffer) {
+      if (!result.ok || !result.value) {
+        console.log(`[Public Storage] File not found: ${filePath}, error:`, result.error);
         return res.status(404).json({ message: "File not found" });
       }
+      
+      const fileBuffer = result.value;
       
       // Set content type based on extension
       const mimeTypes: Record<string, string> = {

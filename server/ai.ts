@@ -497,7 +497,7 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     console.log(`[Thumbnail AI] Extracted image type: ${imageType}, base64 length: ${base64Data.length}`);
     
     const buffer = Buffer.from(base64Data, 'base64');
-    console.log(`[Thumbnail AI] Created buffer with size: ${buffer.length} bytes`);
+    console.log(`[Thumbnail AI] Created buffer with size: ${buffer.length} bytes, isBuffer: ${Buffer.isBuffer(buffer)}, first bytes: ${buffer.slice(0, 8).toString('hex')}`);
     
     if (buffer.length < 100) {
       console.error(`[Thumbnail AI] Buffer too small (${buffer.length} bytes), likely invalid base64 data`);
@@ -510,7 +510,13 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     const fullFileName = `${fileName}.${ext}`;
     const filePath = `public/thumbnails/${fullFileName}`;
     
+    console.log(`[Thumbnail AI] Uploading to object storage: ${filePath}`);
     const result = await storageClient.uploadFromBytes(filePath, buffer);
+    console.log(`[Thumbnail AI] Upload result: ok=${result.ok}, error=${JSON.stringify(result.error || null)}`);
+    
+    // Verify upload by downloading immediately
+    const verifyResult = await storageClient.downloadAsBytes(filePath);
+    console.log(`[Thumbnail AI] Verify download: ok=${verifyResult.ok}, size=${verifyResult.value?.length || 0}`);
     
     if (result.ok) {
       // Return public URL for the uploaded file - matches the serving endpoint
