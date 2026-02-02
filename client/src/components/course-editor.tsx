@@ -22,6 +22,26 @@ import {
   detectDisciplineRules, 
   type DisciplineRule 
 } from "@shared/discipline-rules";
+import {
+  type IntakeTemplate as BaseIntakeTemplate,
+  MONTH_NAMES,
+  getCountryIntakeRecommendations,
+  computeIntakesFromTemplates,
+} from "@shared/intake-utils";
+
+// Local simplified type for intake template state (without required nullable fields for new templates)
+interface LocalIntakeTemplate {
+  id: string;
+  courseId: string;
+  month: number;
+  startDay: number;
+  deadlineWeeksBefore: number;
+  openMonthsBefore: number;
+  intakeName?: string | null;
+  isActive?: boolean | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+}
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -611,6 +631,14 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const [thumbnailStatus, setThumbnailStatus] = useState<string>(course?.thumbnailStatus || "none");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(course?.thumbnailUrl || null);
 
+  // Intake Templates state
+  const [intakeTemplates, setIntakeTemplates] = useState<LocalIntakeTemplate[]>([]);
+  const [showAddIntakeMonth, setShowAddIntakeMonth] = useState(false);
+  const [newIntakeMonth, setNewIntakeMonth] = useState<number>(1);
+  const [newIntakeStartDay, setNewIntakeStartDay] = useState<number>(1);
+  const [newIntakeDeadlineWeeks, setNewIntakeDeadlineWeeks] = useState<number>(8);
+  const [isSavingIntakes, setIsSavingIntakes] = useState(false);
+
   // Pricing configuration state
   const [pricingConfig, setPricingConfig] = useState<{
     pricingModel: 'fixed' | 'dynamic';
@@ -679,6 +707,19 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
     queryKey: ["/api/courses", course?.id, "english-requirements"],
     enabled: !!course?.id,
   });
+
+  // Intake templates query
+  const { data: fetchedIntakeTemplates = [] } = useQuery<LocalIntakeTemplate[]>({
+    queryKey: ["/api/courses", course?.id, "intake-templates"],
+    enabled: !!course?.id,
+  });
+
+  // Update local intake templates state when data is fetched
+  useEffect(() => {
+    if (fetchedIntakeTemplates && fetchedIntakeTemplates.length > 0) {
+      setIntakeTemplates(fetchedIntakeTemplates);
+    }
+  }, [fetchedIntakeTemplates]);
 
   // Pricing config query
   const { data: fetchedPricingConfig } = useQuery<{
@@ -2619,99 +2660,262 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="startDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Start Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
-                                    data-testid="input-course-startDate"
-                                  >
-                                    {field.value ? (
-                                      field.value
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value ? new Date(field.value) : undefined}
-                                  onSelect={(date) => {
-                                    field.onChange(date ? format(date, "MMMM d, yyyy") : "");
-                                  }}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="applicationDeadline"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Application Deadline</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
-                                    data-testid="input-course-applicationDeadline"
-                                  >
-                                    {field.value ? (
-                                      field.value
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value ? new Date(field.value) : undefined}
-                                  onSelect={(date) => {
-                                    field.onChange(date ? format(date, "MMMM d, yyyy") : "");
-                                  }}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    {/* Intake Templates Manager */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium">Intake Schedule</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Define recurring intake months. Dates auto-calculate each year.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setShowAddIntakeMonth(!showAddIntakeMonth)}
+                          data-testid="button-add-intake-template"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Intake
+                        </Button>
+                      </div>
 
-                    <FormField
-                      control={form.control}
-                      name="intakes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Intakes (Comma-separated)</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="January, March, July, September" data-testid="input-course-intakes" />
-                          </FormControl>
-                          <FormDescription>Enter multiple intakes separated by commas</FormDescription>
-                          <FormMessage />
-                        </FormItem>
+                      {/* Country-based recommendations */}
+                      {institutionCountry && intakeTemplates.length === 0 && (
+                        <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                          <div className="font-medium mb-2">Recommended intakes for {institutionCountry}:</div>
+                          <div className="flex flex-wrap gap-2">
+                            {getCountryIntakeRecommendations(institutionCountry).map((rec) => (
+                              <Button
+                                key={rec.month}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newTemplate: LocalIntakeTemplate = {
+                                    id: `temp-${Date.now()}-${rec.month}`,
+                                    courseId: course?.id || "",
+                                    month: rec.month,
+                                    startDay: rec.startDay,
+                                    deadlineWeeksBefore: rec.deadlineWeeksBefore,
+                                    openMonthsBefore: 6,
+                                    isActive: true,
+                                  };
+                                  setIntakeTemplates([...intakeTemplates, newTemplate]);
+                                }}
+                                data-testid={`button-add-recommended-intake-${rec.month}`}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                {MONTH_NAMES[rec.month - 1]}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    />
+
+                      {/* Add intake form */}
+                      {showAddIntakeMonth && (
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-sm font-medium">Month</label>
+                              <Select
+                                value={String(newIntakeMonth)}
+                                onValueChange={(v) => setNewIntakeMonth(parseInt(v))}
+                              >
+                                <SelectTrigger data-testid="select-intake-month">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {MONTH_NAMES.map((name, idx) => (
+                                    <SelectItem key={idx + 1} value={String(idx + 1)}>
+                                      {name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Start Day</label>
+                              <Select
+                                value={String(newIntakeStartDay)}
+                                onValueChange={(v) => setNewIntakeStartDay(parseInt(v))}
+                              >
+                                <SelectTrigger data-testid="select-intake-start-day">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {[1, 5, 10, 15, 20, 25].map((day) => (
+                                    <SelectItem key={day} value={String(day)}>
+                                      {day}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Deadline (weeks before)</label>
+                              <Select
+                                value={String(newIntakeDeadlineWeeks)}
+                                onValueChange={(v) => setNewIntakeDeadlineWeeks(parseInt(v))}
+                              >
+                                <SelectTrigger data-testid="select-intake-deadline-weeks">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {[4, 6, 8, 10, 12, 16].map((weeks) => (
+                                    <SelectItem key={weeks} value={String(weeks)}>
+                                      {weeks} weeks
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowAddIntakeMonth(false)}
+                              data-testid="button-cancel-add-intake"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                // Check if this month already exists
+                                if (intakeTemplates.some(t => t.month === newIntakeMonth)) {
+                                  toast({
+                                    title: "Month already exists",
+                                    description: `${MONTH_NAMES[newIntakeMonth - 1]} intake is already configured.`,
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                const newTemplate: LocalIntakeTemplate = {
+                                  id: `temp-${Date.now()}`,
+                                  courseId: course?.id || "",
+                                  month: newIntakeMonth,
+                                  startDay: newIntakeStartDay,
+                                  deadlineWeeksBefore: newIntakeDeadlineWeeks,
+                                  openMonthsBefore: 6,
+                                  isActive: true,
+                                };
+                                setIntakeTemplates([...intakeTemplates, newTemplate]);
+                                setShowAddIntakeMonth(false);
+                                setNewIntakeMonth(1);
+                                setNewIntakeStartDay(1);
+                                setNewIntakeDeadlineWeeks(8);
+                              }}
+                              data-testid="button-confirm-add-intake"
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Current intake templates */}
+                      {intakeTemplates.length > 0 && (
+                        <div className="space-y-2">
+                          {intakeTemplates
+                            .sort((a, b) => a.month - b.month)
+                            .map((template) => {
+                              const computed = computeIntakesFromTemplates([{
+                                ...template,
+                                isActive: template.isActive ?? true,
+                                createdAt: template.createdAt ?? null,
+                                updatedAt: template.updatedAt ?? null,
+                                intakeName: template.intakeName ?? null,
+                              }], new Date())[0];
+                              return (
+                                <div
+                                  key={template.id}
+                                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <div className="font-medium">
+                                        {MONTH_NAMES[template.month - 1]} Intake
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Starts day {template.startDay} • Deadline {template.deadlineWeeksBefore} weeks before
+                                      </div>
+                                      {computed && (
+                                        <div className="text-xs mt-1">
+                                          <Badge variant={computed.status === "open" ? "default" : computed.status === "upcoming" ? "secondary" : "outline"} className="mr-2">
+                                            {computed.status}
+                                          </Badge>
+                                          Next: {format(computed.startDate, "MMM d, yyyy")}
+                                          {computed.status === "open" && computed.applicationDeadline && (
+                                            <span className="text-muted-foreground"> • Apply by {format(computed.applicationDeadline, "MMM d, yyyy")}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      setIntakeTemplates(intakeTemplates.filter(t => t.id !== template.id));
+                                    }}
+                                    data-testid={`button-remove-intake-${template.month}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          
+                          {/* Save intake templates button */}
+                          {course?.id && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full mt-2"
+                              disabled={isSavingIntakes}
+                              onClick={async () => {
+                                setIsSavingIntakes(true);
+                                try {
+                                  await apiRequest("PUT", `/api/admin/courses/${course.id}/intake-templates`, {
+                                    templates: intakeTemplates.map(t => ({
+                                      month: t.month,
+                                      startDay: t.startDay,
+                                      deadlineWeeksBefore: t.deadlineWeeksBefore,
+                                      openMonthsBefore: t.openMonthsBefore || 6,
+                                      isActive: t.isActive !== false,
+                                    }))
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ["/api/courses", course.id, "intake-templates"] });
+                                  toast({
+                                    title: "Intake templates saved",
+                                    description: `${intakeTemplates.length} intake(s) configured for this course.`,
+                                  });
+                                } catch (error) {
+                                  toast({
+                                    title: "Failed to save intakes",
+                                    description: "Please try again.",
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setIsSavingIntakes(false);
+                                }
+                              }}
+                              data-testid="button-save-intake-templates"
+                            >
+                              {isSavingIntakes ? "Saving..." : "Save Intake Schedule"}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
 

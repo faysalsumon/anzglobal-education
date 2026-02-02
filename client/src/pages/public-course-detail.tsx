@@ -15,7 +15,12 @@ import {
   Target, MonitorPlay, Plane, Star, Info, ExternalLink, ArrowUpRight, Layers, Tag, Heart, Minus,
   Share2, MoreHorizontal, MessageCircle, HelpCircle
 } from "lucide-react";
-import type { Course, University, Application, Favorite } from "@shared/schema";
+import type { Course, University, Application, Favorite, CourseIntakeTemplate } from "@shared/schema";
+import { 
+  computeIntakesFromTemplates,
+  getNextIntake,
+  MONTH_NAMES,
+} from "@shared/intake-utils";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
@@ -101,6 +106,32 @@ export default function PublicCourseDetail() {
     queryKey: ["/api/courses", courseId, "tags"],
     enabled: !!courseId,
   });
+
+  // Fetch intake templates for the course
+  const { data: intakeTemplates = [] } = useQuery<CourseIntakeTemplate[]>({
+    queryKey: ["/api/courses", courseId, "intake-templates"],
+    enabled: !!courseId,
+  });
+
+  // Compute intakes from templates
+  const computedIntakes = useMemo(() => {
+    if (intakeTemplates.length === 0) return [];
+    return computeIntakesFromTemplates(intakeTemplates, new Date());
+  }, [intakeTemplates]);
+
+  const nextIntake = useMemo(() => {
+    if (intakeTemplates.length === 0) return null;
+    return getNextIntake(intakeTemplates, new Date());
+  }, [intakeTemplates]);
+
+  // Format date helper
+  const formatIntakeDate = (date: Date) => {
+    return date.toLocaleDateString("en-AU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
 
   // Fetch pricing config for the course (includes feePeriod)
   interface PricingConfig {
@@ -317,10 +348,11 @@ export default function PublicCourseDetail() {
     "timeToComplete": course.duration || undefined,
     "courseMode": course.deliveryMode === "online" ? "online" : course.deliveryMode === "on-campus" ? "onsite" : "blended",
     "inLanguage": "en",
-    "hasCourseInstance": course.intakes && course.intakes.length > 0 ? course.intakes.map((intake: string) => ({
+    "hasCourseInstance": computedIntakes.length > 0 ? computedIntakes.map((intake) => ({
       "@type": "CourseInstance",
       "courseMode": course.deliveryMode === "online" ? "online" : course.deliveryMode === "on-campus" ? "onsite" : "blended",
-      "startDate": intake,
+      "startDate": intake.startDate.toISOString().split('T')[0],
+      "applicationDeadline": intake.applicationDeadline.toISOString().split('T')[0],
       "locationCreated": course.country ? {
         "@type": "Place",
         "address": {
@@ -382,13 +414,17 @@ export default function PublicCourseDetail() {
     });
   }
   
-  if (course.intakes && course.intakes.length > 0) {
+  if (computedIntakes.length > 0) {
+    const intakeMonths = computedIntakes.map(i => i.monthName).join(', ');
+    const nextIntakeText = nextIntake 
+      ? ` The next intake starts on ${formatIntakeDate(nextIntake.startDate)}.` 
+      : '';
     faqItems.push({
       "@type": "Question",
       "name": `When can I start ${course.title}?`,
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": `${course.title} has intake periods in ${course.intakes.join(', ')}.`
+        "text": `${course.title} has intake periods in ${intakeMonths}.${nextIntakeText}`
       }
     });
   }
@@ -404,13 +440,13 @@ export default function PublicCourseDetail() {
     });
   }
   
-  if (course.applicationDeadline) {
+  if (nextIntake && nextIntake.status === "open") {
     faqItems.push({
       "@type": "Question",
       "name": `What is the application deadline for ${course.title}?`,
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": `The application deadline for ${course.title} is ${course.applicationDeadline}.`
+        "text": `The application deadline for the ${nextIntake.monthName} ${nextIntake.year} intake of ${course.title} is ${formatIntakeDate(nextIntake.applicationDeadline)}.`
       }
     });
   }
@@ -559,12 +595,12 @@ export default function PublicCourseDetail() {
                   </div>
                 </div>
               )}
-              {course.startDate && (
+              {nextIntake && (
                 <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0" data-testid="stat-start-date">
                   <Calendar className="h-4 w-4 text-secondary" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Next Intake</span>
-                    <span className="text-sm font-semibold">{course.startDate}</span>
+                    <span className="text-sm font-semibold">{formatIntakeDate(nextIntake.startDate)}</span>
                   </div>
                 </div>
               )}
@@ -763,25 +799,30 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
-                  {course.startDate && (
+                  {nextIntake && (
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-secondary/10 rounded-md">
                         <Calendar className="h-3.5 w-3.5 text-secondary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Next Intake</p>
-                        <p className="text-sm font-semibold" data-testid="text-next-intake">{course.startDate}</p>
+                        <p className="text-sm font-semibold" data-testid="text-next-intake">
+                          {formatIntakeDate(nextIntake.startDate)}
+                          {nextIntake.status === "open" && (
+                            <Badge variant="default" className="ml-2 text-[10px]">Applications Open</Badge>
+                          )}
+                        </p>
                       </div>
                     </div>
                   )}
-                  {course.applicationDeadline && (
+                  {nextIntake && nextIntake.status === "open" && (
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-accent/10 rounded-md">
                         <Calendar className="h-3.5 w-3.5 text-accent" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Application Deadline</p>
-                        <p className="text-sm font-semibold" data-testid="text-application-deadline">{course.applicationDeadline}</p>
+                        <p className="text-sm font-semibold" data-testid="text-application-deadline">{formatIntakeDate(nextIntake.applicationDeadline)}</p>
                       </div>
                     </div>
                   )}
@@ -798,7 +839,7 @@ export default function PublicCourseDetail() {
                       </div>
                     </div>
                   )}
-                  {course.intakes && course.intakes.length > 0 && (
+                  {computedIntakes.length > 0 && (
                     <div className="flex items-start gap-3">
                       <div className="p-1.5 bg-secondary/10 rounded-md mt-0.5">
                         <Calendar className="h-3.5 w-3.5 text-secondary" />
@@ -806,27 +847,23 @@ export default function PublicCourseDetail() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground mb-1">Available Intakes</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {(() => {
-                            const colorPalette = [
-                              { text: "text-[#3465A5]", border: "border-[#3465A5]/30" },
-                              { text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
-                              { text: "text-[#10b981]", border: "border-[#10b981]/30" },
-                              { text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
-                              { text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
-                            ];
-                            return course.intakes.map((intake, index) => {
-                              const color = colorPalette[index % colorPalette.length];
-                              return (
-                                <Badge 
-                                  key={index} 
-                                  className={`text-xs px-2 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold`}
-                                  data-testid={`badge-intake-${index}`}
-                                >
-                                  {intake}
-                                </Badge>
-                              );
-                            });
-                          })()}
+                          {computedIntakes.map((intake, index) => {
+                            const statusColors = {
+                              open: { text: "text-[#10b981]", border: "border-[#10b981]/30", label: "Open" },
+                              upcoming: { text: "text-[#3465A5]", border: "border-[#3465A5]/30", label: "Upcoming" },
+                              closed: { text: "text-muted-foreground", border: "border-muted/30", label: "Closed" },
+                            };
+                            const color = statusColors[intake.status];
+                            return (
+                              <Badge 
+                                key={intake.templateId} 
+                                className={`text-xs px-2 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold`}
+                                data-testid={`badge-intake-${index}`}
+                              >
+                                {intake.displayLabel}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -1810,12 +1847,15 @@ export default function PublicCourseDetail() {
                 </p>
               </div>
             )}
-            {course.intakes && course.intakes.length > 0 && (
+            {computedIntakes.length > 0 && (
               <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-intakes">
                 <h3 className="font-semibold mb-2" data-testid="faq-question-intakes">When can I start studying {course.title}?</h3>
                 <p className="text-muted-foreground" data-testid="faq-answer-intakes">
-                  This course has intake periods in {course.intakes.join(', ')}.
-                  {' '}Check with the institution for application deadlines.
+                  This course has intake periods in {computedIntakes.map(i => i.monthName).join(', ')}.
+                  {nextIntake && nextIntake.status === "open" && 
+                    ` The next intake starts on ${formatIntakeDate(nextIntake.startDate)} with applications due by ${formatIntakeDate(nextIntake.applicationDeadline)}.`}
+                  {nextIntake && nextIntake.status === "upcoming" && 
+                    ` The next intake starts on ${formatIntakeDate(nextIntake.startDate)}. Applications will open soon.`}
                 </p>
               </div>
             )}

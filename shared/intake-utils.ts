@@ -1,5 +1,8 @@
 import type { CourseIntakeTemplate } from "./schema";
 
+// Re-export the template type for convenience
+export type IntakeTemplate = CourseIntakeTemplate;
+
 export interface ComputedIntake {
   templateId: string;
   month: number;
@@ -13,7 +16,7 @@ export interface ComputedIntake {
   displayLabel: string;
 }
 
-const MONTH_NAMES = [
+export const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
@@ -61,6 +64,22 @@ export function getMonthName(month: number): string {
 export function getIntakeRecommendations(country: string | null | undefined): { months: number[]; names: string[] } {
   if (!country) return DEFAULT_INTAKE_RECOMMENDATIONS;
   return COUNTRY_INTAKE_RECOMMENDATIONS[country] || DEFAULT_INTAKE_RECOMMENDATIONS;
+}
+
+// Returns intake recommendations with detailed configuration for the course editor
+export function getCountryIntakeRecommendations(country: string | null | undefined): Array<{
+  month: number;
+  name: string;
+  startDay: number;
+  deadlineWeeksBefore: number;
+}> {
+  const recs = getIntakeRecommendations(country);
+  return recs.months.map((month, idx) => ({
+    month,
+    name: recs.names[idx] || MONTH_NAMES[month - 1],
+    startDay: month === 2 ? 15 : month === 7 ? 10 : month === 8 ? 20 : month === 9 ? 1 : month === 11 ? 1 : 1,
+    deadlineWeeksBefore: 8,
+  }));
 }
 
 export function computeIntakeDate(
