@@ -482,67 +482,68 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
     const { Client } = await import("@replit/object-storage");
     const storageClient = new Client();
     
-    // Log the input for debugging (first 100 chars)
-    console.log(`[Thumbnail AI] Processing base64 data URL, length: ${base64DataUrl.length}, prefix: ${base64DataUrl.substring(0, 100)}...`);
-    
     // Extract the base64 content and mime type - trim whitespace and handle multi-line
     const cleanedDataUrl = base64DataUrl.trim().replace(/\s+/g, '');
     const matches = cleanedDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
     if (!matches) {
-      console.warn("[Thumbnail AI] Invalid base64 data URL format, cleaned prefix:", cleanedDataUrl.substring(0, 100));
+      console.warn("[Thumbnail AI] Invalid base64 data URL format");
       return null;
     }
     
     const [, imageType, base64Data] = matches;
-    console.log(`[Thumbnail AI] Extracted image type: ${imageType}, base64 length: ${base64Data.length}`);
-    
     const buffer = Buffer.from(base64Data, 'base64');
-    console.log(`[Thumbnail AI] Created buffer with size: ${buffer.length} bytes, isBuffer: ${Buffer.isBuffer(buffer)}, first bytes: ${buffer.slice(0, 8).toString('hex')}`);
     
     if (buffer.length < 100) {
       console.error(`[Thumbnail AI] Buffer too small (${buffer.length} bytes), likely invalid base64 data`);
       return null;
     }
     
-    const ext = imageType === 'jpeg' ? 'jpg' : imageType.replace('+xml', '');
-    
-    // Upload to public folder for CDN access
-    const fullFileName = `${fileName}.${ext}`;
-    const objectPath = `public/thumbnails/${fullFileName}`;
-    
-    // Write to temp file first, then upload (uploadFromBytes has issues)
+    // Optimize image: resize to max 800px width and convert to WebP for smaller file size
+    const sharp = (await import('sharp')).default;
     const fs = await import('fs/promises');
     const path = await import('path');
     const os = await import('os');
     
+    const originalSize = buffer.length;
+    console.log(`[Thumbnail AI] Original image size: ${(originalSize / 1024).toFixed(1)} KB`);
+    
+    // Resize and convert to WebP with 80% quality for optimal balance of size and quality
+    const optimizedBuffer = await sharp(buffer)
+      .resize(800, null, { 
+        withoutEnlargement: true,  // Don't upscale small images
+        fit: 'inside'
+      })
+      .webp({ quality: 80 })
+      .toBuffer();
+    
+    const optimizedSize = optimizedBuffer.length;
+    const savings = ((1 - optimizedSize / originalSize) * 100).toFixed(1);
+    console.log(`[Thumbnail AI] Image optimized: ${(originalSize / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB (${savings}% smaller)`);
+    
+    // Use .webp extension for optimized images
+    const fullFileName = `${fileName}.webp`;
+    const objectPath = `public/thumbnails/${fullFileName}`;
+    
+    // Write to temp file first, then upload (uploadFromBytes has issues)
     const tempDir = os.tmpdir();
     const tempFilePath = path.join(tempDir, fullFileName);
     
-    console.log(`[Thumbnail AI] Writing to temp file: ${tempFilePath}`);
-    await fs.writeFile(tempFilePath, buffer);
+    await fs.writeFile(tempFilePath, optimizedBuffer);
     
-    // Verify temp file was written correctly
-    const stats = await fs.stat(tempFilePath);
-    console.log(`[Thumbnail AI] Temp file size: ${stats.size} bytes`);
-    
-    console.log(`[Thumbnail AI] Uploading from file to object storage: ${objectPath}`);
     const result = await storageClient.uploadFromFilename(objectPath, tempFilePath);
-    console.log(`[Thumbnail AI] Upload result: ok=${result.ok}, error=${JSON.stringify(result.error || null)}`);
     
     // Clean up temp file
     await fs.unlink(tempFilePath).catch(() => {});
     
-    // Verify upload by downloading immediately
+    // Verify upload was successful
     const verifyResult = await storageClient.downloadAsBytes(objectPath);
-    console.log(`[Thumbnail AI] Verify download: ok=${verifyResult.ok}, size=${verifyResult.value?.length || 0}`);
     
     if (result.ok && verifyResult.value && verifyResult.value.length > 100) {
-      // Return public URL for the uploaded file - matches the serving endpoint
       const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
-      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${objectPath}, verified size: ${verifyResult.value.length} bytes`);
+      console.log(`[Thumbnail AI] Thumbnail saved: ${publicUrl} (${(optimizedSize / 1024).toFixed(0)}KB)`);
       return publicUrl;
     } else {
-      console.warn("[Thumbnail AI] Failed to upload to object storage or verify failed:", result.error);
+      console.warn("[Thumbnail AI] Failed to upload to object storage");
       return null;
     }
   } catch (error: any) {
