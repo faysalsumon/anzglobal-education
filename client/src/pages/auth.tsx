@@ -245,6 +245,7 @@ export default function AuthPage() {
           firstName,
           lastName,
           userType: userType || "student",
+          referralCode: referralCode || undefined,
         });
 
         if (error) {

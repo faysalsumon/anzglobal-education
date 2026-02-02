@@ -10,7 +10,7 @@ interface SupabaseAuthContextType {
   isConfigured: boolean;
   isPasswordRecovery: boolean;
   clearPasswordRecovery: () => void;
-  signUp: (email: string, password: string, metadata?: { firstName?: string; lastName?: string; userType?: string }) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, metadata?: { firstName?: string; lastName?: string; userType?: string; referralCode?: string }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
@@ -75,7 +75,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(async (
     email: string,
     password: string,
-    metadata?: { firstName?: string; lastName?: string; userType?: string }
+    metadata?: { firstName?: string; lastName?: string; userType?: string; referralCode?: string }
   ) => {
     if (!supabase) return { error: notConfiguredError };
     const { error } = await supabase.auth.signUp({
@@ -86,6 +86,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           first_name: metadata?.firstName,
           last_name: metadata?.lastName,
           user_type: metadata?.userType || "student",
+          referral_code: metadata?.referralCode,
         },
       },
     });

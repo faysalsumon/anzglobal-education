@@ -107,7 +107,9 @@ export default function AuthCallback() {
       // Check for stored OAuth intended user type (set before redirecting to Google)
       const storedUserType = localStorage.getItem('oauth_intended_user_type');
       // Check for stored referral code (set when user visits via referral link)
-      const storedReferralCode = localStorage.getItem('referral_code');
+      // Fall back to Supabase metadata (for email signups where user verifies on different device)
+      const storedReferralCode = localStorage.getItem('referral_code') || 
+                                  supabaseUser.user_metadata?.referral_code || undefined;
       
       // Use stored type, then Supabase metadata, then default to student
       const userType = storedUserType || supabaseUser.user_metadata?.user_type || "student";
@@ -116,7 +118,8 @@ export default function AuthCallback() {
       if (storedUserType) {
         localStorage.removeItem('oauth_intended_user_type');
       }
-      if (storedReferralCode) {
+      // Only clear localStorage if a code was stored there
+      if (localStorage.getItem('referral_code')) {
         localStorage.removeItem('referral_code');
       }
       
