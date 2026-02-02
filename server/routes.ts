@@ -57,6 +57,8 @@ import {
   adminTeamMembers,
   crmLeads,
   leadStatusHistory,
+  crmContacts,
+  contactStatusHistory,
   // CMS imports
   insertTestimonialSchema,
   updateTestimonialSchema,
@@ -2987,35 +2989,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the legacy student lead (for backwards compatibility)
       const lead = await storage.createLead(leadData);
       
-      // Also create a CRM lead for unified lead management
+      // Create CRM contact for unified lead management (replaces legacy crmLeads)
       try {
-        const [crmLead] = await db.insert(crmLeads).values({
+        // Build notes with course inquiry context
+        const notes = `Course Inquiry via Course Page\n\nCourse: ${course.title}\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`;
+        
+        // Create CRM contact entry for course inquiry
+        const [crmContact] = await db.insert(crmContacts).values({
           firstName: leadData.firstName,
           lastName: leadData.lastName,
           email: leadData.email,
-          phone: leadData.phone,
-          leadStatus: "not_contacted" as const,
+          mobile: leadData.phone || undefined,
+          contactType: "clients" as const,
+          clientStatus: "lead" as const,
+          entrySource: "website" as const,
           leadRating: "warm" as const,
-          leadCreationMethod: "website_form" as const,
           courseName: course.title,
           courseId: course.id,
-          universityId: course.universityId,
-          notes: `Course Inquiry via Course Page\n\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`,
-          referrer: req.headers["referer"] || undefined,
+          universityId: course.universityId || undefined,
+          courseUrl: `/courses/${course.id}`,
+          interestedIn: course.title,
+          notes,
+          referrer: req.headers["referer"] as string || undefined,
+          firstPageVisited: `/courses/${course.id}`,
+          firstVisit: new Date(),
         }).returning();
         
         // Create initial status history
-        await db.insert(leadStatusHistory).values({
-          leadId: crmLead.id,
+        await db.insert(contactStatusHistory).values({
+          contactId: crmContact.id,
           fromStatus: null,
-          toStatus: "not_contacted" as const,
-          notes: `Lead auto-created from course inquiry for ${course.title}`,
+          toStatus: "lead" as const,
+          notes: `Contact auto-created from course inquiry for ${course.title}`,
         });
         
-        console.log("CRM lead created from course inquiry:", crmLead.id);
+        console.log("CRM contact created from course inquiry:", crmContact.id);
       } catch (crmError) {
         // Log error but don't fail the lead submission
-        console.error("Error creating CRM lead from course inquiry:", crmError);
+        console.error("Error creating CRM contact from course inquiry:", crmError);
       }
       
       // Create notifications for all admins and consultants
@@ -14302,7 +14313,7 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
       // Create the inquiry
       const inquiry = await storage.createContactInquiry(fullInquiryData);
       
-      // Also create a CRM lead for unified lead management
+      // Create CRM contact for unified lead management (replaces legacy crmLeads)
       try {
         // Parse name for student inquiries
         let firstName = "";
@@ -14317,33 +14328,61 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
           lastName = nameParts.slice(1).join(" ") || "";
         }
         
-        // Create CRM lead from contact inquiry
-        const [crmLead] = await db.insert(crmLeads).values({
+        // Determine contact type based on inquiry type
+        const contactType = inquiry.inquiryType === "student" ? "clients" as const : "partner" as const;
+        
+        // Try to auto-assign region based on country
+        let regionId: string | undefined;
+        if (inquiry.country) {
+          const matchingRegion = await db.select().from(regions)
+            .where(eq(regions.isActive, true))
+            .then(allRegions => 
+              allRegions.find(r => 
+                r.name?.toLowerCase().includes(inquiry.country!.toLowerCase()) ||
+                r.code?.toLowerCase() === inquiry.country!.toLowerCase()
+              )
+            );
+          if (matchingRegion) {
+            regionId = matchingRegion.id;
+          }
+        }
+        
+        // Build notes with all relevant inquiry details
+        const notes = `Contact Inquiry (${inquiry.inquiryType}):\n\n${inquiry.message}${inquiry.institutionName ? `\n\nInstitution: ${inquiry.institutionName}` : ""}${inquiry.website ? `\nWebsite: ${inquiry.website}` : ""}${inquiry.studyLevel ? `\nStudy Level: ${inquiry.studyLevel}` : ""}${inquiry.visaStatus ? `\nVisa Status: ${inquiry.visaStatus}` : ""}`;
+        
+        // Create CRM contact entry
+        const [crmContact] = await db.insert(crmContacts).values({
           firstName: firstName || "Unknown",
           lastName: lastName || "Contact",
           email: inquiry.email,
-          phone: inquiry.phone || "",
+          mobile: inquiry.phone || undefined,
           country: inquiry.country || undefined,
-          leadStatus: "not_contacted" as const,
+          contactType,
+          clientStatus: "lead" as const,
+          entrySource: "website" as const,
           leadRating: "warm" as const,
-          leadCreationMethod: "website_form" as const,
           interestedIn: inquiry.courseInterest || inquiry.partnershipType || undefined,
-          notes: `Contact Inquiry (${inquiry.inquiryType}):\n\n${inquiry.message}${inquiry.institutionName ? `\n\nInstitution: ${inquiry.institutionName}` : ""}${inquiry.website ? `\nWebsite: ${inquiry.website}` : ""}${inquiry.studyLevel ? `\nStudy Level: ${inquiry.studyLevel}` : ""}${inquiry.visaStatus ? `\nVisa Status: ${inquiry.visaStatus}` : ""}`,
-          referrer: req.headers["referer"] || undefined,
+          notes,
+          referrer: req.headers["referer"] as string || undefined,
+          firstPageVisited: req.headers["referer"] as string || "/contact",
+          firstVisit: new Date(),
+          regionId,
+          // Company name for institution/partner inquiries
+          companyName: inquiry.institutionName || undefined,
         }).returning();
         
         // Create initial status history
-        await db.insert(leadStatusHistory).values({
-          leadId: crmLead.id,
+        await db.insert(contactStatusHistory).values({
+          contactId: crmContact.id,
           fromStatus: null,
-          toStatus: "not_contacted" as const,
-          notes: `Lead auto-created from ${inquiry.inquiryType} contact form submission`,
+          toStatus: "lead" as const,
+          notes: `Contact auto-created from ${inquiry.inquiryType} form submission on website`,
         });
         
-        console.log("CRM lead created from contact inquiry:", crmLead.id);
+        console.log("CRM contact created from contact inquiry:", crmContact.id, "type:", contactType);
       } catch (crmError) {
         // Log error but don't fail the inquiry submission
-        console.error("Error creating CRM lead from contact inquiry:", crmError);
+        console.error("Error creating CRM contact from contact inquiry:", crmError);
       }
       
       // Send email notifications (don't wait for them to complete)

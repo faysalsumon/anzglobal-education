@@ -32,7 +32,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage.
 - **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions, utilizing "Profiles DO, Roles SEE" design pattern across various user types, roles, permission profiles, and scope levels.
-- **CRM System**: Unified contact management (clients, employees, external, partners, providers_rep) with automatic status transitions, lead rating, Kanban view, and advanced filtering.
+- **CRM System**: Unified contact management using single `crmContacts` table (replacing legacy `crmLeads`) with contact types (clients, employees, external, partners, providers_rep), client status lifecycle (lead → prospect → enrolled → converted → alumni), automatic status transitions, lead rating, Kanban view, and advanced filtering. Public form submissions (contact inquiries, course inquiries) auto-create contacts with `entrySource: "website"`, `firstPageVisited`, `referrer`, `firstVisit` tracking, and auto-assign `regionId` based on country matching.
 - **Multi-Course Applications**: Support for multiple courses per application, with auto-generated human-readable IDs and API endpoints for management.
 - **Filtering & Search**: Discipline-based, course level, natural language, and location-based filtering with cascading location filters and map integration.
 - **Unified Tag Manager**: Consolidated tagging system for courses and institutions across 13 categories.
