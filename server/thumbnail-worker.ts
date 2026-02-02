@@ -23,15 +23,15 @@ async function processThumbnailJob(job: Job<ThumbnailJobData>): Promise<void> {
       .set({ thumbnailStatus: "generating" })
       .where(eq(courses.id, courseId));
     
-    const thumbnailUrl = await generateCourseThumbnail(
+    const result = await generateCourseThumbnail(
       courseTitle,
       discipline,
       level,
       universityName
     );
     
-    if (!thumbnailUrl) {
-      throw new Error("Failed to generate thumbnail - no URL returned");
+    if (!result.success || !result.url) {
+      throw new Error(result.error || "Failed to generate thumbnail - no URL returned");
     }
     
     await job.updateProgress({
@@ -43,7 +43,7 @@ async function processThumbnailJob(job: Job<ThumbnailJobData>): Promise<void> {
     await db
       .update(courses)
       .set({
-        thumbnailUrl,
+        thumbnailUrl: result.url,
         thumbnailStatus: "completed",
         thumbnailGeneratedAt: new Date(),
       })

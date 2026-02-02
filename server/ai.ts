@@ -464,17 +464,28 @@ export async function generateInstitutionGalleryImages(
   return imageUrls;
 }
 
+export interface ThumbnailResult {
+  success: boolean;
+  url?: string;
+  error?: string;
+}
+
 export async function generateCourseThumbnail(
   courseTitle: string,
   discipline?: string,
   level?: string,
   universityName?: string
-): Promise<string | null> {
-  checkAIConfigured();
+): Promise<ThumbnailResult> {
+  try {
+    checkAIConfigured();
+  } catch (e: any) {
+    return { success: false, error: e.message || "AI not configured" };
+  }
   
   if (!process.env.OPENAI_API_KEY) {
-    console.warn("DALL-E image generation requires OPENAI_API_KEY, skipping thumbnail generation");
-    return null;
+    const msg = "DALL-E image generation requires OPENAI_API_KEY";
+    console.warn(msg);
+    return { success: false, error: msg };
   }
   
   const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -502,14 +513,18 @@ Suitable for an education platform course card.`;
     
     if (response.data?.[0]?.url) {
       console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
-      return response.data[0].url;
+      return { success: true, url: response.data[0].url };
     }
     
     console.warn(`[Thumbnail AI] No URL returned for: ${courseTitle}`);
-    return null;
-  } catch (error) {
-    console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, error);
-    return null;
+    return { success: false, error: "No image URL returned from OpenAI" };
+  } catch (error: any) {
+    const errorMessage = error?.message || error?.error?.message || "Unknown error generating thumbnail";
+    const errorCode = error?.code || error?.status || "";
+    const fullError = errorCode ? `${errorCode}: ${errorMessage}` : errorMessage;
+    
+    console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, fullError);
+    return { success: false, error: fullError };
   }
 }
 

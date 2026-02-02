@@ -4296,24 +4296,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await db.update(courses).set({ thumbnailStatus: "generating" }).where(eq(courses.id, courseId));
         
-        const thumbnailUrl = await generateCourseThumbnail(
+        const result = await generateCourseThumbnail(
           course.title,
           course.discipline || undefined,
           course.level || undefined,
           university?.name || undefined
         );
         
-        if (thumbnailUrl) {
+        if (result.success && result.url) {
           await db.update(courses).set({
-            thumbnailUrl,
+            thumbnailUrl: result.url,
             thumbnailStatus: "completed",
             thumbnailGeneratedAt: new Date(),
           }).where(eq(courses.id, courseId));
           
-          return res.json({ success: true, thumbnailUrl, mode: "sync" });
+          return res.json({ success: true, thumbnailUrl: result.url, mode: "sync" });
         } else {
           await db.update(courses).set({ thumbnailStatus: "failed" }).where(eq(courses.id, courseId));
-          return res.status(500).json({ message: "Failed to generate thumbnail" });
+          return res.status(500).json({ message: result.error || "Failed to generate thumbnail" });
         }
       }
       
