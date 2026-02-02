@@ -344,19 +344,19 @@ export default function PublicInstitutionDetail() {
       {/* Modern Hero Section */}
       <div id="institution-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 py-12 relative">
+        <div className="container mx-auto px-4 py-6 md:py-12 relative">
           {/* Breadcrumb with Favorite */}
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <nav className="flex flex-wrap items-center gap-2 text-sm" data-testid="breadcrumb">
-              <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-home">
-                <Home className="h-4 w-4" />
+          <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4 mb-4 md:mb-6">
+            <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm min-w-0" data-testid="breadcrumb">
+              <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors shrink-0" data-testid="breadcrumb-home">
+                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Link>
               <span className="text-muted-foreground">/</span>
-              <Link href="/institutions" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="breadcrumb-institutions">
+              <Link href="/institutions" className="text-muted-foreground hover:text-foreground transition-colors shrink-0" data-testid="breadcrumb-institutions">
                 Institutions
               </Link>
               <span className="text-muted-foreground">/</span>
-              <span className="text-foreground font-medium truncate max-w-md" data-testid="breadcrumb-current">{institution.name}</span>
+              <span className="text-foreground font-medium truncate max-w-[150px] sm:max-w-md" data-testid="breadcrumb-current">{institution.name}</span>
             </nav>
             
             {isStudent && (
@@ -375,45 +375,51 @@ export default function PublicInstitutionDetail() {
           </div>
 
           {/* Mobile Quick Stats Strip */}
-          <div className="md:hidden overflow-x-auto -mx-4 px-4 py-3" data-testid="container-mobile-quick-stats">
-            <div className="flex gap-3 min-w-max">
-              {institution.providerType && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</span>
-                    <span className="text-sm font-semibold">{institution.providerType}</span>
+          <div className="md:hidden relative" data-testid="container-mobile-quick-stats">
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 py-3">
+              <div className="flex gap-2 pr-4">
+                {institution.providerType && (
+                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                    <Building2 className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Type</span>
+                      <span className="text-sm font-semibold whitespace-nowrap">{institution.providerType}</span>
+                    </div>
                   </div>
-                </div>
-              )}
-              {institution.establishedYear && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Est.</span>
-                    <span className="text-sm font-semibold">{institution.establishedYear}</span>
+                )}
+                {institution.establishedYear && (
+                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Est.</span>
+                      <span className="text-sm font-semibold whitespace-nowrap">{institution.establishedYear}</span>
+                    </div>
                   </div>
-                </div>
-              )}
-              {institution.numberOfCampuses && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                  <MapPin className="h-4 w-4 text-accent" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Campuses</span>
-                    <span className="text-sm font-semibold">{institution.numberOfCampuses}</span>
+                )}
+                {institution.numberOfCampuses && (
+                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                    <MapPin className="h-4 w-4 text-accent shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Campuses</span>
+                      <span className="text-sm font-semibold whitespace-nowrap">{institution.numberOfCampuses}</span>
+                    </div>
                   </div>
-                </div>
-              )}
-              {institution.country && (
-                <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Location</span>
-                    <span className="text-sm font-semibold">{institution.country}</span>
+                )}
+                {institution.country && (
+                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
+                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Location</span>
+                      <span className="text-sm font-semibold whitespace-nowrap">{institution.country}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+                {/* Spacer for right edge */}
+                <div className="shrink-0 w-1" aria-hidden="true" />
+              </div>
             </div>
+            {/* Scroll indicator gradient */}
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background/80 to-transparent pointer-events-none" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -434,18 +440,18 @@ export default function PublicInstitutionDetail() {
 
                 {/* Institution Title */}
                 <div>
-                  <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-3" data-testid="text-name">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-2 sm:mb-3" data-testid="text-name">
                     {institution.name}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {institution.providerType && (
-                      <Badge variant="secondary" className="text-sm" data-testid="badge-provider-type">
+                      <Badge variant="secondary" className="text-xs sm:text-sm" data-testid="badge-provider-type">
                         <Building2 className="h-3 w-3 mr-1" />
                         {institution.providerType}
                       </Badge>
                     )}
                     {maxScholarshipPercentage > 0 && (
-                      <Badge className="bg-accent text-accent-foreground" data-testid="badge-scholarship">
+                      <Badge className="bg-accent text-accent-foreground text-xs sm:text-sm" data-testid="badge-scholarship">
                         <Award className="h-3 w-3 mr-1" />
                         Up to {maxScholarshipPercentage}% Scholarship
                       </Badge>
@@ -556,10 +562,10 @@ export default function PublicInstitutionDetail() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 py-6 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {/* Main Content Column */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {/* About Section */}
             <ResponsiveSection
               id="about"
