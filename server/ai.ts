@@ -470,6 +470,50 @@ export interface ThumbnailResult {
   error?: string;
 }
 
+// Helper function to upload base64 image to object storage and get a public URL
+async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: string): Promise<string | null> {
+  try {
+    // Check if object storage is configured
+    if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+      console.warn("[Thumbnail AI] Object storage not configured, returning base64 URL");
+      return null;
+    }
+    
+    const { Client } = await import("@replit/object-storage");
+    const storageClient = new Client();
+    
+    // Extract the base64 content and mime type
+    const matches = base64DataUrl.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+    if (!matches) {
+      console.warn("[Thumbnail AI] Invalid base64 data URL format");
+      return null;
+    }
+    
+    const [, imageType, base64Data] = matches;
+    const buffer = Buffer.from(base64Data, 'base64');
+    const ext = imageType === 'jpeg' ? 'jpg' : imageType.replace('+xml', '');
+    
+    // Upload to public folder for CDN access
+    const fullFileName = `${fileName}.${ext}`;
+    const filePath = `public/thumbnails/${fullFileName}`;
+    
+    const result = await storageClient.uploadFromBytes(filePath, buffer);
+    
+    if (result.ok) {
+      // Return public URL for the uploaded file - matches the serving endpoint
+      const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
+      console.log(`[Thumbnail AI] Uploaded thumbnail to object storage: ${filePath}`);
+      return publicUrl;
+    } else {
+      console.warn("[Thumbnail AI] Failed to upload to object storage:", result.error);
+      return null;
+    }
+  } catch (error: any) {
+    console.error("[Thumbnail AI] Error uploading to object storage:", error?.message);
+    return null;
+  }
+}
+
 export async function generateCourseThumbnail(
   courseTitle: string,
   discipline?: string,
@@ -537,34 +581,61 @@ No artificial graphics, no text overlays, no logos. Just natural, candid educati
     
     // Extract base64 image from response - Nano Banana Pro returns images in message
     const message = data.choices?.[0]?.message;
+    let imageUrl: string | null = null;
     
     // Check for inline image in content parts
     if (message?.content && Array.isArray(message.content)) {
       for (const part of message.content) {
         if (part.type === "image_url" && part.image_url?.url) {
-          console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
-          return { success: true, url: part.image_url.url };
+          imageUrl = part.image_url.url;
+          break;
+        }
+        // Also check for inline_data format
+        if (part.inline_data?.data && part.inline_data?.mime_type) {
+          imageUrl = `data:${part.inline_data.mime_type};base64,${part.inline_data.data}`;
+          break;
         }
       }
     }
     
     // Check for images array in message
-    if (message?.images?.[0]?.image_url?.url) {
-      console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
-      return { success: true, url: message.images[0].image_url.url };
+    if (!imageUrl && message?.images?.[0]?.image_url?.url) {
+      imageUrl = message.images[0].image_url.url;
     }
     
     // Check if image data is embedded in content string
-    if (typeof message?.content === "string" && message.content.includes("data:image")) {
+    if (!imageUrl && typeof message?.content === "string" && message.content.includes("data:image")) {
       const match = message.content.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
       if (match) {
-        console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
-        return { success: true, url: match[0] };
+        imageUrl = match[0];
       }
     }
     
-    console.warn(`[Thumbnail AI] No image in response for: ${courseTitle}`, JSON.stringify(data).substring(0, 500));
-    return { success: false, error: "No image returned from Nano Banana Pro model" };
+    if (!imageUrl) {
+      console.warn(`[Thumbnail AI] No image in response for: ${courseTitle}`, JSON.stringify(data).substring(0, 500));
+      return { success: false, error: "No image returned from Nano Banana Pro model" };
+    }
+    
+    // If it's a base64 data URL, upload to object storage for a proper URL
+    if (imageUrl.startsWith('data:image')) {
+      const timestamp = Date.now();
+      const safeTitle = courseTitle.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+      const fileName = `course_${safeTitle}_${timestamp}`;
+      
+      const uploadedUrl = await uploadBase64ToObjectStorage(imageUrl, fileName);
+      if (uploadedUrl) {
+        console.log(`[Thumbnail AI] Successfully generated and uploaded thumbnail for: ${courseTitle}`);
+        return { success: true, url: uploadedUrl };
+      } else {
+        // Fall back to returning the base64 URL if upload fails
+        console.log(`[Thumbnail AI] Upload failed, returning base64 URL for: ${courseTitle}`);
+        return { success: true, url: imageUrl };
+      }
+    }
+    
+    // If it's already a proper URL, return it directly
+    console.log(`[Thumbnail AI] Successfully generated thumbnail for: ${courseTitle}`);
+    return { success: true, url: imageUrl };
   } catch (error: any) {
     const errorMessage = error?.message || "Unknown error generating thumbnail";
     console.error(`[Thumbnail AI] Error generating thumbnail for ${courseTitle}:`, errorMessage);

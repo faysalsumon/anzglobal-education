@@ -615,6 +615,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve attached assets (stock images, generated images, etc.)
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
+  // Public object storage endpoint for serving thumbnails and other public files
+  app.get("/api/public-storage/public/thumbnails/:filename", async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      
+      // Security: Validate filename - only allow alphanumeric, underscores, dots, and hyphens
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      
+      // Security: Only allow image extensions
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      if (!allowedExtensions.includes(ext)) {
+        return res.status(400).json({ message: "Invalid file type" });
+      }
+      
+      const filePath = `public/thumbnails/${filename}`;
+      
+      // Check if object storage is available
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+      
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      
+      const { ok, value: fileBuffer } = await storageClient.downloadAsBytes(filePath);
+      
+      if (!ok || !fileBuffer) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      // Set content type based on extension
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+      };
+      const contentType = mimeTypes[ext] || 'image/png';
+      
+      // Set cache headers for thumbnails (cache for 1 day)
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Content-Type', contentType);
+      res.send(Buffer.from(fileBuffer));
+    } catch (error) {
+      console.error("Error serving public storage file:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
   // Get current authenticated user
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
