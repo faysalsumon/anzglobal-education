@@ -18,6 +18,40 @@ interface PlatformStats {
   courseCount: number;
 }
 
+interface FeaturedCourse {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  thumbnailUrl: string | null;
+  subject: string | null;
+  level: string | null;
+  duration: number | null;
+  durationType: string | null;
+  tuitionFee: number | null;
+  currency: string | null;
+  universityId: string;
+  universityName: string;
+  universityLogo: string | null;
+  universitySlug: string;
+}
+
+interface FeaturedInstitution {
+  id: string;
+  name: string;
+  slug: string | null;
+  logoUrl: string | null;
+  country: string | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+interface FeaturedData {
+  institutions: FeaturedInstitution[];
+  courses: FeaturedCourse[];
+}
+
 type CourseWithUniversity = Course & { university?: University };
 
 export default function Landing() {
@@ -50,6 +84,14 @@ export default function Landing() {
   const { data: cmsTestimonials = [] } = useQuery<Testimonial[]>({
     queryKey: ["/api/public/testimonials"],
   });
+
+  // Fetch featured institutions and courses
+  const { data: featuredData } = useQuery<FeaturedData>({
+    queryKey: ["/api/public/featured"],
+  });
+
+  const featuredInstitutions = featuredData?.institutions || [];
+  const featuredCourses = featuredData?.courses || [];
 
   // Filter courses or institutions based on search query and type
   const courseSuggestions = searchQuery.trim().length > 0 && searchType === "courses"
@@ -269,6 +311,193 @@ export default function Landing() {
           <DisciplineCards />
         </div>
       </section>
+
+      {/* Featured Partners Section */}
+      {featuredInstitutions.length > 0 && (
+        <section className="py-16 md:py-24 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
+                <Award className="h-4 w-4" />
+                <span className="text-sm font-semibold">Our Partners</span>
+              </div>
+              <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+                Featured Education Partners
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Trusted institutions offering world-class education to international students
+              </p>
+            </div>
+            
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredInstitutions.slice(0, 6).map((institution) => (
+                <Link 
+                  key={institution.id} 
+                  href={`/institutions/${institution.slug || institution.id}`}
+                  data-testid={`link-featured-institution-${institution.id}`}
+                >
+                  <Card className="h-full hover-elevate cursor-pointer group overflow-hidden">
+                    <div className="relative h-40 bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+                      {institution.logoUrl ? (
+                        <img 
+                          src={institution.logoUrl} 
+                          alt={institution.name}
+                          className="h-20 w-auto object-contain group-hover:scale-105 transition-transform"
+                          data-testid={`img-featured-institution-logo-${institution.id}`}
+                        />
+                      ) : (
+                        <Building2 className="h-16 w-16 text-primary/40" />
+                      )}
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle 
+                        className="text-lg line-clamp-2 group-hover:text-primary transition-colors"
+                        data-testid={`text-featured-institution-name-${institution.id}`}
+                      >
+                        {institution.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate" data-testid={`text-featured-institution-location-${institution.id}`}>
+                          {[institution.city, institution.state, institution.country]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            
+            <div className="text-center mt-10">
+              <Button 
+                asChild 
+                size="lg"
+                variant="outline"
+                className="px-8"
+                data-testid="button-view-all-institutions"
+              >
+                <Link href="/institutions">
+                  View All Institutions
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Featured Courses Section */}
+      {featuredCourses.length > 0 && (
+        <section className="py-16 md:py-24 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary mb-6 border border-secondary/20">
+                <GraduationCap className="h-4 w-4" />
+                <span className="text-sm font-semibold">Popular Programs</span>
+              </div>
+              <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+                Featured Courses
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Discover our most popular courses chosen by students worldwide
+              </p>
+            </div>
+            
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredCourses.slice(0, 6).map((course) => (
+                <Link 
+                  key={course.id} 
+                  href={`/courses/${course.slug || course.id}`}
+                  data-testid={`link-featured-course-${course.id}`}
+                >
+                  <Card className="h-full hover-elevate cursor-pointer group overflow-hidden">
+                    <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10">
+                      {course.thumbnailUrl ? (
+                        <img 
+                          src={course.thumbnailUrl} 
+                          alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          data-testid={`img-featured-course-thumbnail-${course.id}`}
+                        />
+                      ) : (
+                        <div className="h-full flex items-center justify-center">
+                          <GraduationCap className="h-16 w-16 text-secondary/40" />
+                        </div>
+                      )}
+                      {course.level && (
+                        <div 
+                          className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium"
+                          data-testid={`text-featured-course-level-${course.id}`}
+                        >
+                          {course.level}
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle 
+                        className="text-lg line-clamp-2 group-hover:text-primary transition-colors"
+                        data-testid={`text-featured-course-title-${course.id}`}
+                      >
+                        {course.title}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        {course.universityLogo ? (
+                          <img 
+                            src={course.universityLogo} 
+                            alt={course.universityName}
+                            className="h-5 w-5 object-contain rounded"
+                          />
+                        ) : (
+                          <Building2 className="h-4 w-4 flex-shrink-0" />
+                        )}
+                        <span className="truncate" data-testid={`text-featured-course-university-${course.id}`}>
+                          {course.universityName}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                        {course.duration && course.durationType && (
+                          <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}>
+                            <Calendar className="h-4 w-4" />
+                            <span>{course.duration} {course.durationType}</span>
+                          </div>
+                        )}
+                        {course.tuitionFee && (
+                          <div 
+                            className="font-medium text-foreground"
+                            data-testid={`text-featured-course-fee-${course.id}`}
+                          >
+                            {course.currency || 'AUD'} ${course.tuitionFee.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            
+            <div className="text-center mt-10">
+              <Button 
+                asChild 
+                size="lg"
+                className="px-8"
+                data-testid="button-view-all-courses"
+              >
+                <Link href="/courses">
+                  View All Courses
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Promotional Video Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">

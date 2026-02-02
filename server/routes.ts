@@ -17344,6 +17344,115 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Public endpoint - get featured institutions and courses (by "featured" tag)
+  app.get("/api/public/featured", async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 6, 20);
+      
+      // Find the "featured" tag
+      const [featuredTag] = await db.select().from(tags).where(eq(tags.slug, 'featured')).limit(1);
+      
+      if (!featuredTag) {
+        return res.json({ institutions: [], courses: [] });
+      }
+      
+      // Get featured institutions (published, approved, publicly visible)
+      const featuredInstitutionIds = await db
+        .select({ institutionId: institutionTags.institutionId })
+        .from(institutionTags)
+        .where(eq(institutionTags.tagId, featuredTag.id));
+      
+      let featuredInstitutions: any[] = [];
+      if (featuredInstitutionIds.length > 0) {
+        const instIds = featuredInstitutionIds.map(i => i.institutionId);
+        const rawInstitutions = await db
+          .select({
+            id: universities.id,
+            name: universities.name,
+            slug: universities.slug,
+            logoUrl: universities.logo,
+            country: universities.country,
+            description: universities.smallDescription,
+            campusAddresses: universities.campusAddresses,
+          })
+          .from(universities)
+          .where(and(
+            inArray(universities.id, instIds),
+            eq(universities.isApproved, true),
+            eq(universities.isPublished, true),
+            eq(universities.isPubliclyVisible, true),
+            eq(universities.isActive, true)
+          ))
+          .limit(limit);
+        
+        // Extract city/state from first campus address if available
+        featuredInstitutions = rawInstitutions.map(inst => {
+          const campuses = inst.campusAddresses as any[] | null;
+          const firstCampus = campuses?.[0];
+          return {
+            id: inst.id,
+            name: inst.name,
+            slug: inst.slug,
+            logoUrl: inst.logoUrl,
+            country: inst.country,
+            description: inst.description,
+            city: firstCampus?.city || null,
+            state: firstCampus?.state || null,
+          };
+        });
+      }
+      
+      // Get featured courses (published, approved, from approved institutions)
+      const featuredCourseIds = await db
+        .select({ courseId: courseTags.courseId })
+        .from(courseTags)
+        .where(eq(courseTags.tagId, featuredTag.id));
+      
+      let featuredCourses: any[] = [];
+      if (featuredCourseIds.length > 0) {
+        const courseIds = featuredCourseIds.map(c => c.courseId);
+        featuredCourses = await db
+          .select({
+            id: courses.id,
+            title: courses.title,
+            slug: courses.slug,
+            description: courses.description,
+            thumbnailUrl: courses.thumbnailUrl,
+            subject: courses.subject,
+            level: courses.level,
+            duration: courses.duration,
+            durationType: courses.durationType,
+            tuitionFee: courses.tuitionFee,
+            currency: courses.currency,
+            universityId: courses.universityId,
+            universityName: universities.name,
+            universityLogo: universities.logo,
+            universitySlug: universities.slug,
+          })
+          .from(courses)
+          .innerJoin(universities, eq(courses.universityId, universities.id))
+          .where(and(
+            inArray(courses.id, courseIds),
+            eq(courses.isApproved, true),
+            eq(courses.isPublished, true),
+            eq(universities.isApproved, true),
+            eq(universities.isPublished, true),
+            eq(universities.isPubliclyVisible, true),
+            eq(universities.isActive, true)
+          ))
+          .limit(limit);
+      }
+      
+      res.json({
+        institutions: featuredInstitutions,
+        courses: featuredCourses,
+      });
+    } catch (error: any) {
+      console.error("Error fetching featured items:", error);
+      res.status(500).json({ message: "Failed to fetch featured items" });
+    }
+  });
+
   // Get single tag by ID
   app.get("/api/admin/tags/:id", isAuthenticated, async (req: any, res) => {
     try {
