@@ -4339,7 +4339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const university = await storage.getUniversity(course.universityId);
+      // Get university name directly from database
+      let universityName: string | undefined;
+      if (course.universityId) {
+        const [university] = await db.select({ name: universities.name })
+          .from(universities)
+          .where(eq(universities.id, course.universityId))
+          .limit(1);
+        universityName = university?.name;
+      }
       
       const { addThumbnailJob } = await import('./thumbnail-queue');
       const { isRedisAvailable } = await import('./scraping-queue');
@@ -4353,7 +4361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           course.title,
           course.discipline || undefined,
           course.level || undefined,
-          university?.name || undefined
+          universityName
         );
         
         if (result.success && result.url) {
@@ -4377,7 +4385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courseTitle: course.title,
         discipline: course.discipline || undefined,
         level: course.level || undefined,
-        universityName: university?.name || undefined,
+        universityName,
       });
       
       if (jobId) {
