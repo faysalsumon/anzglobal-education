@@ -17369,14 +17369,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
       if (instIds.length > 0) {
         const rawInstitutions = await db
-          .select({
-            id: universities.id,
-            name: universities.name,
-            logoUrl: universities.logo,
-            country: universities.country,
-            description: universities.smallDescription,
-            campusAddresses: universities.campusAddresses,
-          })
+          .select()
           .from(universities)
           .where(and(
             inArray(universities.id, instIds),
@@ -17394,9 +17387,9 @@ Sitemap: ${baseUrl}/sitemap.xml
           return {
             id: inst.id,
             name: inst.name,
-            logoUrl: inst.logoUrl,
+            logoUrl: inst.logo,
             country: inst.country,
-            description: inst.description,
+            description: inst.smallDescription,
             city: firstCampus?.city || null,
             state: firstCampus?.state || null,
           };
@@ -17415,35 +17408,59 @@ Sitemap: ${baseUrl}/sitemap.xml
       let featuredCourses: any[] = [];
       const courseIds = featuredCourseIds.map(c => c.courseId).filter((id): id is string => id !== null);
       if (courseIds.length > 0) {
-        featuredCourses = await db
-          .select({
-            id: courses.id,
-            title: courses.title,
-            slug: courses.slug,
-            description: courses.description,
-            thumbnailUrl: courses.thumbnailUrl,
-            subject: courses.subject,
-            level: courses.level,
-            duration: courses.duration,
-            durationType: courses.durationType,
-            tuitionFee: courses.tuitionFee,
-            currency: courses.currency,
-            universityId: courses.universityId,
-            universityName: universities.name,
-            universityLogo: universities.logo,
-          })
+        // First get the approved/published courses
+        const rawCourses = await db
+          .select()
           .from(courses)
-          .innerJoin(universities, eq(courses.universityId, universities.id))
           .where(and(
             inArray(courses.id, courseIds),
             eq(courses.approvalStatus, 'approved'),
-            eq(courses.publishStatus, 'published'),
-            eq(universities.approvalStatus, 'approved'),
-            eq(universities.publishStatus, 'published'),
-            eq(universities.visibility, 'public'),
-            eq(universities.isActive, true)
+            eq(courses.publishStatus, 'published')
           ))
           .limit(limit);
+        
+        // Get unique university IDs from the courses
+        const universityIds = [...new Set(rawCourses.map(c => c.universityId).filter((id): id is string => id !== null))];
+        
+        // Fetch universities that are approved, published, and public
+        let universityMap: Record<string, { name: string; logo: string | null }> = {};
+        if (universityIds.length > 0) {
+          const validUniversities = await db
+            .select()
+            .from(universities)
+            .where(and(
+              inArray(universities.id, universityIds),
+              eq(universities.approvalStatus, 'approved'),
+              eq(universities.publishStatus, 'published'),
+              eq(universities.visibility, 'public'),
+              eq(universities.isActive, true)
+            ));
+          
+          universityMap = validUniversities.reduce((acc, uni) => {
+            acc[uni.id] = { name: uni.name, logo: uni.logo };
+            return acc;
+          }, {} as Record<string, { name: string; logo: string | null }>);
+        }
+        
+        // Combine courses with university data, only including courses from valid universities
+        featuredCourses = rawCourses
+          .filter(course => course.universityId && universityMap[course.universityId])
+          .map(course => ({
+            id: course.id,
+            title: course.title,
+            slug: course.slug,
+            description: course.description,
+            thumbnailUrl: course.thumbnailUrl,
+            subject: course.subject,
+            level: course.level,
+            duration: course.duration,
+            durationType: course.durationType,
+            tuitionFee: course.tuitionFee,
+            currency: course.currency,
+            universityId: course.universityId,
+            universityName: universityMap[course.universityId!]?.name || null,
+            universityLogo: universityMap[course.universityId!]?.logo || null,
+          }));
       }
       
       res.json({
