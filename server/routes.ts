@@ -17535,6 +17535,26 @@ Sitemap: ${baseUrl}/sitemap.xml
           }, {} as Record<string, { name: string; logo: string | null }>);
         }
         
+        // Get scholarship counts for courses
+        const scholarshipCounts = await db
+          .select({
+            courseId: courseScholarships.courseId,
+            count: dsql<number>`count(*)::int`
+          })
+          .from(courseScholarships)
+          .innerJoin(scholarships, and(
+            eq(courseScholarships.scholarshipId, scholarships.id),
+            eq(scholarships.isActive, true),
+            eq(scholarships.status, 'open')
+          ))
+          .where(inArray(courseScholarships.courseId, courseIds))
+          .groupBy(courseScholarships.courseId);
+        
+        const scholarshipMap = scholarshipCounts.reduce((acc, item) => {
+          acc[item.courseId] = item.count;
+          return acc;
+        }, {} as Record<string, number>);
+        
         // Combine courses with university data, only including courses from valid universities
         featuredCourses = rawCourses
           .filter(course => course.universityId && universityMap[course.universityId])
@@ -17553,6 +17573,8 @@ Sitemap: ${baseUrl}/sitemap.xml
             universityId: course.universityId,
             universityName: universityMap[course.universityId!]?.name || null,
             universityLogo: universityMap[course.universityId!]?.logo || null,
+            hasScholarship: (scholarshipMap[course.id] || 0) > 0,
+            scholarshipCount: scholarshipMap[course.id] || 0,
           }));
       }
       

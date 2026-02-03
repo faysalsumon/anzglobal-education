@@ -33,6 +33,8 @@ interface FeaturedCourse {
   universityId: string;
   universityName: string;
   universityLogo: string | null;
+  hasScholarship?: boolean;
+  scholarshipCount?: number;
 }
 
 interface FeaturedInstitution {
@@ -395,7 +397,7 @@ export default function Landing() {
 
       {/* Featured Courses Section */}
       {featuredCourses.length > 0 && (
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-[#3465A5]/5">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary mb-6 border border-secondary/20">
@@ -410,8 +412,8 @@ export default function Landing() {
               </p>
             </div>
             
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredCourses.slice(0, 6).map((course) => (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {featuredCourses.slice(0, 16).map((course) => (
                 <Link 
                   key={course.id} 
                   href={`/courses/${course.slug || course.id}`}
@@ -431,14 +433,22 @@ export default function Landing() {
                           <GraduationCap className="h-16 w-16 text-secondary/40" />
                         </div>
                       )}
-                      {course.level && (
+                      <div className="absolute top-3 left-3 flex gap-2">
+                        {course.level && (
+                          <div 
+                            className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium"
+                            data-testid={`text-featured-course-level-${course.id}`}
+                          >
+                            {course.level}
+                          </div>
+                        )}
                         <div 
-                          className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium"
-                          data-testid={`text-featured-course-level-${course.id}`}
+                          className="bg-[#FF5000] text-white px-2 py-1 rounded-md text-xs font-medium"
+                          data-testid={`badge-featured-course-${course.id}`}
                         >
-                          {course.level}
+                          Featured
                         </div>
-                      )}
+                      </div>
                     </div>
                     <CardHeader className="pb-2">
                       <CardTitle 
@@ -452,10 +462,11 @@ export default function Landing() {
                           <img 
                             src={course.universityLogo} 
                             alt={course.universityName}
-                            className="h-5 w-5 object-contain rounded"
+                            className="h-8 w-8 object-contain rounded"
+                            data-testid={`img-featured-course-logo-${course.id}`}
                           />
                         ) : (
-                          <Building2 className="h-4 w-4 flex-shrink-0" />
+                          <Building2 className="h-6 w-6 flex-shrink-0" />
                         )}
                         <span className="truncate" data-testid={`text-featured-course-university-${course.id}`}>
                           {course.universityName}
@@ -463,19 +474,30 @@ export default function Landing() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                        {course.duration && course.durationType && (
-                          <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}>
-                            <Calendar className="h-4 w-4" />
-                            <span>{course.duration} {course.durationType}</span>
-                          </div>
-                        )}
-                        {course.tuitionFee && (
+                      <div className="flex flex-wrap justify-between items-end gap-2 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-3">
+                          {course.duration && course.durationType && (
+                            <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}>
+                              <Calendar className="h-4 w-4" />
+                              <span>{course.duration} {course.durationType}</span>
+                            </div>
+                          )}
+                          {course.tuitionFee && (
+                            <div 
+                              className="font-medium text-foreground"
+                              data-testid={`text-featured-course-fee-${course.id}`}
+                            >
+                              {course.currency || 'AUD'} ${course.tuitionFee.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                        {course.hasScholarship && (
                           <div 
-                            className="font-medium text-foreground"
-                            data-testid={`text-featured-course-fee-${course.id}`}
+                            className="flex items-center gap-1 text-[#10b981] font-medium text-xs"
+                            data-testid={`badge-featured-course-scholarship-${course.id}`}
                           >
-                            {course.currency || 'AUD'} ${course.tuitionFee.toLocaleString()}
+                            <Award className="h-3.5 w-3.5" />
+                            <span>Scholarship</span>
                           </div>
                         )}
                       </div>
