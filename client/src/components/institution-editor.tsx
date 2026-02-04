@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye, History, Users, Clock, Edit, Plus, Trash2, User } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye, History, Users, Clock, Edit, Plus, Trash2, User, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -160,6 +161,86 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [featuredCourses, setFeaturedCourses] = useState<FeaturedCourse[]>([]);
   const [legacyCourseNames, setLegacyCourseNames] = useState<string[]>([]); // Preserve legacy text entries
   const [activeTab, setActiveTab] = useState<string>("website");
+  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [extractionConfidence, setExtractionConfidence] = useState<number | null>(null);
+
+  // AI extraction mutation
+  const extractInstitutionMutation = useMutation({
+    mutationFn: async (websiteUrl: string) => {
+      const response = await apiRequest("POST", "/api/admin/extract-institution-data", { url: websiteUrl });
+      return await response.json();
+    },
+    onSuccess: (response: any) => {
+      if (!response.success || !response.data) {
+        toast({ title: "Extraction failed", description: "No data returned from extraction", variant: "destructive" });
+        return;
+      }
+      
+      const data = response.data;
+      
+      // Store confidence and warnings
+      setExtractionConfidence(data.confidence || null);
+      setExtractionWarnings(data.warnings || []);
+      
+      // Auto-fill form fields from extracted data
+      if (data.name) form.setValue("name", data.name);
+      if (data.description) form.setValue("description", data.description);
+      if (data.country) form.setValue("country", data.country);
+      if (data.contactEmail) form.setValue("contactEmail", data.contactEmail);
+      if (data.contactPhone) form.setValue("contactPhone", data.contactPhone);
+      if (data.providerType) form.setValue("providerType", data.providerType);
+      if (data.numberOfCampuses) form.setValue("numberOfCampuses", data.numberOfCampuses);
+      if (data.establishedYear) form.setValue("establishedYear", data.establishedYear);
+      if (data.topDisciplines && Array.isArray(data.topDisciplines)) {
+        form.setValue("topDisciplines", data.topDisciplines);
+      }
+      if (data.campusAddresses && Array.isArray(data.campusAddresses)) {
+        form.setValue("campusAddresses", data.campusAddresses);
+      }
+      if (data.institutionGallery && Array.isArray(data.institutionGallery)) {
+        form.setValue("institutionGallery", data.institutionGallery);
+      }
+      if (data.logo) {
+        form.setValue("logo", data.logo);
+        setLogoPreview(data.logo);
+      }
+      
+      const confidencePercent = Math.round((data.confidence || 0.5) * 100);
+      toast({
+        title: "Data extracted successfully",
+        description: `Confidence: ${confidencePercent}%. Review and adjust the auto-filled fields as needed.`,
+      });
+    },
+    onError: (error: any) => {
+      let description = error.message || "Failed to extract data from website.";
+      
+      if (error.rateLimit) {
+        const resetDate = new Date(error.rateLimit.resetDate);
+        const minutesUntilReset = Math.ceil((resetDate.getTime() - Date.now()) / 60000);
+        description = `Rate limit exceeded. Try again in ${minutesUntilReset} minute(s).`;
+      }
+      
+      toast({ title: "Extraction failed", description, variant: "destructive" });
+    },
+  });
+
+  const handleAIExtract = () => {
+    const websiteUrl = form.getValues("website");
+    if (!websiteUrl) {
+      toast({
+        title: "Website URL required",
+        description: "Please enter a website URL first to extract data.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Clear previous extraction results
+    setExtractionWarnings([]);
+    setExtractionConfidence(null);
+    
+    extractInstitutionMutation.mutate(websiteUrl);
+  };
 
   // Fetch grouped tags for picker
   const { data: groupedTags } = useQuery<Record<string, InstitutionTagItem[]>>({
@@ -778,13 +859,70 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="https://university.edu" data-testid="input-institution-website" />
-                          </FormControl>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input {...field} placeholder="https://university.edu" data-testid="input-institution-website" />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="default"
+                              onClick={handleAIExtract}
+                              disabled={extractInstitutionMutation.isPending || !form.watch("website")}
+                              data-testid="button-ai-extract-institution"
+                            >
+                              {extractInstitutionMutation.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  Extracting...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-4 w-4 mr-1" />
+                                  AI Extract
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormDescription className="text-xs">
+                            Enter a website URL and click "AI Extract" to auto-fill institution data
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    
+                    {/* Extraction confidence and warnings */}
+                    {extractionConfidence !== null && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={extractionConfidence >= 0.7 ? "default" : extractionConfidence >= 0.5 ? "secondary" : "outline"}
+                            data-testid="badge-extraction-confidence"
+                          >
+                            {Math.round(extractionConfidence * 100)}% Confidence
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {extractionConfidence >= 0.7 ? "High confidence extraction" : 
+                             extractionConfidence >= 0.5 ? "Medium confidence - please review" : 
+                             "Low confidence - manual review recommended"}
+                          </span>
+                        </div>
+                        
+                        {extractionWarnings.length > 0 && (
+                          <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
+                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                            <AlertDescription className="text-xs">
+                              <ul className="list-disc list-inside space-y-1 mt-1">
+                                {extractionWarnings.map((warning, index) => (
+                                  <li key={index}>{warning}</li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

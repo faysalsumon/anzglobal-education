@@ -2375,16 +2375,10 @@ export default function AdminDashboard() {
                   <CardTitle className="text-base">Institution Management</CardTitle>
                   <CardDescription className="text-xs">View and manage all institutions</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => setAiExtractorDialogOpen(true)} variant="outline" data-testid="button-ai-extract">
-                    <Sparkles className="h-4 w-4 mr-1" />
-                    AI Extract
-                  </Button>
-                  <Button size="sm" onClick={handleCreateInstitution} data-testid="button-create-institution">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create
-                  </Button>
-                </div>
+                <Button size="sm" onClick={handleCreateInstitution} data-testid="button-create-institution">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 px-4 py-3">
