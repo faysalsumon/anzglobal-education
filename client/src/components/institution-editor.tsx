@@ -385,14 +385,17 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, data, stayOnPage }: { id: string; data: any; stayOnPage?: boolean }) => {
       const response = await apiRequest("PATCH", `/api/super-admin/institutions/${id}`, data);
-      return response.json();
+      const result = await response.json();
+      return { result, stayOnPage };
     },
-    onSuccess: () => {
+    onSuccess: ({ stayOnPage }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/institutions"] });
       toast({ title: "Success", description: "Institution updated successfully" });
-      onBack();
+      if (!stayOnPage) {
+        onBack();
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -417,13 +420,7 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     }
   };
 
-  const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft', visibility: 'public' | 'private' = 'public') => {
-    console.log('[InstitutionEditor] handleSubmit called with data:', {
-      rtoNumber: data.rtoNumber,
-      cricosProviderCode: data.cricosProviderCode,
-      country: data.country,
-    });
-    
+  const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft', visibility: 'public' | 'private' = 'public', stayOnPage: boolean = false) => {
     const apiData: any = {
       ...data,
       topDisciplines: data.topDisciplines && data.topDisciplines.length > 0
@@ -442,13 +439,8 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       }),
     };
     
-    console.log('[InstitutionEditor] apiData being sent:', {
-      rtoNumber: apiData.rtoNumber,
-      cricosProviderCode: apiData.cricosProviderCode,
-    });
-    
     if (institution?.id) {
-      updateMutation.mutate({ id: institution.id, data: apiData });
+      updateMutation.mutate({ id: institution.id, data: apiData, stayOnPage });
     } else {
       createMutation.mutate(apiData);
     }
@@ -504,10 +496,10 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                   const formData = form.getValues();
                   const isValid = await form.trigger();
                   if (isValid) {
-                    // Keep current publish status and visibility
+                    // Keep current publish status and visibility, stay on page for quick edits
                     const currentStatus = institution.publishStatus || 'draft';
                     const currentVisibility = institution.visibility || 'public';
-                    handleSubmit(formData, currentStatus as 'draft' | 'published', currentVisibility as 'public' | 'private');
+                    handleSubmit(formData, currentStatus as 'draft' | 'published', currentVisibility as 'public' | 'private', true);
                   } else {
                     const errors = form.formState.errors;
                     const errorFields = Object.keys(errors).join(', ');
