@@ -64,6 +64,23 @@ interface Scholarship {
   status: string;
 }
 
+// Enhanced course type with pricing tier and scholarship data
+interface EnhancedCourse {
+  id: string;
+  title: string;
+  slug: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  discipline: string | null;
+  level: string | null;
+  duration: string | null;
+  tuitionFee: number | null;
+  currency: string;
+  hasDynamicPricing: boolean;
+  hasScholarship: boolean;
+  scholarshipCount: number;
+}
+
 export default function PublicInstitutionDetail() {
   const [, params] = useRoute("/institutions/:id");
   const institutionId = params?.id;
@@ -83,10 +100,11 @@ export default function PublicInstitutionDetail() {
     enabled: !!institutionId,
   });
 
-  const { data: institutionCourses = [], isLoading: coursesLoading } = useQuery<Course[]>({
-    queryKey: ['/api/courses', { universityId: institutionId }],
+  // Use enhanced API that includes pricing tier and scholarship data
+  const { data: institutionCourses = [], isLoading: coursesLoading } = useQuery<EnhancedCourse[]>({
+    queryKey: ['/api/public/institutions', institutionId, 'courses'],
     queryFn: async () => {
-      const response = await fetch(`/api/courses?universityId=${institutionId}`);
+      const response = await fetch(`/api/public/institutions/${institutionId}/courses`);
       if (!response.ok) throw new Error('Failed to fetch courses');
       return response.json();
     },
@@ -691,10 +709,19 @@ export default function PublicInstitutionDetail() {
                             {course.duration && (
                               <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}><Clock className="h-3 w-3" /><span>{course.duration}</span></div>
                             )}
-                            {course.fees && (
-                              <div className="flex items-center gap-1" data-testid={`text-featured-course-fees-${course.id}`}><DollarSign className="h-3 w-3" /><span>${Number(course.fees).toLocaleString()}/year</span></div>
+                            {course.tuitionFee && (
+                              <div className="flex items-center gap-1" data-testid={`text-featured-course-fees-${course.id}`}>
+                                <DollarSign className="h-3 w-3" />
+                                <span>{course.hasDynamicPricing ? 'From ' : ''}{course.currency} {course.tuitionFee.toLocaleString()}</span>
+                              </div>
                             )}
                           </div>
+                          {course.hasScholarship && (
+                            <div className="flex items-center gap-1 text-[#10b981] font-medium text-xs mt-2" data-testid={`badge-featured-course-scholarship-${course.id}`}>
+                              <Award className="h-3 w-3" />
+                              <span>Scholarship</span>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     </Link>
@@ -757,7 +784,7 @@ export default function PublicInstitutionDetail() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {displayedCourses.map(course => (
                       <Link key={course.id} href={`/courses/${course.id}`} data-testid={`link-course-${course.id}`}>
-                        <Card className="h-full hover-elevate cursor-pointer group overflow-hidden" data-testid={`course-card-${course.id}`}>
+                        <Card className="h-full hover-elevate cursor-pointer group" data-testid={`course-card-${course.id}`}>
                           {/* Thumbnail Area */}
                           <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10">
                             {course.thumbnailUrl ? (
@@ -810,13 +837,25 @@ export default function PublicInstitutionDetail() {
                                     <span>{course.duration}</span>
                                   </div>
                                 )}
-                                {course.fees && (
+                                {course.tuitionFee && (
                                   <div className="flex items-center gap-1" data-testid={`text-course-fee-${course.id}`}>
                                     <DollarSign className="h-4 w-4" />
-                                    <span>{course.currency || 'AUD'} {Number(course.fees).toLocaleString()}</span>
+                                    <span>
+                                      {course.hasDynamicPricing ? 'From ' : ''}
+                                      {course.currency} {course.tuitionFee.toLocaleString()}
+                                    </span>
                                   </div>
                                 )}
                               </div>
+                              {course.hasScholarship && (
+                                <div 
+                                  className="flex items-center gap-1 text-[#10b981] font-medium text-xs"
+                                  data-testid={`badge-course-scholarship-${course.id}`}
+                                >
+                                  <Award className="h-3.5 w-3.5" />
+                                  <span>Scholarship</span>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

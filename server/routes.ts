@@ -17626,6 +17626,112 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Get institution courses with pricing tier info and scholarship data (for public institution detail page)
+  app.get("/api/public/institutions/:id/courses", async (req, res) => {
+    try {
+      const institutionId = req.params.id;
+      
+      // Get all published courses for this institution
+      const allCourses = await storage.getAllCourses();
+      const institution = await storage.getUniversity(institutionId);
+      
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      // Filter to published, approved, active courses for this institution
+      const institutionCourses = allCourses.filter(course => 
+        course.universityId === institutionId &&
+        course.publishStatus === 'published' &&
+        course.approvalStatus === 'approved' &&
+        course.isActive
+      );
+      
+      if (institutionCourses.length === 0) {
+        return res.json([]);
+      }
+      
+      const courseIds = institutionCourses.map(c => c.id);
+      
+      // Get scholarship counts for courses
+      const scholarshipCounts = await db
+        .select({
+          courseId: courseScholarships.courseId,
+          count: dsql<number>`count(*)::int`
+        })
+        .from(courseScholarships)
+        .innerJoin(scholarships, and(
+          eq(courseScholarships.scholarshipId, scholarships.id),
+          eq(scholarships.isActive, true),
+          eq(scholarships.status, 'open')
+        ))
+        .where(inArray(courseScholarships.courseId, courseIds))
+        .groupBy(courseScholarships.courseId);
+      
+      const scholarshipMap = scholarshipCounts.reduce((acc, item) => {
+        acc[item.courseId] = item.count;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Get minimum pricing from coursePricingTiers for courses
+      const pricingTiersMin = await db
+        .select({
+          courseId: coursePricingTiers.courseId,
+          minAmount: dsql<string>`MIN(amount)`,
+          currency: dsql<string>`MIN(currency)`
+        })
+        .from(coursePricingTiers)
+        .where(inArray(coursePricingTiers.courseId, courseIds))
+        .groupBy(coursePricingTiers.courseId);
+      
+      const pricingTiersMap = pricingTiersMin.reduce((acc, item) => {
+        acc[item.courseId] = {
+          minAmount: item.minAmount ? Number(item.minAmount) : null,
+          currency: item.currency || 'AUD'
+        };
+        return acc;
+      }, {} as Record<string, { minAmount: number | null; currency: string }>);
+      
+      // Build response with enhanced course data
+      const enhancedCourses = institutionCourses.map(course => {
+        const baseFee = course.fees ? Number(course.fees) : null;
+        const tierPricing = pricingTiersMap[course.id];
+        
+        // Use base fee if available, otherwise use minimum tier price
+        let displayFee = baseFee;
+        let displayCurrency = course.currency || 'AUD';
+        let hasDynamicPricing = false;
+        
+        if (!displayFee && tierPricing?.minAmount) {
+          displayFee = tierPricing.minAmount;
+          displayCurrency = tierPricing.currency || 'AUD';
+          hasDynamicPricing = true;
+        }
+        
+        return {
+          id: course.id,
+          title: course.title,
+          slug: course.slug,
+          description: course.description,
+          thumbnailUrl: course.thumbnailUrl,
+          discipline: course.discipline,
+          level: course.level,
+          duration: course.duration,
+          tuitionFee: displayFee,
+          currency: displayCurrency,
+          hasDynamicPricing,
+          hasScholarship: (scholarshipMap[course.id] || 0) > 0,
+          scholarshipCount: scholarshipMap[course.id] || 0,
+        };
+      });
+      
+      res.json(enhancedCourses);
+    } catch (error: any) {
+      console.error("Error fetching institution courses:", error);
+      res.status(500).json({ message: "Failed to fetch institution courses" });
+    }
+  });
+
   // Get single tag by ID
   app.get("/api/admin/tags/:id", isAuthenticated, async (req: any, res) => {
     try {
