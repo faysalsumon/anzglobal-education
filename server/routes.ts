@@ -19263,9 +19263,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // POST /api/admin/api-keys - Create a new API key (platform_admin/cto only)
   app.post("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
@@ -19288,7 +19292,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         keyHash,
         keyPrefix,
         permissions: validPermissions,
-        createdByUserId: user.id,
+        createdByUserId: userId,
         description: description?.trim(),
         expiresAt: expiresAt ? new Date(expiresAt) : undefined,
         rateLimitPerMinute: rateLimitPerMinute || 100,
@@ -19310,9 +19314,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // GET /api/admin/api-keys - List all API keys (platform_admin/cto only)
   app.get("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
@@ -19334,9 +19342,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // GET /api/admin/api-keys/:id - Get a specific API key (platform_admin/cto only)
   app.get("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
@@ -19364,9 +19376,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // PUT /api/admin/api-keys/:id - Update API key (platform_admin/cto only)
   app.put("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
@@ -19401,9 +19417,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // DELETE /api/admin/api-keys/:id - Revoke API key (platform_admin/cto only)
   app.delete("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
@@ -19418,7 +19438,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(400).json({ message: "API key is already revoked" });
       }
       
-      const revoked = await storage.revokeApiKey(id, user.id);
+      const revoked = await storage.revokeApiKey(id, userId);
       
       res.json({
         message: "API key revoked successfully",
@@ -19434,9 +19454,13 @@ Sitemap: ${baseUrl}/sitemap.xml
   // GET /api/admin/api-keys/:id/usage - Get usage logs for an API key (platform_admin/cto only)
   app.get("/api/admin/api-keys/:id/usage", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
-      const allowedTypes = ['platform_admin', 'cto'];
-      if (!user || !allowedTypes.includes(user.userType)) {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const access = await checkAdminAccess(userId, ['cto', 'platform_admin']);
+      if (!access) {
         return res.status(403).json({ message: "Platform admin or CTO access required" });
       }
 
