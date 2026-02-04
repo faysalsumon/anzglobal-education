@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import { Link } from "wouter";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
 import { TypingText } from "@/components/typing-text";
@@ -484,10 +484,11 @@ export default function Landing() {
                           )}
                           {course.tuitionFee && (
                             <div 
-                              className="font-medium text-foreground"
+                              className="flex items-center gap-1"
                               data-testid={`text-featured-course-fee-${course.id}`}
                             >
-                              {course.currency || 'AUD'} ${course.tuitionFee.toLocaleString()}
+                              <DollarSign className="h-4 w-4" />
+                              <span>{course.currency || 'AUD'} {course.tuitionFee.toLocaleString()}</span>
                             </div>
                           )}
                         </div>
