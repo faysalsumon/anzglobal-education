@@ -754,23 +754,69 @@ export default function PublicInstitutionDetail() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {displayedCourses.map(course => (
-                      <Link key={course.id} href={`/courses/${course.id}`}>
-                        <Card className="h-full hover-elevate cursor-pointer overflow-hidden" data-testid={`course-card-${course.id}`}>
-                          <CardContent className="p-4">
-                            <h3 className="font-semibold text-sm line-clamp-2 mb-2">{course.title}</h3>
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {course.level && <Badge variant="secondary" className="text-xs">{course.level}</Badge>}
-                              {course.discipline && <Badge variant="outline" className="text-xs">{course.discipline}</Badge>}
+                      <Link key={course.id} href={`/courses/${course.id}`} data-testid={`link-course-${course.id}`}>
+                        <Card className="h-full hover-elevate cursor-pointer group overflow-hidden" data-testid={`course-card-${course.id}`}>
+                          {/* Thumbnail Area */}
+                          <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10">
+                            {course.thumbnailUrl ? (
+                              <img 
+                                src={course.thumbnailUrl} 
+                                alt={course.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                data-testid={`img-course-thumbnail-${course.id}`}
+                              />
+                            ) : (
+                              <div className="h-full flex items-center justify-center">
+                                <GraduationCap className="h-16 w-16 text-secondary/40" />
+                              </div>
+                            )}
+                            {/* Level Badge Overlay */}
+                            <div className="absolute top-3 left-3 flex gap-2">
+                              {course.level && (
+                                <div 
+                                  className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium"
+                                  data-testid={`badge-course-level-${course.id}`}
+                                >
+                                  {course.level}
+                                </div>
+                              )}
                             </div>
-                            <div className="space-y-1 text-xs text-muted-foreground">
-                              {course.duration && (
-                                <div className="flex items-center gap-1"><Clock className="h-3 w-3" /><span>{course.duration}</span></div>
-                              )}
-                              {course.fees && (
-                                <div className="flex items-center gap-1"><DollarSign className="h-3 w-3" /><span>${Number(course.fees).toLocaleString()}/year</span></div>
-                              )}
+                          </div>
+                          
+                          {/* Card Header with Title */}
+                          <CardHeader className="pb-2">
+                            <CardTitle 
+                              className="text-lg line-clamp-2 group-hover:text-primary transition-colors"
+                              data-testid={`text-course-title-${course.id}`}
+                            >
+                              {course.title}
+                            </CardTitle>
+                            {course.discipline && (
+                              <p className="text-sm text-muted-foreground truncate" data-testid={`text-course-discipline-${course.id}`}>
+                                {course.discipline}
+                              </p>
+                            )}
+                          </CardHeader>
+                          
+                          {/* Card Content with Duration & Fee */}
+                          <CardContent>
+                            <div className="flex flex-wrap justify-between items-end gap-2 text-sm text-muted-foreground">
+                              <div className="flex flex-wrap gap-3">
+                                {course.duration && (
+                                  <div className="flex items-center gap-1" data-testid={`text-course-duration-${course.id}`}>
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{course.duration}</span>
+                                  </div>
+                                )}
+                                {course.fees && (
+                                  <div className="flex items-center gap-1" data-testid={`text-course-fee-${course.id}`}>
+                                    <DollarSign className="h-4 w-4" />
+                                    <span>{course.currency || 'AUD'} {Number(course.fees).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
