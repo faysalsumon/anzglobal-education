@@ -462,11 +462,11 @@ export default function Landing() {
                           <img 
                             src={course.universityLogo} 
                             alt={course.universityName}
-                            className="h-8 w-8 object-contain rounded"
+                            className="h-10 w-10 object-contain rounded"
                             data-testid={`img-featured-course-logo-${course.id}`}
                           />
                         ) : (
-                          <Building2 className="h-6 w-6 flex-shrink-0" />
+                          <Building2 className="h-8 w-8 flex-shrink-0" />
                         )}
                         <span className="truncate" data-testid={`text-featured-course-university-${course.id}`}>
                           {course.universityName}
