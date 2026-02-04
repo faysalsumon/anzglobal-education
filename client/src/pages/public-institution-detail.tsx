@@ -489,70 +489,32 @@ export default function PublicInstitutionDetail() {
               </div>
             </div>
 
-            {/* Quick Facts Sidebar */}
+            {/* CTA Card - Explore This Institution */}
             <div className="hidden md:block">
               <Card className="bg-background/60 backdrop-blur-sm border-primary/20">
                 <CardHeader className="pb-2 pt-4 px-4">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Quick Facts
+                    <Sparkles className="h-4 w-4 text-accent" />
+                    Explore This Institution
                   </CardTitle>
+                  <p className="text-sm text-muted-foreground">Take the first step towards your future education</p>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                  {institution.providerType && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <Building2 className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Provider Type</p>
-                        <p className="text-sm font-semibold" data-testid="quick-fact-type">{institution.providerType}</p>
-                      </div>
-                    </div>
-                  )}
-                  {institution.establishedYear && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-secondary/10 rounded-md">
-                        <Calendar className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Established</p>
-                        <p className="text-sm font-semibold" data-testid="quick-fact-established">{institution.establishedYear}</p>
-                      </div>
-                    </div>
-                  )}
-                  {institution.numberOfCampuses && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-accent/10 rounded-md">
-                        <MapPin className="h-3.5 w-3.5 text-accent" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Campuses</p>
-                        <p className="text-sm font-semibold" data-testid="quick-fact-campuses">{institution.numberOfCampuses}</p>
-                      </div>
-                    </div>
-                  )}
-                  {institution.country && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <Globe className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Location</p>
-                        <p className="text-sm font-semibold" data-testid="quick-fact-location">{institution.country}</p>
-                      </div>
-                    </div>
-                  )}
-                  {institutionCourses.length > 0 && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-secondary/10 rounded-md">
-                        <GraduationCap className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Available Courses</p>
-                        <p className="text-sm font-semibold" data-testid="quick-fact-courses">{institutionCourses.length}</p>
-                      </div>
-                    </div>
+                  <Button className="w-full" asChild data-testid="button-browse-courses-hero">
+                    <Link href={`/courses?university=${institution.id}`}>
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Browse All Courses
+                    </Link>
+                  </Button>
+
+                  {institution.website && (
+                    <Button variant="ghost" className="w-full" asChild data-testid="button-visit-website-hero">
+                      <a href={institution.website} target="_blank" rel="noopener noreferrer">
+                        <Globe className="h-4 w-4 mr-2" />
+                        View on Institution Website
+                        <ExternalLink className="h-3 w-3 ml-2" />
+                      </a>
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -782,31 +744,69 @@ export default function PublicInstitutionDetail() {
 
           {/* Sticky Sidebar */}
           <div className="space-y-6 lg:sticky lg:top-28 self-start">
-            {/* CTA Card */}
+            {/* Quick Facts Card */}
             <Card className="border-primary/20">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-accent" />
-                  Explore This Institution
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Quick Facts
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Take the first step towards your future education</p>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" asChild data-testid="button-browse-courses">
-                  <Link href={`/courses?university=${institution.id}`}>
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Browse All Courses
-                  </Link>
-                </Button>
-
-                {institution.website && (
-                  <Button variant="ghost" className="w-full" asChild data-testid="button-visit-website">
-                    <a href={institution.website} target="_blank" rel="noopener noreferrer">
-                      <Globe className="h-4 w-4 mr-2" />
-                      View on Institution Website
-                      <ExternalLink className="h-3 w-3 ml-2" />
-                    </a>
-                  </Button>
+                {institution.providerType && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <Building2 className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Provider Type</p>
+                      <p className="text-sm font-semibold" data-testid="quick-fact-type">{institution.providerType}</p>
+                    </div>
+                  </div>
+                )}
+                {institution.establishedYear && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-secondary/10 rounded-md">
+                      <Calendar className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Established</p>
+                      <p className="text-sm font-semibold" data-testid="quick-fact-established">{institution.establishedYear}</p>
+                    </div>
+                  </div>
+                )}
+                {institution.numberOfCampuses && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-accent/10 rounded-md">
+                      <MapPin className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Campuses</p>
+                      <p className="text-sm font-semibold" data-testid="quick-fact-campuses">{institution.numberOfCampuses}</p>
+                    </div>
+                  </div>
+                )}
+                {institution.country && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <Globe className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p className="text-sm font-semibold" data-testid="quick-fact-location">{institution.country}</p>
+                    </div>
+                  </div>
+                )}
+                {institutionCourses.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-secondary/10 rounded-md">
+                      <GraduationCap className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Available Courses</p>
+                      <p className="text-sm font-semibold" data-testid="quick-fact-courses">{institutionCourses.length}</p>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
