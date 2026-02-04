@@ -17633,7 +17633,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       // Get all published courses for this institution
       const allCourses = await storage.getAllCourses();
-      const institution = await storage.getUniversity(institutionId);
+      const institution = await storage.getUniversityById(institutionId);
       
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
