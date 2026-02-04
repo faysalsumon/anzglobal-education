@@ -402,60 +402,46 @@ export default function PublicInstitutionDetail() {
             )}
           </div>
 
-          {/* Mobile Quick Stats Strip */}
-          <div className="md:hidden relative" data-testid="container-mobile-quick-stats">
-            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 py-3">
-              <div className="flex gap-2 pr-4">
-                {institution.providerType && (
-                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                    <Building2 className="h-4 w-4 text-primary shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Type</span>
-                      <span className="text-sm font-semibold whitespace-nowrap">{institution.providerType}</span>
-                    </div>
-                  </div>
-                )}
-                {institution.establishedYear && (
-                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                    <Calendar className="h-4 w-4 text-primary shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Est.</span>
-                      <span className="text-sm font-semibold whitespace-nowrap">{institution.establishedYear}</span>
-                    </div>
-                  </div>
-                )}
-                {institution.numberOfCampuses && (
-                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                    <MapPin className="h-4 w-4 text-accent shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Campuses</span>
-                      <span className="text-sm font-semibold whitespace-nowrap">{institution.numberOfCampuses}</span>
-                    </div>
-                  </div>
-                )}
-                {institution.country && (
-                  <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/10 shrink-0">
-                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide whitespace-nowrap">Location</span>
-                      <span className="text-sm font-semibold whitespace-nowrap">{institution.country}</span>
-                    </div>
-                  </div>
-                )}
-                {/* Spacer for right edge */}
-                <div className="shrink-0 w-1" aria-hidden="true" />
-              </div>
+          {/* Mobile Quick Stats Strip - Compact grid layout for small screens */}
+          <div className="md:hidden mb-4" data-testid="container-mobile-quick-stats">
+            <div className="grid grid-cols-4 gap-1 bg-background/60 backdrop-blur-sm rounded-lg p-2 border border-primary/10">
+              {institution.providerType && (
+                <div className="flex flex-col items-center text-center p-1">
+                  <Building2 className="h-4 w-4 text-primary mb-0.5" />
+                  <span className="text-[9px] text-muted-foreground uppercase">Type</span>
+                  <span className="text-xs font-semibold truncate w-full">{institution.providerType}</span>
+                </div>
+              )}
+              {institution.establishedYear && (
+                <div className="flex flex-col items-center text-center p-1">
+                  <Calendar className="h-4 w-4 text-primary mb-0.5" />
+                  <span className="text-[9px] text-muted-foreground uppercase">Est.</span>
+                  <span className="text-xs font-semibold">{institution.establishedYear}</span>
+                </div>
+              )}
+              {institution.numberOfCampuses && (
+                <div className="flex flex-col items-center text-center p-1">
+                  <MapPin className="h-4 w-4 text-accent mb-0.5" />
+                  <span className="text-[9px] text-muted-foreground uppercase">Campuses</span>
+                  <span className="text-xs font-semibold">{institution.numberOfCampuses}</span>
+                </div>
+              )}
+              {institution.country && (
+                <div className="flex flex-col items-center text-center p-1">
+                  <Globe className="h-4 w-4 text-muted-foreground mb-0.5" />
+                  <span className="text-[9px] text-muted-foreground uppercase">Location</span>
+                  <span className="text-xs font-semibold truncate w-full">{institution.country}</span>
+                </div>
+              )}
             </div>
-            {/* Scroll indicator gradient */}
-            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background/80 to-transparent pointer-events-none" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Hero Content */}
             <div className="lg:col-span-2">
-              <div className="flex flex-col gap-6">
-                {/* Institution Badge */}
-                <div className="flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit">
+              <div className="flex flex-col gap-4 sm:gap-6">
+                {/* Institution Badge - Hidden on mobile (info shown in quick stats) */}
+                <div className="hidden sm:flex flex-wrap items-center gap-3 bg-background/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 w-fit">
                   <InstitutionLogo src={institution.logo} alt={institution.name} size="lg" testId="img-logo" />
                   <div>
                     {institution.country && (
@@ -466,48 +452,58 @@ export default function PublicInstitutionDetail() {
                   </div>
                 </div>
 
+                {/* Mobile Institution Logo - Smaller and centered */}
+                <div className="sm:hidden flex items-center gap-3">
+                  <InstitutionLogo src={institution.logo} alt={institution.name} size="md" testId="img-logo-mobile" />
+                  {institution.country && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {institution.country}
+                    </p>
+                  )}
+                </div>
+
                 {/* Institution Title */}
                 <div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-2 sm:mb-3" data-testid="text-name">
+                  <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent mb-2" data-testid="text-name">
                     {institution.name}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
                     {institution.providerType && (
-                      <Badge variant="secondary" className="text-xs sm:text-sm" data-testid="badge-provider-type">
-                        <Building2 className="h-3 w-3 mr-1" />
+                      <Badge variant="secondary" className="text-[10px] sm:text-sm" data-testid="badge-provider-type">
+                        <Building2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                         {institution.providerType}
                       </Badge>
                     )}
                     {maxScholarshipPercentage > 0 && (
-                      <Badge className="bg-accent text-accent-foreground text-xs sm:text-sm" data-testid="badge-scholarship">
-                        <Award className="h-3 w-3 mr-1" />
-                        Up to {maxScholarshipPercentage}% Scholarship
+                      <Badge className="bg-accent text-accent-foreground text-[10px] sm:text-sm" data-testid="badge-scholarship">
+                        <Award className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                        Up to {maxScholarshipPercentage}%
                       </Badge>
                     )}
                     {institution.cricosProviderCode && (
-                      <Badge variant="outline" className="text-xs">CRICOS: {institution.cricosProviderCode}</Badge>
+                      <Badge variant="outline" className="text-[10px] sm:text-xs hidden xs:inline-flex">CRICOS: {institution.cricosProviderCode}</Badge>
                     )}
                     {institution.rtoNumber && (
-                      <Badge variant="outline" className="text-xs">RTO: {institution.rtoNumber}</Badge>
+                      <Badge variant="outline" className="text-[10px] sm:text-xs hidden xs:inline-flex">RTO: {institution.rtoNumber}</Badge>
                     )}
                   </div>
                 </div>
 
                 {/* Institution Features Tags */}
                 {institutionTags.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-primary" /> Institution Features
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <p className="text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2">
+                      <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" /> Institution Features
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {institutionTags.slice(0, 8).map(tag => (
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      {institutionTags.slice(0, 6).map(tag => (
                         <Badge 
                           key={tag.id} 
                           variant="outline" 
-                          className="text-xs"
+                          className="text-[10px] sm:text-xs py-0.5"
                           style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: tag.color || '#666' }} />
+                          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mr-1 sm:mr-1.5" style={{ backgroundColor: tag.color || '#666' }} />
                           {tag.name}
                         </Badge>
                       ))}
