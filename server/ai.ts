@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { promises as dns } from 'dns';
+import { chromium } from "playwright";
 import { storage } from "./storage";
 
 // Node.js 18+ has built-in fetch, but TypeScript needs to know about it
@@ -1316,75 +1317,330 @@ export async function extractInstitutionDataFromWebsite(url: string): Promise<Ex
   // Validate URL to prevent SSRF (includes DNS resolution checks)
   const validatedUrl = await validateUrl(url);
   
-  // Fetch webpage content with timeout and size limits
+  // Fetch webpage content using hybrid approach
   let htmlContent: string;
-  try {
+  let fetchMethod: 'http' | 'browser' = 'http';
+  
+  // Enhanced browser-like headers for better compatibility
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+  };
+  
+  // Helper function to fetch with HTTP (with safe redirect handling)
+  async function fetchWithHttp(): Promise<string> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    // Manual redirect handling for SSRF protection
+    let currentUrl = validatedUrl.toString();
+    let redirectCount = 0;
+    const MAX_REDIRECTS = 3;
+    
+    while (redirectCount < MAX_REDIRECTS) {
+      const response = await fetch(currentUrl, {
+        headers: browserHeaders,
+        signal: controller.signal,
+        redirect: 'manual', // Manual redirect for SSRF protection
+      });
+      
+      // Handle redirects safely
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new Error('Redirect without location header');
+        }
+        
+        // Validate the redirect URL for SSRF
+        const redirectUrl = new URL(location, currentUrl);
+        const validatedRedirect = await validateUrl(redirectUrl.toString());
+        currentUrl = validatedRedirect.toString();
+        redirectCount++;
+        continue;
+      }
+      
+      clearTimeout(timeoutId);
+      
+      // Check for blocked responses
+      if (response.status === 403 || response.status === 429) {
+        throw new Error(`BLOCKED:${response.status}:${response.statusText}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch website: ${response.statusText}`);
+      }
+    
+      // Limit response size to 2MB to prevent DoS
+      const MAX_SIZE = 2 * 1024 * 1024;
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+        throw new Error('Website content too large (max 2MB)');
+      }
 
-    const response = await fetch(validatedUrl.toString(), {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ANZ-Education-Bot/1.0)',
-      },
-      signal: controller.signal,
-      redirect: 'manual', // Prevent following redirects to avoid SSRF bypass
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Reject redirects to prevent SSRF bypass via redirect chains
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error('Redirects are not allowed for security reasons. Please provide the final URL.');
+      // Read with size limit
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Unable to read response body');
+      }
+
+      let receivedLength = 0;
+      const chunks: Uint8Array[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        receivedLength += value.length;
+
+        if (receivedLength > MAX_SIZE) {
+          reader.cancel();
+          throw new Error('Website content exceeded size limit (max 2MB)');
+        }
+      }
+
+      const chunksAll = new Uint8Array(receivedLength);
+      let position = 0;
+      for (const chunk of chunks) {
+        chunksAll.set(chunk, position);
+        position += chunk.length;
+      }
+
+      return new TextDecoder('utf-8').decode(chunksAll);
     }
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.statusText}`);
+    // If we exhausted redirects
+    throw new Error('Too many redirects');
+  }
+  
+  // Helper function to fetch with Playwright browser (with SSRF protection)
+  async function fetchWithBrowser(): Promise<string> {
+    console.log('[AI Extraction] Falling back to browser-based extraction for:', url);
+    let browser = null;
+    let page = null;
+    
+    // List of blocked IP patterns for SSRF protection (after DNS resolution)
+    const blockedIpPatterns = [
+      /^127\./,           // Localhost
+      /^10\./,            // Private Class A
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./, // Private Class B
+      /^192\.168\./,      // Private Class C
+      /^169\.254\./,      // Link-local
+      /^0\./,             // Invalid
+      /^::1$/,            // IPv6 localhost
+      /^fc00:/i,          // IPv6 private
+      /^fe80:/i,          // IPv6 link-local
+    ];
+    
+    const blockedHostPatterns = [
+      /localhost/i,       // Localhost hostname
+      /\.local$/i,        // Local domains
+      /\.internal$/i,     // Internal domains
+    ];
+    
+    function isPrivateIp(ip: string): boolean {
+      return blockedIpPatterns.some(pattern => pattern.test(ip));
     }
     
-    // Limit response size to 2MB to prevent DoS
-    const MAX_SIZE = 2 * 1024 * 1024;
-    const contentLength = response.headers.get('content-length');
-    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
-      throw new Error('Website content too large (max 2MB)');
+    function isBlockedHostname(hostname: string): boolean {
+      return blockedHostPatterns.some(pattern => pattern.test(hostname));
     }
-
-    // Read with size limit
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('Unable to read response body');
-    }
-
-    let receivedLength = 0;
-    const chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      chunks.push(value);
-      receivedLength += value.length;
-
-      if (receivedLength > MAX_SIZE) {
-        reader.cancel();
-        throw new Error('Website content exceeded size limit (max 2MB)');
+    
+    // Validate URL with DNS resolution (async, but we'll check hostname first)
+    async function isAllowedRequest(urlToCheck: string): Promise<boolean> {
+      try {
+        const parsed = new URL(urlToCheck);
+        const hostname = parsed.hostname;
+        
+        // Quick check: blocked hostnames
+        if (isBlockedHostname(hostname)) {
+          return false;
+        }
+        
+        // Check if hostname is already an IP address
+        if (isPrivateIp(hostname)) {
+          return false;
+        }
+        
+        // Resolve DNS to check for private IPs (DNS rebinding protection)
+        try {
+          const addresses = await dns.lookup(hostname, { all: true });
+          for (const addr of addresses) {
+            if (isPrivateIp(addr.address)) {
+              console.log(`[AI Extraction] DNS resolved to private IP: ${hostname} -> ${addr.address}`);
+              return false;
+            }
+          }
+        } catch (dnsError) {
+          // DNS resolution failed - allow if it's a valid-looking hostname
+          // The browser will fail to load anyway if DNS truly fails
+          console.log(`[AI Extraction] DNS lookup failed for ${hostname}, allowing request`);
+        }
+        
+        return true;
+      } catch {
+        return false; // Block invalid URLs
       }
     }
-
-    const chunksAll = new Uint8Array(receivedLength);
-    let position = 0;
-    for (const chunk of chunks) {
-      chunksAll.set(chunk, position);
-      position += chunk.length;
-    }
-
-    htmlContent = new TextDecoder('utf-8').decode(chunksAll);
     
-    // Limit content size to avoid token limits (first 50000 characters)
-    if (htmlContent.length > 50000) {
-      htmlContent = htmlContent.substring(0, 50000);
+    // Extract the allowed origin from validated URL for same-origin enforcement
+    const allowedOrigin = new URL(validatedUrl.toString()).origin;
+    
+    // Map to store pinned IPs for DNS rebinding protection
+    const pinnedIps = new Map<string, string[]>();
+    
+    // Validate URL with DNS resolution and IP pinning
+    async function isAllowedRequestWithPinning(urlToCheck: string): Promise<boolean> {
+      try {
+        const parsed = new URL(urlToCheck);
+        const hostname = parsed.hostname;
+        const requestOrigin = parsed.origin;
+        
+        // Strict same-origin enforcement - only allow requests to the validated domain
+        if (requestOrigin !== allowedOrigin) {
+          console.log(`[AI Extraction] Blocked cross-origin request: ${requestOrigin} (allowed: ${allowedOrigin})`);
+          return false;
+        }
+        
+        // Quick check: blocked hostnames
+        if (isBlockedHostname(hostname)) {
+          return false;
+        }
+        
+        // Check if hostname is already an IP address
+        if (isPrivateIp(hostname)) {
+          return false;
+        }
+        
+        // Resolve DNS and pin IPs to prevent DNS rebinding
+        try {
+          const addresses = await dns.lookup(hostname, { all: true });
+          const resolvedIps = addresses.map(a => a.address);
+          
+          // Check for private IPs in resolution
+          for (const ip of resolvedIps) {
+            if (isPrivateIp(ip)) {
+              console.log(`[AI Extraction] DNS resolved to private IP: ${hostname} -> ${ip}`);
+              return false;
+            }
+          }
+          
+          // Pin the IPs for this hostname (first lookup wins)
+          if (!pinnedIps.has(hostname)) {
+            pinnedIps.set(hostname, resolvedIps);
+            console.log(`[AI Extraction] Pinned IPs for ${hostname}: ${resolvedIps.join(', ')}`);
+          } else {
+            // Verify IPs haven't changed (DNS rebinding check)
+            const pinned = pinnedIps.get(hostname)!;
+            const hasMatch = resolvedIps.some(ip => pinned.includes(ip));
+            if (!hasMatch) {
+              console.log(`[AI Extraction] DNS rebinding detected for ${hostname}: pinned=${pinned.join(',')} resolved=${resolvedIps.join(',')}`);
+              return false;
+            }
+          }
+        } catch (dnsError) {
+          // If this is the first time and DNS fails, block it
+          if (!pinnedIps.has(hostname)) {
+            console.log(`[AI Extraction] DNS lookup failed for ${hostname}, blocking request`);
+            return false;
+          }
+        }
+        
+        return true;
+      } catch {
+        return false; // Block invalid URLs
+      }
     }
-  } catch (error: any) {
-    throw new Error(`Failed to fetch website content: ${error.message}`);
+    
+    try {
+      browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      });
+      
+      page = await browser.newPage();
+      
+      // Add request interception for SSRF protection with same-origin + IP pinning
+      await page.route('**/*', async (route) => {
+        const requestUrl = route.request().url();
+        
+        // Only allow HTTP/HTTPS protocols
+        if (!requestUrl.startsWith('http://') && !requestUrl.startsWith('https://')) {
+          console.log('[AI Extraction] Blocked non-HTTP request:', requestUrl);
+          await route.abort('blockedbyclient');
+          return;
+        }
+        
+        // Validate with same-origin check + DNS resolution + IP pinning
+        const allowed = await isAllowedRequestWithPinning(requestUrl);
+        
+        if (!allowed) {
+          await route.abort('blockedbyclient');
+          return;
+        }
+        
+        await route.continue();
+      });
+      
+      // Set realistic viewport and user agent
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+      });
+      
+      // Navigate with extended timeout for slow sites
+      await page.goto(validatedUrl.toString(), {
+        timeout: 30000,
+        waitUntil: 'domcontentloaded',
+      });
+      
+      // Wait a moment for dynamic content
+      await page.waitForTimeout(2000);
+      
+      const content = await page.content();
+      return content;
+    } finally {
+      if (page) await page.close();
+      if (browser) await browser.close();
+    }
+  }
+  
+  try {
+    // Try HTTP first (faster)
+    htmlContent = await fetchWithHttp();
+    console.log('[AI Extraction] Successfully fetched with HTTP');
+  } catch (httpError: any) {
+    // Check if blocked - retry with browser
+    if (httpError.message?.includes('BLOCKED') || 
+        httpError.message?.includes('Forbidden') ||
+        httpError.message?.includes('403') ||
+        httpError.message?.includes('429') ||
+        httpError.message?.includes('Access Denied')) {
+      console.log('[AI Extraction] HTTP blocked, trying browser fallback:', httpError.message);
+      try {
+        htmlContent = await fetchWithBrowser();
+        fetchMethod = 'browser';
+        console.log('[AI Extraction] Successfully fetched with browser');
+      } catch (browserError: any) {
+        throw new Error(`Website blocked both HTTP and browser access. The site may have strong anti-bot protection. Error: ${browserError.message}`);
+      }
+    } else {
+      throw new Error(`Failed to fetch website content: ${httpError.message}`);
+    }
+  }
+    
+  // Limit content size to avoid token limits (first 50000 characters)
+  if (htmlContent.length > 50000) {
+    htmlContent = htmlContent.substring(0, 50000);
   }
 
   // Use OpenAI to extract structured data

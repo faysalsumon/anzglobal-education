@@ -214,10 +214,19 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     onError: (error: any) => {
       let description = error.message || "Failed to extract data from website.";
       
+      // Clean up technical error messages for better UX
       if (error.rateLimit) {
         const resetDate = new Date(error.rateLimit.resetDate);
         const minutesUntilReset = Math.ceil((resetDate.getTime() - Date.now()) / 60000);
         description = `Rate limit exceeded. Try again in ${minutesUntilReset} minute(s).`;
+      } else if (description.includes("blocked both HTTP and browser")) {
+        description = "This website has strong anti-bot protection. Try entering the data manually or use a different URL (e.g., an 'About' page).";
+      } else if (description.includes("Forbidden") || description.includes("403")) {
+        description = "Website access was blocked. Please try again or use a different URL (e.g., an 'About Us' page).";
+      } else if (description.includes("timeout") || description.includes("Timeout")) {
+        description = "The website took too long to respond. Try again or use a different URL.";
+      } else if (description.includes("SSRF") || description.includes("internal")) {
+        description = "This URL cannot be accessed for security reasons. Please use a public website URL.";
       }
       
       toast({ title: "Extraction failed", description, variant: "destructive" });
