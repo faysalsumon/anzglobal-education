@@ -1,17 +1,26 @@
 import { Helmet } from "react-helmet";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { 
   GraduationCap, 
   Globe, 
-  Heart, 
+  Cpu, 
   Target, 
   Users, 
   TrendingUp,
   Sparkles,
-  Award,
-  MapPin
+  Search,
+  FileCheck,
+  MessageSquare,
+  BarChart3,
+  Zap,
+  Shield,
+  CheckCircle2,
+  Building2,
+  BookOpen,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 
 export default function OurStory() {
@@ -20,13 +29,13 @@ export default function OurStory() {
   return (
     <>
       <Helmet>
-        <title>Our Story - ANZ Global Education</title>
+        <title>About Us - ANZ Global Education | AI-Powered Education Technology</title>
         <meta 
           name="description" 
-          content="Founded in 2017 by former international students Golam Haque and Faysal Bahar, ANZ Global Education transforms the study abroad journey with AI-powered tools. From students who struggled, to a platform that makes studying in Australia simple and stress-free." 
+          content="ANZ Global Education is an AI-powered edutech platform connecting international students with global universities. Smart course matching, streamlined applications, and intelligent tools for students and institutions." 
         />
-        <meta property="og:title" content="Our Story - ANZ Global Education" />
-        <meta property="og:description" content="Founded by ex-international students in 2017, we built an AI platform that breaks down barriers to Australian education. From conventional agency to cutting-edge technology—helping students navigate their journey with clarity and confidence." />
+        <meta property="og:title" content="About Us - ANZ Global Education" />
+        <meta property="og:description" content="An AI-powered edutech platform transforming how students discover courses and how institutions connect with qualified candidates." />
         <meta property="og:type" content="website" />
       </Helmet>
 
@@ -37,19 +46,23 @@ export default function OurStory() {
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm mb-6 border border-white/20">
-                <Heart className="h-10 w-10 text-white" />
+                <Cpu className="h-10 w-10 text-white" />
               </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-                Our Story
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6" data-testid="heading-about-us">
+                About Us
               </h1>
-              <p className="text-xl md:text-2xl text-white/90 font-medium">
-                From students who struggled, to a platform that makes it simple
+              <p className="text-xl md:text-2xl text-white/90 font-medium mb-4" data-testid="text-tagline">
+                AI-Powered Education Technology
+              </p>
+              <p className="text-lg text-white/80 max-w-3xl mx-auto" data-testid="text-hero-description">
+                We're building the future of international education—where finding the right course 
+                is instant, applications are effortless, and institutions connect with their ideal students.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Mission Statement */}
+        {/* What We Do */}
         <section className="py-16 md:py-24 bg-card/50">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
@@ -60,13 +73,14 @@ export default function OurStory() {
                       <Target className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                        Our Mission
+                      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4" data-testid="heading-what-we-do">
+                        What We Do
                       </h2>
-                      <p className="text-lg text-muted-foreground leading-relaxed">
-                        To break down the barriers in international education by connecting the right students with the right courses. 
-                        We give students the tools, transparency, and support they deserve—while helping universities reach motivated, 
-                        qualified students who'll thrive in their programs. Simple, smart, and stress-free for everyone.
+                      <p className="text-lg text-muted-foreground leading-relaxed" data-testid="text-what-we-do">
+                        ANZ Global Education is an <strong className="text-foreground">AI-powered edutech platform</strong> that 
+                        transforms how international students discover courses and how educational institutions 
+                        connect with qualified candidates. Our technology eliminates the friction in international 
+                        education—making the process faster, smarter, and more transparent for everyone.
                       </p>
                     </div>
                   </div>
@@ -76,271 +90,410 @@ export default function OurStory() {
           </div>
         </section>
 
-        {/* The Journey */}
+        {/* The Problem We Solve */}
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                A Story Born from Experience
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4" data-testid="heading-problem-we-solve">
+                The Problem We Solve
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Because we've walked in your shoes—and we know the struggle is real
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-problem-description">
+                International education has been broken—for students and institutions alike
               </p>
             </div>
 
-            <div className="max-w-5xl mx-auto space-y-12">
-              {/* Founders Story */}
-              <div className="bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-2xl p-8 md:p-12 border border-primary/10">
-                <div className="flex items-start gap-4 mb-8">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                    <Users className="h-8 w-8 text-white" />
+            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {/* Student Problems */}
+              <Card className="border-destructive/20" data-testid="card-problems-students">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-destructive" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground" data-testid="heading-problems-students">For Students</h3>
                   </div>
-                  <div>
-                    <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                      Founded by Students, For Students
-                    </h3>
-                    <p className="text-muted-foreground text-lg">
-                      Golam Haque & Faysal Bahar • Est. 2017
-                    </p>
+                  <ul className="space-y-4 text-muted-foreground" data-testid="list-problems-students">
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-student-1">Overwhelming choices with no clear way to compare courses</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-student-2">Confusing application processes with endless paperwork</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-student-3">Lack of transparency on fees, requirements, and outcomes</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-student-4">Generic advice that doesn't match individual goals</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Institution Problems */}
+              <Card className="border-destructive/20" data-testid="card-problems-institutions">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Building2 className="h-6 w-6 text-destructive" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground" data-testid="heading-problems-institutions">For Institutions</h3>
                   </div>
-                </div>
-                
-                <div className="space-y-6 text-muted-foreground leading-relaxed">
-                  <p className="text-lg">
-                    Back in 2017, two former international students—<strong className="text-foreground">Golam Haque</strong> and{" "}
-                    <strong className="text-foreground">Faysal Bahar</strong>—sat down with a shared frustration and a bold vision. 
-                    They had both navigated the maze of studying in Australia firsthand: the endless paperwork, the confusing requirements, 
-                    the sleepless nights wondering if they'd chosen the right course or the right university.
-                  </p>
-                  
-                  <p className="text-lg">
-                    But as they started working with universities as education consultants, they discovered another side of the problem. 
-                    <strong className="text-foreground"> Institutions were struggling too</strong>—drowning in applications, unable to effectively 
-                    reach the <em>right students</em> for their programs. Quality courses were going unnoticed while talented students were 
-                    ending up in programs that didn't match their goals.
-                  </p>
-                  
-                  <p className="text-lg">
-                    They realized: <em>this isn't just a student problem—it's a matching problem</em>. Students need the right course. 
-                    Universities need the right students. Both were struggling, and nobody was winning. That's when ANZ Global Education 
-                    was born—a platform designed to solve <strong className="text-foreground">both sides</strong> of the equation.
-                  </p>
-                </div>
-              </div>
-
-              {/* Timeline Cards */}
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card className="border-primary/20 hover-elevate">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold">
-                        2017
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground">The Beginning</h3>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Started as a conventional education agency, helping students one application at a time. 
-                      We learned what students really needed—clarity, speed, and someone who understood their journey.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-secondary/20 hover-elevate">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center text-white font-bold">
-                        2019
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground">The Turning Point</h3>
-                    </div>
-                    <p className="text-muted-foreground">
-                      After two years of running a traditional agency, we saw the limitations. Students deserved better. 
-                      We asked ourselves: <em>What if technology could do the heavy lifting?</em>
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-accent/20 hover-elevate">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold">
-                        <Sparkles className="h-6 w-6" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground">The Platform</h3>
-                    </div>
-                    <p className="text-muted-foreground">
-                      We built an AI-powered platform that puts everything students need at their fingertips. 
-                      No more endless emails. No more confusion. Just smart, simple, and stress-free.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* The Why */}
-              <Card className="border-primary/20">
-                <CardContent className="p-8 md:p-12">
-                  <div className="flex items-start gap-4 mb-6">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Heart className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                        Why We Do What We Do
-                      </h3>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4 text-muted-foreground leading-relaxed">
-                    <p className="text-lg">
-                      Here's the truth: navigating the Australian education system can feel overwhelming. The forms, the deadlines, 
-                      the visa requirements—it's a lot. And when you're doing it from thousands of miles away, in a different time zone, 
-                      sometimes in a different language? It can feel impossible.
-                    </p>
-                    
-                    <p className="text-lg">
-                      But it doesn't have to be. <strong className="text-foreground">We've been there.</strong> We know what it's like to dream big 
-                      and feel small. To want a better future but not know where to start. That's why we built this platform—to give you 
-                      the clarity, confidence, and support you need to take that leap.
-                    </p>
-                    
-                    <p className="text-lg">
-                      And for our university partners, we saw how daunting it was to promote courses and reach the right students. 
-                      Quality programs were invisible to the students who'd thrive in them. That's why our platform doesn't just help students 
-                      find courses—<strong className="text-foreground">it helps universities find the right students</strong>. Smart matching. 
-                      Better outcomes. Everyone wins.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Today, we partner with <strong className="text-foreground">22+ Australian universities</strong>, offering{" "}
-                      <strong className="text-foreground">AI-powered search</strong> that actually understands what you're looking for. 
-                      Whether you're searching for "affordable engineering in Melbourne" or "nursing courses with scholarships," 
-                      our platform gets it—and gets you results in seconds. And universities get qualified, motivated students who are 
-                      genuinely interested in their programs.
-                    </p>
-                    
-                    <p className="text-lg font-medium text-foreground">
-                      Your dream of studying in Australia shouldn't come with a headache. And universities shouldn't struggle to reach 
-                      their ideal students. Let us handle the complexity, so everyone can focus on what matters: education and future success.
-                    </p>
-                  </div>
+                  <ul className="space-y-4 text-muted-foreground" data-testid="list-problems-institutions">
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-institution-1">Difficulty reaching qualified international students</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-institution-2">High volume of unqualified or mismatched applications</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-institution-3">Inefficient manual processes for course management</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-destructive/60 mt-2 flex-shrink-0"></div>
+                      <span data-testid="text-problem-institution-4">Limited visibility into student intent and quality</span>
+                    </li>
+                  </ul>
                 </CardContent>
               </Card>
             </div>
           </div>
         </section>
 
-        {/* Core Values */}
+        {/* Our Technology */}
         <section className="py-16 md:py-24 bg-gradient-to-b from-background to-card/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                What We Stand For
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4" data-testid="heading-our-technology">
+                Our Technology
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Our values guide every decision we make and every feature we build
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-technology-description">
+                Powered by artificial intelligence to deliver personalized, intelligent experiences
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              <Card className="border-primary/20 hover-elevate">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-primary" />
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-search">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Search className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">
-                    Student-First
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-search">
+                    AI-Powered Search
                   </h3>
-                  <p className="text-muted-foreground">
-                    Every feature, every design decision, every partnership—we build with students' 
-                    best interests at heart.
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-search-desc">
+                    Natural language search that understands intent. Ask "affordable engineering in Melbourne" 
+                    and get instant, relevant results.
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-secondary/20 hover-elevate">
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-matching">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Zap className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-matching">
+                    Smart Matching
+                  </h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-matching-desc">
+                    Our algorithms match students with courses based on qualifications, preferences, 
+                    budget, and career goals—not just keywords.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-chat">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <MessageSquare className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-chat">
+                    AI Chat Assistant
+                  </h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-chat-desc">
+                    24/7 intelligent assistant that answers questions, guides course selection, 
+                    and helps with applications in real-time.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-applications">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <FileCheck className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-applications">
+                    Automated Applications
+                  </h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-applications-desc">
+                    One profile, multiple applications. Fill once, apply anywhere. 
+                    Track progress through our streamlined workflow system.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-content">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-content">
+                    AI Content Generation
+                  </h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-content-desc">
+                    Auto-generate course descriptions, thumbnails, and marketing content. 
+                    AI-powered web scraping extracts course data automatically.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-verification">
+                <CardContent className="p-6">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-verification">
+                    Qualification Verification
+                  </h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-tech-verification-desc">
+                    AI-powered academic qualification matching and cross-country equivalency 
+                    to ensure students meet entry requirements.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Platform Benefits */}
+        <section className="py-16 md:py-24">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4" data-testid="heading-platform-value">
+                How Our Platform Delivers Value
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+              {/* For Students */}
+              <div className="bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 rounded-2xl p-8 border border-primary/10" data-testid="card-benefits-students">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <GraduationCap className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground" data-testid="heading-benefits-students">For Students</h3>
+                    <p className="text-muted-foreground" data-testid="text-benefits-students-subtitle">Find, compare, apply—simplified</p>
+                  </div>
+                </div>
+                
+                <ul className="space-y-4" data-testid="list-benefits-students">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-student-1-title">Instant Course Discovery</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-student-1-desc">Search thousands of courses with AI that understands what you're looking for</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-student-2-title">Personalized Recommendations</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-student-2-desc">Get matched with courses that fit your qualifications, budget, and goals</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-student-3-title">One-Click Applications</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-student-3-desc">Apply to multiple courses with a single profile—no repetitive forms</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-student-4-title">Real-Time Progress Tracking</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-student-4-desc">Track every application from submission to offer with complete visibility</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-student-5-title">24/7 AI Support</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-student-5-desc">Get instant answers to your questions anytime, anywhere</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              {/* For Institutions */}
+              <div className="bg-gradient-to-br from-secondary/5 via-transparent to-primary/5 rounded-2xl p-8 border border-secondary/10" data-testid="card-benefits-institutions">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center">
+                    <Building2 className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground" data-testid="heading-benefits-institutions">For Institutions</h3>
+                    <p className="text-muted-foreground" data-testid="text-benefits-institutions-subtitle">Reach the right students, faster</p>
+                  </div>
+                </div>
+                
+                <ul className="space-y-4" data-testid="list-benefits-institutions">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-institution-1-title">Qualified Lead Generation</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-institution-1-desc">Connect with pre-qualified students who match your entry requirements</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-institution-2-title">AI-Powered Course Management</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-institution-2-desc">Auto-generate descriptions, thumbnails, and keep course data up-to-date</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-institution-3-title">Streamlined Application Processing</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-institution-3-desc">Manage applications through a unified dashboard with automated workflows</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-institution-4-title">Global Visibility</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-institution-4-desc">Showcase your courses to international students actively searching</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground" data-testid="text-benefit-institution-5-title">Analytics & Insights</span>
+                      <p className="text-sm text-muted-foreground" data-testid="text-benefit-institution-5-desc">Understand student interest, application trends, and conversion metrics</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Platform Stats */}
+        <section className="py-16 md:py-24 bg-card/50">
+          <div className="container mx-auto px-4">
+            <div className="max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <Card className="border-primary/20 text-center" data-testid="card-stat-institutions">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Building2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-institutions-count">22+</div>
+                    <div className="text-sm text-muted-foreground" data-testid="text-stat-institutions-label">Partner Institutions</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20 text-center" data-testid="card-stat-courses">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-courses-count">1000+</div>
+                    <div className="text-sm text-muted-foreground" data-testid="text-stat-courses-label">Courses Available</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20 text-center" data-testid="card-stat-countries">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Globe className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-countries-count">50+</div>
+                    <div className="text-sm text-muted-foreground" data-testid="text-stat-countries-label">Countries Served</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-primary/20 text-center" data-testid="card-stat-support">
+                  <CardContent className="p-6">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Clock className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-support-count">24/7</div>
+                    <div className="text-sm text-muted-foreground" data-testid="text-stat-support-label">AI Support</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Why Choose Us */}
+        <section className="py-16 md:py-24">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4" data-testid="heading-why-choose-us">
+                Why Choose Our Platform
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-why-description">
+                Built for the future of international education
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              <Card className="border-primary/20 hover-elevate" data-testid="card-why-technology">
+                <CardContent className="p-6 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Cpu className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-3" data-testid="heading-why-technology">
+                    Technology-First
+                  </h3>
+                  <p className="text-muted-foreground" data-testid="text-why-technology-desc">
+                    We leverage AI, machine learning, and automation to solve problems 
+                    that traditional agencies can't.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-secondary/20 hover-elevate" data-testid="card-why-data">
                 <CardContent className="p-6 text-center">
                   <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
                     <TrendingUp className="h-8 w-8 text-secondary" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">
-                    Innovation
+                  <h3 className="text-xl font-semibold text-foreground mb-3" data-testid="heading-why-data">
+                    Data-Driven
                   </h3>
-                  <p className="text-muted-foreground">
-                    We leverage AI and modern technology to make education discovery intuitive, 
-                    fast, and personalized.
+                  <p className="text-muted-foreground" data-testid="text-why-data-desc">
+                    Every recommendation, every match, every insight is powered by 
+                    data and intelligent algorithms.
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-accent/20 hover-elevate">
+              <Card className="border-accent/20 hover-elevate" data-testid="card-why-global">
                 <CardContent className="p-6 text-center">
                   <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                    <Award className="h-8 w-8 text-accent" />
+                    <Globe className="h-8 w-8 text-accent" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-3">
-                    Transparency
+                  <h3 className="text-xl font-semibold text-foreground mb-3" data-testid="heading-why-global">
+                    Globally Scalable
                   </h3>
-                  <p className="text-muted-foreground">
-                    No hidden fees, no misleading information. We believe in honest, clear 
-                    communication every step of the way.
+                  <p className="text-muted-foreground" data-testid="text-why-global-desc">
+                    Built to serve students and institutions across borders, 
+                    with multi-country support and localization.
                   </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Global Reach */}
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                <CardContent className="p-8 md:p-12">
-                  <div className="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                      <div className="flex items-center gap-3 mb-4">
-                        <MapPin className="h-8 w-8 text-primary" />
-                        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                          Global Reach, Local Touch
-                        </h2>
-                      </div>
-                      <p className="text-muted-foreground leading-relaxed mb-6">
-                        With offices and partnerships spanning Australia and Bangladesh, we understand 
-                        both the aspirations of international students and the requirements of Australian institutions.
-                      </p>
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <GraduationCap className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            <strong className="text-foreground">22+ Partner Universities</strong> across Australia
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Globe className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            <strong className="text-foreground">Multiple Regions</strong> including Australia and Bangladesh
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Users className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            <strong className="text-foreground">Thousands of Students</strong> supported on their journey
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <div className="aspect-square rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                        <Globe className="h-32 w-32 text-primary/40" />
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -351,46 +504,43 @@ export default function OurStory() {
         <section className="py-16 md:py-24 bg-gradient-to-br from-primary via-primary/95 to-secondary">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                Ready to Be Part of the Solution?
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6" data-testid="heading-cta">
+                Ready to Experience the Future of Education?
               </h2>
-              <p className="text-lg md:text-xl text-white/90 mb-8">
-                <strong className="text-white">Students:</strong> Join thousands who've turned their Australian education dreams into reality. 
-                Let's make your journey simple, transparent, and stress-free.
-              </p>
-              <p className="text-base md:text-lg text-white/80 mb-8">
-                <strong className="text-white">Universities:</strong> Connect with motivated, qualified students who are genuinely interested in your programs. 
-                Smart matching means better outcomes for everyone.
+              <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto" data-testid="text-cta-description">
+                Whether you're a student looking for your dream course or an institution 
+                seeking qualified candidates—our platform is built for you.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
                 <Button 
                   size="lg"
                   onClick={() => setLocation('/courses')}
-                  className="bg-white text-primary hover:bg-white/90 px-8"
+                  className="bg-white text-primary"
                   data-testid="button-explore-courses"
                 >
-                  <GraduationCap className="mr-2 h-5 w-5" />
-                  Find Your Course
+                  <Search className="mr-2 h-5 w-5" />
+                  Explore Courses
                 </Button>
                 <Button 
                   size="lg"
                   variant="outline"
                   onClick={() => setLocation('/contact')}
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm px-8"
+                  className="bg-white/10 border-white/30 text-white backdrop-blur-sm"
                   data-testid="button-contact-us"
                 >
-                  Talk to an Advisor
+                  Partner With Us
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
-              <p className="text-sm text-white/70">
-                Universities interested in partnering?{" "}
-                <button 
-                  onClick={() => setLocation('/contact')}
-                  className="underline hover:text-white transition-colors font-medium"
-                  data-testid="link-partner-inquiry"
+              <p className="text-sm text-white/70" data-testid="text-institution-inquiry">
+                Institutions interested in listing courses?{" "}
+                <Link 
+                  href="/contact"
+                  className="text-white underline font-medium"
+                  data-testid="link-institution-inquiry"
                 >
                   Get in touch
-                </button>
+                </Link>
               </p>
             </div>
           </div>
