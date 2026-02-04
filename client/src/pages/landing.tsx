@@ -344,16 +344,16 @@ export default function Landing() {
                   className="group text-center"
                 >
                   <div className="flex flex-col items-center gap-3 p-4 rounded-lg hover-elevate cursor-pointer">
-                    <div className="w-20 h-20 rounded-full bg-white dark:bg-white border border-border/50 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md transition-shadow">
+                    <div className="w-24 h-24 rounded-full bg-white dark:bg-white border border-border/50 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md transition-shadow">
                       {institution.logoUrl ? (
                         <img 
                           src={institution.logoUrl} 
                           alt={institution.name}
-                          className="w-14 h-14 object-contain"
+                          className="w-[72px] h-[72px] object-contain"
                           data-testid={`img-featured-institution-logo-${institution.id}`}
                         />
                       ) : (
-                        <Building2 className="h-8 w-8 text-primary/40" />
+                        <Building2 className="h-10 w-10 text-primary/40" />
                       )}
                     </div>
                     <div className="space-y-1">
