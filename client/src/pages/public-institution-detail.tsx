@@ -811,39 +811,6 @@ export default function PublicInstitutionDetail() {
               </CardContent>
             </Card>
 
-            {/* Contact Info Card */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {institution.contactEmail && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${institution.contactEmail}`} className="text-sm text-primary hover:underline" data-testid="link-email">
-                      {institution.contactEmail}
-                    </a>
-                  </div>
-                )}
-                {institution.contactPhone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${institution.contactPhone}`} className="text-sm text-primary hover:underline" data-testid="link-phone">
-                      {institution.contactPhone}
-                    </a>
-                  </div>
-                )}
-                {institution.website && (
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a href={institution.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1" data-testid="link-website">
-                      Visit Website <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Top Disciplines Card */}
             {institution.topDisciplines && institution.topDisciplines.length > 0 && (
               <Card>
