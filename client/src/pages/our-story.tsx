@@ -386,7 +386,7 @@ export default function OurStory() {
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                       <Building2 className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-institutions-count">22+</div>
+                    <div className="text-3xl md:text-4xl font-bold text-foreground mb-1" data-testid="text-stat-institutions-count">200+</div>
                     <div className="text-sm text-muted-foreground" data-testid="text-stat-institutions-label">Partner Institutions</div>
                   </CardContent>
                 </Card>
