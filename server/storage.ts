@@ -585,7 +585,13 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    console.log('[Storage] updateUniversity called with:', { id, publishStatus: processedData.publishStatus, publishedAt: processedData.publishedAt });
+    console.log('[Storage] updateUniversity called with:', { 
+      id, 
+      publishStatus: processedData.publishStatus, 
+      publishedAt: processedData.publishedAt,
+      cricosProviderCode: processedData.cricosProviderCode,
+      rtoNumber: processedData.rtoNumber,
+    });
     
     const [university] = await db
       .update(universities)
@@ -593,7 +599,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(universities.id, id))
       .returning();
     
-    console.log('[Storage] updateUniversity result:', { id: university.id, publishStatus: university.publishStatus, publishedAt: university.publishedAt });
+    console.log('[Storage] updateUniversity result:', { 
+      id: university.id, 
+      publishStatus: university.publishStatus, 
+      publishedAt: university.publishedAt,
+      cricosProviderCode: university.cricosProviderCode,
+      rtoNumber: university.rtoNumber,
+    });
     
     return university;
   }
