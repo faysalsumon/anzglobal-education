@@ -418,6 +418,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   };
 
   const handleSubmit = (data: z.infer<typeof institutionSchema>, publishStatus: 'draft' | 'published' = 'draft', visibility: 'public' | 'private' = 'public') => {
+    console.log('[InstitutionEditor] handleSubmit called with data:', {
+      rtoNumber: data.rtoNumber,
+      cricosProviderCode: data.cricosProviderCode,
+      country: data.country,
+    });
+    
     const apiData: any = {
       ...data,
       topDisciplines: data.topDisciplines && data.topDisciplines.length > 0
@@ -435,6 +441,11 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
         publishedByUserId: userId,
       }),
     };
+    
+    console.log('[InstitutionEditor] apiData being sent:', {
+      rtoNumber: apiData.rtoNumber,
+      cricosProviderCode: apiData.cricosProviderCode,
+    });
     
     if (institution?.id) {
       updateMutation.mutate({ id: institution.id, data: apiData });
@@ -711,7 +722,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                             <FormItem>
                               <FormLabel>CRICOS Provider Code</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="e.g., 03548F" data-testid="input-institution-cricosProviderCode" />
+                                <Input 
+                                  {...field} 
+                                  value={field.value || ""} 
+                                  placeholder="e.g., 03548F" 
+                                  data-testid="input-institution-cricosProviderCode" 
+                                />
                               </FormControl>
                               <FormDescription className="text-xs">
                                 Required for enrolling international students
@@ -727,7 +743,12 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                             <FormItem>
                               <FormLabel>RTO Number</FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="e.g., 52010" data-testid="input-institution-rtoNumber" />
+                                <Input 
+                                  {...field} 
+                                  value={field.value || ""} 
+                                  placeholder="e.g., 52010" 
+                                  data-testid="input-institution-rtoNumber" 
+                                />
                               </FormControl>
                               <FormDescription className="text-xs">
                                 Registered Training Organization number
