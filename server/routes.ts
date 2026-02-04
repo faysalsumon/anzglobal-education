@@ -17568,10 +17568,10 @@ Sitemap: ${baseUrl}/sitemap.xml
             thumbnailUrl: course.thumbnailUrl,
             subject: course.subject,
             level: course.level,
-            duration: course.duration,
-            durationType: course.durationType,
-            tuitionFee: course.tuitionFee,
-            currency: course.currency,
+            duration: course.duration, // Text like "2 years" or "1 year full-time"
+            durationType: null, // Not used - duration is already complete text
+            tuitionFee: course.fees ? Number(course.fees) : null, // Map fees to tuitionFee for frontend
+            currency: course.currency || 'AUD',
             universityId: course.universityId,
             universityName: universityMap[course.universityId!]?.name || null,
             universityLogo: universityMap[course.universityId!]?.logo || null,

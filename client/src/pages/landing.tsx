@@ -26,8 +26,8 @@ interface FeaturedCourse {
   thumbnailUrl: string | null;
   subject: string | null;
   level: string | null;
-  duration: number | null;
-  durationType: string | null;
+  duration: string | null; // Text like "2 years" or "1 year full-time"
+  durationType: string | null; // Legacy, usually null
   tuitionFee: number | null;
   currency: string | null;
   universityId: string;
@@ -476,10 +476,10 @@ export default function Landing() {
                     <CardContent>
                       <div className="flex flex-wrap justify-between items-end gap-2 text-sm text-muted-foreground">
                         <div className="flex flex-wrap gap-3">
-                          {course.duration && course.durationType && (
+                          {course.duration && (
                             <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}>
                               <Calendar className="h-4 w-4" />
-                              <span>{course.duration} {course.durationType}</span>
+                              <span>{course.duration}{course.durationType ? ` ${course.durationType}` : ''}</span>
                             </div>
                           )}
                           {course.tuitionFee && (
