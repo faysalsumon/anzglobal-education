@@ -9912,6 +9912,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         publishStatus: universities.publishStatus,
         publishedAt: universities.publishedAt,
         publishedByUserId: universities.publishedByUserId,
+        cricosProviderCode: universities.cricosProviderCode,
+        rtoNumber: universities.rtoNumber,
       }).from(universities);
 
       // Get user names for creator/editor display
