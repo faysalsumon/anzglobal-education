@@ -84,6 +84,7 @@ import { AdminAiSettingsPanel } from "@/components/admin-ai-settings-panel";
 import { AdminQualificationTypesPanel } from "@/components/admin-qualification-types";
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 import { ListPagination } from "@/components/list-pagination";
+import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -3351,6 +3352,11 @@ export default function AdminDashboard() {
         {/* Messages Tab */}
         {activeTab === "messages" && (
           <AdminMessagesTab />
+        )}
+
+        {/* Partner API Keys Tab - Platform Admin/CTO Only */}
+        {activeTab === "api-keys" && hasFullAdminAccess && (
+          <AdminApiKeysPanel />
         )}
 
               </div>

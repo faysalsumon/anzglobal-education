@@ -133,6 +133,11 @@ import {
   aiSettings,
   type AiSetting,
   type InsertAiSetting,
+  // API Keys imports
+  apiKeys,
+  apiKeyUsageLogs,
+  type ApiKey,
+  type ApiKeyUsageLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, or, desc, isNull, sql, lt } from "drizzle-orm";
@@ -475,6 +480,19 @@ export interface IStorage {
   getAiSetting(settingKey: string): Promise<AiSetting | undefined>;
   getAllAiSettings(): Promise<AiSetting[]>;
   upsertAiSetting(settingKey: string, data: Partial<InsertAiSetting>): Promise<AiSetting>;
+  
+  // API Key operations
+  createApiKey(data: { name: string; keyHash: string; keyPrefix: string; permissions: string[]; createdByUserId: string; description?: string; expiresAt?: Date; rateLimitPerMinute?: number; rateLimitPerHour?: number }): Promise<ApiKey>;
+  getApiKeyById(id: string): Promise<ApiKey | undefined>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  getAllApiKeys(): Promise<ApiKey[]>;
+  updateApiKey(id: string, data: Partial<{ name: string; permissions: string[]; description: string; isActive: boolean; rateLimitPerMinute: number; rateLimitPerHour: number }>): Promise<ApiKey>;
+  revokeApiKey(id: string, revokedByUserId: string): Promise<ApiKey>;
+  incrementApiKeyUsage(id: string, ipAddress: string): Promise<void>;
+  
+  // API Key Usage Logs operations
+  createApiKeyUsageLog(data: { apiKeyId: string; endpoint: string; method: string; statusCode?: number; resourceType?: string; resourceId?: string; ipAddress?: string; userAgent?: string }): Promise<ApiKeyUsageLog>;
+  getApiKeyUsageLogs(apiKeyId: string, limit?: number): Promise<ApiKeyUsageLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3089,6 +3107,130 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+  
+  // API Key operations
+  async createApiKey(data: { 
+    name: string; 
+    keyHash: string; 
+    keyPrefix: string; 
+    permissions: string[]; 
+    createdByUserId: string; 
+    description?: string; 
+    expiresAt?: Date; 
+    rateLimitPerMinute?: number; 
+    rateLimitPerHour?: number;
+  }): Promise<ApiKey> {
+    const [created] = await db
+      .insert(apiKeys)
+      .values({
+        name: data.name,
+        keyHash: data.keyHash,
+        keyPrefix: data.keyPrefix,
+        permissions: data.permissions,
+        createdByUserId: data.createdByUserId,
+        description: data.description,
+        expiresAt: data.expiresAt,
+        rateLimitPerMinute: data.rateLimitPerMinute || 100,
+        rateLimitPerHour: data.rateLimitPerHour || 1000,
+      })
+      .returning();
+    return created;
+  }
+  
+  async getApiKeyById(id: string): Promise<ApiKey | undefined> {
+    const [key] = await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.id, id));
+    return key;
+  }
+  
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [key] = await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.keyHash, keyHash));
+    return key;
+  }
+  
+  async getAllApiKeys(): Promise<ApiKey[]> {
+    return await db
+      .select()
+      .from(apiKeys)
+      .orderBy(desc(apiKeys.createdAt));
+  }
+  
+  async updateApiKey(id: string, data: Partial<{ 
+    name: string; 
+    permissions: string[]; 
+    description: string; 
+    isActive: boolean; 
+    rateLimitPerMinute: number; 
+    rateLimitPerHour: number;
+  }>): Promise<ApiKey> {
+    const [updated] = await db
+      .update(apiKeys)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return updated;
+  }
+  
+  async revokeApiKey(id: string, revokedByUserId: string): Promise<ApiKey> {
+    const [revoked] = await db
+      .update(apiKeys)
+      .set({
+        isActive: false,
+        revokedAt: new Date(),
+        revokedByUserId,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return revoked;
+  }
+  
+  async incrementApiKeyUsage(id: string, ipAddress: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({
+        usageCount: sql`${apiKeys.usageCount} + 1`,
+        lastUsedAt: new Date(),
+        lastUsedIp: ipAddress,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiKeys.id, id));
+  }
+  
+  // API Key Usage Logs operations
+  async createApiKeyUsageLog(data: { 
+    apiKeyId: string; 
+    endpoint: string; 
+    method: string; 
+    statusCode?: number; 
+    resourceType?: string; 
+    resourceId?: string; 
+    ipAddress?: string; 
+    userAgent?: string;
+  }): Promise<ApiKeyUsageLog> {
+    const [log] = await db
+      .insert(apiKeyUsageLogs)
+      .values(data)
+      .returning();
+    return log;
+  }
+  
+  async getApiKeyUsageLogs(apiKeyId: string, limit: number = 100): Promise<ApiKeyUsageLog[]> {
+    return await db
+      .select()
+      .from(apiKeyUsageLogs)
+      .where(eq(apiKeyUsageLogs.apiKeyId, apiKeyId))
+      .orderBy(desc(apiKeyUsageLogs.createdAt))
+      .limit(limit);
   }
 }
 

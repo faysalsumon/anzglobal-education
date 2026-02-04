@@ -588,6 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       '/api/university/login',
       '/api/university/register',
       '/api/supabase-auth/',
+      '/api/partner/', // Partner API uses X-API-Key authentication, not CSRF
     ];
     const fullPath = req.originalUrl.split('?')[0];
     if (publicEndpoints.some(ep => fullPath.startsWith(ep))) {
@@ -19230,6 +19231,740 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END COURSE INTAKE TEMPLATES API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // PARTNER API KEY MANAGEMENT ENDPOINTS
+  // ============================================
+  
+  const crypto = await import('crypto');
+  
+  // Secret pepper for HMAC-based key hashing (use env var in production)
+  const API_KEY_PEPPER = process.env.API_KEY_PEPPER || 'anz_partner_api_secret_pepper_v1';
+  
+  // Helper function to generate API key
+  const generateApiKey = () => {
+    const prefix = 'anz_live';
+    const randomPart = crypto.randomBytes(24).toString('base64url');
+    return `${prefix}_${randomPart}`;
+  };
+  
+  // Helper function to hash API key with HMAC for additional security
+  const hashApiKey = (key: string) => {
+    return crypto.createHmac('sha256', API_KEY_PEPPER).update(key).digest('hex');
+  };
+  
+  // Constant-time comparison to prevent timing attacks
+  const secureCompare = (a: string, b: string): boolean => {
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  };
+  
+  // POST /api/admin/api-keys - Create a new API key (platform_admin/cto only)
+  app.post("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const { name, permissions, description, expiresAt, rateLimitPerMinute, rateLimitPerHour } = req.body;
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: "API key name is required" });
+      }
+      
+      // Default permissions if not provided
+      const validPermissions = permissions || ['institutions:create', 'courses:create', 'institutions:read'];
+      
+      // Generate the actual API key (only shown once)
+      const rawKey = generateApiKey();
+      const keyHash = hashApiKey(rawKey);
+      const keyPrefix = rawKey.substring(0, 12);
+      
+      const apiKey = await storage.createApiKey({
+        name: name.trim(),
+        keyHash,
+        keyPrefix,
+        permissions: validPermissions,
+        createdByUserId: user.id,
+        description: description?.trim(),
+        expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+        rateLimitPerMinute: rateLimitPerMinute || 100,
+        rateLimitPerHour: rateLimitPerHour || 1000,
+      });
+      
+      // Return the key with the raw key (only shown this once)
+      res.status(201).json({
+        ...apiKey,
+        key: rawKey, // Only returned on creation
+        message: "Store this API key securely. It will not be shown again.",
+      });
+    } catch (error: any) {
+      console.error("Error creating API key:", error);
+      res.status(500).json({ message: "Failed to create API key" });
+    }
+  });
+  
+  // GET /api/admin/api-keys - List all API keys (platform_admin/cto only)
+  app.get("/api/admin/api-keys", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const apiKeys = await storage.getAllApiKeys();
+      
+      // Remove sensitive data from response
+      const sanitizedKeys = apiKeys.map(key => ({
+        ...key,
+        keyHash: undefined, // Never expose the hash
+      }));
+      
+      res.json(sanitizedKeys);
+    } catch (error: any) {
+      console.error("Error listing API keys:", error);
+      res.status(500).json({ message: "Failed to list API keys" });
+    }
+  });
+  
+  // GET /api/admin/api-keys/:id - Get a specific API key (platform_admin/cto only)
+  app.get("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const { id } = req.params;
+      const apiKey = await storage.getApiKeyById(id);
+      
+      if (!apiKey) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      
+      // Get recent usage logs
+      const usageLogs = await storage.getApiKeyUsageLogs(id, 50);
+      
+      res.json({
+        ...apiKey,
+        keyHash: undefined, // Never expose the hash
+        recentUsage: usageLogs,
+      });
+    } catch (error: any) {
+      console.error("Error getting API key:", error);
+      res.status(500).json({ message: "Failed to get API key" });
+    }
+  });
+  
+  // PUT /api/admin/api-keys/:id - Update API key (platform_admin/cto only)
+  app.put("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const { id } = req.params;
+      const { name, permissions, description, isActive, rateLimitPerMinute, rateLimitPerHour } = req.body;
+      
+      const existingKey = await storage.getApiKeyById(id);
+      if (!existingKey) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      
+      const updateData: any = {};
+      if (name) updateData.name = name.trim();
+      if (permissions) updateData.permissions = permissions;
+      if (description !== undefined) updateData.description = description?.trim();
+      if (isActive !== undefined) updateData.isActive = isActive;
+      if (rateLimitPerMinute) updateData.rateLimitPerMinute = rateLimitPerMinute;
+      if (rateLimitPerHour) updateData.rateLimitPerHour = rateLimitPerHour;
+      
+      const updated = await storage.updateApiKey(id, updateData);
+      
+      res.json({
+        ...updated,
+        keyHash: undefined,
+      });
+    } catch (error: any) {
+      console.error("Error updating API key:", error);
+      res.status(500).json({ message: "Failed to update API key" });
+    }
+  });
+  
+  // DELETE /api/admin/api-keys/:id - Revoke API key (platform_admin/cto only)
+  app.delete("/api/admin/api-keys/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const { id } = req.params;
+      
+      const existingKey = await storage.getApiKeyById(id);
+      if (!existingKey) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      
+      if (existingKey.revokedAt) {
+        return res.status(400).json({ message: "API key is already revoked" });
+      }
+      
+      const revoked = await storage.revokeApiKey(id, user.id);
+      
+      res.json({
+        message: "API key revoked successfully",
+        ...revoked,
+        keyHash: undefined,
+      });
+    } catch (error: any) {
+      console.error("Error revoking API key:", error);
+      res.status(500).json({ message: "Failed to revoke API key" });
+    }
+  });
+  
+  // GET /api/admin/api-keys/:id/usage - Get usage logs for an API key (platform_admin/cto only)
+  app.get("/api/admin/api-keys/:id/usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const allowedTypes = ['platform_admin', 'cto'];
+      if (!user || !allowedTypes.includes(user.userType)) {
+        return res.status(403).json({ message: "Platform admin or CTO access required" });
+      }
+
+      const { id } = req.params;
+      const limit = parseInt(req.query.limit as string) || 100;
+      
+      const existingKey = await storage.getApiKeyById(id);
+      if (!existingKey) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      
+      const usageLogs = await storage.getApiKeyUsageLogs(id, limit);
+      
+      res.json({
+        apiKeyId: id,
+        keyPrefix: existingKey.keyPrefix,
+        usageCount: existingKey.usageCount,
+        lastUsedAt: existingKey.lastUsedAt,
+        logs: usageLogs,
+      });
+    } catch (error: any) {
+      console.error("Error getting API key usage:", error);
+      res.status(500).json({ message: "Failed to get API key usage" });
+    }
+  });
+  
+  // ============================================
+  // END PARTNER API KEY MANAGEMENT ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // PARTNER API ENDPOINTS (External Bot Access)
+  // ============================================
+  
+  // Rate limiting store (in-memory, consider Redis for production scaling)
+  const rateLimitStore = new Map<string, { minute: { count: number; resetAt: number }; hour: { count: number; resetAt: number } }>();
+  
+  // Periodic cleanup of expired rate limit entries (every 5 minutes)
+  const RATE_LIMIT_CLEANUP_INTERVAL = 5 * 60 * 1000;
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, limits] of rateLimitStore.entries()) {
+      if (now > limits.minute.resetAt && now > limits.hour.resetAt) {
+        rateLimitStore.delete(key);
+      }
+    }
+  }, RATE_LIMIT_CLEANUP_INTERVAL);
+  
+  // Partner API authentication middleware
+  const authenticatePartnerApi = async (req: any, res: any, next: any) => {
+    try {
+      const apiKeyHeader = req.headers['x-api-key'];
+      
+      if (!apiKeyHeader || typeof apiKeyHeader !== 'string') {
+        return res.status(401).json({ 
+          error: 'Missing API key',
+          message: 'Provide your API key in the X-API-Key header',
+        });
+      }
+      
+      // Hash the provided key and look it up
+      const keyHash = hashApiKey(apiKeyHeader);
+      const apiKey = await storage.getApiKeyByHash(keyHash);
+      
+      if (!apiKey) {
+        return res.status(401).json({ 
+          error: 'Invalid API key',
+          message: 'The provided API key is not valid',
+        });
+      }
+      
+      // Check if key is active
+      if (!apiKey.isActive) {
+        return res.status(401).json({ 
+          error: 'API key disabled',
+          message: 'This API key has been disabled',
+        });
+      }
+      
+      // Check if key is revoked
+      if (apiKey.revokedAt) {
+        return res.status(401).json({ 
+          error: 'API key revoked',
+          message: 'This API key has been revoked',
+        });
+      }
+      
+      // Check expiration
+      if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
+        return res.status(401).json({ 
+          error: 'API key expired',
+          message: 'This API key has expired',
+        });
+      }
+      
+      // Rate limiting check
+      const now = Date.now();
+      const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+      const rateLimitKey = `${apiKey.id}:${clientIp}`;
+      
+      let limits = rateLimitStore.get(rateLimitKey);
+      if (!limits) {
+        limits = {
+          minute: { count: 0, resetAt: now + 60000 },
+          hour: { count: 0, resetAt: now + 3600000 },
+        };
+        rateLimitStore.set(rateLimitKey, limits);
+      }
+      
+      // Reset counters if needed
+      if (now > limits.minute.resetAt) {
+        limits.minute = { count: 0, resetAt: now + 60000 };
+      }
+      if (now > limits.hour.resetAt) {
+        limits.hour = { count: 0, resetAt: now + 3600000 };
+      }
+      
+      // Check rate limits
+      const perMinuteLimit = apiKey.rateLimitPerMinute || 100;
+      const perHourLimit = apiKey.rateLimitPerHour || 1000;
+      
+      if (limits.minute.count >= perMinuteLimit) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          message: `Rate limit of ${perMinuteLimit} requests per minute exceeded`,
+          retryAfter: Math.ceil((limits.minute.resetAt - now) / 1000),
+        });
+      }
+      
+      if (limits.hour.count >= perHourLimit) {
+        return res.status(429).json({
+          error: 'Rate limit exceeded',
+          message: `Rate limit of ${perHourLimit} requests per hour exceeded`,
+          retryAfter: Math.ceil((limits.hour.resetAt - now) / 1000),
+        });
+      }
+      
+      // Increment counters
+      limits.minute.count++;
+      limits.hour.count++;
+      
+      // Track usage
+      await storage.incrementApiKeyUsage(apiKey.id, clientIp);
+      
+      // Attach API key info to request
+      req.apiKey = apiKey;
+      req.partnerClientIp = clientIp;
+      
+      next();
+    } catch (error: any) {
+      console.error("Partner API authentication error:", error);
+      return res.status(500).json({ 
+        error: 'Authentication error',
+        message: 'An error occurred during authentication',
+      });
+    }
+  };
+  
+  // Helper to check permissions
+  const hasPermission = (apiKey: any, permission: string): boolean => {
+    return apiKey.permissions && apiKey.permissions.includes(permission);
+  };
+  
+  // Log partner API usage
+  const logPartnerUsage = async (req: any, statusCode: number, resourceType?: string, resourceId?: string) => {
+    try {
+      await storage.createApiKeyUsageLog({
+        apiKeyId: req.apiKey.id,
+        endpoint: req.originalUrl,
+        method: req.method,
+        statusCode,
+        resourceType,
+        resourceId,
+        ipAddress: req.partnerClientIp,
+        userAgent: req.headers['user-agent'],
+      });
+    } catch (error) {
+      console.error("Failed to log partner API usage:", error);
+    }
+  };
+  
+  // POST /api/partner/institutions - Create institution as draft
+  app.post("/api/partner/institutions", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      // Check permission
+      if (!hasPermission(req.apiKey, 'institutions:create')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to create institutions',
+        });
+      }
+      
+      const { 
+        name, 
+        description, 
+        website, 
+        country, 
+        city, 
+        address,
+        email,
+        phone,
+        type,
+        establishedYear,
+        cricosCodes,
+        logoUrl,
+        campuses,
+      } = req.body;
+      
+      // Validate required fields
+      if (!name || typeof name !== 'string' || name.trim().length < 2) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'Institution name is required (minimum 2 characters)',
+        });
+      }
+      
+      if (!country || typeof country !== 'string') {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'Country is required',
+        });
+      }
+      
+      // Check for duplicate (by name and country)
+      const existingInstitutions = await storage.getAllUniversities();
+      const duplicate = existingInstitutions.find(
+        u => u.name?.toLowerCase() === name.trim().toLowerCase() && 
+             u.country?.toLowerCase() === country.toLowerCase()
+      );
+      
+      if (duplicate) {
+        await logPartnerUsage(req, 409);
+        return res.status(409).json({
+          error: 'Duplicate institution',
+          message: 'An institution with this name already exists in this country',
+          existingId: duplicate.id,
+        });
+      }
+      
+      // Create institution as draft (pending approval)
+      const institution = await storage.createUniversity({
+        name: name.trim(),
+        description: description?.trim(),
+        website: website?.trim(),
+        country: country.trim(),
+        city: city?.trim(),
+        address: address?.trim(),
+        email: email?.trim(),
+        phone: phone?.trim(),
+        type: type || 'University',
+        establishedYear: establishedYear ? parseInt(establishedYear) : null,
+        cricosCodes: cricosCodes || [],
+        logoUrl: logoUrl?.trim(),
+        campuses: campuses || [],
+        isApproved: false, // Draft status - requires admin approval
+        partnerApiKeyId: req.apiKey.id, // Track which API key created this
+      } as any);
+      
+      await logPartnerUsage(req, 201, 'institution', institution.id);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Institution created as draft. It will be reviewed by an admin before being published.',
+        data: {
+          id: institution.id,
+          name: institution.name,
+          country: institution.country,
+          status: 'pending_approval',
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API create institution error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to create institution',
+      });
+    }
+  });
+  
+  // POST /api/partner/courses - Create course as draft
+  app.post("/api/partner/courses", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      // Check permission
+      if (!hasPermission(req.apiKey, 'courses:create')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to create courses',
+        });
+      }
+      
+      const {
+        universityId,
+        title,
+        description,
+        discipline,
+        subDiscipline,
+        courseLevel,
+        durationMonths,
+        tuitionFee,
+        currency,
+        intakeMonths,
+        applicationDeadline,
+        entryRequirements,
+        englishRequirements,
+        startDates,
+        courseUrl,
+        cricosCourseCode,
+      } = req.body;
+      
+      // Validate required fields
+      if (!universityId || typeof universityId !== 'string') {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'universityId is required',
+        });
+      }
+      
+      if (!title || typeof title !== 'string' || title.trim().length < 5) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Validation error',
+          message: 'Course title is required (minimum 5 characters)',
+        });
+      }
+      
+      // Verify institution exists
+      const institution = await storage.getUniversityById(universityId);
+      if (!institution) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Institution not found',
+          message: 'The specified universityId does not exist',
+        });
+      }
+      
+      // Check for duplicate (by title and university)
+      const existingCourses = await storage.getCoursesByUniversityId(universityId);
+      const duplicate = existingCourses.find(
+        c => c.title?.toLowerCase() === title.trim().toLowerCase()
+      );
+      
+      if (duplicate) {
+        await logPartnerUsage(req, 409);
+        return res.status(409).json({
+          error: 'Duplicate course',
+          message: 'A course with this title already exists at this institution',
+          existingId: duplicate.id,
+        });
+      }
+      
+      // Create course as draft
+      const course = await storage.createCourse({
+        universityId,
+        title: title.trim(),
+        description: description?.trim(),
+        discipline: discipline?.trim(),
+        subDiscipline: subDiscipline?.trim(),
+        courseLevel: courseLevel || 'Bachelor',
+        duration: durationMonths ? `${durationMonths} months` : null,
+        durationMonths: durationMonths ? parseInt(durationMonths) : null,
+        tuitionFee: tuitionFee ? parseFloat(tuitionFee).toString() : null,
+        currency: currency || 'AUD',
+        intakeMonths: intakeMonths || [],
+        applicationDeadline: applicationDeadline?.trim(),
+        entryRequirements: entryRequirements?.trim(),
+        englishRequirements: englishRequirements?.trim(),
+        startDates: startDates || [],
+        courseUrl: courseUrl?.trim(),
+        cricosCourseCode: cricosCourseCode?.trim(),
+        isApproved: false, // Draft status - requires admin approval
+        partnerApiKeyId: req.apiKey.id, // Track which API key created this
+      } as any);
+      
+      await logPartnerUsage(req, 201, 'course', course.id);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Course created as draft. It will be reviewed by an admin before being published.',
+        data: {
+          id: course.id,
+          title: course.title,
+          universityId: course.universityId,
+          status: 'pending_approval',
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API create course error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to create course',
+      });
+    }
+  });
+  
+  // GET /api/partner/institutions - List institutions (for duplicate checking)
+  app.get("/api/partner/institutions", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      // Check permission
+      if (!hasPermission(req.apiKey, 'institutions:read')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to read institutions',
+        });
+      }
+      
+      const { search, country, limit = '50', offset = '0' } = req.query;
+      
+      let institutions = await storage.getAllUniversities();
+      
+      // Filter by search term
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        institutions = institutions.filter(u => 
+          u.name?.toLowerCase().includes(searchLower) ||
+          u.city?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Filter by country
+      if (country && typeof country === 'string') {
+        institutions = institutions.filter(u => 
+          u.country?.toLowerCase() === country.toLowerCase()
+        );
+      }
+      
+      // Pagination
+      const limitNum = Math.min(parseInt(limit as string) || 50, 100);
+      const offsetNum = parseInt(offset as string) || 0;
+      const total = institutions.length;
+      const paginatedInstitutions = institutions.slice(offsetNum, offsetNum + limitNum);
+      
+      await logPartnerUsage(req, 200);
+      
+      res.json({
+        success: true,
+        data: paginatedInstitutions.map(u => ({
+          id: u.id,
+          name: u.name,
+          country: u.country,
+          city: u.city,
+          type: u.type,
+          isApproved: u.isApproved,
+        })),
+        pagination: {
+          total,
+          limit: limitNum,
+          offset: offsetNum,
+          hasMore: offsetNum + limitNum < total,
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API list institutions error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to list institutions',
+      });
+    }
+  });
+  
+  // GET /api/partner/institutions/:id - Get institution details
+  app.get("/api/partner/institutions/:id", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      // Check permission
+      if (!hasPermission(req.apiKey, 'institutions:read')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to read institutions',
+        });
+      }
+      
+      const { id } = req.params;
+      const institution = await storage.getUniversityById(id);
+      
+      if (!institution) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Not found',
+          message: 'Institution not found',
+        });
+      }
+      
+      await logPartnerUsage(req, 200, 'institution', id);
+      
+      res.json({
+        success: true,
+        data: {
+          id: institution.id,
+          name: institution.name,
+          description: institution.description,
+          website: institution.website,
+          country: institution.country,
+          city: institution.city,
+          type: institution.type,
+          isApproved: institution.isApproved,
+          createdAt: institution.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API get institution error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to get institution',
+      });
+    }
+  });
+  
+  // GET /api/partner/health - Health check endpoint
+  app.get("/api/partner/health", (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+    });
+  });
+  
+  // ============================================
+  // END PARTNER API ENDPOINTS
   // ============================================
 
   // ============================================
