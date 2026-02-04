@@ -1629,6 +1629,76 @@ export const regions = pgTable("regions", {
   activeIdx: index("regions_active_idx").on(table.isActive),
 }));
 
+// ============================================
+// PARTNER API KEYS TABLE
+// For external bots/integrations to upload institutions and courses
+// ============================================
+
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Key identification
+  name: varchar("name", { length: 100 }).notNull(), // Human-readable name for the key
+  keyHash: varchar("key_hash", { length: 128 }).notNull(), // SHA-256 hash of the API key
+  keyPrefix: varchar("key_prefix", { length: 12 }).notNull(), // First 8 chars for identification (e.g., "anz_live_")
+  
+  // Permissions
+  permissions: text("permissions").array().default(sql`ARRAY['institutions:create', 'courses:create', 'institutions:read']::text[]`),
+  
+  // Ownership and tracking
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  description: text("description"), // Optional description of what this key is used for
+  
+  // Usage tracking
+  usageCount: integer("usage_count").default(0),
+  lastUsedAt: timestamp("last_used_at"),
+  lastUsedIp: varchar("last_used_ip", { length: 45 }), // IPv6 compatible
+  
+  // Rate limiting
+  rateLimitPerMinute: integer("rate_limit_per_minute").default(100),
+  rateLimitPerHour: integer("rate_limit_per_hour").default(1000),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  revokedAt: timestamp("revoked_at"),
+  revokedByUserId: varchar("revoked_by_user_id").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  keyHashIdx: index("api_keys_key_hash_idx").on(table.keyHash),
+  keyPrefixIdx: index("api_keys_key_prefix_idx").on(table.keyPrefix),
+  createdByIdx: index("api_keys_created_by_idx").on(table.createdByUserId),
+  activeIdx: index("api_keys_active_idx").on(table.isActive),
+}));
+
+// API Key usage logs for audit trail
+export const apiKeyUsageLogs = pgTable("api_key_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  apiKeyId: varchar("api_key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
+  
+  // Request details
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull(), // GET, POST, etc.
+  statusCode: integer("status_code"),
+  
+  // Resource tracking
+  resourceType: varchar("resource_type", { length: 50 }), // 'institution', 'course'
+  resourceId: varchar("resource_id"), // ID of created/modified resource
+  
+  // Request metadata
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  apiKeyIdx: index("api_key_usage_logs_key_idx").on(table.apiKeyId),
+  createdAtIdx: index("api_key_usage_logs_created_at_idx").on(table.createdAt),
+  resourceTypeIdx: index("api_key_usage_logs_resource_type_idx").on(table.resourceType),
+}));
+
 // Branches table - office locations within regions
 export const branches = pgTable("branches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4925,6 +4995,41 @@ export const updateBranchSchema = insertBranchSchema.partial();
 export type Branch = typeof branches.$inferSelect;
 export type InsertBranch = z.infer<typeof insertBranchSchema>;
 export type UpdateBranch = z.infer<typeof updateBranchSchema>;
+
+// ============================================
+// API KEYS SCHEMAS AND TYPES
+// ============================================
+
+// API Keys
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  keyHash: true, // Hash is generated server-side
+  keyPrefix: true, // Prefix is extracted server-side
+  usageCount: true,
+  lastUsedAt: true,
+  lastUsedIp: true,
+  revokedAt: true,
+  revokedByUserId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateApiKeySchema = insertApiKeySchema.partial().omit({
+  createdByUserId: true, // Cannot change ownership
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type UpdateApiKey = z.infer<typeof updateApiKeySchema>;
+
+// API Key Usage Logs
+export const insertApiKeyUsageLogSchema = createInsertSchema(apiKeyUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
+export type InsertApiKeyUsageLog = z.infer<typeof insertApiKeyUsageLogSchema>;
 
 // Student Pathways
 export const insertStudentPathwaySchema = createInsertSchema(studentPathways).omit({
