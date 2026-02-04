@@ -13,7 +13,6 @@ import {
   Search,
   FileCheck,
   MessageSquare,
-  BarChart3,
   Zap,
   Shield,
   CheckCircle2,
@@ -55,8 +54,10 @@ export default function OurStory() {
                 AI-Powered Education Technology
               </p>
               <p className="text-lg text-white/80 max-w-3xl mx-auto" data-testid="text-hero-description">
-                We're building the future of international education—where finding the right course 
-                is instant, applications are effortless, and institutions connect with their ideal students.
+                Born in Australia with a global vision, we're transforming international education through 
+                cutting-edge technology. Our mission is to make course discovery instant, applications 
+                effortless, and help institutions worldwide connect with their ideal students—breaking 
+                down barriers to education across borders.
               </p>
             </div>
           </div>
@@ -242,32 +243,17 @@ export default function OurStory() {
                 </CardContent>
               </Card>
 
-              <Card className="border-primary/20 hover-elevate" data-testid="card-tech-content">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <BarChart3 className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-content">
-                    AI Content Generation
-                  </h3>
-                  <p className="text-muted-foreground text-sm" data-testid="text-tech-content-desc">
-                    Auto-generate course descriptions, thumbnails, and marketing content. 
-                    AI-powered web scraping extracts course data automatically.
-                  </p>
-                </CardContent>
-              </Card>
-
               <Card className="border-primary/20 hover-elevate" data-testid="card-tech-verification">
                 <CardContent className="p-6">
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <Shield className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2" data-testid="heading-tech-verification">
-                    Qualification Verification
+                    Blockchain Verification
                   </h3>
                   <p className="text-muted-foreground text-sm" data-testid="text-tech-verification-desc">
-                    AI-powered academic qualification matching and cross-country equivalency 
-                    to ensure students meet entry requirements.
+                    Tamper-proof credential verification using blockchain technology. 
+                    AI-powered qualification matching ensures documents are authentic and students meet entry requirements.
                   </p>
                 </CardContent>
               </Card>
