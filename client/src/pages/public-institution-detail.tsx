@@ -22,7 +22,7 @@ import {
 import { 
   MapPin, Globe, Mail, Phone, Building2, Calendar, Award, GraduationCap, 
   ExternalLink, Home, Search, Clock, DollarSign, Loader2, X, ChevronLeft, 
-  ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles
+  ChevronRight, ZoomIn, Image, Tag, TrendingUp, Heart, Sparkles, Star
 } from "lucide-react";
 import type { University, Campus, Course } from "@shared/schema";
 import { InstitutionLogo } from "@/components/institution-logo";
@@ -170,6 +170,15 @@ export default function PublicInstitutionDetail() {
     return COURSE_LEVELS.filter(level => levels.has(level));
   }, [institutionCourses]);
 
+  // Featured courses from institution.topCourses (array of course IDs)
+  const featuredCourses = useMemo(() => {
+    if (!institution?.topCourses || !Array.isArray(institution.topCourses) || institution.topCourses.length === 0) {
+      return [];
+    }
+    const featuredIds = new Set(institution.topCourses);
+    return institutionCourses.filter(course => featuredIds.has(course.id));
+  }, [institution?.topCourses, institutionCourses]);
+
   const filteredCourses = useMemo(() => {
     let filtered = institutionCourses;
     if (courseSearch.trim()) {
@@ -267,9 +276,10 @@ export default function PublicInstitutionDetail() {
     if (institutionTags.length > 0) sections.push("features");
     if (scholarships.length > 0) sections.push("scholarships");
     if (campusLocations.length > 0) sections.push("campuses");
+    if (featuredCourses.length > 0) sections.push("featured-courses");
     sections.push("courses");
     return sections;
-  }, [galleryImages.length, institutionTags.length, scholarships.length, campusLocations.length]);
+  }, [galleryImages.length, institutionTags.length, scholarships.length, campusLocations.length, featuredCourses.length]);
 
   if (isLoading) {
     return (
@@ -653,6 +663,43 @@ export default function PublicInstitutionDetail() {
                   institutionName={institution.name}
                   institutionLogo={institution.logo || undefined}
                 />
+              </ResponsiveSection>
+            )}
+
+            {/* Featured Courses Section */}
+            {featuredCourses.length > 0 && (
+              <ResponsiveSection
+                id="featured-courses"
+                icon={<Star className="h-5 w-5 text-accent" />}
+                title={<>Featured Courses<span className="text-muted-foreground font-normal text-base ml-1">• {featuredCourses.length} Recommended</span></>}
+                defaultOpen={true}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="grid-featured-courses">
+                  {featuredCourses.map(course => (
+                    <Link key={course.id} href={`/courses/${course.id}`} data-testid={`link-featured-course-${course.id}`}>
+                      <Card className="h-full hover-elevate cursor-pointer overflow-hidden border-accent/30 bg-gradient-to-br from-accent/5 to-transparent" data-testid={`featured-course-card-${course.id}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            <Star className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                            <h3 className="font-semibold text-sm line-clamp-2" data-testid={`text-featured-course-title-${course.id}`}>{course.title}</h3>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {course.level && <Badge variant="secondary" className="text-xs" data-testid={`badge-featured-course-level-${course.id}`}>{course.level}</Badge>}
+                            {course.discipline && <Badge variant="outline" className="text-xs" data-testid={`badge-featured-course-discipline-${course.id}`}>{course.discipline}</Badge>}
+                          </div>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            {course.duration && (
+                              <div className="flex items-center gap-1" data-testid={`text-featured-course-duration-${course.id}`}><Clock className="h-3 w-3" /><span>{course.duration}</span></div>
+                            )}
+                            {course.fees && (
+                              <div className="flex items-center gap-1" data-testid={`text-featured-course-fees-${course.id}`}><DollarSign className="h-3 w-3" /><span>${Number(course.fees).toLocaleString()}/year</span></div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
               </ResponsiveSection>
             )}
 

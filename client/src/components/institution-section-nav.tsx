@@ -5,7 +5,8 @@ import {
   GraduationCap, 
   MapPin,
   Image,
-  Tag
+  Tag,
+  Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const sections: SectionConfig[] = [
   { id: "features", label: "Features", icon: <Tag className="h-4 w-4" /> },
   { id: "scholarships", label: "Scholarships", icon: <Award className="h-4 w-4" /> },
   { id: "campuses", label: "Campuses", icon: <MapPin className="h-4 w-4" /> },
+  { id: "featured-courses", label: "Featured", icon: <Star className="h-4 w-4" /> },
   { id: "courses", label: "Courses", icon: <GraduationCap className="h-4 w-4" /> },
 ];
 
