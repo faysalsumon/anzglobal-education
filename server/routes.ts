@@ -17557,27 +17557,63 @@ Sitemap: ${baseUrl}/sitemap.xml
           return acc;
         }, {} as Record<string, number>);
         
+        // Get minimum pricing from coursePricingTiers for courses without base fees
+        const pricingTiersMin = await db
+          .select({
+            courseId: coursePricingTiers.courseId,
+            minAmount: dsql<string>`MIN(amount)`,
+            currency: dsql<string>`MIN(currency)`
+          })
+          .from(coursePricingTiers)
+          .where(inArray(coursePricingTiers.courseId, courseIds))
+          .groupBy(coursePricingTiers.courseId);
+        
+        const pricingTiersMap = pricingTiersMin.reduce((acc, item) => {
+          acc[item.courseId] = {
+            minAmount: item.minAmount ? Number(item.minAmount) : null,
+            currency: item.currency || 'AUD'
+          };
+          return acc;
+        }, {} as Record<string, { minAmount: number | null; currency: string }>);
+        
         // Combine courses with university data, only including courses from valid universities
         featuredCourses = rawCourses
           .filter(course => course.universityId && universityMap[course.universityId])
-          .map(course => ({
-            id: course.id,
-            title: course.title,
-            slug: course.slug,
-            description: course.description,
-            thumbnailUrl: course.thumbnailUrl,
-            subject: course.subject,
-            level: course.level,
-            duration: course.duration, // Text like "2 years" or "1 year full-time"
-            durationType: null, // Not used - duration is already complete text
-            tuitionFee: course.fees ? Number(course.fees) : null, // Map fees to tuitionFee for frontend
-            currency: course.currency || 'AUD',
-            universityId: course.universityId,
-            universityName: universityMap[course.universityId!]?.name || null,
-            universityLogo: universityMap[course.universityId!]?.logo || null,
-            hasScholarship: (scholarshipMap[course.id] || 0) > 0,
-            scholarshipCount: scholarshipMap[course.id] || 0,
-          }));
+          .map(course => {
+            const baseFee = course.fees ? Number(course.fees) : null;
+            const tierPricing = pricingTiersMap[course.id];
+            
+            // Use base fee if available, otherwise use minimum tier price
+            let displayFee = baseFee;
+            let displayCurrency = course.currency || 'AUD';
+            let hasDynamicPricing = false;
+            
+            if (!displayFee && tierPricing?.minAmount) {
+              displayFee = tierPricing.minAmount;
+              displayCurrency = tierPricing.currency || 'AUD';
+              hasDynamicPricing = true; // Only true when price actually comes from tiers
+            }
+            
+            return {
+              id: course.id,
+              title: course.title,
+              slug: course.slug,
+              description: course.description,
+              thumbnailUrl: course.thumbnailUrl,
+              subject: course.subject,
+              level: course.level,
+              duration: course.duration, // Text like "2 years" or "1 year full-time"
+              durationType: null, // Not used - duration is already complete text
+              tuitionFee: displayFee,
+              currency: displayCurrency,
+              hasDynamicPricing, // True when price comes from tiers (show "From $X")
+              universityId: course.universityId,
+              universityName: universityMap[course.universityId!]?.name || null,
+              universityLogo: universityMap[course.universityId!]?.logo || null,
+              hasScholarship: (scholarshipMap[course.id] || 0) > 0,
+              scholarshipCount: scholarshipMap[course.id] || 0,
+            };
+          });
       }
       
       res.json({

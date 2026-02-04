@@ -30,6 +30,7 @@ interface FeaturedCourse {
   durationType: string | null; // Legacy, usually null
   tuitionFee: number | null;
   currency: string | null;
+  hasDynamicPricing?: boolean; // True when price comes from pricing tiers (show "From $X")
   universityId: string;
   universityName: string;
   universityLogo: string | null;
@@ -488,7 +489,10 @@ export default function Landing() {
                               data-testid={`text-featured-course-fee-${course.id}`}
                             >
                               <DollarSign className="h-4 w-4" />
-                              <span>{course.currency || 'AUD'} {course.tuitionFee.toLocaleString()}</span>
+                              <span>
+                                {course.hasDynamicPricing ? 'From ' : ''}
+                                {course.currency || 'AUD'} {course.tuitionFee.toLocaleString()}
+                              </span>
                             </div>
                           )}
                         </div>
