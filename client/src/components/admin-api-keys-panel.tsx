@@ -379,7 +379,7 @@ export function AdminApiKeysPanel() {
         setIsCreateDialogOpen(open);
         if (!open) resetForm();
       }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {newKeyData ? 'API Key Created' : 'Create API Key'}
@@ -465,7 +465,7 @@ export function AdminApiKeysPanel() {
 
               <div className="space-y-2">
                 <Label>Permissions</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {PERMISSION_OPTIONS.map((perm) => (
                     <div key={perm.value} className="flex items-center space-x-2">
                       <Switch
@@ -489,7 +489,7 @@ export function AdminApiKeysPanel() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="rateLimitPerMinute">Rate Limit (per minute)</Label>
                   <Input
