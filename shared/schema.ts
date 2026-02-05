@@ -757,6 +757,21 @@ export const universities = pgTable("universities", {
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id), // User who last updated the institution
   assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // User currently assigned to manage/edit this institution
   
+  // Financial Information (Gold Standard fields for Partner API)
+  tuitionFeesMin: decimal("tuition_fees_min", { precision: 10, scale: 2 }),
+  tuitionFeesMax: decimal("tuition_fees_max", { precision: 10, scale: 2 }),
+  tuitionCurrency: varchar("tuition_currency", { length: 3 }),
+  
+  // Delivery & Intake (Gold Standard fields for Partner API)
+  deliveryModes: text("delivery_modes").array(),
+  intakePeriods: text("intake_periods").array(),
+  
+  // Additional Information (Gold Standard fields for Partner API)
+  accreditationStatus: text("accreditation_status"),
+  rankingBand: text("ranking_band"),
+  facilities: text("facilities").array(),
+  internationalStudentSupport: boolean("international_student_support"),
+  
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

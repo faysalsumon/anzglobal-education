@@ -19736,6 +19736,17 @@ Sitemap: ${baseUrl}/sitemap.xml
         scholarshipPercentageMin,
         scholarshipPercentageMax,
         numberOfCampuses,
+        // Gold standard fields for 95% completeness
+        tuitionFeesMin,
+        tuitionFeesMax,
+        tuitionCurrency,
+        intakePeriods,
+        deliveryModes,
+        accreditationStatus,
+        rankingBand,
+        facilities,
+        internationalStudentSupport,
+        tags,
       } = req.body;
       
       // Collect all validation errors
@@ -19764,6 +19775,40 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       if (!contactPhone || typeof contactPhone !== 'string' || contactPhone.trim().length < 8) {
         errors.push({ field: 'contactPhone', message: 'Contact phone is required (minimum 8 characters)' });
+      }
+      
+      // Gold standard required fields for 95% completeness
+      if (!smallDescription || typeof smallDescription !== 'string' || smallDescription.trim().length < 30) {
+        errors.push({ field: 'smallDescription', message: 'Short description is required (minimum 30 characters for card displays)' });
+      }
+      
+      const currentYear = new Date().getFullYear();
+      if (!establishedYear || isNaN(parseInt(establishedYear)) || parseInt(establishedYear) < 1800 || parseInt(establishedYear) > currentYear) {
+        errors.push({ field: 'establishedYear', message: `Established year is required (between 1800 and ${currentYear})` });
+      }
+      
+      if (!tuitionFeesMin || isNaN(parseFloat(tuitionFeesMin)) || parseFloat(tuitionFeesMin) < 0) {
+        errors.push({ field: 'tuitionFeesMin', message: 'Minimum tuition fees is required (must be a number >= 0)' });
+      }
+      
+      if (!tuitionFeesMax || isNaN(parseFloat(tuitionFeesMax)) || parseFloat(tuitionFeesMax) <= 0) {
+        errors.push({ field: 'tuitionFeesMax', message: 'Maximum tuition fees is required (must be a positive number)' });
+      }
+      
+      if (tuitionFeesMin && tuitionFeesMax && parseFloat(tuitionFeesMin) > parseFloat(tuitionFeesMax)) {
+        errors.push({ field: 'tuitionFeesMin', message: 'Minimum tuition fees cannot be greater than maximum' });
+      }
+      
+      if (!intakePeriods || !Array.isArray(intakePeriods) || intakePeriods.length === 0) {
+        errors.push({ field: 'intakePeriods', message: 'Intake periods is required (array of months, e.g., ["February", "July"])' });
+      }
+      
+      if (!deliveryModes || !Array.isArray(deliveryModes) || deliveryModes.length === 0) {
+        errors.push({ field: 'deliveryModes', message: 'Delivery modes is required (array, e.g., ["On Campus", "Online"])' });
+      }
+      
+      if (internationalStudentSupport === undefined || internationalStudentSupport === null) {
+        errors.push({ field: 'internationalStudentSupport', message: 'International student support is required (true/false)' });
       }
       
       // Optional field validations
@@ -19804,7 +19849,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
       
-      // Create institution as draft (pending approval)
+      // Create institution as draft (pending approval) with gold standard data
       const institution = await storage.createUniversity({
         name: name.trim(),
         description: description?.trim(),
@@ -19827,6 +19872,17 @@ Sitemap: ${baseUrl}/sitemap.xml
         scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
         scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
         numberOfCampuses: numberOfCampuses ? parseInt(numberOfCampuses) : null,
+        // Gold standard fields for 95% completeness (decimal fields need string format)
+        tuitionFeesMin: tuitionFeesMin ? String(parseFloat(tuitionFeesMin)) : null,
+        tuitionFeesMax: tuitionFeesMax ? String(parseFloat(tuitionFeesMax)) : null,
+        tuitionCurrency: tuitionCurrency || 'AUD',
+        intakePeriods: intakePeriods && Array.isArray(intakePeriods) ? intakePeriods : null,
+        deliveryModes: deliveryModes && Array.isArray(deliveryModes) ? deliveryModes : null,
+        accreditationStatus: accreditationStatus?.trim() || null,
+        rankingBand: rankingBand?.trim() || null,
+        facilities: facilities && Array.isArray(facilities) ? facilities : null,
+        internationalStudentSupport: internationalStudentSupport === true || internationalStudentSupport === 'true',
+        tags: tags && Array.isArray(tags) ? tags : null,
         approvalStatus: 'pending',
         publishStatus: 'draft',
       } as any);
@@ -19884,6 +19940,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         applicationDeadline,
         prerequisites,
         eligibilityRequirements,
+        academicRequirements,
         englishRequirements,
         sourceUrl,
         thumbnailUrl,
@@ -19896,8 +19953,15 @@ Sitemap: ${baseUrl}/sitemap.xml
         internshipDetails,
         studyAreas,
         careerOutcomes,
+        careerPath,
         scholarshipPercentageMin,
         scholarshipPercentageMax,
+        // Gold standard fields for 95% completeness
+        costOfLiving,
+        applicationFees,
+        curriculumUrl,
+        minimumAge,
+        pathways,
       } = req.body;
       
       // Collect all validation errors
@@ -19944,6 +20008,27 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       if (!englishRequirements || typeof englishRequirements !== 'string' || englishRequirements.trim().length < 10) {
         errors.push({ field: 'englishRequirements', message: 'English requirements is required (minimum 10 characters, e.g., "IELTS 6.5")' });
+      }
+      
+      // Gold standard required fields for 95% completeness
+      if (!academicRequirements && !eligibilityRequirements) {
+        errors.push({ field: 'academicRequirements', message: 'Academic requirements OR eligibility requirements is required (describe entry qualifications)' });
+      }
+      
+      if (!intakes || !Array.isArray(intakes) || intakes.length === 0) {
+        errors.push({ field: 'intakes', message: 'Intakes is required (array of months, e.g., ["February", "July"])' });
+      }
+      
+      if (!deliveryMode || typeof deliveryMode !== 'string') {
+        errors.push({ field: 'deliveryMode', message: 'Delivery mode is required (online, on-campus, hybrid, or blended)' });
+      }
+      
+      if (workRights === undefined || workRights === null) {
+        errors.push({ field: 'workRights', message: 'Work rights is required (true/false - can students work while studying?)' });
+      }
+      
+      if (!careerOutcomes || !Array.isArray(careerOutcomes) || careerOutcomes.length === 0) {
+        errors.push({ field: 'careerOutcomes', message: 'Career outcomes is required (array of job titles graduates can pursue)' });
       }
       
       // Optional field validations
@@ -20007,7 +20092,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         durationStr = `${durationWeeks} weeks`;
       }
       
-      // Create course as draft with comprehensive data
+      // Create course as draft with gold standard data (95% completeness)
       const course = await storage.createCourse({
         universityId,
         title: title.trim(),
@@ -20027,6 +20112,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         applicationDeadline: applicationDeadline?.trim(),
         prerequisites: prerequisites?.trim(),
         eligibilityRequirements: eligibilityRequirements?.trim(),
+        academicRequirements: academicRequirements?.trim(),
         englishRequirements: englishRequirements.trim(),
         sourceUrl: sourceUrl?.trim(),
         thumbnailUrl: thumbnailUrl?.trim(),
@@ -20039,8 +20125,15 @@ Sitemap: ${baseUrl}/sitemap.xml
         internshipDetails: internshipDetails?.trim(),
         studyAreas: studyAreas || [],
         careerOutcomes: careerOutcomes || [],
+        careerPath: careerPath?.trim(),
         scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
         scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
+        // Gold standard fields for 95% completeness
+        costOfLiving: costOfLiving ? parseFloat(costOfLiving) : null,
+        applicationFees: applicationFees ? parseFloat(applicationFees) : null,
+        curriculumUrl: curriculumUrl?.trim(),
+        minimumAge: minimumAge ? parseInt(minimumAge) : null,
+        pathways: pathways || [],
         approvalStatus: 'pending',
         publishStatus: 'draft',
       } as any);

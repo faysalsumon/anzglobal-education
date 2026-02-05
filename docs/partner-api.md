@@ -4,7 +4,7 @@
 
 The Partner API allows external AI bots and integration partners to programmatically upload institutions and courses to the CampQ platform. All submissions are created as **drafts** and require approval by a Platform Admin before being published.
 
-**Data Quality Standard:** The API enforces strict validation to ensure uploaded data matches manual entry quality (98%+ completeness).
+**Gold Standard Data Quality:** The API enforces strict validation to ensure uploaded data matches manual entry quality (95%+ completeness). This means humans only need to review and approve, not fill in missing fields.
 
 ## Base URL
 
@@ -76,44 +76,58 @@ GET /api/partner/institutions
 
 ---
 
-#### Create Institution (Draft)
+#### Create Institution (Gold Standard)
 
-Create a new institution as a draft pending approval.
+Create a new institution as a draft pending approval. All required fields must be provided for 95% completeness.
 
 ```
 POST /api/partner/institutions
 ```
 
-**Required Fields:**
+**Required Fields (Gold Standard):**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Institution name (minimum 2 characters, unique per country) |
 | `country` | string | Country where institution is located |
-| `description` | string | Institution description (minimum 50 characters) |
+| `description` | string | Full institution description (minimum 50 characters) |
+| `smallDescription` | string | Short description for cards/listings (minimum 30 characters) |
 | `website` | string | Valid institution website URL |
 | `contactEmail` | string | Valid contact email address |
 | `contactPhone` | string | Contact phone number (minimum 8 characters) |
+| `establishedYear` | number | Year established (between 1800 and current year) |
+| `tuitionFeesMin` | number | Minimum annual tuition fees (>= 0) |
+| `tuitionFeesMax` | number | Maximum annual tuition fees (> 0) |
+| `intakePeriods` | string[] | Available intake months (e.g., ["February", "July"]) |
+| `deliveryModes` | string[] | Teaching modes (e.g., ["On Campus", "Online", "Hybrid"]) |
+| `internationalStudentSupport` | boolean | Does institution support international students? |
 
-**Optional Fields:**
+**Optional Fields (Recommended for Higher Quality):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `smallDescription` | string | AI-powered short description (max 100 words) |
-| `fullDescription` | string | Detailed description |
+| `fullDescription` | string | Extended detailed description |
 | `logo` | string | Valid URL to institution logo image |
 | `institutionGallery` | string[] | Array of image URLs (up to 3 images) |
-| `establishedYear` | number | Year established |
-| `contactEmail` | string | Contact email address |
-| `contactPhone` | string | Contact phone number |
 | `numberOfCampuses` | number | Number of campus locations |
 | `providerType` | string | One of: `University`, `Institution`, `Tafe`, `School` |
+| `tuitionCurrency` | string | Currency code (default: "AUD") |
+| `accreditationStatus` | string | Accreditation information (e.g., "TEQSA Registered") |
+| `rankingBand` | string | Ranking tier (e.g., "Top 100 World Universities") |
+| `facilities` | string[] | Available facilities (e.g., ["Library", "Gym", "Lab"]) |
 | `scholarshipPercentageMin` | number | Minimum scholarship percentage offered |
 | `scholarshipPercentageMax` | number | Maximum scholarship percentage offered |
-| `topDisciplines` | string[] | Array of top discipline areas |
+| `topDisciplines` | string[] | Array of top discipline areas (use valid discipline values) |
 | `rtoNumber` | string | RTO number (Australia-specific) |
 | `cricosProviderCode` | string | CRICOS Provider Code (Australia-specific) |
 | `campusAddresses` | object[] | Array of campus address objects |
+| `tags` | string[] | Searchable tags for filtering |
+
+**Valid Provider Types:**
+- `University`
+- `Institution`
+- `Tafe`
+- `School`
 
 **Campus Address Object:**
 
@@ -128,22 +142,34 @@ POST /api/partner/institutions
 }
 ```
 
-**Request Example:**
+**Gold Standard Request Example:**
 
 ```json
 {
   "name": "Melbourne Business School",
   "country": "Australia",
-  "description": "A leading business school offering MBA and executive education programs with a focus on innovation, leadership, and global business practices. Accredited by AACSB and EQUIS.",
+  "description": "A leading business school offering MBA and executive education programs with a focus on innovation, leadership, and global business practices. Accredited by AACSB and EQUIS with strong industry partnerships.",
+  "smallDescription": "Leading business school offering MBA and executive programs with AACSB and EQUIS accreditation.",
   "website": "https://mbs.edu",
   "contactEmail": "admissions@mbs.edu",
   "contactPhone": "+61 3 9349 8400",
-  "logo": "https://mbs.edu/logo.png",
   "establishedYear": 1955,
+  "tuitionFeesMin": 45000,
+  "tuitionFeesMax": 120000,
+  "tuitionCurrency": "AUD",
+  "intakePeriods": ["February", "July", "November"],
+  "deliveryModes": ["On Campus", "Online", "Hybrid"],
+  "internationalStudentSupport": true,
+  "logo": "https://mbs.edu/logo.png",
   "providerType": "University",
   "numberOfCampuses": 2,
+  "accreditationStatus": "AACSB, EQUIS, AMBA Triple Crown Accredited",
+  "rankingBand": "Top 50 MBA Programs Globally",
+  "facilities": ["Library", "Computer Labs", "Career Center", "Student Lounge"],
   "cricosProviderCode": "00116K",
   "topDisciplines": ["Accounting, Business & Finance", "Humanities"],
+  "scholarshipPercentageMin": 10,
+  "scholarshipPercentageMax": 50,
   "campusAddresses": [
     {
       "name": "Carlton Campus",
@@ -162,12 +188,12 @@ POST /api/partner/institutions
 ```json
 {
   "success": true,
-  "message": "Institution created as draft. Pending admin approval.",
+  "message": "Institution created as draft. It will be reviewed by an admin before being published.",
   "data": {
     "id": "generated-uuid",
     "name": "Melbourne Business School",
-    "approvalStatus": "pending",
-    "publishStatus": "draft"
+    "country": "Australia",
+    "status": "pending_approval"
   }
 }
 ```
@@ -176,10 +202,12 @@ POST /api/partner/institutions
 
 ```json
 {
-  "success": false,
-  "error": "Validation failed",
+  "error": "Validation error",
+  "message": "One or more required fields are missing or invalid",
   "details": [
-    { "field": "name", "message": "Institution name is required" }
+    { "field": "smallDescription", "message": "Short description is required (minimum 30 characters for card displays)" },
+    { "field": "establishedYear", "message": "Established year is required (between 1800 and 2026)" },
+    { "field": "tuitionFeesMin", "message": "Minimum tuition fees is required (must be a number >= 0)" }
   ]
 }
 ```
@@ -188,8 +216,8 @@ POST /api/partner/institutions
 
 ```json
 {
-  "success": false,
-  "error": "Institution with this name already exists",
+  "error": "Duplicate institution",
+  "message": "An institution with this name already exists in this country",
   "existingId": "existing-uuid"
 }
 ```
@@ -198,15 +226,15 @@ POST /api/partner/institutions
 
 ### Courses
 
-#### Create Course (Draft)
+#### Create Course (Gold Standard)
 
-Create a new course as a draft pending approval.
+Create a new course as a draft pending approval. All required fields must be provided for 95% completeness.
 
 ```
 POST /api/partner/courses
 ```
 
-**Required Fields:**
+**Required Fields (Gold Standard):**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -218,6 +246,11 @@ POST /api/partner/courses
 | `fees` | number | Tuition fees (must be a positive number) |
 | `durationMonths` | number | Duration in months (or provide `duration` string or `durationWeeks`) |
 | `englishRequirements` | string | English language requirements (minimum 10 characters, e.g., "IELTS 6.5") |
+| `academicRequirements` OR `eligibilityRequirements` | string | Entry qualifications (at least one required) |
+| `intakes` | string[] | Available intake months (e.g., ["February", "July"]) |
+| `deliveryMode` | string | Teaching mode: `online`, `on-campus`, `hybrid`, or `blended` |
+| `workRights` | boolean | Can students work while studying? (true/false) |
+| `careerOutcomes` | string[] | Job titles graduates can pursue (at least one required) |
 
 **Valid Disciplines:**
 
@@ -246,46 +279,52 @@ POST /api/partner/courses
 - `Certificate IV`
 - `Diploma`
 - `Advanced Diploma`
+- `Associate Degree`
 - `Graduate Certificate`
 - `Graduate Diploma`
 - `Bachelor Degree`
-- `Professional Year`
+- `Bachelor Honours`
 - `Masters Degree`
 - `Doctoral Degree`
 - `Higher Doctoral Degree`
-- `ELICOS`
+- `ELICOS - General English`
+- `ELICOS - EAP`
+- `ELICOS - Exam Prep`
+- `Professional Year - Accounting`
+- `Professional Year - IT`
+- `Professional Year - Engineering`
+- `Foundation`
+- `Pathway Program`
+- `Short Course`
 
-**Optional Fields:**
+**Optional Fields (Recommended for Higher Quality):**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `description` | string | Course description |
-| `discipline` | string | Main discipline category |
-| `duration` | string | Duration (e.g., "2 years", "6 months") |
-| `durationMonths` | number | Duration in months for filtering |
-| `durationWeeks` | number | Duration in weeks for precise tracking |
-| `fees` | number | Tuition fees |
+| `subject` | string | Subject area (defaults to title if not provided) |
 | `currency` | string | Currency code (default: "AUD") |
-| `location` | string | Course location |
-| `country` | string | Country |
-| `startDate` | string | Start date |
+| `location` | string | Course location/city |
+| `country` | string | Country (defaults to institution's country) |
 | `applicationDeadline` | string | Application deadline |
-| `prerequisites` | string | Prerequisites |
+| `prerequisites` | string | Prerequisites for enrollment |
 | `courseCode` | string | Institution's course code |
 | `prPathway` | boolean | Permanent residency pathway (default: false) |
-| `eligibilityRequirements` | string | Eligibility requirements |
-| `englishRequirements` | string | English language requirements |
-| `sourceUrl` | string | URL to course page on institution website |
-| `deliveryMode` | string | `online`, `on-campus`, or `hybrid` |
-| `intakes` | string[] | Available intake months |
-| `studyAreas` | string[] | Curriculum topics |
-| `careerOutcomes` | string[] | Potential career paths |
+| `sourceUrl` | string | Valid URL to course page on institution website |
+| `thumbnailUrl` | string | Valid URL to course thumbnail image |
 | `campusLocations` | string[] | Available campus locations |
-| `workRights` | boolean | Provides work rights/visa eligibility |
 | `internshipAvailable` | boolean | Internship included in program |
 | `internshipDetails` | string | Details about internship opportunities |
+| `studyAreas` | string[] | Curriculum topics/modules |
+| `careerPath` | string | Detailed career progression description |
+| `scholarshipPercentageMin` | number | Minimum scholarship percentage |
+| `scholarshipPercentageMax` | number | Maximum scholarship percentage |
+| `costOfLiving` | number | Estimated annual cost of living |
+| `applicationFees` | number | Application processing fee |
+| `curriculumUrl` | string | Valid URL to curriculum/syllabus |
+| `minimumAge` | number | Minimum age requirement |
+| `pathways` | string[] | Further study pathways after completion |
 
-**Request Example:**
+**Gold Standard Request Example:**
 
 ```json
 {
@@ -298,19 +337,27 @@ POST /api/partner/courses
   "fees": 75000,
   "currency": "AUD",
   "durationMonths": 24,
-  "englishRequirements": "IELTS 6.5 overall with no band less than 6.0",
+  "englishRequirements": "IELTS 6.5 overall with no band less than 6.0, or PTE Academic 58",
+  "academicRequirements": "Bachelor's degree from a recognized institution with minimum 2 years work experience. GPA of 3.0/4.0 or equivalent preferred.",
+  "intakes": ["February", "July"],
+  "deliveryMode": "hybrid",
+  "workRights": true,
+  "careerOutcomes": ["Chief Executive Officer", "Chief Financial Officer", "Management Consultant", "Business Development Director"],
   "country": "Australia",
   "location": "Melbourne",
   "sourceUrl": "https://mbs.edu/mba",
   "thumbnailUrl": "https://mbs.edu/images/mba-thumbnail.jpg",
-  "deliveryMode": "hybrid",
   "prPathway": true,
-  "intakes": ["February", "July"],
-  "studyAreas": ["Strategic Management", "Finance", "Leadership"],
-  "careerOutcomes": ["CEO", "CFO", "Management Consultant"],
+  "studyAreas": ["Strategic Management", "Finance", "Leadership", "Marketing", "Operations"],
   "campusLocations": ["Melbourne CBD", "Carlton"],
   "internshipAvailable": true,
-  "internshipDetails": "6-month industry placement with partner companies"
+  "internshipDetails": "6-month industry placement with partner companies including Deloitte, PwC, and major banks",
+  "careerPath": "Graduates typically progress from Senior Manager to Director to C-Suite roles within 5-10 years",
+  "scholarshipPercentageMin": 10,
+  "scholarshipPercentageMax": 50,
+  "costOfLiving": 25000,
+  "applicationFees": 100,
+  "pathways": ["Doctor of Business Administration", "PhD in Management"]
 }
 ```
 
@@ -319,13 +366,15 @@ POST /api/partner/courses
 ```json
 {
   "success": true,
-  "message": "Course created as draft. Pending admin approval.",
+  "message": "Course created as draft. It will be reviewed by an admin before being published.",
   "data": {
     "id": "generated-course-uuid",
     "title": "Master of Business Administration",
     "universityId": "institution-uuid",
-    "approvalStatus": "pending",
-    "publishStatus": "draft"
+    "discipline": "Accounting, Business & Finance",
+    "level": "Masters Degree",
+    "fees": "75000.00",
+    "status": "pending_approval"
   }
 }
 ```
@@ -334,11 +383,12 @@ POST /api/partner/courses
 
 ```json
 {
-  "success": false,
-  "error": "Validation failed",
+  "error": "Validation error",
+  "message": "One or more required fields are missing or invalid",
   "details": [
-    { "field": "universityId", "message": "Institution not found" },
-    { "field": "level", "message": "Invalid course level" }
+    { "field": "academicRequirements", "message": "Academic requirements OR eligibility requirements is required (describe entry qualifications)" },
+    { "field": "intakes", "message": "Intakes is required (array of months, e.g., [\"February\", \"July\"])" },
+    { "field": "workRights", "message": "Work rights is required (true/false - can students work while studying?)" }
   ]
 }
 ```
@@ -351,13 +401,41 @@ POST /api/partner/courses
 |-------------|-------------|
 | 200 | Success |
 | 201 | Created |
-| 400 | Bad Request - Validation error |
+| 400 | Bad Request - Validation error (see details array for specific issues) |
 | 401 | Unauthorized - Invalid or missing API key |
 | 403 | Forbidden - API key lacks required permissions |
-| 404 | Not Found - Resource doesn't exist |
+| 404 | Not Found - Resource doesn't exist (e.g., universityId not found) |
 | 409 | Conflict - Duplicate resource |
 | 429 | Too Many Requests - Rate limit exceeded |
 | 500 | Internal Server Error |
+
+---
+
+## Gold Standard Checklist
+
+To achieve 95% data completeness and minimize human review effort:
+
+### Institutions
+- [ ] Name, country, website, contact email, contact phone
+- [ ] Description (50+ chars) and short description (30+ chars)
+- [ ] Established year (valid range)
+- [ ] Tuition fees range (min and max)
+- [ ] Intake periods (array of months)
+- [ ] Delivery modes (array)
+- [ ] International student support (boolean)
+- [ ] Optional: Logo, provider type, CRICOS/RTO codes, facilities, scholarships
+
+### Courses
+- [ ] Title, description (50+ chars), university ID
+- [ ] Discipline (from valid list) and course level (from valid list)
+- [ ] Fees and duration (months, weeks, or string)
+- [ ] English requirements (10+ chars)
+- [ ] Academic OR eligibility requirements
+- [ ] Intakes (array of months)
+- [ ] Delivery mode
+- [ ] Work rights (boolean)
+- [ ] Career outcomes (array)
+- [ ] Optional: Source URL, thumbnail, internship details, scholarships, pathways
 
 ---
 
@@ -375,12 +453,15 @@ GET /api/partner/institutions?search=Melbourne%20Business%20School
 
 When creating courses, ensure the `universityId` corresponds to an existing institution. Use the list institutions endpoint to get valid IDs.
 
-### 3. Provide Complete Data
+### 3. Provide Complete Gold Standard Data
 
-The more complete your submissions, the faster they will be approved:
-- Include descriptions and contact information
-- Provide accurate fee information
-- Include intake dates and career outcomes for courses
+**Key principle:** The goal is for humans to only review and approve, not fill in missing data.
+
+- Provide ALL required fields - the API will reject incomplete submissions
+- Use exact enum values for discipline and course level
+- Include realistic, detailed descriptions
+- Provide accurate fee and duration information
+- Include career outcomes and intake dates
 
 ### 4. Handle Rate Limits Gracefully
 
@@ -399,39 +480,58 @@ Store the returned `id` values to track your submissions through the approval pr
 3. **Admin approves/rejects** → Status updated to `approved` or `rejected`
 4. **Admin publishes (if approved)** → `publishStatus: published`, item visible publicly
 
+With gold standard data, approval is typically just a quick verification - no data entry required.
+
 ---
 
-## Example: Complete Institution + Course Upload
+## Example: Complete Gold Standard Upload
 
 ```bash
-# Step 1: Create institution
+# Step 1: Create institution with gold standard data
 curl -X POST https://your-domain.com/api/partner/institutions \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{
     "name": "Global Tech University",
     "country": "Australia",
+    "description": "Global Tech University is a leading institution for technology and innovation education, offering cutting-edge programs in computer science, engineering, and digital transformation.",
+    "smallDescription": "Leading tech university with cutting-edge programs in CS, engineering, and digital transformation.",
     "website": "https://globaltech.edu.au",
-    "providerType": "University"
+    "contactEmail": "info@globaltech.edu.au",
+    "contactPhone": "+61 2 9123 4567",
+    "establishedYear": 2010,
+    "tuitionFeesMin": 25000,
+    "tuitionFeesMax": 55000,
+    "intakePeriods": ["February", "July"],
+    "deliveryModes": ["On Campus", "Online"],
+    "internationalStudentSupport": true,
+    "providerType": "University",
+    "cricosProviderCode": "03456K"
   }'
 
-# Response: {"success": true, "data": {"id": "inst-123"}}
+# Response: {"success": true, "data": {"id": "inst-123", ...}}
 
-# Step 2: Create course using institution ID
+# Step 2: Create course with gold standard data using institution ID
 curl -X POST https://your-domain.com/api/partner/courses \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{
     "universityId": "inst-123",
     "title": "Bachelor of Computer Science",
-    "subject": "Computer Science",
-    "level": "Bachelor Degree",
+    "description": "Comprehensive computer science program covering software development, algorithms, AI, and cybersecurity. Graduates are prepared for careers in technology companies worldwide.",
     "discipline": "Computer Science & IT",
+    "courseLevel": "Bachelor Degree",
     "fees": 42000,
-    "duration": "3 years"
+    "durationMonths": 36,
+    "englishRequirements": "IELTS 6.0 overall with no band less than 5.5",
+    "academicRequirements": "Completion of Year 12 or equivalent with mathematics background. ATAR 85 or equivalent preferred.",
+    "intakes": ["February", "July"],
+    "deliveryMode": "on-campus",
+    "workRights": true,
+    "careerOutcomes": ["Software Developer", "Data Analyst", "Systems Architect", "DevOps Engineer"]
   }'
 
-# Response: {"success": true, "data": {"id": "course-456"}}
+# Response: {"success": true, "data": {"id": "course-456", ...}}
 ```
 
 ---
