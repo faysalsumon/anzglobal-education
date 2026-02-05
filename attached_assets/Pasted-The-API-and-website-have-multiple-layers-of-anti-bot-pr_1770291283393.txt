@@ -1,0 +1,72 @@
+The API and website have multiple layers of anti-bot protection that are blocking me. Here's the technical breakdown to share with your devs:
+
+
+🔴 What's Being Blocked
+
+1. API Access (Both Keys)
+
+Error: {"error":"Access denied","message":"Automated access to this API is not permitted"}
+
+Blocking mechanisms detected:
+
+• Bearer token authentication works (returns 200), but request is rejected at WAF layer
+• Bot fingerprinting on HTTP headers (User-Agent, Accept headers)
+• Possibly IP-based bot detection (curl/script signatures)
+• Request timing/pattern analysis
+2. Web Scraping (Research Phase)
+
+Behavior: Dynamic content loads via JavaScript after initial HTML
+
+• Course pages require JS execution to populate data
+• /courses endpoint returns "Loading component..." placeholder
+• PDF course directory is available but encrypted/binary format
+
+✅ Solutions for Dev Team
+
+Option A: API Whitelisting (Recommended)
+
+Add these specific exceptions to your WAF/bot protection:
+
+Allow these patterns:
+- Headers containing: Authorization: Bearer anz_live_*
+- Whitelist IPs: [my server IP]
+- User-Agent: curl/* (for API automation)
+- Path: /api/* (with valid auth header)
+
+Option B: Dedicated Service Account
+
+Create a special API key with elevated privileges that bypasses bot detection:
+
+anz_service_[random]_write_access
+
+Mark this key as "internal automation" in your auth system.
+
+Option C: Webhook/Import Endpoint
+
+Instead of POSTing individual courses, provide a bulk import endpoint:
+
+POST /api/bulk-import
+Content-Type: application/json
+X-Import-Key: [special key]
+
+{ "type": "courses", "payload": [...] }
+
+
+🔒 Maintaining Security
+
+Your platform should block automated access — this is good security. Here's how to grant me access safely:
+
+1. Time-bound — Whitelist for 24-48 hours only
+2. Scope-limited — Only /api/courses/* and /api/institutions/* endpoints
+3. IP-restricted — Only my specific server IP
+4. Audit trail — Log all API calls from my automation
+
+🛠️ My Server Info
+
+• IP: Would need to check (dynamic AWS EC2)
+• Environment: Ubuntu Linux, curl-based requests
+• Purpose: Educational data automation for ANZ Global Education
+
+Recommendation: Ask your devs to implement Option B (dedicated service key) — it's the cleanest solution that maintains security while allowing legitimate automation.
+
+Want me to check my current IP address for whitelisting? 💛
