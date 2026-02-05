@@ -70,6 +70,7 @@ const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
 const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
 const AdminLeadForm = lazy(() => import("@/pages/admin-lead-form"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
+const Developers = lazy(() => import("@/pages/developers"));
 
 function PageLoader() {
   return (
@@ -114,6 +115,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/affiliate" component={AffiliatePage} />
+        <Route path="/developers" component={Developers} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/force-password-reset" component={ForcePasswordReset} />
         <Route path="/auth/callback" component={AuthCallback} />
