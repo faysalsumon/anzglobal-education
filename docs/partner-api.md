@@ -204,8 +204,8 @@ POST /api/partner/courses
 |-------|------|-------------|
 | `universityId` | string | UUID of the parent institution (must exist) |
 | `title` | string | Course title |
-| `subject` | string | Course subject area |
-| `level` | string | Course level (see valid values below) |
+| `subject` | string | Course subject area (defaults to title if not provided) |
+| `courseLevel` | string | Course level (see valid values below) |
 
 **Valid Course Levels:**
 
@@ -278,7 +278,7 @@ POST /api/partner/courses
   "universityId": "institution-uuid",
   "title": "Master of Business Administration",
   "subject": "Business Administration",
-  "level": "Masters Degree",
+  "courseLevel": "Masters Degree",
   "discipline": "Business & Management",
   "description": "Our MBA program prepares leaders for the global business environment.",
   "duration": "2 years",

@@ -19759,6 +19759,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       const {
         universityId,
         title,
+        subject,
         description,
         discipline,
         subDiscipline,
@@ -19773,6 +19774,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         startDates,
         courseUrl,
         cricosCourseCode,
+        country,
       } = req.body;
       
       // Validate required fields
@@ -19821,10 +19823,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       const course = await storage.createCourse({
         universityId,
         title: title.trim(),
+        subject: subject?.trim() || title.trim(), // Use title as fallback for subject
         description: description?.trim(),
         discipline: discipline?.trim(),
         subDiscipline: subDiscipline?.trim(),
-        courseLevel: courseLevel || 'Bachelor',
+        country: country?.trim(),
+        level: courseLevel || 'Bachelor Degree',
         duration: durationMonths ? `${durationMonths} months` : null,
         durationMonths: durationMonths ? parseInt(durationMonths) : null,
         tuitionFee: tuitionFee ? parseFloat(tuitionFee).toString() : null,
