@@ -131,6 +131,13 @@ function isExcludedPath(path: string): boolean {
 }
 
 export function botProtectionMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Allow Partner API requests with X-API-Key header (bypass bot protection for authenticated partners)
+  // Scoped strictly to /api/partner/ routes - the Partner API auth middleware validates the key
+  const apiKey = req.headers['x-api-key'];
+  if (req.path.startsWith('/api/partner/') && apiKey && typeof apiKey === 'string') {
+    return next();
+  }
+  
   if (isExcludedPath(req.path)) {
     return next();
   }
