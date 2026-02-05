@@ -1,8 +1,10 @@
-# ANZ Global Education - Partner API Documentation
+# CampQ - Partner API Documentation
 
 ## Overview
 
-The Partner API allows external AI bots and integration partners to programmatically upload institutions and courses to the ANZ Global Education platform. All submissions are created as **drafts** and require approval by a Platform Admin before being published.
+The Partner API allows external AI bots and integration partners to programmatically upload institutions and courses to the CampQ platform. All submissions are created as **drafts** and require approval by a Platform Admin before being published.
+
+**Data Quality Standard:** The API enforces strict validation to ensure uploaded data matches manual entry quality (98%+ completeness).
 
 ## Base URL
 
@@ -86,18 +88,21 @@ POST /api/partner/institutions
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | string | Institution name (unique) |
+| `name` | string | Institution name (minimum 2 characters, unique per country) |
 | `country` | string | Country where institution is located |
+| `description` | string | Institution description (minimum 50 characters) |
+| `website` | string | Valid institution website URL |
+| `contactEmail` | string | Valid contact email address |
+| `contactPhone` | string | Contact phone number (minimum 8 characters) |
 
 **Optional Fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `description` | string | Brief description |
 | `smallDescription` | string | AI-powered short description (max 100 words) |
 | `fullDescription` | string | Detailed description |
-| `logo` | string | URL to institution logo |
-| `website` | string | Institution website URL |
+| `logo` | string | Valid URL to institution logo image |
+| `institutionGallery` | string[] | Array of image URLs (up to 3 images) |
 | `establishedYear` | number | Year established |
 | `contactEmail` | string | Contact email address |
 | `contactPhone` | string | Contact phone number |
@@ -129,13 +134,16 @@ POST /api/partner/institutions
 {
   "name": "Melbourne Business School",
   "country": "Australia",
-  "description": "A leading business school offering MBA and executive education programs.",
+  "description": "A leading business school offering MBA and executive education programs with a focus on innovation, leadership, and global business practices. Accredited by AACSB and EQUIS.",
   "website": "https://mbs.edu",
+  "contactEmail": "admissions@mbs.edu",
+  "contactPhone": "+61 3 9349 8400",
+  "logo": "https://mbs.edu/logo.png",
   "establishedYear": 1955,
   "providerType": "University",
   "numberOfCampuses": 2,
   "cricosProviderCode": "00116K",
-  "topDisciplines": ["Business", "Management", "Finance"],
+  "topDisciplines": ["Accounting, Business & Finance", "Humanities"],
   "campusAddresses": [
     {
       "name": "Carlton Campus",
@@ -203,13 +211,36 @@ POST /api/partner/courses
 | Field | Type | Description |
 |-------|------|-------------|
 | `universityId` | string | UUID of the parent institution (must exist) |
-| `title` | string | Course title |
-| `subject` | string | Course subject area (defaults to title if not provided) |
+| `title` | string | Course title (minimum 5 characters) |
+| `description` | string | Course description (minimum 50 characters) |
+| `discipline` | string | Main discipline category (see valid values below) |
 | `courseLevel` | string | Course level (see valid values below) |
+| `fees` | number | Tuition fees (must be a positive number) |
+| `durationMonths` | number | Duration in months (or provide `duration` string or `durationWeeks`) |
+| `englishRequirements` | string | English language requirements (minimum 10 characters, e.g., "IELTS 6.5") |
+
+**Valid Disciplines:**
+
+- `Accounting, Business & Finance`
+- `Agriculture & Forestry`
+- `Applied Sciences & Professions`
+- `Arts, Design & Architecture`
+- `Computer Science & IT`
+- `Education & Training`
+- `Engineering & Technology`
+- `Environmental Studies & Earth Sciences`
+- `Hospitality, Leisure & Sports`
+- `Humanities`
+- `Journalism & Media`
+- `Law`
+- `Medicine & Health`
+- `Short Courses`
+- `Trade`
 
 **Valid Course Levels:**
 
 - `VCE (11-12)`
+- `Certificate I`
 - `Certificate II`
 - `Certificate III`
 - `Certificate IV`
@@ -254,23 +285,6 @@ POST /api/partner/courses
 | `internshipAvailable` | boolean | Internship included in program |
 | `internshipDetails` | string | Details about internship opportunities |
 
-**Valid Disciplines:**
-
-- `Accounting`
-- `Arts & Design`
-- `Business & Management`
-- `Computer Science & IT`
-- `Education & Teaching`
-- `Engineering`
-- `Healthcare & Medicine`
-- `Hospitality & Tourism`
-- `Law & Legal Studies`
-- `Marketing & Communications`
-- `Science & Mathematics`
-- `Social Sciences`
-- `Trades & Vocational`
-- `Other`
-
 **Request Example:**
 
 ```json
@@ -278,21 +292,25 @@ POST /api/partner/courses
   "universityId": "institution-uuid",
   "title": "Master of Business Administration",
   "subject": "Business Administration",
+  "description": "Our globally recognized MBA program prepares leaders for the modern business environment. With a focus on strategic thinking, innovation, and ethical leadership, graduates are equipped to drive organizational success in any industry.",
+  "discipline": "Accounting, Business & Finance",
   "courseLevel": "Masters Degree",
-  "discipline": "Business & Management",
-  "description": "Our MBA program prepares leaders for the global business environment.",
-  "duration": "2 years",
-  "durationMonths": 24,
   "fees": 75000,
   "currency": "AUD",
+  "durationMonths": 24,
+  "englishRequirements": "IELTS 6.5 overall with no band less than 6.0",
   "country": "Australia",
   "location": "Melbourne",
+  "sourceUrl": "https://mbs.edu/mba",
+  "thumbnailUrl": "https://mbs.edu/images/mba-thumbnail.jpg",
   "deliveryMode": "hybrid",
   "prPathway": true,
   "intakes": ["February", "July"],
   "studyAreas": ["Strategic Management", "Finance", "Leadership"],
   "careerOutcomes": ["CEO", "CFO", "Management Consultant"],
-  "sourceUrl": "https://mbs.edu/mba"
+  "campusLocations": ["Melbourne CBD", "Carlton"],
+  "internshipAvailable": true,
+  "internshipDetails": "6-month industry placement with partner companies"
 }
 ```
 

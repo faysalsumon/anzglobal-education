@@ -19642,6 +19642,66 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   };
   
+  // Valid provider types for Partner API
+  const VALID_PROVIDER_TYPES = ['University', 'Institution', 'Tafe', 'School'];
+  
+  // Valid disciplines for Partner API
+  const VALID_DISCIPLINES = [
+    'Accounting, Business & Finance',
+    'Agriculture & Forestry',
+    'Applied Sciences & Professions',
+    'Arts, Design & Architecture',
+    'Computer Science & IT',
+    'Education & Training',
+    'Engineering & Technology',
+    'Environmental Studies & Earth Sciences',
+    'Hospitality, Leisure & Sports',
+    'Humanities',
+    'Journalism & Media',
+    'Law',
+    'Medicine & Health',
+    'Short Courses',
+    'Trade',
+  ];
+  
+  // Valid course levels for Partner API
+  const VALID_COURSE_LEVELS = [
+    'VCE (11-12)',
+    'Certificate I',
+    'Certificate II',
+    'Certificate III',
+    'Certificate IV',
+    'Diploma',
+    'Advanced Diploma',
+    'Associate Degree',
+    'Graduate Certificate',
+    'Graduate Diploma',
+    'Bachelor Degree',
+    'Bachelor Honours',
+    'Masters Degree',
+    'Doctoral Degree',
+    'Higher Doctoral Degree',
+    'ELICOS - General English',
+    'ELICOS - EAP',
+    'ELICOS - Exam Prep',
+    'Professional Year - Accounting',
+    'Professional Year - IT',
+    'Professional Year - Engineering',
+    'Foundation',
+    'Pathway Program',
+    'Short Course',
+  ];
+  
+  // URL validation helper
+  const isValidUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // POST /api/partner/institutions - Create institution as draft
   app.post("/api/partner/institutions", authenticatePartnerApi, async (req: any, res) => {
     try {
@@ -19657,33 +19717,74 @@ Sitemap: ${baseUrl}/sitemap.xml
       const { 
         name, 
         description, 
+        smallDescription,
+        fullDescription,
         website, 
         country, 
         city, 
         address,
-        email,
-        phone,
-        type,
+        contactEmail,
+        contactPhone,
+        providerType,
         establishedYear,
-        cricosCodes,
-        logoUrl,
-        campuses,
+        cricosProviderCode,
+        rtoNumber,
+        logo,
+        institutionGallery,
+        campusAddresses,
+        topDisciplines,
+        scholarshipPercentageMin,
+        scholarshipPercentageMax,
+        numberOfCampuses,
       } = req.body;
       
-      // Validate required fields
+      // Collect all validation errors
+      const errors: Array<{field: string, message: string}> = [];
+      
+      // Required field validations
       if (!name || typeof name !== 'string' || name.trim().length < 2) {
-        await logPartnerUsage(req, 400);
-        return res.status(400).json({
-          error: 'Validation error',
-          message: 'Institution name is required (minimum 2 characters)',
-        });
+        errors.push({ field: 'name', message: 'Institution name is required (minimum 2 characters)' });
       }
       
       if (!country || typeof country !== 'string') {
+        errors.push({ field: 'country', message: 'Country is required' });
+      }
+      
+      if (!description || typeof description !== 'string' || description.trim().length < 50) {
+        errors.push({ field: 'description', message: 'Description is required (minimum 50 characters)' });
+      }
+      
+      if (!website || typeof website !== 'string' || !isValidUrl(website)) {
+        errors.push({ field: 'website', message: 'Valid website URL is required' });
+      }
+      
+      if (!contactEmail || typeof contactEmail !== 'string' || !contactEmail.includes('@')) {
+        errors.push({ field: 'contactEmail', message: 'Valid contact email is required' });
+      }
+      
+      if (!contactPhone || typeof contactPhone !== 'string' || contactPhone.trim().length < 8) {
+        errors.push({ field: 'contactPhone', message: 'Contact phone is required (minimum 8 characters)' });
+      }
+      
+      // Optional field validations
+      if (providerType && !VALID_PROVIDER_TYPES.includes(providerType)) {
+        errors.push({ 
+          field: 'providerType', 
+          message: `Invalid providerType. Must be one of: ${VALID_PROVIDER_TYPES.join(', ')}` 
+        });
+      }
+      
+      if (logo && typeof logo === 'string' && !isValidUrl(logo)) {
+        errors.push({ field: 'logo', message: 'Logo must be a valid URL' });
+      }
+      
+      // Return all validation errors at once
+      if (errors.length > 0) {
         await logPartnerUsage(req, 400);
         return res.status(400).json({
           error: 'Validation error',
-          message: 'Country is required',
+          message: 'One or more required fields are missing or invalid',
+          details: errors,
         });
       }
       
@@ -19707,19 +19808,27 @@ Sitemap: ${baseUrl}/sitemap.xml
       const institution = await storage.createUniversity({
         name: name.trim(),
         description: description?.trim(),
+        smallDescription: smallDescription?.trim(),
+        fullDescription: fullDescription?.trim(),
         website: website?.trim(),
         country: country.trim(),
         city: city?.trim(),
         address: address?.trim(),
-        email: email?.trim(),
-        phone: phone?.trim(),
-        type: type || 'University',
+        contactEmail: contactEmail?.trim(),
+        contactPhone: contactPhone?.trim(),
+        providerType: providerType || 'Institution',
         establishedYear: establishedYear ? parseInt(establishedYear) : null,
-        cricosCodes: cricosCodes || [],
-        logoUrl: logoUrl?.trim(),
-        campuses: campuses || [],
-        isApproved: false, // Draft status - requires admin approval
-        partnerApiKeyId: req.apiKey.id, // Track which API key created this
+        cricosProviderCode: cricosProviderCode?.trim(),
+        rtoNumber: rtoNumber?.trim(),
+        logo: logo?.trim(),
+        institutionGallery: institutionGallery || [],
+        campusAddresses: campusAddresses || [],
+        topDisciplines: topDisciplines || [],
+        scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
+        scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
+        numberOfCampuses: numberOfCampuses ? parseInt(numberOfCampuses) : null,
+        approvalStatus: 'pending',
+        publishStatus: 'draft',
       } as any);
       
       await logPartnerUsage(req, 201, 'institution', institution.id);
@@ -19764,33 +19873,99 @@ Sitemap: ${baseUrl}/sitemap.xml
         discipline,
         subDiscipline,
         courseLevel,
+        duration,
         durationMonths,
-        tuitionFee,
+        durationWeeks,
+        fees,
         currency,
-        intakeMonths,
-        applicationDeadline,
-        entryRequirements,
-        englishRequirements,
-        startDates,
-        courseUrl,
-        cricosCourseCode,
         country,
+        location,
+        intakes,
+        applicationDeadline,
+        prerequisites,
+        eligibilityRequirements,
+        englishRequirements,
+        sourceUrl,
+        thumbnailUrl,
+        courseCode,
+        prPathway,
+        deliveryMode,
+        campusLocations,
+        workRights,
+        internshipAvailable,
+        internshipDetails,
+        studyAreas,
+        careerOutcomes,
+        scholarshipPercentageMin,
+        scholarshipPercentageMax,
       } = req.body;
       
-      // Validate required fields
+      // Collect all validation errors
+      const errors: Array<{field: string, message: string}> = [];
+      
+      // Required field validations
       if (!universityId || typeof universityId !== 'string') {
-        await logPartnerUsage(req, 400);
-        return res.status(400).json({
-          error: 'Validation error',
-          message: 'universityId is required',
-        });
+        errors.push({ field: 'universityId', message: 'universityId is required' });
       }
       
       if (!title || typeof title !== 'string' || title.trim().length < 5) {
+        errors.push({ field: 'title', message: 'Course title is required (minimum 5 characters)' });
+      }
+      
+      if (!description || typeof description !== 'string' || description.trim().length < 50) {
+        errors.push({ field: 'description', message: 'Description is required (minimum 50 characters)' });
+      }
+      
+      if (!discipline || typeof discipline !== 'string') {
+        errors.push({ field: 'discipline', message: 'Discipline is required' });
+      } else if (!VALID_DISCIPLINES.includes(discipline)) {
+        errors.push({ 
+          field: 'discipline', 
+          message: `Invalid discipline. Must be one of: ${VALID_DISCIPLINES.join(', ')}` 
+        });
+      }
+      
+      if (!courseLevel || typeof courseLevel !== 'string') {
+        errors.push({ field: 'courseLevel', message: 'Course level is required' });
+      } else if (!VALID_COURSE_LEVELS.includes(courseLevel)) {
+        errors.push({ 
+          field: 'courseLevel', 
+          message: `Invalid courseLevel. Must be one of: ${VALID_COURSE_LEVELS.join(', ')}` 
+        });
+      }
+      
+      if (!fees || isNaN(parseFloat(fees)) || parseFloat(fees) <= 0) {
+        errors.push({ field: 'fees', message: 'Fees is required (must be a positive number)' });
+      }
+      
+      if (!durationMonths && !duration && !durationWeeks) {
+        errors.push({ field: 'duration', message: 'Duration is required (provide durationMonths, durationWeeks, or duration string)' });
+      }
+      
+      if (!englishRequirements || typeof englishRequirements !== 'string' || englishRequirements.trim().length < 10) {
+        errors.push({ field: 'englishRequirements', message: 'English requirements is required (minimum 10 characters, e.g., "IELTS 6.5")' });
+      }
+      
+      // Optional field validations
+      if (sourceUrl && typeof sourceUrl === 'string' && !isValidUrl(sourceUrl)) {
+        errors.push({ field: 'sourceUrl', message: 'sourceUrl must be a valid URL' });
+      }
+      
+      if (thumbnailUrl && typeof thumbnailUrl === 'string' && !isValidUrl(thumbnailUrl)) {
+        errors.push({ field: 'thumbnailUrl', message: 'thumbnailUrl must be a valid URL' });
+      }
+      
+      if (deliveryMode && !['online', 'on-campus', 'hybrid', 'blended'].includes(deliveryMode)) {
+        errors.push({ field: 'deliveryMode', message: 'deliveryMode must be one of: online, on-campus, hybrid, blended' });
+      }
+      
+      // Return all validation errors at once
+      if (errors.length > 0) {
         await logPartnerUsage(req, 400);
         return res.status(400).json({
           error: 'Validation error',
-          message: 'Course title is required (minimum 5 characters)',
+          message: 'One or more required fields are missing or invalid',
+          details: errors,
         });
       }
       
@@ -19819,29 +19994,55 @@ Sitemap: ${baseUrl}/sitemap.xml
         });
       }
       
-      // Create course as draft
+      // Calculate duration string if not provided
+      let durationStr = duration?.trim();
+      if (!durationStr && durationMonths) {
+        const months = parseInt(durationMonths);
+        if (months >= 12 && months % 12 === 0) {
+          durationStr = `${months / 12} year${months / 12 > 1 ? 's' : ''}`;
+        } else {
+          durationStr = `${months} months`;
+        }
+      } else if (!durationStr && durationWeeks) {
+        durationStr = `${durationWeeks} weeks`;
+      }
+      
+      // Create course as draft with comprehensive data
       const course = await storage.createCourse({
         universityId,
         title: title.trim(),
-        subject: subject?.trim() || title.trim(), // Use title as fallback for subject
-        description: description?.trim(),
-        discipline: discipline?.trim(),
+        subject: subject?.trim() || title.trim(),
+        description: description.trim(),
+        discipline: discipline.trim(),
         subDiscipline: subDiscipline?.trim(),
-        country: country?.trim(),
-        level: courseLevel || 'Bachelor Degree',
-        duration: durationMonths ? `${durationMonths} months` : null,
+        country: country?.trim() || institution.country,
+        location: location?.trim(),
+        level: courseLevel,
+        duration: durationStr,
         durationMonths: durationMonths ? parseInt(durationMonths) : null,
-        tuitionFee: tuitionFee ? parseFloat(tuitionFee).toString() : null,
+        durationWeeks: durationWeeks ? parseInt(durationWeeks) : null,
+        fees: parseFloat(fees).toFixed(2),
         currency: currency || 'AUD',
-        intakeMonths: intakeMonths || [],
+        intakes: intakes || [],
         applicationDeadline: applicationDeadline?.trim(),
-        entryRequirements: entryRequirements?.trim(),
-        englishRequirements: englishRequirements?.trim(),
-        startDates: startDates || [],
-        courseUrl: courseUrl?.trim(),
-        cricosCourseCode: cricosCourseCode?.trim(),
-        isApproved: false, // Draft status - requires admin approval
-        partnerApiKeyId: req.apiKey.id, // Track which API key created this
+        prerequisites: prerequisites?.trim(),
+        eligibilityRequirements: eligibilityRequirements?.trim(),
+        englishRequirements: englishRequirements.trim(),
+        sourceUrl: sourceUrl?.trim(),
+        thumbnailUrl: thumbnailUrl?.trim(),
+        courseCode: courseCode?.trim(),
+        prPathway: prPathway === true || prPathway === 'true',
+        deliveryMode: deliveryMode?.trim(),
+        campusLocations: campusLocations || [],
+        workRights: workRights === true || workRights === 'true',
+        internshipAvailable: internshipAvailable === true || internshipAvailable === 'true',
+        internshipDetails: internshipDetails?.trim(),
+        studyAreas: studyAreas || [],
+        careerOutcomes: careerOutcomes || [],
+        scholarshipPercentageMin: scholarshipPercentageMin ? parseInt(scholarshipPercentageMin) : null,
+        scholarshipPercentageMax: scholarshipPercentageMax ? parseInt(scholarshipPercentageMax) : null,
+        approvalStatus: 'pending',
+        publishStatus: 'draft',
       } as any);
       
       await logPartnerUsage(req, 201, 'course', course.id);
@@ -19853,6 +20054,9 @@ Sitemap: ${baseUrl}/sitemap.xml
           id: course.id,
           title: course.title,
           universityId: course.universityId,
+          discipline: course.discipline,
+          level: course.level,
+          fees: course.fees,
           status: 'pending_approval',
         },
       });
