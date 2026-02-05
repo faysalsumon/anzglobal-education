@@ -61,7 +61,6 @@
     "campus": "Campus",
     "requirements": "Requirements",
     "englishRequirements": "English Requirements",
-    "academicRequirements": "Academic Requirements",
     "ielts": "IELTS",
     "pte": "PTE",
     "toefl": "TOEFL",
@@ -109,8 +108,7 @@
     "financialRequirements": "Financial Requirements",
     "healthRequirements": "Health Requirements",
     "englishRequirements": "English Requirements",
-    "requiredDocuments": "Required Documents",
-    "workRights": "Work Rights"
+    "requiredDocuments": "Required Documents"
   },
   "profile": {
     "title": "Profile",

@@ -84,7 +84,6 @@ DISCIPLINE:
 REQUIREMENTS:
 - prerequisites: Prior education/courses needed (e.g., "High school completion")
 - eligibilityRequirements: Entry requirements summary
-- academicRequirements: Academic scores/GPA requirements
 - englishRequirements: English language tests (text format)
 - englishRequirementsStructured: Parse IELTS/TOEFL scores if available (JSON format)
 - minimumAge: Age requirements if mentioned
@@ -99,7 +98,6 @@ CAREER & PATHWAYS:
 - careerOutcomes: Array of potential job titles
 - careerPath: Text description of career progression
 - pathways: Further study options
-- workRights: Post-study work visa information
 
 OTHER IMPORTANT FIELDS:
 - courseCode: Official course code (e.g., "BACH-CS-01")

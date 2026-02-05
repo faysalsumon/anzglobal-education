@@ -73,7 +73,6 @@ function sanitizeExtractionData(data: any) {
     scholarshipPercentageMin: sanitizeInteger(data.scholarshipPercentageMin),
     scholarshipPercentageMax: sanitizeInteger(data.scholarshipPercentageMax),
     prPathway: sanitizeBoolean(data.prPathway),
-    workRights: sanitizeBoolean(data.workRights),
     internshipAvailable: sanitizeBoolean(data.internshipAvailable),
   };
 }
@@ -480,11 +479,9 @@ async function processScrapingJob(job: Job<ScrapingJobData>): Promise<void> {
                 careerPath: courseData.careerPath,
                 pathways: courseData.pathways,
                 minimumAge: courseData.minimumAge,
-                academicRequirements: courseData.academicRequirements,
                 englishRequirementsStructured: courseData.englishRequirementsStructured as any,
                 deliveryMode: courseData.deliveryMode,
                 campusLocations: courseData.campusLocations,
-                workRights: courseData.workRights,
                 internshipAvailable: courseData.internshipAvailable,
                 internshipDetails: courseData.internshipDetails,
                 approvalStatus: "approved", // Auto-approved, no manual review needed

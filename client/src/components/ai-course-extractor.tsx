@@ -52,7 +52,6 @@ interface ExtractedData {
   prerequisites: string | null;
   eligibilityRequirements: string | null;
   englishRequirements: string | null;
-  academicRequirements: string | null;
   minimumAge: number | null;
   
   // Academic Content
@@ -553,7 +552,6 @@ export function AICourseExtractor({ onDataApproved }: AICourseExtractorProps) {
                   {renderField("Prerequisites", "prerequisites", extractedData.prerequisites, "textarea")}
                   {renderField("Eligibility Requirements", "eligibilityRequirements", extractedData.eligibilityRequirements, "textarea")}
                   {renderField("English Requirements", "englishRequirements", extractedData.englishRequirements, "textarea")}
-                  {renderField("Academic Requirements", "academicRequirements", extractedData.academicRequirements, "textarea")}
                   {renderField("Minimum Age", "minimumAge", extractedData.minimumAge, "number")}
                 </div>
               )}

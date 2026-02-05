@@ -93,7 +93,6 @@ export default function CourseForm() {
       careerPath: "",
       pathways: [],
       minimumAge: undefined,
-      academicRequirements: "",
       englishRequirementsStructured: {
         IELTS: {},
         TOEFL: {},
@@ -102,7 +101,6 @@ export default function CourseForm() {
       },
       deliveryMode: undefined,
       campusLocations: [],
-      workRights: false,
       internshipAvailable: false,
       internshipDetails: "",
     },
@@ -144,7 +142,6 @@ export default function CourseForm() {
         careerPath: course.careerPath ?? "",
         pathways: course.pathways ?? [],
         minimumAge: course.minimumAge ?? undefined,
-        academicRequirements: course.academicRequirements ?? "",
         englishRequirementsStructured: course.englishRequirementsStructured ?? {
           IELTS: {},
           TOEFL: {},
@@ -153,7 +150,6 @@ export default function CourseForm() {
         },
         deliveryMode: (course.deliveryMode as "online" | "on-campus" | "hybrid" | undefined) ?? undefined,
         campusLocations: course.campusLocations ?? [],
-        workRights: course.workRights ?? false,
         internshipAvailable: course.internshipAvailable ?? false,
         internshipDetails: course.internshipDetails ?? "",
       });
@@ -1094,29 +1090,6 @@ export default function CourseForm() {
                         placeholder="e.g., Must be 18 years or older, Valid passport, etc..."
                         className="min-h-[100px]"
                         data-testid="textarea-eligibility-requirements"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="academicRequirements"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Academic Requirements</FormLabel>
-                    <FormDescription>
-                      Detailed academic entry requirements (GPA, qualifications, etc.)
-                    </FormDescription>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="e.g., Minimum GPA of 3.0, High School Diploma or equivalent..."
-                        className="min-h-[100px]"
-                        data-testid="textarea-academic-requirements"
                       />
                     </FormControl>
                     <FormMessage />

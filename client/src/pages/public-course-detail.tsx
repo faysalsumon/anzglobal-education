@@ -267,7 +267,7 @@ export default function PublicCourseDetail() {
     }
     
     // Academic requirements section
-    if (course.academicRequirements || course.minimumAge) {
+    if (course.minimumAge) {
       sections.push("academic");
     }
     
@@ -1475,7 +1475,7 @@ export default function PublicCourseDetail() {
             )}
 
             {/* Academic Requirements */}
-            {(course.academicRequirements || course.minimumAge) && (
+            {course.minimumAge && (
               <ResponsiveSection
                 id="academic"
                 icon={<FileText className="h-5 w-5 text-primary" />}
@@ -1483,17 +1483,10 @@ export default function PublicCourseDetail() {
                 defaultOpen={false}
               >
                 <div className="space-y-4">
-                  {course.minimumAge && (
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
-                      <p className="text-lg font-semibold" data-testid="text-minimum-age">{course.minimumAge} years old</p>
-                    </div>
-                  )}
-                  {course.academicRequirements && (
-                    <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-academic-requirements">
-                      {course.academicRequirements}
-                    </p>
-                  )}
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
+                    <p className="text-lg font-semibold" data-testid="text-minimum-age">{course.minimumAge} years old</p>
+                  </div>
                 </div>
               </ResponsiveSection>
             )}

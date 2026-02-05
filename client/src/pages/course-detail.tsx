@@ -443,7 +443,7 @@ export default function CourseDetail() {
             )}
 
             {/* Academic Requirements */}
-            {(course.academicRequirements || course.minimumAge) && (
+            {course.minimumAge && (
               <Card className="border-primary/10 hover-elevate transition-all duration-300">
                 <CardHeader className="bg-gradient-to-r from-background to-primary/5 border-b">
                   <CardTitle className="flex items-center gap-2">
@@ -452,17 +452,10 @@ export default function CourseDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
-                  {course.minimumAge && (
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
-                      <p className="text-lg font-semibold" data-testid="text-minimum-age">{course.minimumAge} years old</p>
-                    </div>
-                  )}
-                  {course.academicRequirements && (
-                    <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-academic-requirements">
-                      {course.academicRequirements}
-                    </p>
-                  )}
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Minimum Age</p>
+                    <p className="text-lg font-semibold" data-testid="text-minimum-age">{course.minimumAge} years old</p>
+                  </div>
                 </CardContent>
               </Card>
             )}

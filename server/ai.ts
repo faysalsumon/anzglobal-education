@@ -1722,14 +1722,12 @@ interface InternalExtractedCourseData {
   scholarshipPercentageMax: number | null;
   eligibilityRequirements: string | null;
   englishRequirements: string | null;
-  academicRequirements: string | null;
   intakes: string[] | null;
   studyAreas: string[] | null;
   careerOutcomes: string[] | null;
   careerPath: string | null;
   deliveryMode: string | null;
   campusLocations: string[] | null;
-  workRights: boolean | null;
   internshipAvailable: boolean | null;
   internshipDetails: string | null;
   minimumAge: number | null;
@@ -1875,7 +1873,6 @@ IMPORTANT INSTRUCTIONS:
 - For careerOutcomes, extract potential job roles/career paths (e.g., ["Software Engineer", "Data Analyst"])
 - For careerPath, extract detailed career progression description if available
 - For prPathway, set to true if course explicitly mentions permanent residency/PR pathway
-- For workRights, set to true if course mentions work rights or visa eligibility
 
 Website URL: ${url}
 
@@ -1903,14 +1900,12 @@ Extract the following fields and return as JSON:
   "scholarshipPercentageMax": 50,
   "eligibilityRequirements": "Academic and other entry requirements",
   "englishRequirements": "IELTS 6.5 or equivalent",
-  "academicRequirements": "Minimum GPA 3.0",
   "intakes": ["February", "July"],
   "studyAreas": ["Programming", "Database Systems", "Web Development"],
   "careerOutcomes": ["Software Developer", "Web Developer", "Systems Analyst"],
   "careerPath": "Detailed career progression description",
   "deliveryMode": "on-campus|online|hybrid",
   "campusLocations": ["Sydney", "Melbourne"],
-  "workRights": false,
   "internshipAvailable": true,
   "internshipDetails": "6-month industry placement",
   "minimumAge": 18

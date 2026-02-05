@@ -2935,7 +2935,7 @@ export class DatabaseStorage implements IStorage {
       
       // Requirements: prefer variant, fall back to base course
       englishRequirements: variant?.englishRequirements || course.englishRequirementsStructured || null,
-      academicRequirements: variant?.academicRequirements || course.academicRequirements || null,
+      academicRequirements: variant?.academicRequirements || null,
       minimumAge: variant?.minimumAge ?? course.minimumAge ?? null,
       
       // Region info

@@ -484,10 +484,6 @@ export function transformCourseRow(row: any, universityId: string): Partial<Inse
   if (row.prPathway !== undefined) {
     course.prPathway = row.prPathway === 'true' || row.prPathway === '1' || row.prPathway === true;
   }
-  if (row.workRights !== undefined) {
-    course.workRights = row.workRights === 'true' || row.workRights === '1' || row.workRights === true;
-  }
-
   // Parse array fields (comma-separated)
   if (row.intakes) {
     course.intakes = row.intakes.split(',').map((i: string) => i.trim()).filter(Boolean);
@@ -591,7 +587,6 @@ export function generateCoursesSampleCSV(): string {
       scholarshipPercentageMin: '15',
       scholarshipPercentageMax: '25',
       prPathway: 'false',
-      workRights: 'true',
     },
     {
       universityName: 'Melbourne Institute of Technology',
@@ -614,7 +609,6 @@ export function generateCoursesSampleCSV(): string {
       scholarshipPercentageMin: '5',
       scholarshipPercentageMax: '15',
       prPathway: 'true',
-      workRights: 'true',
     },
   ];
 

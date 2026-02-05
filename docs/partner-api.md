@@ -246,10 +246,9 @@ POST /api/partner/courses
 | `fees` | number | Tuition fees (must be a positive number) |
 | `durationMonths` | number | Duration in months (or provide `duration` string or `durationWeeks`) |
 | `englishRequirements` | string | English language requirements (minimum 10 characters, e.g., "IELTS 6.5") |
-| `academicRequirements` OR `eligibilityRequirements` | string | Entry qualifications (at least one required) |
+| `eligibilityRequirements` | string | Entry qualifications describing who can enroll |
 | `intakes` | string[] | Available intake months (e.g., ["February", "July"]) |
 | `deliveryMode` | string | Teaching mode: `online`, `on-campus`, `hybrid`, or `blended` |
-| `workRights` | boolean | Can students work while studying? (true/false) |
 | `careerOutcomes` | string[] | Job titles graduates can pursue (at least one required) |
 
 **Valid Disciplines:**
@@ -338,10 +337,9 @@ POST /api/partner/courses
   "currency": "AUD",
   "durationMonths": 24,
   "englishRequirements": "IELTS 6.5 overall with no band less than 6.0, or PTE Academic 58",
-  "academicRequirements": "Bachelor's degree from a recognized institution with minimum 2 years work experience. GPA of 3.0/4.0 or equivalent preferred.",
+  "eligibilityRequirements": "Bachelor's degree from a recognized institution with minimum 2 years work experience. GPA of 3.0/4.0 or equivalent preferred.",
   "intakes": ["February", "July"],
   "deliveryMode": "hybrid",
-  "workRights": true,
   "careerOutcomes": ["Chief Executive Officer", "Chief Financial Officer", "Management Consultant", "Business Development Director"],
   "country": "Australia",
   "location": "Melbourne",

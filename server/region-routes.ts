@@ -569,7 +569,7 @@ export function registerRegionRoutes(router: Router) {
             scholarshipMin: course.scholarshipPercentageMin ?? null,
             scholarshipMax: course.scholarshipPercentageMax ?? null,
             englishRequirements: course.englishRequirementsStructured || null,
-            academicRequirements: course.academicRequirements || null,
+            academicRequirements: null, // Available via course variants only
             minimumAge: course.minimumAge ?? null,
             regionCode: context.region!.code,
             pathwayCode: context.pathway?.code || null,

@@ -223,7 +223,6 @@ Fees: ${course.fees ? `$${course.fees} AUD` : 'Not specified'}
 Course Code: ${course.courseCode || 'Not specified'}
 Description: ${course.description || 'No description available'}
 Career Path: ${course.careerPath || 'Not specified'}
-Academic Requirements: ${course.academicRequirements || 'Not specified'}
 English Requirements: ${course.englishRequirements || 'Not specified'}
 Delivery Mode: ${course.deliveryMode || 'Not specified'}
 PR Pathway: ${course.prPathway ? 'Yes' : 'No'}

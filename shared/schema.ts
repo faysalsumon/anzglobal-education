@@ -1015,13 +1015,11 @@ export const courses = pgTable("courses", {
   
   // Detailed entry requirements for AI matching
   minimumAge: integer("minimum_age"), // Minimum age requirement
-  academicRequirements: text("academic_requirements"), // Detailed academic entry criteria
   englishRequirementsStructured: jsonb("english_requirements_structured").$type<EnglishRequirementsStructured>(), // Structured English requirements
   
   // Delivery and work-related fields for comprehensive recommendations
   deliveryMode: text("delivery_mode"), // 'online', 'on-campus', 'hybrid'
   campusLocations: text("campus_locations").array(), // Multiple campus options
-  workRights: boolean("work_rights"), // Whether course provides work rights/visa eligibility
   internshipAvailable: boolean("internship_available"), // Whether internships are part of the program
   internshipDetails: text("internship_details"), // Details about internship opportunities
   
@@ -4481,11 +4479,9 @@ export const scrapedCourses = pgTable("scraped_courses", {
   careerPath: text("career_path"),
   pathways: text("pathways").array(),
   minimumAge: integer("minimum_age"),
-  academicRequirements: text("academic_requirements"),
   englishRequirementsStructured: jsonb("english_requirements_structured"),
   deliveryMode: text("delivery_mode"),
   campusLocations: text("campus_locations").array(),
-  workRights: boolean("work_rights"),
   internshipAvailable: boolean("internship_available"),
   internshipDetails: text("internship_details"),
   

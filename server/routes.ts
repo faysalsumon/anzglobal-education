@@ -19940,7 +19940,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         applicationDeadline,
         prerequisites,
         eligibilityRequirements,
-        academicRequirements,
         englishRequirements,
         sourceUrl,
         thumbnailUrl,
@@ -19948,7 +19947,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         prPathway,
         deliveryMode,
         campusLocations,
-        workRights,
         internshipAvailable,
         internshipDetails,
         studyAreas,
@@ -20011,8 +20009,8 @@ Sitemap: ${baseUrl}/sitemap.xml
       }
       
       // Gold standard required fields for 95% completeness
-      if (!academicRequirements && !eligibilityRequirements) {
-        errors.push({ field: 'academicRequirements', message: 'Academic requirements OR eligibility requirements is required (describe entry qualifications)' });
+      if (!eligibilityRequirements) {
+        errors.push({ field: 'eligibilityRequirements', message: 'Eligibility requirements is required (describe entry qualifications)' });
       }
       
       if (!intakes || !Array.isArray(intakes) || intakes.length === 0) {
@@ -20021,10 +20019,6 @@ Sitemap: ${baseUrl}/sitemap.xml
       
       if (!deliveryMode || typeof deliveryMode !== 'string') {
         errors.push({ field: 'deliveryMode', message: 'Delivery mode is required (online, on-campus, hybrid, or blended)' });
-      }
-      
-      if (workRights === undefined || workRights === null) {
-        errors.push({ field: 'workRights', message: 'Work rights is required (true/false - can students work while studying?)' });
       }
       
       if (!careerOutcomes || !Array.isArray(careerOutcomes) || careerOutcomes.length === 0) {
@@ -20112,7 +20106,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         applicationDeadline: applicationDeadline?.trim(),
         prerequisites: prerequisites?.trim(),
         eligibilityRequirements: eligibilityRequirements?.trim(),
-        academicRequirements: academicRequirements?.trim(),
         englishRequirements: englishRequirements.trim(),
         sourceUrl: sourceUrl?.trim(),
         thumbnailUrl: thumbnailUrl?.trim(),
@@ -20120,7 +20113,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         prPathway: prPathway === true || prPathway === 'true',
         deliveryMode: deliveryMode?.trim(),
         campusLocations: campusLocations || [],
-        workRights: workRights === true || workRights === 'true',
         internshipAvailable: internshipAvailable === true || internshipAvailable === 'true',
         internshipDetails: internshipDetails?.trim(),
         studyAreas: studyAreas || [],

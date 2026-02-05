@@ -61,7 +61,6 @@
     "campus": "ক্যাম্পাস",
     "requirements": "প্রয়োজনীয়তা",
     "englishRequirements": "ইংরেজি প্রয়োজনীয়তা",
-    "academicRequirements": "একাডেমিক প্রয়োজনীয়তা",
     "ielts": "আইইএলটিএস",
     "pte": "পিটিই",
     "toefl": "টোফেল",
@@ -109,8 +108,7 @@
     "financialRequirements": "আর্থিক প্রয়োজনীয়তা",
     "healthRequirements": "স্বাস্থ্য প্রয়োজনীয়তা",
     "englishRequirements": "ইংরেজি প্রয়োজনীয়তা",
-    "requiredDocuments": "প্রয়োজনীয় নথি",
-    "workRights": "কাজের অধিকার"
+    "requiredDocuments": "প্রয়োজনীয় নথি"
   },
   "profile": {
     "title": "প্রোফাইল",
