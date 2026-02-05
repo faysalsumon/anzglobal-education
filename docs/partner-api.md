@@ -1,8 +1,8 @@
-# CampQ - Partner API Documentation
+# ANZ Global Education - Partner API Documentation
 
 ## Overview
 
-The Partner API allows external AI bots and integration partners to programmatically upload institutions and courses to the CampQ platform. All submissions are created as **drafts** and require approval by a Platform Admin before being published.
+The Partner API allows external AI bots and integration partners to programmatically upload institutions and courses to the ANZ Global Education platform. All submissions are created as **drafts** and require approval by a Platform Admin before being published.
 
 **Gold Standard Data Quality:** The API enforces strict validation to ensure uploaded data matches manual entry quality (95%+ completeness). This means humans only need to review and approve, not fill in missing fields.
 
