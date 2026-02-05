@@ -122,7 +122,7 @@ export default function Developers() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground text-sm">
-                      Secure HMAC-SHA256 authentication with configurable permissions and rate limits per API key.
+                      Secure API key authentication with configurable permissions and rate limits per API key.
                     </p>
                   </CardContent>
                 </Card>
