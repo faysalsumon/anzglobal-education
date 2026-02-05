@@ -300,6 +300,8 @@ POST /api/partner/courses
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `subDiscipline` | string | Sub-discipline within main discipline (see Discipline Hierarchy below) |
+| `specialization` | string | Free-text specialization for course focus (e.g., "Artificial Intelligence", "Civil Engineering") |
 | `subject` | string | Subject area (defaults to title if not provided) |
 | `currency` | string | Currency code (default: "AUD") |
 | `location` | string | Course location/city |
@@ -322,6 +324,39 @@ POST /api/partner/courses
 | `curriculumUrl` | string | Valid URL to curriculum/syllabus |
 | `minimumAge` | number | Minimum age requirement |
 | `pathways` | string[] | Further study pathways after completion |
+
+**Discipline Hierarchy (3-Tier System):**
+
+Courses use a 3-tier categorization system for precise filtering and discovery:
+
+| Tier | Field | Required | Description |
+|------|-------|----------|-------------|
+| 1 | `discipline` | **Required** | Main discipline category (must be from valid list above) |
+| 2 | `subDiscipline` | Optional | Sub-category within discipline (use valid sub-discipline name) |
+| 3 | `specialization` | Optional | Free-text focus area for maximum specificity |
+
+**Example Hierarchy:**
+```
+Discipline: "Computer Science & IT" (Tier 1 - Required)
+  └── Sub-Discipline: "Cybersecurity" (Tier 2 - Optional)
+        └── Specialization: "Network Security" (Tier 3 - Optional free text)
+```
+
+**Valid Sub-Disciplines by Discipline:**
+
+| Discipline | Valid Sub-Disciplines |
+|------------|----------------------|
+| Accounting, Business & Finance | Accounting, Business Management, Economics, Finance, Human Resources, International Business, Marketing, Project Management |
+| Arts, Design & Architecture | Architecture, Fashion Design, Fine Arts, Graphic Design, Interior Design |
+| Computer Science & IT | Artificial Intelligence, Computer Science, Cybersecurity, Data Science, Information Technology, Software Development |
+| Education & Training | Early Childhood Education, Primary Education, Secondary Education, TESOL |
+| Engineering & Technology | Aerospace Engineering, Chemical Engineering, Civil Engineering, Electrical Engineering, Mechanical Engineering, Software Engineering |
+| Hospitality, Leisure & Sports | Culinary Arts, Event Management, Hospitality Management, Sports Management, Tourism |
+| Law | Commercial Law, Criminal Law, International Law |
+| Medicine & Health | Aged Care, Allied Health, Medicine, Nursing, Pharmacy, Public Health |
+| Trade | Automotive, Carpentry, Electrical Trade, Plumbing |
+
+Use `GET /api/partner/disciplines` to retrieve the full list of disciplines and their sub-disciplines programmatically.
 
 **Gold Standard Request Example:**
 
@@ -384,12 +419,76 @@ POST /api/partner/courses
   "error": "Validation error",
   "message": "One or more required fields are missing or invalid",
   "details": [
-    { "field": "academicRequirements", "message": "Academic requirements OR eligibility requirements is required (describe entry qualifications)" },
+    { "field": "eligibilityRequirements", "message": "Eligibility requirements is required (describe entry qualifications)" },
     { "field": "intakes", "message": "Intakes is required (array of months, e.g., [\"February\", \"July\"])" },
-    { "field": "workRights", "message": "Work rights is required (true/false - can students work while studying?)" }
+    { "field": "careerOutcomes", "message": "Career outcomes is required (array of job titles graduates can pursue)" }
   ]
 }
 ```
+
+---
+
+### Disciplines
+
+#### List Disciplines and Sub-Disciplines
+
+Retrieve all valid disciplines and their sub-disciplines for course categorization.
+
+```
+GET /api/partner/disciplines
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "disciplines": [
+      "Accounting, Business & Finance",
+      "Agriculture & Forestry",
+      "Applied Sciences & Professions",
+      "Arts, Design & Architecture",
+      "Computer Science & IT",
+      "Education & Training",
+      "Engineering & Technology",
+      "Environmental Studies & Earth Sciences",
+      "Hospitality, Leisure & Sports",
+      "Humanities",
+      "Journalism & Media",
+      "Law",
+      "Medicine & Health",
+      "Short Courses",
+      "Trade"
+    ],
+    "hierarchy": {
+      "Computer Science & IT": {
+        "subDisciplines": [
+          { "name": "Artificial Intelligence", "slug": "artificial-intelligence" },
+          { "name": "Computer Science", "slug": "computer-science" },
+          { "name": "Cybersecurity", "slug": "cybersecurity" },
+          { "name": "Data Science", "slug": "data-science" },
+          { "name": "Information Technology", "slug": "information-technology" },
+          { "name": "Software Development", "slug": "software-development" }
+        ]
+      },
+      "Law": {
+        "subDisciplines": [
+          { "name": "Commercial Law", "slug": "commercial-law" },
+          { "name": "Criminal Law", "slug": "criminal-law" },
+          { "name": "International Law", "slug": "international-law" }
+        ]
+      }
+    },
+    "description": "3-tier system: discipline (required) → subDiscipline (optional) → specialization (optional free text)"
+  }
+}
+```
+
+**Usage Notes:**
+- Use the `disciplines` array for the required `discipline` field when creating courses
+- Use the `hierarchy` to find valid `subDiscipline` values for each discipline
+- The `specialization` field accepts free text and is not validated against a fixed list
 
 ---
 
@@ -428,12 +527,11 @@ To achieve 95% data completeness and minimize human review effort:
 - [ ] Discipline (from valid list) and course level (from valid list)
 - [ ] Fees and duration (months, weeks, or string)
 - [ ] English requirements (10+ chars)
-- [ ] Academic OR eligibility requirements
+- [ ] Eligibility requirements (describe who can enroll)
 - [ ] Intakes (array of months)
 - [ ] Delivery mode
-- [ ] Work rights (boolean)
 - [ ] Career outcomes (array)
-- [ ] Optional: Source URL, thumbnail, internship details, scholarships, pathways
+- [ ] Optional: subDiscipline, specialization, source URL, thumbnail, internship details, scholarships, pathways
 
 ---
 
@@ -518,14 +616,15 @@ curl -X POST https://your-domain.com/api/partner/courses \
     "title": "Bachelor of Computer Science",
     "description": "Comprehensive computer science program covering software development, algorithms, AI, and cybersecurity. Graduates are prepared for careers in technology companies worldwide.",
     "discipline": "Computer Science & IT",
+    "subDiscipline": "Computer Science",
+    "specialization": "Artificial Intelligence",
     "courseLevel": "Bachelor Degree",
     "fees": 42000,
     "durationMonths": 36,
     "englishRequirements": "IELTS 6.0 overall with no band less than 5.5",
-    "academicRequirements": "Completion of Year 12 or equivalent with mathematics background. ATAR 85 or equivalent preferred.",
+    "eligibilityRequirements": "Completion of Year 12 or equivalent with mathematics background. ATAR 85 or equivalent preferred.",
     "intakes": ["February", "July"],
     "deliveryMode": "on-campus",
-    "workRights": true,
     "careerOutcomes": ["Software Developer", "Data Analyst", "Systems Architect", "DevOps Engineer"]
   }'
 

@@ -20155,6 +20155,50 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
   
+  // GET /api/partner/disciplines - List all valid disciplines and sub-disciplines
+  app.get("/api/partner/disciplines", authenticatePartnerApi, async (req: any, res) => {
+    try {
+      // Fetch all sub-disciplines from database
+      const subDisciplines = await storage.getSubDisciplines();
+      
+      // Group sub-disciplines by parent discipline
+      const disciplineHierarchy: Record<string, { subDisciplines: Array<{ name: string; slug: string }> }> = {};
+      
+      // Initialize all valid disciplines
+      for (const discipline of VALID_DISCIPLINES) {
+        disciplineHierarchy[discipline] = { subDisciplines: [] };
+      }
+      
+      // Populate sub-disciplines
+      for (const sub of subDisciplines) {
+        if (disciplineHierarchy[sub.discipline]) {
+          disciplineHierarchy[sub.discipline].subDisciplines.push({
+            name: sub.name,
+            slug: sub.slug,
+          });
+        }
+      }
+      
+      await logPartnerUsage(req, 200);
+      
+      res.json({
+        success: true,
+        data: {
+          disciplines: VALID_DISCIPLINES,
+          hierarchy: disciplineHierarchy,
+          description: "3-tier system: discipline (required) → subDiscipline (optional) → specialization (optional free text)",
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API list disciplines error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to list disciplines',
+      });
+    }
+  });
+  
   // GET /api/partner/institutions - List institutions (for duplicate checking)
   app.get("/api/partner/institutions", authenticatePartnerApi, async (req: any, res) => {
     try {
