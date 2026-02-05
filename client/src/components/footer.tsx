@@ -83,7 +83,6 @@ const footerSections: FooterSection[] = [
       { label: "Institution Login", href: "/auth" },
       { label: "Become a Partner", href: "/partner-with-us" },
       { label: "Partner Support", href: "/contact?topic=partner" },
-      { label: "Partner API", href: "/developers" },
     ],
   },
   {

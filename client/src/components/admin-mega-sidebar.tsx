@@ -144,7 +144,7 @@ export function AdminMegaSidebar({
         { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess },
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
         { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO },
-        { icon: Key, label: "Partner API", value: "api-keys", show: hasFullAdminAccess },
+        { icon: Key, label: "Partner API", value: "api-keys", show: hasFullAdminAccess || isCTO },
       ],
     },
   ];
