@@ -255,7 +255,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  className="bg-[#ff631b] text-white border-[#ff631b] hover:bg-[#e55516]"
+                  className="bg-accent text-white border-accent-border"
                   asChild
                   data-testid="button-login"
                 >
@@ -391,7 +391,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                     ) : (
                       <div className="flex flex-col gap-2">
                         <Button
-                          className="w-full bg-[#ff631b] text-white border-[#ff631b] hover:bg-[#e55516]"
+                          className="w-full bg-accent text-white border-accent-border"
                           asChild
                           data-testid="button-mobile-login"
                         >

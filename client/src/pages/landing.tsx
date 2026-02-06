@@ -300,7 +300,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="px-8 text-base"
+                  className="px-8 text-base bg-accent text-white border-accent-border"
                   data-testid="button-hero-explore-courses"
                 >
                   <Link href="/courses">
@@ -605,7 +605,7 @@ export default function Landing() {
               <Button 
                 asChild 
                 size="lg"
-                className="px-8"
+                className="px-8 bg-accent text-white border-accent-border"
                 data-testid="button-view-all-courses"
               >
                 <Link href="/courses">
@@ -701,7 +701,7 @@ export default function Landing() {
               <Button 
                 asChild
                 size="lg" 
-                className="px-8"
+                className="px-8 bg-accent text-white border-accent-border"
                 data-testid="button-student-get-started"
               >
                 <Link href="/auth">
@@ -843,7 +843,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/courses" data-testid="link-explore-courses-video">
-                  <Button size="lg" className="gap-2 shadow-lg" data-testid="button-explore-courses-video">
+                  <Button size="lg" className="gap-2 shadow-lg bg-accent text-white border-accent-border" data-testid="button-explore-courses-video">
                     <Search className="h-5 w-5" />
                     Explore Courses
                   </Button>
@@ -942,7 +942,7 @@ export default function Landing() {
             <Button 
               asChild
               size="lg" 
-              className="px-8"
+              className="px-8 bg-accent text-white border-accent-border"
               data-testid="button-institution-partner"
             >
               <Link href="/auth">
@@ -1301,7 +1301,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="w-full sm:w-auto bg-accent text-white font-semibold shadow-lg border-0" 
+                  className="w-full sm:w-auto bg-accent text-white font-semibold shadow-lg border-accent-border" 
                   data-testid="button-institution-cta"
                 >
                   <Link href="/auth">
