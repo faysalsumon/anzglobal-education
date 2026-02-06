@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   ArrowRight,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Upload
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,12 @@ export default function Developers() {
       method: "POST",
       path: "/api/partner/institutions",
       description: "Create a new institution as draft",
+      permission: "institutions:create"
+    },
+    {
+      method: "POST",
+      path: "/api/partner/institutions/:id/logo",
+      description: "Upload institution logo (multipart/form-data)",
       permission: "institutions:create"
     },
     {
@@ -257,6 +264,67 @@ X-API-Key: your-api-key
     "name": "Melbourne Business School",
     "approvalStatus": "pending",
     "publishStatus": "draft"
+  }
+}`}</pre>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-6" data-testid="text-section-logo-upload">Upload Institution Logo</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="font-semibold">Direct File Upload</h3>
+                    </div>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Upload a logo image directly for an institution. The image is automatically resized to 160x160 pixels and converted to PNG format.
+                      Use the institution ID returned from the Create Institution endpoint.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Accepted formats: JPEG, PNG, GIF, WebP</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Max file size: 5MB</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Auto-resized to 160x160px</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Field name: <code className="bg-muted px-1 py-0.5 rounded">logo</code></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Example Request (cURL)</h3>
+                    <div className="bg-muted rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                      <pre data-testid="code-logo-upload-example">{`curl -X POST /api/partner/institutions/{id}/logo \\
+  -H "X-API-Key: your-api-key" \\
+  -F "logo=@/path/to/logo.png"`}</pre>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Response</h3>
+                    <div className="bg-muted rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                      <pre data-testid="code-logo-upload-response">{`{
+  "success": true,
+  "message": "Institution logo uploaded and processed successfully",
+  "data": {
+    "institutionId": "institution-uuid",
+    "logoUrl": "/institutions/college-logo-uuid-1706234567890.png",
+    "dimensions": "160x160",
+    "format": "png"
   }
 }`}</pre>
                     </div>

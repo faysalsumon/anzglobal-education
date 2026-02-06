@@ -19909,6 +19909,99 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
   
+  // POST /api/partner/institutions/:id/logo - Upload institution logo via Partner API
+  app.post("/api/partner/institutions/:id/logo", authenticatePartnerApi, upload.single('logo'), async (req: any, res) => {
+    try {
+      if (!hasPermission(req.apiKey, 'institutions:create')) {
+        await logPartnerUsage(req, 403);
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'This API key does not have permission to manage institutions',
+        });
+      }
+
+      const institutionId = req.params.id;
+      if (!institutionId || typeof institutionId !== 'string' || institutionId.trim().length === 0) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Invalid ID',
+          message: 'A valid institution ID is required',
+        });
+      }
+
+      const institution = await storage.getUniversity(institutionId);
+      if (!institution) {
+        await logPartnerUsage(req, 404);
+        return res.status(404).json({
+          error: 'Not found',
+          message: 'Institution not found',
+        });
+      }
+
+      if (!req.file) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'No file uploaded',
+          message: 'A logo image file is required. Send as multipart/form-data with field name "logo". Accepted formats: JPEG, PNG, GIF, WebP. Max size: 5MB.',
+        });
+      }
+
+      const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'Invalid file type',
+          message: `Only image files are accepted. Supported formats: JPEG, PNG, GIF, WebP. Received: ${req.file.mimetype}`,
+        });
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        await logPartnerUsage(req, 400);
+        return res.status(400).json({
+          error: 'File too large',
+          message: 'Logo file must be under 5MB',
+        });
+      }
+
+      const resizedBuffer = await sharp(req.file.buffer)
+        .resize(160, 160, { fit: 'cover' })
+        .png()
+        .toBuffer();
+
+      const filename = `college-logo-${institutionId}-${Date.now()}.png`;
+      const localPath = path.join(process.cwd(), 'public', 'institutions');
+      await fs.mkdir(localPath, { recursive: true });
+      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
+
+      const logoPath = `/institutions/${filename}`;
+
+      await storage.updateUniversity(institutionId, {
+        ...institution,
+        logo: logoPath,
+      });
+
+      await logPartnerUsage(req, 200, 'institution', institutionId);
+
+      res.json({
+        success: true,
+        message: 'Institution logo uploaded and processed successfully',
+        data: {
+          institutionId,
+          logoUrl: logoPath,
+          dimensions: '160x160',
+          format: 'png',
+        },
+      });
+    } catch (error: any) {
+      console.error("Partner API upload logo error:", error);
+      await logPartnerUsage(req, 500);
+      res.status(500).json({
+        error: 'Server error',
+        message: 'Failed to upload institution logo',
+      });
+    }
+  });
+
   // POST /api/partner/courses - Create course as draft
   app.post("/api/partner/courses", authenticatePartnerApi, async (req: any, res) => {
     try {
