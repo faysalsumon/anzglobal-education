@@ -1,58 +1,64 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   GraduationCap, BookOpen, Globe, DollarSign, ArrowRight, ArrowLeft, X, Sparkles, Check,
   Briefcase, TreePine, FlaskConical, Palette, Monitor, BookOpenCheck, Cog, Mountain,
-  Hotel, ScrollText, Newspaper, Scale, Stethoscope, Clock, Wrench
+  Hotel, ScrollText, Newspaper, Scale, Stethoscope, Clock, Wrench, Loader2, GraduationCap as GradCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { getFlagUrl } from "@/lib/countries";
+import { getFlagUrl, getCountryByName } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
-const DISCIPLINES: { label: string; icon: LucideIcon }[] = [
-  { label: "Accounting, Business & Finance", icon: Briefcase },
-  { label: "Agriculture & Forestry", icon: TreePine },
-  { label: "Applied Sciences & Professions", icon: FlaskConical },
-  { label: "Arts, Design & Architecture", icon: Palette },
-  { label: "Computer Science & IT", icon: Monitor },
-  { label: "Education & Training", icon: BookOpenCheck },
-  { label: "Engineering & Technology", icon: Cog },
-  { label: "Environmental Studies & Earth Sciences", icon: Mountain },
-  { label: "Hospitality, Leisure & Sports", icon: Hotel },
-  { label: "Humanities", icon: ScrollText },
-  { label: "Journalism & Media", icon: Newspaper },
-  { label: "Law", icon: Scale },
-  { label: "Medicine & Health", icon: Stethoscope },
-  { label: "Short Courses", icon: Clock },
-  { label: "Trade", icon: Wrench },
-];
+const DISCIPLINE_ICON_MAP: Record<string, LucideIcon> = {
+  "accounting": Briefcase,
+  "business": Briefcase,
+  "finance": Briefcase,
+  "agriculture": TreePine,
+  "forestry": TreePine,
+  "applied sciences": FlaskConical,
+  "sciences": FlaskConical,
+  "arts": Palette,
+  "design": Palette,
+  "architecture": Palette,
+  "computer": Monitor,
+  "it": Monitor,
+  "information technology": Monitor,
+  "education": BookOpenCheck,
+  "training": BookOpenCheck,
+  "engineering": Cog,
+  "technology": Cog,
+  "environmental": Mountain,
+  "earth": Mountain,
+  "hospitality": Hotel,
+  "leisure": Hotel,
+  "sports": Hotel,
+  "humanities": ScrollText,
+  "journalism": Newspaper,
+  "media": Newspaper,
+  "law": Scale,
+  "medicine": Stethoscope,
+  "health": Stethoscope,
+  "short courses": Clock,
+  "trade": Wrench,
+  "professional": GradCap,
+};
 
-const COURSE_LEVELS = [
-  "Certificate I",
-  "Certificate II",
-  "Certificate III",
-  "Certificate IV",
-  "Diploma",
-  "Advanced Diploma",
-  "Associate Degree",
-  "Bachelor Degree",
-  "Bachelor Honours Degree",
-  "Graduate Certificate",
-  "Graduate Diploma",
-  "Master Degree (Coursework)",
-  "Master Degree (Research)",
-  "Doctoral Degree",
-];
+function getIconForDiscipline(discipline: string): LucideIcon {
+  const lower = discipline.toLowerCase();
+  for (const [keyword, icon] of Object.entries(DISCIPLINE_ICON_MAP)) {
+    if (lower.includes(keyword)) return icon;
+  }
+  return BookOpen;
+}
 
-const COUNTRIES = [
-  { name: "Australia", code: "AU" },
-  { name: "United Kingdom", code: "GB" },
-  { name: "United States", code: "US" },
-  { name: "Canada", code: "CA" },
-  { name: "New Zealand", code: "NZ" },
-];
+interface FilterOptions {
+  disciplines: string[];
+  levels: string[];
+  countries: string[];
+}
 
 const TOTAL_STEPS = 4;
 
@@ -80,6 +86,10 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [budgetRange, setBudgetRange] = useState<[number, number]>([5000, 60000]);
+
+  const { data: filterOptions, isLoading: filtersLoading } = useQuery<FilterOptions>({
+    queryKey: ["/api/courses/filter-options"],
+  });
 
   useEffect(() => {
     if (open) {
@@ -182,6 +192,10 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
 
   if (!open) return null;
 
+  const disciplines = filterOptions?.disciplines || [];
+  const levels = filterOptions?.levels || [];
+  const countries = filterOptions?.countries || [];
+
   const progress = ((step + 1) / TOTAL_STEPS) * 100;
 
   const getSlideClass = () => {
@@ -242,33 +256,43 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_TITLES[0]}</h2>
                 <p id="quiz-description" className="text-muted-foreground text-base">Choose your preferred field of study</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {DISCIPLINES.map((disc) => {
-                  const IconComponent = disc.icon;
-                  return (
-                    <button
-                      key={disc.label}
-                      onClick={() => handleSelectDiscipline(disc.label)}
-                      className={cn(
-                        "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
-                        "hover-elevate",
-                        selectedDiscipline === disc.label
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                          : "border-border"
-                      )}
-                      data-testid={`quiz-discipline-${disc.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    >
-                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10 flex-shrink-0">
-                        <IconComponent className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{disc.label}</span>
-                      {selectedDiscipline === disc.label && (
-                        <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {filtersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : disciplines.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No disciplines available at this time.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {disciplines.map((disc) => {
+                    const IconComponent = getIconForDiscipline(disc);
+                    return (
+                      <button
+                        key={disc}
+                        onClick={() => handleSelectDiscipline(disc)}
+                        className={cn(
+                          "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
+                          "hover-elevate",
+                          selectedDiscipline === disc
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                            : "border-border"
+                        )}
+                        data-testid={`quiz-discipline-${disc.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10 flex-shrink-0">
+                          <IconComponent className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="text-sm font-medium text-foreground">{disc}</span>
+                        {selectedDiscipline === disc && (
+                          <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -281,27 +305,37 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_TITLES[1]}</h2>
                 <p id="quiz-description" className="text-muted-foreground text-base">Select the qualification you're aiming for</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {COURSE_LEVELS.map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => handleSelectLevel(level)}
-                    className={cn(
-                      "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
-                      "hover-elevate",
-                      selectedLevel === level
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                        : "border-border"
-                    )}
-                    data-testid={`quiz-level-${level.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                  >
-                    <span className="text-sm font-medium text-foreground">{level}</span>
-                    {selectedLevel === level && (
-                      <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              {filtersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : levels.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No levels available at this time.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {levels.map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => handleSelectLevel(level)}
+                      className={cn(
+                        "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
+                        "hover-elevate",
+                        selectedLevel === level
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border"
+                      )}
+                      data-testid={`quiz-level-${level.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                    >
+                      <span className="text-sm font-medium text-foreground">{level}</span>
+                      {selectedLevel === level && (
+                        <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -314,32 +348,48 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{STEP_TITLES[2]}</h2>
                 <p id="quiz-description" className="text-muted-foreground text-base">Pick your dream study destination</p>
               </div>
-              <div className="grid grid-cols-1 gap-3 max-w-md mx-auto">
-                {COUNTRIES.map((country) => (
-                  <button
-                    key={country.name}
-                    onClick={() => handleSelectCountry(country.name)}
-                    className={cn(
-                      "flex items-center gap-4 p-4 rounded-lg border text-left transition-all duration-200",
-                      "hover-elevate",
-                      selectedCountry === country.name
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                        : "border-border"
-                    )}
-                    data-testid={`quiz-country-${country.code.toLowerCase()}`}
-                  >
-                    <img
-                      src={getFlagUrl(country.code)}
-                      alt={country.name}
-                      className="w-8 h-6 object-cover rounded-sm shadow-sm"
-                    />
-                    <span className="text-base font-medium text-foreground">{country.name}</span>
-                    {selectedCountry === country.name && (
-                      <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              {filtersLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              ) : countries.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No destinations available at this time.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 max-w-md mx-auto">
+                  {countries.map((countryName) => {
+                    const countryData = getCountryByName(countryName);
+                    const code = countryData?.code || "";
+                    return (
+                      <button
+                        key={countryName}
+                        onClick={() => handleSelectCountry(countryName)}
+                        className={cn(
+                          "flex items-center gap-4 p-4 rounded-lg border text-left transition-all duration-200",
+                          "hover-elevate",
+                          selectedCountry === countryName
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                            : "border-border"
+                        )}
+                        data-testid={`quiz-country-${code.toLowerCase() || countryName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        {code && (
+                          <img
+                            src={getFlagUrl(code)}
+                            alt={countryName}
+                            className="w-8 h-6 object-cover rounded-sm shadow-sm"
+                          />
+                        )}
+                        <span className="text-base font-medium text-foreground">{countryName}</span>
+                        {selectedCountry === countryName && (
+                          <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

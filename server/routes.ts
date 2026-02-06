@@ -2506,6 +2506,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Lightweight endpoint for course filter options (used by quiz and search)
+  app.get("/api/courses/filter-options", async (req, res) => {
+    try {
+      const allCourses = await storage.getAllCourses();
+      const allUniversities = await storage.getAllUniversities();
+
+      const publishedInstitutionIds = new Set(
+        allUniversities
+          .filter((u) => u.publishStatus === "published" && u.approvalStatus === "approved" && u.isActive)
+          .map((u) => u.id)
+      );
+
+      const visibleCourses = allCourses.filter(
+        (c) =>
+          c.publishStatus === "published" &&
+          c.approvalStatus === "approved" &&
+          c.isActive &&
+          c.universityId &&
+          publishedInstitutionIds.has(c.universityId)
+      );
+
+      const disciplines = new Set<string>();
+      const levels = new Set<string>();
+      const countries = new Set<string>();
+
+      visibleCourses.forEach((course) => {
+        if (course.discipline) disciplines.add(course.discipline);
+        if (course.level) levels.add(course.level);
+        if (course.country) countries.add(course.country);
+      });
+
+      res.json({
+        disciplines: Array.from(disciplines).sort(),
+        levels: Array.from(levels).sort(),
+        countries: Array.from(countries).sort(),
+      });
+    } catch (error) {
+      console.error("Error fetching filter options:", error);
+      res.status(500).json({ message: "Failed to fetch filter options" });
+    }
+  });
+
   // Course routes - only show published, approved, and active courses from published institutions
   app.get("/api/courses", async (req, res) => {
     try {
