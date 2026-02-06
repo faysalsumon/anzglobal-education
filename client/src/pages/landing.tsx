@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
@@ -267,31 +268,119 @@ export default function Landing() {
       </Helmet>
 
       {/* Hero Section */}
-      <section id="main-content" className="overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 py-20 md:py-32 text-white isolate -z-10">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl min-h-[120px] sm:min-h-[140px] md:min-h-[160px]">
-              Find Your{" "}
-              <TypingText 
-                words={["Dream Course", "Perfect Institution", "Future Career"]}
-                className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-200 to-pink-200"
-              />
-              <br />
-              with{" "}
-              <span className="relative inline-block">
-                <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-blue-200 font-extrabold">
-                  AI
-                </span>
-                <span className="absolute inset-0 blur-xl bg-gradient-to-r from-cyan-400 to-blue-400 opacity-50" aria-hidden="true"></span>
-              </span>
-            </h1>
-            <p className="mb-12 text-lg text-white sm:text-xl max-w-2xl mx-auto font-medium">
-              Connect with top institutions or discover your ideal course — our AI makes it simple
-            </p>
+      <section id="main-content" className="relative bg-background py-16 md:py-24 lg:py-28 overflow-hidden">
+        {/* Subtle decorative elements */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-primary/3 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
-            {/* Natural Language Search */}
-            <div className="mx-auto max-w-4xl">
-              <NaturalLanguageSearch />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            {/* Left: Content */}
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="text-xs font-semibold uppercase tracking-wide">AI-Powered Course Discovery</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
+                Find Your{" "}
+                <TypingText 
+                  words={["Dream Course", "Perfect University", "Future Career"]}
+                  className="text-primary"
+                />
+              </h1>
+
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+                Connect with top institutions worldwide. Discover, compare, and apply to courses that match your goals.
+              </p>
+
+              {/* Primary CTA */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start mb-8">
+                <Button 
+                  asChild
+                  size="lg" 
+                  className="px-8 text-base"
+                  data-testid="button-hero-explore-courses"
+                >
+                  <Link href="/courses">
+                    <Search className="mr-2 h-5 w-5" />
+                    Explore Courses
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button 
+                  asChild
+                  size="lg" 
+                  variant="outline"
+                  data-testid="button-hero-view-institutions"
+                >
+                  <Link href="/institutions">
+                    <Building2 className="mr-2 h-5 w-5" />
+                    View Institutions
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Trust indicators */}
+              <div className="flex items-center gap-6 justify-center lg:justify-start text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                    <GraduationCap className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground text-lg" data-testid="text-hero-course-count">{stats?.courseCount || 0}+</span>
+                    <p className="text-xs">Courses</p>
+                  </div>
+                </div>
+                <div className="w-px h-8 bg-border" />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent/10">
+                    <Building2 className="h-4 w-4 text-accent" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground text-lg" data-testid="text-hero-institution-count">{stats?.institutionCount || 0}+</span>
+                    <p className="text-xs">Institutions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Search + Visual */}
+            <div className="space-y-6">
+              {/* AI Search Card */}
+              <Card className="border-border/50 shadow-lg">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm text-foreground">AI-Powered Search</h3>
+                      <p className="text-xs text-muted-foreground">Describe what you're looking for in plain English</p>
+                    </div>
+                  </div>
+                  <NaturalLanguageSearch variant="light" />
+                </CardContent>
+              </Card>
+
+              {/* Quick discipline links */}
+              <div className="text-center lg:text-left">
+                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Popular disciplines</p>
+                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                  {["Computer Science & IT", "Accounting, Business & Finance", "Engineering & Technology", "Health & Medical Sciences", "Arts, Design & Architecture"].map((discipline) => (
+                    <Link 
+                      key={discipline}
+                      href={`/courses?discipline=${encodeURIComponent(discipline)}`}
+                      data-testid={`link-hero-discipline-${discipline.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                    >
+                      <Badge variant="outline" className="cursor-pointer text-xs">
+                        {discipline}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

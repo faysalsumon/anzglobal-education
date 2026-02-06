@@ -10,11 +10,13 @@ import type { Course, University } from "@shared/schema";
 
 interface NaturalLanguageSearchProps {
   onSearchResults?: (results: any) => void;
+  variant?: "dark" | "light";
 }
 
 type CourseWithUniversity = Course & { university?: University };
 
-export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearchProps) {
+export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: NaturalLanguageSearchProps) {
+  const isLight = variant === "light";
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
@@ -280,8 +282,8 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
             setQuery("");
           }}
           className={searchType === "courses" 
-            ? "bg-white text-primary hover:bg-white/90" 
-            : "bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"}
+            ? (isLight ? "" : "bg-white text-primary") 
+            : (isLight ? "" : "bg-white/10 border-white/30 text-white backdrop-blur-sm")}
           data-testid="button-search-type-courses"
         >
           <GraduationCap className="h-4 w-4 mr-2" />
@@ -295,8 +297,8 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
             setQuery("");
           }}
           className={searchType === "institutions" 
-            ? "bg-white text-primary hover:bg-white/90" 
-            : "bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"}
+            ? (isLight ? "" : "bg-white text-primary") 
+            : (isLight ? "" : "bg-white/10 border-white/30 text-white backdrop-blur-sm")}
           data-testid="button-search-type-institutions"
         >
           <Building2 className="h-4 w-4 mr-2" />
@@ -319,13 +321,13 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder=""
-                className="h-14 sm:h-16 text-base sm:text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-2 sm:pr-4 bg-transparent text-primary"
+                className="h-14 sm:h-16 text-base sm:text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-2 sm:pr-4 bg-transparent text-foreground"
                 disabled={searchMutation.isPending}
                 data-testid="input-natural-search"
               />
               {!query && (
                 <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none right-2 overflow-hidden">
-                  <span className="text-base sm:text-lg text-primary/70 whitespace-nowrap block overflow-hidden text-ellipsis">
+                  <span className="text-base sm:text-lg text-muted-foreground whitespace-nowrap block overflow-hidden text-ellipsis">
                     {placeholderText}
                     <span className="animate-pulse">|</span>
                   </span>
@@ -336,7 +338,7 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
               onClick={handleSearch}
               disabled={searchMutation.isPending || !query.trim()}
               size="lg"
-              className="h-12 sm:h-14 px-4 sm:px-8 m-1 bg-primary hover:bg-primary/90 shrink-0"
+              className="m-1 shrink-0"
               data-testid="button-search"
             >
               {searchMutation.isPending ? (
@@ -354,12 +356,16 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
 
       {/* Example Suggestions */}
       <div className="flex flex-wrap gap-2 justify-center">
-        <span className="text-sm text-white/80 self-center font-medium">Try:</span>
+        <span className={`text-sm self-center font-medium ${isLight ? "text-muted-foreground" : "text-white/80"}`}>Try:</span>
         {exampleQueries.slice(0, 3).map((example, index) => (
           <button
             key={index}
             onClick={() => handleExampleClick(example)}
-            className="text-sm text-white/90 hover:text-white hover-elevate active-elevate-2 px-3 py-1 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm transition-all duration-200 font-medium"
+            className={`text-sm hover-elevate active-elevate-2 px-3 py-1 rounded-md border transition-all duration-200 font-medium ${
+              isLight 
+                ? "text-foreground border-border bg-card" 
+                : "text-white/90 hover:text-white border-white/30 bg-white/10 backdrop-blur-sm"
+            }`}
             data-testid={`button-example-${index}`}
           >
             "{example}"
@@ -368,8 +374,8 @@ export function NaturalLanguageSearch({ onSearchResults }: NaturalLanguageSearch
       </div>
 
       {/* Search Tips */}
-      <div className="text-center text-sm text-white/90">
-        <p className="font-medium">💡 Describe what you want in plain English - our AI will understand!</p>
+      <div className={`text-center text-sm ${isLight ? "text-muted-foreground" : "text-white/90"}`}>
+        <p className="font-medium">Describe what you want in plain English - our AI will understand!</p>
       </div>
     </div>
   );
