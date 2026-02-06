@@ -307,7 +307,7 @@ export default function Landing() {
                   data-testid="button-hero-find-my-course"
                 >
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Find My Course
+                  Match My Course
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 

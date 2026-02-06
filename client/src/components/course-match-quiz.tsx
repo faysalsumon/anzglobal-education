@@ -12,46 +12,66 @@ import { getFlagUrl, getCountryByName } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
-const DISCIPLINE_ICON_MAP: Record<string, LucideIcon> = {
-  "accounting": Briefcase,
-  "business": Briefcase,
-  "finance": Briefcase,
-  "agriculture": TreePine,
-  "forestry": TreePine,
-  "applied sciences": FlaskConical,
-  "sciences": FlaskConical,
-  "arts": Palette,
-  "design": Palette,
-  "architecture": Palette,
-  "computer": Monitor,
-  "it": Monitor,
-  "information technology": Monitor,
-  "education": BookOpenCheck,
-  "training": BookOpenCheck,
-  "engineering": Cog,
-  "technology": Cog,
-  "environmental": Mountain,
-  "earth": Mountain,
-  "hospitality": Hotel,
-  "leisure": Hotel,
-  "sports": Hotel,
-  "humanities": ScrollText,
-  "journalism": Newspaper,
-  "media": Newspaper,
-  "law": Scale,
-  "medicine": Stethoscope,
-  "health": Stethoscope,
-  "short courses": Clock,
-  "trade": Wrench,
-  "professional": GradCap,
+interface DisciplineStyle {
+  icon: LucideIcon;
+  bg: string;
+  text: string;
+  selectedBorder: string;
+  selectedBg: string;
+  selectedRing: string;
+  checkColor: string;
+}
+
+const DISCIPLINE_STYLE_MAP: Record<string, DisciplineStyle> = {
+  "accounting": { icon: Briefcase, bg: "bg-orange-100 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400", selectedBorder: "border-orange-400 dark:border-orange-500", selectedBg: "bg-orange-50 dark:bg-orange-950/30", selectedRing: "ring-orange-300/50", checkColor: "text-orange-500" },
+  "business": { icon: Briefcase, bg: "bg-orange-100 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400", selectedBorder: "border-orange-400 dark:border-orange-500", selectedBg: "bg-orange-50 dark:bg-orange-950/30", selectedRing: "ring-orange-300/50", checkColor: "text-orange-500" },
+  "finance": { icon: Briefcase, bg: "bg-orange-100 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400", selectedBorder: "border-orange-400 dark:border-orange-500", selectedBg: "bg-orange-50 dark:bg-orange-950/30", selectedRing: "ring-orange-300/50", checkColor: "text-orange-500" },
+  "agriculture": { icon: TreePine, bg: "bg-lime-100 dark:bg-lime-950/40", text: "text-lime-600 dark:text-lime-400", selectedBorder: "border-lime-400 dark:border-lime-500", selectedBg: "bg-lime-50 dark:bg-lime-950/30", selectedRing: "ring-lime-300/50", checkColor: "text-lime-500" },
+  "forestry": { icon: TreePine, bg: "bg-lime-100 dark:bg-lime-950/40", text: "text-lime-600 dark:text-lime-400", selectedBorder: "border-lime-400 dark:border-lime-500", selectedBg: "bg-lime-50 dark:bg-lime-950/30", selectedRing: "ring-lime-300/50", checkColor: "text-lime-500" },
+  "applied sciences": { icon: FlaskConical, bg: "bg-cyan-100 dark:bg-cyan-950/40", text: "text-cyan-600 dark:text-cyan-400", selectedBorder: "border-cyan-400 dark:border-cyan-500", selectedBg: "bg-cyan-50 dark:bg-cyan-950/30", selectedRing: "ring-cyan-300/50", checkColor: "text-cyan-500" },
+  "sciences": { icon: FlaskConical, bg: "bg-cyan-100 dark:bg-cyan-950/40", text: "text-cyan-600 dark:text-cyan-400", selectedBorder: "border-cyan-400 dark:border-cyan-500", selectedBg: "bg-cyan-50 dark:bg-cyan-950/30", selectedRing: "ring-cyan-300/50", checkColor: "text-cyan-500" },
+  "arts": { icon: Palette, bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", selectedBorder: "border-purple-400 dark:border-purple-500", selectedBg: "bg-purple-50 dark:bg-purple-950/30", selectedRing: "ring-purple-300/50", checkColor: "text-purple-500" },
+  "design": { icon: Palette, bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", selectedBorder: "border-purple-400 dark:border-purple-500", selectedBg: "bg-purple-50 dark:bg-purple-950/30", selectedRing: "ring-purple-300/50", checkColor: "text-purple-500" },
+  "architecture": { icon: Palette, bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", selectedBorder: "border-purple-400 dark:border-purple-500", selectedBg: "bg-purple-50 dark:bg-purple-950/30", selectedRing: "ring-purple-300/50", checkColor: "text-purple-500" },
+  "computer": { icon: Monitor, bg: "bg-teal-100 dark:bg-teal-950/40", text: "text-teal-600 dark:text-teal-400", selectedBorder: "border-teal-400 dark:border-teal-500", selectedBg: "bg-teal-50 dark:bg-teal-950/30", selectedRing: "ring-teal-300/50", checkColor: "text-teal-500" },
+  "it": { icon: Monitor, bg: "bg-teal-100 dark:bg-teal-950/40", text: "text-teal-600 dark:text-teal-400", selectedBorder: "border-teal-400 dark:border-teal-500", selectedBg: "bg-teal-50 dark:bg-teal-950/30", selectedRing: "ring-teal-300/50", checkColor: "text-teal-500" },
+  "information technology": { icon: Monitor, bg: "bg-teal-100 dark:bg-teal-950/40", text: "text-teal-600 dark:text-teal-400", selectedBorder: "border-teal-400 dark:border-teal-500", selectedBg: "bg-teal-50 dark:bg-teal-950/30", selectedRing: "ring-teal-300/50", checkColor: "text-teal-500" },
+  "education": { icon: BookOpenCheck, bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", selectedBorder: "border-emerald-400 dark:border-emerald-500", selectedBg: "bg-emerald-50 dark:bg-emerald-950/30", selectedRing: "ring-emerald-300/50", checkColor: "text-emerald-500" },
+  "training": { icon: BookOpenCheck, bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", selectedBorder: "border-emerald-400 dark:border-emerald-500", selectedBg: "bg-emerald-50 dark:bg-emerald-950/30", selectedRing: "ring-emerald-300/50", checkColor: "text-emerald-500" },
+  "engineering": { icon: Cog, bg: "bg-slate-100 dark:bg-slate-800/40", text: "text-slate-600 dark:text-slate-400", selectedBorder: "border-slate-400 dark:border-slate-500", selectedBg: "bg-slate-50 dark:bg-slate-900/30", selectedRing: "ring-slate-300/50", checkColor: "text-slate-500" },
+  "technology": { icon: Cog, bg: "bg-slate-100 dark:bg-slate-800/40", text: "text-slate-600 dark:text-slate-400", selectedBorder: "border-slate-400 dark:border-slate-500", selectedBg: "bg-slate-50 dark:bg-slate-900/30", selectedRing: "ring-slate-300/50", checkColor: "text-slate-500" },
+  "environmental": { icon: Mountain, bg: "bg-green-100 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400", selectedBorder: "border-green-400 dark:border-green-500", selectedBg: "bg-green-50 dark:bg-green-950/30", selectedRing: "ring-green-300/50", checkColor: "text-green-500" },
+  "earth": { icon: Mountain, bg: "bg-green-100 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400", selectedBorder: "border-green-400 dark:border-green-500", selectedBg: "bg-green-50 dark:bg-green-950/30", selectedRing: "ring-green-300/50", checkColor: "text-green-500" },
+  "hospitality": { icon: Hotel, bg: "bg-rose-100 dark:bg-rose-950/40", text: "text-rose-600 dark:text-rose-400", selectedBorder: "border-rose-400 dark:border-rose-500", selectedBg: "bg-rose-50 dark:bg-rose-950/30", selectedRing: "ring-rose-300/50", checkColor: "text-rose-500" },
+  "leisure": { icon: Hotel, bg: "bg-rose-100 dark:bg-rose-950/40", text: "text-rose-600 dark:text-rose-400", selectedBorder: "border-rose-400 dark:border-rose-500", selectedBg: "bg-rose-50 dark:bg-rose-950/30", selectedRing: "ring-rose-300/50", checkColor: "text-rose-500" },
+  "sports": { icon: Hotel, bg: "bg-rose-100 dark:bg-rose-950/40", text: "text-rose-600 dark:text-rose-400", selectedBorder: "border-rose-400 dark:border-rose-500", selectedBg: "bg-rose-50 dark:bg-rose-950/30", selectedRing: "ring-rose-300/50", checkColor: "text-rose-500" },
+  "humanities": { icon: ScrollText, bg: "bg-indigo-100 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400", selectedBorder: "border-indigo-400 dark:border-indigo-500", selectedBg: "bg-indigo-50 dark:bg-indigo-950/30", selectedRing: "ring-indigo-300/50", checkColor: "text-indigo-500" },
+  "journalism": { icon: Newspaper, bg: "bg-sky-100 dark:bg-sky-950/40", text: "text-sky-600 dark:text-sky-400", selectedBorder: "border-sky-400 dark:border-sky-500", selectedBg: "bg-sky-50 dark:bg-sky-950/30", selectedRing: "ring-sky-300/50", checkColor: "text-sky-500" },
+  "media": { icon: Newspaper, bg: "bg-sky-100 dark:bg-sky-950/40", text: "text-sky-600 dark:text-sky-400", selectedBorder: "border-sky-400 dark:border-sky-500", selectedBg: "bg-sky-50 dark:bg-sky-950/30", selectedRing: "ring-sky-300/50", checkColor: "text-sky-500" },
+  "law": { icon: Scale, bg: "bg-amber-100 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400", selectedBorder: "border-amber-400 dark:border-amber-500", selectedBg: "bg-amber-50 dark:bg-amber-950/30", selectedRing: "ring-amber-300/50", checkColor: "text-amber-500" },
+  "medicine": { icon: Stethoscope, bg: "bg-red-100 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400", selectedBorder: "border-red-400 dark:border-red-500", selectedBg: "bg-red-50 dark:bg-red-950/30", selectedRing: "ring-red-300/50", checkColor: "text-red-500" },
+  "health": { icon: Stethoscope, bg: "bg-red-100 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400", selectedBorder: "border-red-400 dark:border-red-500", selectedBg: "bg-red-50 dark:bg-red-950/30", selectedRing: "ring-red-300/50", checkColor: "text-red-500" },
+  "short courses": { icon: Clock, bg: "bg-violet-100 dark:bg-violet-950/40", text: "text-violet-600 dark:text-violet-400", selectedBorder: "border-violet-400 dark:border-violet-500", selectedBg: "bg-violet-50 dark:bg-violet-950/30", selectedRing: "ring-violet-300/50", checkColor: "text-violet-500" },
+  "trade": { icon: Wrench, bg: "bg-amber-100 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", selectedBorder: "border-amber-400 dark:border-amber-500", selectedBg: "bg-amber-50 dark:bg-amber-950/30", selectedRing: "ring-amber-300/50", checkColor: "text-amber-500" },
+  "professional": { icon: GradCap, bg: "bg-blue-100 dark:bg-blue-950/40", text: "text-blue-600 dark:text-blue-400", selectedBorder: "border-blue-400 dark:border-blue-500", selectedBg: "bg-blue-50 dark:bg-blue-950/30", selectedRing: "ring-blue-300/50", checkColor: "text-blue-500" },
 };
 
-function getIconForDiscipline(discipline: string): LucideIcon {
+const DEFAULT_STYLE: DisciplineStyle = {
+  icon: BookOpen,
+  bg: "bg-primary/10",
+  text: "text-primary",
+  selectedBorder: "border-primary",
+  selectedBg: "bg-primary/10",
+  selectedRing: "ring-primary/30",
+  checkColor: "text-primary",
+};
+
+function getStyleForDiscipline(discipline: string): DisciplineStyle {
   const lower = discipline.toLowerCase();
-  for (const [keyword, icon] of Object.entries(DISCIPLINE_ICON_MAP)) {
-    if (lower.includes(keyword)) return icon;
+  for (const [keyword, style] of Object.entries(DISCIPLINE_STYLE_MAP)) {
+    if (lower.includes(keyword)) return style;
   }
-  return BookOpen;
+  return DEFAULT_STYLE;
 }
 
 interface FilterOptions {
@@ -267,7 +287,9 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {disciplines.map((disc) => {
-                    const IconComponent = getIconForDiscipline(disc);
+                    const style = getStyleForDiscipline(disc);
+                    const IconComponent = style.icon;
+                    const isSelected = selectedDiscipline === disc;
                     return (
                       <button
                         key={disc}
@@ -275,18 +297,18 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                         className={cn(
                           "flex items-center gap-3 p-3.5 rounded-lg border text-left transition-all duration-200",
                           "hover-elevate",
-                          selectedDiscipline === disc
-                            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          isSelected
+                            ? `${style.selectedBorder} ${style.selectedBg} ring-1 ${style.selectedRing}`
                             : "border-border"
                         )}
                         data-testid={`quiz-discipline-${disc.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10 flex-shrink-0">
-                          <IconComponent className="h-4 w-4 text-primary" />
+                        <div className={cn("flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0", style.bg)}>
+                          <IconComponent className={cn("h-[18px] w-[18px]", style.text)} />
                         </div>
                         <span className="text-sm font-medium text-foreground">{disc}</span>
-                        {selectedDiscipline === disc && (
-                          <Check className="h-4 w-4 text-primary ml-auto flex-shrink-0" />
+                        {isSelected && (
+                          <Check className={cn("h-4 w-4 ml-auto flex-shrink-0", style.checkColor)} />
                         )}
                       </button>
                     );
@@ -457,7 +479,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
                 data-testid="quiz-find-courses-button"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Find My Courses
+                Match My Courses
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : canProceed() ? (
