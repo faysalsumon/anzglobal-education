@@ -297,22 +297,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Browse by Discipline Section */}
-      <section className="py-20 md:py-32 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Browse Courses by Discipline
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Explore our wide range of programs across different disciplines
-            </p>
-          </div>
-          
-          <DisciplineCards />
-        </div>
-      </section>
-
       {/* Featured Partners Section */}
       {featuredInstitutions.length > 0 && (
         <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
@@ -395,6 +379,22 @@ export default function Landing() {
           </div>
         </section>
       )}
+
+      {/* Browse by Discipline Section */}
+      <section className="py-20 md:py-32 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Browse Courses by Discipline
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Explore our wide range of programs across different disciplines
+            </p>
+          </div>
+          
+          <DisciplineCards />
+        </div>
+      </section>
 
       {/* Featured Courses Section */}
       {featuredCourses.length > 0 && (
