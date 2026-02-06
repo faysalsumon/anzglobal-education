@@ -231,6 +231,7 @@ export default function Landing() {
 
   return (
     <PublicLayout>
+      <div className="landing-sections">
       <Helmet>
         {/* Primary Meta Tags */}
         <title>{pageTitle}</title>
@@ -268,7 +269,7 @@ export default function Landing() {
       </Helmet>
 
       {/* Hero Section */}
-      <section id="main-content" className="relative bg-background py-16 md:py-24 lg:py-28 overflow-hidden">
+      <section id="main-content" className="relative py-16 md:py-24 lg:py-28 overflow-hidden">
         {/* Subtle decorative elements */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
@@ -388,7 +389,7 @@ export default function Landing() {
 
       {/* Featured Partners Section */}
       {featuredInstitutions.length > 0 && (
-        <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
+        <section className="py-16 md:py-24 relative overflow-hidden">
           {/* Decorative floating shapes */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
           <div className="absolute top-1/4 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl translate-x-1/2 pointer-events-none" />
@@ -470,7 +471,7 @@ export default function Landing() {
       )}
 
       {/* Browse by Discipline Section */}
-      <section className="py-20 md:py-32 bg-background">
+      <section className="py-20 md:py-32">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
@@ -487,7 +488,7 @@ export default function Landing() {
 
       {/* Featured Courses Section */}
       {featuredCourses.length > 0 && (
-        <section className="py-16 md:py-24 bg-primary/5">
+        <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary mb-6 border border-secondary/20">
@@ -619,7 +620,7 @@ export default function Landing() {
       )}
 
       {/* Your Journey Starts Here */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background to-card/50">
+      <section className="py-20 md:py-32">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
@@ -734,7 +735,7 @@ export default function Landing() {
       {/* Promotional Video Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">
         {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent"></div>
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
         
         <div className="container mx-auto px-4 relative">
@@ -861,7 +862,7 @@ export default function Landing() {
       </section>
 
       {/* For Institutions Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-card/50 to-background">
+      <section className="py-20 md:py-32">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
@@ -994,7 +995,7 @@ export default function Landing() {
       </section>
 
       {/* Value Proposition */}
-      <section className="py-16 md:py-24 bg-card">
+      <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose ANZ Global Education?</h2>
@@ -1078,7 +1079,7 @@ export default function Landing() {
 
       {/* Recent Blog Posts Section */}
       {blogs.length > 0 && (
-        <section className="py-16 md:py-24 bg-background" data-testid="section-recent-blogs">
+        <section className="py-16 md:py-24" data-testid="section-recent-blogs">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-12">
               <div>
@@ -1145,7 +1146,7 @@ export default function Landing() {
       )}
 
       {/* Student Reviews Section - Compact Slider */}
-      <section className="py-12 md:py-16 bg-primary/5 dark:bg-primary/10">
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -1315,6 +1316,7 @@ export default function Landing() {
         </div>
       </section>
 
+      </div>
     </PublicLayout>
   );
 }

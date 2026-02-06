@@ -539,3 +539,11 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Landing page alternating section backgrounds */
+.landing-sections > section:nth-of-type(odd) {
+  background-color: hsl(var(--background));
+}
+.landing-sections > section:nth-of-type(even) {
+  background-color: hsl(var(--muted));
+}
