@@ -2535,6 +2535,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (course.discipline) disciplines.add(course.discipline);
         if (course.level) levels.add(course.level);
         if (course.country) countries.add(course.country);
+        if (course.universityId) {
+          const uni = allUniversities.find(u => u.id === course.universityId);
+          if (uni) {
+            if (uni.country) countries.add(uni.country);
+            const campusAddresses = (uni as any).campusAddresses;
+            if (Array.isArray(campusAddresses)) {
+              campusAddresses.forEach((campus: any) => {
+                if (campus.country) countries.add(campus.country);
+              });
+            }
+          }
+        }
       });
 
       res.json({

@@ -433,6 +433,10 @@ export default function PublicCourses() {
       if ((course as any).qualificationFramework) frameworks.add((course as any).qualificationFramework);
       if (course.level) levels.add(course.level);
       if (course.country) countries.add(course.country);
+      if (course.university) {
+        const uniCountry = (course.university as any).country;
+        if (uniCountry) countries.add(uniCountry);
+      }
       if (course.currency) currencies.add(course.currency);
       if (course.fees) {
         const fee = Number(course.fees);
@@ -731,7 +735,18 @@ export default function PublicCourses() {
     if (framework && (course as any).qualificationFramework !== framework) return false;
     
     if (level && course.level !== level) return false;
-    if (country && course.country !== country) return false;
+    if (country) {
+      const courseCountry = course.country;
+      const institution = course.university;
+      const campuses = institution && (institution as any).campusAddresses
+        ? (institution as any).campusAddresses as CampusAddress[]
+        : null;
+      const institutionCountry = institution ? (institution as any).country : null;
+      const matchesCourse = courseCountry === country;
+      const matchesInstitution = institutionCountry === country;
+      const matchesCampus = campuses && Array.isArray(campuses) && campuses.some(c => c.country === country);
+      if (!matchesCourse && !matchesInstitution && !matchesCampus) return false;
+    }
     if (universityFilter && course.universityId !== universityFilter) return false;
     
     // State and city filtering using institution campusAddresses
