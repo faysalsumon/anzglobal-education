@@ -56,7 +56,7 @@ export function CampusMapTabs({
     link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.style.cssText = "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #3465A5; text-decoration: none; font-weight: 500;";
+    link.style.cssText = "display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #3455A5; text-decoration: none; font-weight: 500;";
     link.textContent = "Get Directions";
     
     container.appendChild(title);
@@ -171,7 +171,7 @@ export function CampusMapTabs({
                 icon: {
                   path: google.maps.SymbolPath.CIRCLE,
                   scale: i === selectedIndex ? 14 : 10,
-                  fillColor: i === selectedIndex ? "#3465A5" : "#FF5000",
+                  fillColor: i === selectedIndex ? "#3455A5" : "#FF5000",
                   fillOpacity: 1,
                   strokeColor: "#ffffff",
                   strokeWeight: 3,
@@ -247,7 +247,7 @@ export function CampusMapTabs({
       marker.setIcon({
         path: google.maps.SymbolPath.CIRCLE,
         scale: isSelected ? 14 : 10,
-        fillColor: isSelected ? "#3465A5" : "#FF5000",
+        fillColor: isSelected ? "#3455A5" : "#FF5000",
         fillOpacity: 1,
         strokeColor: "#ffffff",
         strokeWeight: 3,

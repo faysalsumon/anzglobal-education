@@ -1823,7 +1823,7 @@ export default function PublicCourses() {
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <Button
                                 size="sm"
-                                className="bg-[#FF5000] text-white"
+                                className="bg-accent text-white border-accent-border"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
