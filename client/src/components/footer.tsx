@@ -1,7 +1,6 @@
 import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone } from "lucide-react";
 import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -211,12 +210,12 @@ export function Footer() {
           {/* Mobile App Badges - Desktop */}
           <div className="mt-8 pt-8 border-t border-border">
             <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading">
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4" data-testid="app-store-badges">
-                <div className="relative" data-testid="badge-app-store">
+                <div data-testid="badge-app-store">
                   <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
                     <SiApple className="h-6 w-6" />
                     <div className="flex flex-col leading-tight">
@@ -224,11 +223,8 @@ export function Footer() {
                       <span className="text-sm font-semibold">App Store</span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-app-store-coming-soon">
-                    Coming Soon
-                  </Badge>
                 </div>
-                <div className="relative" data-testid="badge-google-play">
+                <div data-testid="badge-google-play">
                   <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
                     <SiGoogleplay className="h-5 w-5" />
                     <div className="flex flex-col leading-tight">
@@ -236,9 +232,6 @@ export function Footer() {
                       <span className="text-sm font-semibold">Google Play</span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-google-play-coming-soon">
-                    Coming Soon
-                  </Badge>
                 </div>
               </div>
             </div>
@@ -368,12 +361,12 @@ export function Footer() {
           {/* Mobile App Badges - Mobile */}
           <div className="mt-6 pt-6 border-t border-border">
             <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading-mobile">
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3" data-testid="app-store-badges-mobile">
-                <div className="relative" data-testid="badge-app-store-mobile">
+                <div data-testid="badge-app-store-mobile">
                   <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
                     <SiApple className="h-5 w-5" />
                     <div className="flex flex-col leading-tight">
@@ -381,11 +374,8 @@ export function Footer() {
                       <span className="text-xs font-semibold">App Store</span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-app-store-coming-soon-mobile">
-                    Soon
-                  </Badge>
                 </div>
-                <div className="relative" data-testid="badge-google-play-mobile">
+                <div data-testid="badge-google-play-mobile">
                   <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
                     <SiGoogleplay className="h-4 w-4" />
                     <div className="flex flex-col leading-tight">
@@ -393,9 +383,6 @@ export function Footer() {
                       <span className="text-xs font-semibold">Google Play</span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-google-play-coming-soon-mobile">
-                    Soon
-                  </Badge>
                 </div>
               </div>
             </div>
