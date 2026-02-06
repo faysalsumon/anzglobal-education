@@ -529,6 +529,119 @@ export default function Landing() {
         </section>
       )}
 
+      {/* Your Journey Starts Here */}
+      <section className="py-20 md:py-32 bg-gradient-to-b from-background to-card/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              For Students: Your Path to Success
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Three simple steps to find your perfect course and start your international education journey
+            </p>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
+            {/* Step 1 */}
+            <Card className="relative overflow-hidden border-primary/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    1
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Search className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Discover & Filter</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Tell our AI what you're looking for in plain language. Get instant, personalized course recommendations that match your goals, budget, and career aspirations.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Step 2 */}
+            <Card className="relative overflow-hidden border-secondary/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-secondary/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    2
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <GraduationCap className="h-6 w-6 text-secondary" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Compare & Choose</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Review detailed course information, compare scholarships, explore career pathways, and read real student reviews. Make confident decisions about your education.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Step 3 */}
+            <Card className="relative overflow-hidden border-accent/20 hover-elevate group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/10 to-transparent rounded-bl-full"></div>
+              <CardHeader className="relative">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    3
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ArrowRight className="h-6 w-6 text-accent" />
+                  </div>
+                </div>
+                <CardTitle className="text-2xl">Apply with Ease</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">
+                  Apply directly through our platform with expert guidance. Track your application status in real-time and get personalized support from our experienced counselors.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Dual CTA */}
+          <div className="text-center mt-12">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Button 
+                asChild
+                size="lg" 
+                className="px-8"
+                data-testid="button-student-get-started"
+              >
+                <Link href="/auth">
+                  <GraduationCap className="mr-2 h-5 w-5" />
+                  Start as a Student
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button 
+                asChild
+                size="lg" 
+                variant="outline"
+                className="px-8"
+                data-testid="button-institution-get-started"
+              >
+                <Link href="/auth">
+                  <Building2 className="mr-2 h-5 w-5" />
+                  Join as an Institution
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Join students and institutions building their futures together
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Promotional Video Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">
         {/* Background Pattern */}
@@ -654,120 +767,6 @@ export default function Landing() {
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Your Journey Starts Here */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background to-card/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              For Students: Your Path to Success
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Three simple steps to find your perfect course and start your international education journey
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
-            {/* Step 1 */}
-            <Card className="relative overflow-hidden border-primary/20 hover-elevate group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full"></div>
-              <CardHeader className="relative">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                    1
-                  </div>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Search className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl">Discover & Filter</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  Tell our AI what you're looking for in plain language. Get instant, personalized course recommendations that match your goals, budget, and career aspirations.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Step 2 */}
-            <Card className="relative overflow-hidden border-secondary/20 hover-elevate group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-secondary/10 to-transparent rounded-bl-full"></div>
-              <CardHeader className="relative">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                    2
-                  </div>
-                  <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <GraduationCap className="h-6 w-6 text-secondary" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl">Compare & Choose</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  Review detailed course information, compare scholarships, explore career pathways, and read real student reviews. Make confident decisions about your education.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Step 3 */}
-            <Card className="relative overflow-hidden border-accent/20 hover-elevate group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/10 to-transparent rounded-bl-full"></div>
-              <CardHeader className="relative">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                    3
-                  </div>
-                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ArrowRight className="h-6 w-6 text-accent" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl">Apply with Ease</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  Apply directly through our platform with expert guidance. Track your application status in real-time and get personalized support from our experienced counselors.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Dual CTA */}
-          <div className="text-center mt-12">
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Button 
-                asChild
-                size="lg" 
-                className="px-8"
-                data-testid="button-student-get-started"
-              >
-                <Link href="/auth">
-                  <GraduationCap className="mr-2 h-5 w-5" />
-                  Start as a Student
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button 
-                asChild
-                size="lg" 
-                variant="outline"
-                className="px-8"
-                data-testid="button-institution-get-started"
-              >
-                <Link href="/auth">
-                  <Building2 className="mr-2 h-5 w-5" />
-                  Join as an Institution
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              Join students and institutions building their futures together
-            </p>
           </div>
         </div>
       </section>
