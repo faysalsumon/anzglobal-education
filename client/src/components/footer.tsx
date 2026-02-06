@@ -1,6 +1,7 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes } from "lucide-react";
-import { SiOpenai } from "react-icons/si";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone } from "lucide-react";
+import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
+import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -96,6 +97,16 @@ const footerSections: FooterSection[] = [
       { label: "Trade", href: "/courses?search=Trade" },
     ],
   },
+  {
+    title: "LEGAL",
+    links: [
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Use", href: "/terms" },
+      { label: "Cookie Policy", href: "/cookie-policy" },
+      { label: "Disclaimer", href: "/disclaimer" },
+      { label: "Refund Policy", href: "/refund-policy" },
+    ],
+  },
 ];
 
 export function Footer() {
@@ -106,7 +117,7 @@ export function Footer() {
       {/* Desktop Footer - Grid Layout */}
       <div className="hidden md:block">
         <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
             {footerSections.map((section) => (
               <div key={section.title}>
                 <h3 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wide">
@@ -197,6 +208,42 @@ export function Footer() {
             </div>
           </div>
           
+          {/* Mobile App Badges - Desktop */}
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Smartphone className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-4" data-testid="app-store-badges">
+                <div className="relative" data-testid="badge-app-store">
+                  <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
+                    <SiApple className="h-6 w-6" />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[10px]">Download on the</span>
+                      <span className="text-sm font-semibold">App Store</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-app-store-coming-soon">
+                    Coming Soon
+                  </Badge>
+                </div>
+                <div className="relative" data-testid="badge-google-play">
+                  <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
+                    <SiGoogleplay className="h-5 w-5" />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[10px]">GET IT ON</span>
+                      <span className="text-sm font-semibold">Google Play</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-google-play-coming-soon">
+                    Coming Soon
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Powered by AI Section - Desktop */}
           <div className="mt-8 pt-8 border-t border-border">
             <div className="flex flex-col items-center gap-4">
@@ -318,6 +365,42 @@ export function Footer() {
             </div>
           </div>
           
+          {/* Mobile App Badges - Mobile */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Smartphone className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3" data-testid="app-store-badges-mobile">
+                <div className="relative" data-testid="badge-app-store-mobile">
+                  <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
+                    <SiApple className="h-5 w-5" />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[9px]">Download on the</span>
+                      <span className="text-xs font-semibold">App Store</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-app-store-coming-soon-mobile">
+                    Soon
+                  </Badge>
+                </div>
+                <div className="relative" data-testid="badge-google-play-mobile">
+                  <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
+                    <SiGoogleplay className="h-4 w-4" />
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[9px]">GET IT ON</span>
+                      <span className="text-xs font-semibold">Google Play</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 scale-75" data-testid="badge-google-play-coming-soon-mobile">
+                    Soon
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Powered by AI Section - Mobile */}
           <div className="mt-6 pt-6 border-t border-border">
             <div className="flex flex-col items-center gap-3">
@@ -345,29 +428,10 @@ export function Footer() {
 
       {/* Copyright Bar - Blue Background */}
       <div className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 md:px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
-            <p className="text-center md:text-left">
-              Copyright {currentYear} | ANZ Global Education
-            </p>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/terms"
-                className="hover:underline transition-all"
-                data-testid="footer-link-terms"
-              >
-                Terms of Use
-              </Link>
-              <span className="text-primary-foreground/60">|</span>
-              <Link
-                href="/privacy"
-                className="hover:underline transition-all"
-                data-testid="footer-link-privacy"
-              >
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
+        <div className="container mx-auto px-4 md:px-6 py-4">
+          <p className="text-sm text-center" data-testid="text-copyright">
+            Copyright {currentYear} | ANZ Global Education. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
