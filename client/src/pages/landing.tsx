@@ -267,7 +267,7 @@ export default function Landing() {
       </Helmet>
 
       {/* Hero Section */}
-      <section id="main-content" className="overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 py-20 md:py-32 text-white isolate -z-10">
+      <section id="main-content" className="overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 py-20 md:py-32 text-white isolate -z-10">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl min-h-[120px] sm:min-h-[140px] md:min-h-[160px]">
@@ -398,7 +398,7 @@ export default function Landing() {
 
       {/* Featured Courses Section */}
       {featuredCourses.length > 0 && (
-        <section className="py-16 md:py-24 bg-[#3465A5]/5">
+        <section className="py-16 md:py-24 bg-primary/5">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 text-secondary mb-6 border border-secondary/20">
@@ -420,8 +420,8 @@ export default function Landing() {
                   href={`/courses/${course.slug || course.id}`}
                   data-testid={`link-featured-course-${course.id}`}
                 >
-                  <Card className="h-full hover-elevate cursor-pointer group overflow-hidden">
-                    <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10">
+                  <Card className="h-full hover-elevate cursor-pointer group">
+                    <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10 rounded-t-md overflow-hidden">
                       {course.thumbnailUrl ? (
                         <img 
                           src={course.thumbnailUrl} 
@@ -444,7 +444,7 @@ export default function Landing() {
                           </div>
                         )}
                         <div 
-                          className="bg-[#FF5000] text-white px-2 py-1 rounded-md text-xs font-medium"
+                          className="bg-accent text-white px-2 py-1 rounded-md text-xs font-medium"
                           data-testid={`badge-featured-course-${course.id}`}
                         >
                           Featured
@@ -498,7 +498,7 @@ export default function Landing() {
                         </div>
                         {course.hasScholarship && (
                           <div 
-                            className="flex items-center gap-1 text-[#10b981] font-medium text-xs"
+                            className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium text-xs"
                             data-testid={`badge-featured-course-scholarship-${course.id}`}
                           >
                             <Award className="h-3.5 w-3.5" />
@@ -742,7 +742,7 @@ export default function Landing() {
               <Button 
                 asChild
                 size="lg" 
-                className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
+                className="px-8"
                 data-testid="button-student-get-started"
               >
                 <Link href="/auth">
@@ -755,7 +755,7 @@ export default function Landing() {
                 asChild
                 size="lg" 
                 variant="outline"
-                className="px-8 py-6 text-lg"
+                className="px-8"
                 data-testid="button-institution-get-started"
               >
                 <Link href="/auth">
@@ -854,7 +854,7 @@ export default function Landing() {
             <Button 
               asChild
               size="lg" 
-              className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg"
+              className="px-8"
               data-testid="button-institution-partner"
             >
               <Link href="/auth">
@@ -990,7 +990,7 @@ export default function Landing() {
 
       {/* Recent Blog Posts Section */}
       {blogs.length > 0 && (
-        <section className="py-16 md:py-24 bg-card" data-testid="section-recent-blogs">
+        <section className="py-16 md:py-24 bg-background" data-testid="section-recent-blogs">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-12">
               <div>
@@ -1057,7 +1057,7 @@ export default function Landing() {
       )}
 
       {/* Student Reviews Section - Compact Slider */}
-      <section className="py-12 md:py-16 bg-blue-50 dark:bg-blue-950/20">
+      <section className="py-12 md:py-16 bg-primary/5 dark:bg-primary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -1085,7 +1085,7 @@ export default function Landing() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 rounded-full bg-background shadow-md flex-shrink-0"
+                      className="rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === 0 ? featuredReviews.length - 1 : prev - 1))}
                       data-testid="button-review-prev"
                     >
@@ -1156,7 +1156,7 @@ export default function Landing() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 rounded-full bg-background shadow-md flex-shrink-0"
+                      className="rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === featuredReviews.length - 1 ? 0 : prev + 1))}
                       data-testid="button-review-next"
                     >
@@ -1188,7 +1188,7 @@ export default function Landing() {
       {/* CTA Section */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl rounded-3xl bg-gradient-to-br from-[#3465A5] via-[#2a5286] to-[#1e3a5f] p-8 md:p-12 relative overflow-hidden">
+          <div className="mx-auto max-w-4xl rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 md:p-12 relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -1202,7 +1202,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="w-full sm:w-auto bg-white text-[#3465A5] hover:bg-white/90 font-semibold shadow-lg" 
+                  className="w-full sm:w-auto bg-white text-primary font-semibold shadow-lg" 
                   data-testid="button-student-cta"
                 >
                   <Link href="/auth">
@@ -1213,7 +1213,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="w-full sm:w-auto bg-[#FF5000] hover:bg-[#e64800] text-white font-semibold shadow-lg border-0" 
+                  className="w-full sm:w-auto bg-accent text-white font-semibold shadow-lg border-0" 
                   data-testid="button-institution-cta"
                 >
                   <Link href="/auth">
