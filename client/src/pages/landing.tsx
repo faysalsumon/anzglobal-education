@@ -293,7 +293,7 @@ export default function Landing() {
               </h1>
 
               <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
-                Connect with top institutions worldwide. Discover, compare, and apply to courses that match your goals.
+                We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.
               </p>
 
               {/* Primary CTA */}
@@ -310,38 +310,37 @@ export default function Landing() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button 
-                  asChild
-                  size="lg" 
-                  variant="outline"
-                  data-testid="button-hero-view-institutions"
-                >
-                  <Link href="/institutions">
-                    <Building2 className="mr-2 h-5 w-5" />
-                    View Institutions
-                  </Link>
-                </Button>
               </div>
 
-              {/* Trust indicators */}
-              <div className="flex items-center gap-6 justify-center lg:justify-start text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                    <GraduationCap className="h-4 w-4 text-primary" />
+              {/* Benefit badges */}
+              <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
+                <div className="flex items-center gap-2" data-testid="badge-hero-compare">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                    <Filter className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
-                    <span className="font-bold text-foreground text-lg" data-testid="text-hero-course-count">{stats?.courseCount || 0}+</span>
-                    <p className="text-xs">Courses</p>
+                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-compare">Compare Side-by-Side</span>
+                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-compare-desc">Fees, scholarships & career paths</p>
                   </div>
                 </div>
-                <div className="w-px h-8 bg-border" />
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent/10">
-                    <Building2 className="h-4 w-4 text-accent" />
+                <div className="w-px h-8 bg-border hidden sm:block" />
+                <div className="flex items-center gap-2" data-testid="badge-hero-visa">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
+                    <CheckCircle className="h-3.5 w-3.5 text-accent" />
                   </div>
                   <div>
-                    <span className="font-bold text-foreground text-lg" data-testid="text-hero-institution-count">{stats?.institutionCount || 0}+</span>
-                    <p className="text-xs">Institutions</p>
+                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-visa">98% Visa Success</span>
+                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-visa-desc">Expert guidance at every step</p>
+                  </div>
+                </div>
+                <div className="w-px h-8 bg-border hidden sm:block" />
+                <div className="flex items-center gap-2" data-testid="badge-hero-free">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-free">100% Free for Students</span>
+                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-free-desc">No hidden fees, ever</p>
                   </div>
                 </div>
               </div>
