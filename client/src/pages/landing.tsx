@@ -13,6 +13,7 @@ import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
+import { CourseMatchQuiz } from "@/components/course-match-quiz";
 
 interface PlatformStats {
   institutionCount: number;
@@ -62,6 +63,7 @@ export default function Landing() {
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
+  const [quizOpen, setQuizOpen] = useState(false);
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
@@ -299,15 +301,24 @@ export default function Landing() {
               {/* Primary CTA */}
               <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start mb-8">
                 <Button 
-                  asChild
                   size="lg" 
                   className="px-8 text-base bg-accent text-white border-accent-border"
+                  onClick={() => setQuizOpen(true)}
+                  data-testid="button-hero-find-my-course"
+                >
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Find My Course
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button 
+                  asChild
+                  size="lg" 
+                  variant="outline"
                   data-testid="button-hero-explore-courses"
                 >
                   <Link href="/courses">
                     <Search className="mr-2 h-5 w-5" />
                     Explore Courses
-                    <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
               </div>
@@ -1316,6 +1327,8 @@ export default function Landing() {
       </section>
 
       </div>
+
+      <CourseMatchQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
     </PublicLayout>
   );
 }
