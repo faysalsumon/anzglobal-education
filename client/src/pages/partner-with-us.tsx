@@ -17,15 +17,33 @@ import {
   Zap,
   ArrowRight,
   Target,
-  FileCheck
+  FileCheck,
+  MapPin,
+  Award
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
 import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
 interface PlatformStats {
   institutionCount: number;
   courseCount: number;
+}
+
+interface FeaturedInstitution {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  country: string | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+interface FeaturedData {
+  institutions: FeaturedInstitution[];
+  courses: unknown[];
 }
 
 export default function PartnerWithUs() {
@@ -98,17 +116,11 @@ export default function PartnerWithUs() {
     }
   ];
 
-  // Partner logos - these would typically be stored in your assets or database
-  const partnerLogos = [
-    { name: "Leading Australian University", placeholder: true },
-    { name: "International College", placeholder: true },
-    { name: "Technical Institute", placeholder: true },
-    { name: "Education Provider", placeholder: true },
-    { name: "Global Academy", placeholder: true },
-    { name: "Higher Education", placeholder: true },
-    { name: "Professional Institute", placeholder: true },
-    { name: "Australian College", placeholder: true },
-  ];
+  const { data: featuredData } = useQuery<FeaturedData>({
+    queryKey: ["/api/public/featured"],
+  });
+
+  const featuredInstitutions = featuredData?.institutions || [];
 
   return (
     <PublicLayout>
@@ -318,21 +330,49 @@ export default function PartnerWithUs() {
               </p>
             </div>
 
-            {/* Partner logos grid - placeholder styling */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-12">
-              {partnerLogos.map((partner, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-center p-6 bg-card rounded-lg border border-border/50 hover-elevate h-24"
-                  data-testid={`partner-logo-${index}`}
-                >
-                  <div className="text-center">
-                    <Building2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-xs text-muted-foreground/60">{partner.name}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {featuredInstitutions.length > 0 && (
+              <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-12">
+                {featuredInstitutions.map((institution) => (
+                  <Link 
+                    key={institution.id} 
+                    href={`/institutions/${institution.id}`}
+                    data-testid={`link-partner-institution-${institution.id}`}
+                    className="group text-center"
+                  >
+                    <div className="flex flex-col items-center gap-3 p-4 rounded-lg hover-elevate cursor-pointer">
+                      <div className="w-24 h-24 rounded-full bg-white dark:bg-white border border-border/50 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md transition-shadow">
+                        {institution.logoUrl ? (
+                          <img 
+                            src={institution.logoUrl} 
+                            alt={institution.name}
+                            className="w-[72px] h-[72px] object-contain"
+                            data-testid={`img-partner-institution-logo-${institution.id}`}
+                          />
+                        ) : (
+                          <Building2 className="h-10 w-10 text-primary/40" />
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <h3 
+                          className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors"
+                          data-testid={`text-partner-institution-name-${institution.id}`}
+                        >
+                          {institution.name}
+                        </h3>
+                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate" data-testid={`text-partner-institution-location-${institution.id}`}>
+                            {[institution.city, institution.state, institution.country]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
 
             <div className="text-center">
               <Button 
