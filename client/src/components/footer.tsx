@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone, BookOpen, MapPin, Mail, GraduationCap } from "lucide-react";
 import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
 import whiteLogoUrl from "@assets/White_Logo_Primary-Dark_Background_400x120_1770431203113.png";
-import anzLogoUrl from "@assets/WHITE_no_Background_1770436368004.jpeg";
+import anzLogoUrl from "@assets/ANZ_PNG_Logo_(1)_1770437147511.png";
 import {
   Accordion,
   AccordionContent,
