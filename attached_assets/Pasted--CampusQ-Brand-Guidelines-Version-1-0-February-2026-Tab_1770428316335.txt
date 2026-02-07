@@ -1,0 +1,978 @@
+# CampusQ Brand Guidelines
+
+### Version 1.0 — February 2026
+
+---
+
+## Table of Contents
+1. [Brand Overview](#brand-overview)
+2. [Logo Usage](#1-logo-usage)
+3. [Color Palette](#2-color-palette)
+4. [Typography](#3-typography)
+5. [Voice & Tone](#4-voice--tone)
+6. [Iconography](#5-iconography)
+7. [UI Components](#6-ui-components)
+8. [Photography & Imagery](#7-photography--imagery)
+
+---
+
+## Brand Overview
+
+**CampusQ** is an intelligent EdTech platform designed to match students with the right courses, built with a student-first philosophy. These guidelines ensure a consistent, trustworthy, and approachable brand experience across all touchpoints.
+
+> **Tagline:** *Intelligent Course Matching*
+> **Parent Company:** A product of **ANZ Global Education**
+
+---
+
+## 1. Logo Usage
+
+### Primary Logo
+
+The primary logo is the **"campQ"** wordmark featuring a stylized **magnifying glass integrated into the letter Q**. The magnifying glass symbolizes search, discovery, and intelligent matching — the core promise of the platform.
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│   camp🔍    ← Primary Logo     │
+│        Q                        │
+│                                 │
+│   "campQ" wordmark              │
+│   Magnifying glass = the Q      │
+│   Teal (#2DBDB6) accent on Q   │
+│   Navy (#1E2A5E) on "camp"     │
+│                                 │
+└─────────────────────────────────┘
+```
+
+### Logo Variations
+
+| Variation | Use Case |
+|---|---|
+| **Full-color (primary)** | Light backgrounds (`#FFFFFF`, `#F5F7FA`) |
+| **Reversed (white)** | Dark backgrounds, navy overlays, hero images |
+| **Monochrome Navy** | Single-color print, formal documents |
+| **Monochrome White** | Dark surfaces, photography overlays |
+| **Favicon / App Icon** | Magnifying glass "Q" mark only |
+
+### Minimum Size
+
+To maintain legibility and the integrity of the magnifying glass detail:
+
+| Format | Minimum Width |
+|---|---|
+| **Digital (full wordmark)** | `120px` |
+| **Digital (Q icon only)** | `32px` |
+| **Print (full wordmark)** | `30mm` |
+| **Print (Q icon only)** | `10mm` |
+
+### Clear Space
+
+Maintain clear space around the logo equal to the **height of the lowercase "a"** in the wordmark (referred to as unit **`X`**). No other text, graphics, or visual elements should enter this zone.
+
+```
+        X
+      ┌───┐
+      │   │
+  X ──┤ campQ ├── X
+      │       │
+      └───────┘
+          X
+```
+
+### Background Usage
+
+#### ✅ On Light Backgrounds
+```css
+/* Use full-color logo */
+background: #FFFFFF;   /* White           → Full-color logo */
+background: #F5F7FA;   /* Light gray      → Full-color logo */
+background: #EEF0F6;   /* Warm light gray → Full-color logo */
+```
+
+#### ✅ On Dark Backgrounds
+```css
+/* Use reversed (white) logo */
+background: #1E2A5E;   /* Primary Navy → White logo          */
+background: #0F1A3E;   /* Deep Navy    → White logo          */
+background: #1A1A2E;   /* Dark mode    → White logo          */
+```
+
+#### ✅ On Photography
+- Place logo on areas with sufficient contrast
+- Use a semi-transparent navy overlay (`rgba(30, 42, 94, 0.7)`) behind the white logo if contrast is insufficient
+
+### Logo Don'ts
+
+> ❌ **Never** do any of the following:
+
+| Rule | Description |
+|---|---|
+| 🚫 **Don't stretch or distort** | Always scale proportionally |
+| 🚫 **Don't rotate** | The logo must remain horizontal |
+| 🚫 **Don't recolor arbitrarily** | Only use approved color variations |
+| 🚫 **Don't add effects** | No drop shadows, glows, bevels, or gradients |
+| 🚫 **Don't place on busy backgrounds** | Without an overlay or container |
+| 🚫 **Don't alter the magnifying glass** | The Q icon is a fixed element |
+| 🚫 **Don't rearrange elements** | "camp" and "Q" must stay as one unit |
+| 🚫 **Don't outline the logo** | No strokes around the wordmark |
+| 🚫 **Don't change the typeface** | The logotype is custom — never recreate it |
+| 🚫 **Don't use low-resolution files** | Always use provided vector/SVG assets |
+
+---
+
+## 2. Color Palette
+
+### Primary Colors
+
+<table>
+<tr>
+<td style="width: 80px; height: 80px; background: #1E2A5E; border-radius: 8px;"></td>
+<td>
+<strong>Navy — Primary</strong><br>
+<code>#1E2A5E</code><br>
+<code>RGB: 30, 42, 94</code><br>
+<code>HSL: 229°, 52%, 24%</code><br>
+<em>Usage: Main text, headings, trust & authority, navbar, footer</em>
+</td>
+</tr>
+<tr>
+<td style="width: 80px; height: 80px; background: #2DBDB6; border-radius: 8px;"></td>
+<td>
+<strong>Teal — Primary Accent</strong><br>
+<code>#2DBDB6</code><br>
+<code>RGB: 45, 189, 182</code><br>
+<code>HSL: 177°, 62%, 46%</code><br>
+<em>Usage: The Q mark, CTAs, links, accents, interactive elements</em>
+</td>
+</tr>
+</table>
+
+### Accent Color
+
+<table>
+<tr>
+<td style="width: 80px; height: 80px; background: #FF5000; border-radius: 8px;"></td>
+<td>
+<strong>Orange — Accent</strong><br>
+<code>#FF5000</code><br>
+<code>RGB: 255, 80, 0</code><br>
+<em>Usage: Action buttons, urgency indicators, progress elements, badges</em>
+</td>
+</tr>
+</table>
+
+### Extended Teal Scale
+
+```css
+:root {
+  --teal-50:  #E6F9F8;
+  --teal-100: #B3EEEC;
+  --teal-200: #80E3DF;
+  --teal-300: #4DD8D3;
+  --teal-400: #2DBDB6;  /* ← Primary */
+  --teal-500: #24A09A;
+  --teal-600: #1B837E;
+  --teal-700: #136662;
+  --teal-800: #0A4946;
+  --teal-900: #022C2A;
+}
+```
+
+### Extended Navy Scale
+
+```css
+:root {
+  --navy-50:  #E8EAF0;
+  --navy-100: #B9BFCF;
+  --navy-200: #8A94AE;
+  --navy-300: #5B698D;
+  --navy-400: #3A4A74;
+  --navy-500: #1E2A5E;  /* ← Primary */
+  --navy-600: #182249;
+  --navy-700: #121A36;
+  --navy-800: #0C1224;
+  --navy-900: #060A14;
+}
+```
+
+### Neutrals
+
+```css
+:root {
+  --gray-50:  #F8F9FB;   /* Page backgrounds            */
+  --gray-100: #F1F3F7;   /* Card backgrounds, sections  */
+  --gray-200: #E2E5EC;   /* Borders, dividers           */
+  --gray-300: #C8CDD8;   /* Disabled states             */
+  --gray-400: #9BA3B5;   /* Placeholder text            */
+  --gray-500: #6E7891;   /* Secondary text              */
+  --gray-600: #4A5468;   /* Body text                   */
+  --gray-700: #2D3648;   /* Strong body text            */
+  --gray-800: #1A2033;   /* Headings (alt to navy)      */
+  --gray-900: #0D1017;   /* Maximum contrast            */
+
+  --white:    #FFFFFF;
+}
+```
+
+### Semantic Colors
+
+| Role | Color | Hex | Usage |
+|---|---|---|---|
+| ✅ **Success** | Green | `#16A34A` | Confirmations, completed steps, match indicators |
+| ⚠️ **Warning** | Amber | `#D97706` | Alerts, deadline reminders, partial matches |
+| ❌ **Error** | Red | `#DC2626` | Form errors, failed states, critical alerts |
+| ℹ️ **Info** | Blue | `#2563EB` | Tips, informational banners, help text |
+
+Each semantic color should have light background variants for alert containers:
+
+```css
+:root {
+  --success-bg: #F0FDF4;   --success-border: #BBF7D0;   --success-text: #166534;
+  --warning-bg: #FFFBEB;   --warning-border: #FDE68A;   --warning-text: #92400E;
+  --error-bg:   #FEF2F2;   --error-border:   #FECACA;   --error-text:   #991B1B;
+  --info-bg:    #EFF6FF;   --info-border:    #BFDBFE;   --info-text:    #1E40AF;
+}
+```
+
+### Color Accessibility
+
+All color combinations must meet **WCAG 2.1 AA** standards:
+
+| Combination | Contrast Ratio | Rating |
+|---|---|---|
+| Navy `#1E2A5E` on White `#FFFFFF` | **12.5:1** | ✅ AAA |
+| Teal `#2DBDB6` on Navy `#1E2A5E` | **5.8:1** | ✅ AA |
+| Teal `#2DBDB6` on White `#FFFFFF` | **2.9:1** | ⚠️ Large text only |
+| White `#FFFFFF` on Teal `#24A09A` | **3.2:1** | ⚠️ Use `--teal-700` for small text |
+| White `#FFFFFF` on Orange `#FF5000` | **3.5:1** | ✅ AA Large |
+| Gray-600 `#4A5468` on White | **7.1:1** | ✅ AAA |
+
+> **Rule:** For body-text sized Teal elements on white, use `--teal-600` (`#1B837E`) or darker to meet AA. The primary Teal `#2DBDB6` is approved for large text (18px+), icons, and decorative elements only.
+
+---
+
+## 3. Typography
+
+### Font Stack
+
+```css
+:root {
+  --font-heading: 'Nunito', 'Nunito Sans', -apple-system, system-ui, sans-serif;
+  --font-body:    'Open Sans', 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+```
+
+### Why These Fonts?
+
+| Font | Role | Rationale |
+|---|---|---|
+| **Nunito** | Headings, display | Rounded terminals match the logo's friendly, rounded letterforms. Approachable yet professional. |
+| **Open Sans** | Body text, UI | Highly legible at all sizes. Neutral personality lets Nunito headings shine. Excellent screen rendering. |
+
+### Type Scale
+
+Based on a **1.25 major third** scale with `16px` base:
+
+| Element | Font | Size | Weight | Line Height | Letter Spacing | Color |
+|---|---|---|---|---|---|---|
+| **Display** | Nunito | `3rem` / `48px` | 800 (ExtraBold) | 1.1 | `-0.02em` | Navy |
+| **H1** | Nunito | `2.25rem` / `36px` | 700 (Bold) | 1.2 | `-0.015em` | Navy |
+| **H2** | Nunito | `1.875rem` / `30px` | 700 (Bold) | 1.25 | `-0.01em` | Navy |
+| **H3** | Nunito | `1.5rem` / `24px` | 700 (Bold) | 1.3 | `-0.005em` | Navy |
+| **H4** | Nunito | `1.25rem` / `20px` | 600 (SemiBold) | 1.35 | `0` | Navy |
+| **H5** | Nunito | `1.125rem` / `18px` | 600 (SemiBold) | 1.4 | `0` | Navy |
+| **H6** | Nunito | `1rem` / `16px` | 600 (SemiBold) | 1.4 | `0.01em` | Navy |
+| **Body Large** | Open Sans | `1.125rem` / `18px` | 400 (Regular) | 1.6 | `0` | Gray-700 |
+| **Body** | Open Sans | `1rem` / `16px` | 400 (Regular) | 1.6 | `0` | Gray-700 |
+| **Body Small** | Open Sans | `0.875rem` / `14px` | 400 (Regular) | 1.5 | `0.005em` | Gray-600 |
+| **Caption** | Open Sans | `0.75rem` / `12px` | 400 (Regular) | 1.5 | `0.01em` | Gray-500 |
+| **Overline** | Open Sans | `0.75rem` / `12px` | 600 (SemiBold) | 1.5 | `0.08em` | Teal-600 |
+| **Button** | Nunito | `0.875rem` / `14px` | 700 (Bold) | 1 | `0.02em` | — |
+
+### CSS Implementation
+
+```css
+/* Headings */
+h1 {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--navy-500);
+}
+
+/* Body */
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--gray-700);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Links */
+a {
+  color: var(--teal-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+a:hover {
+  color: var(--teal-700);
+}
+
+/* Overline / Label */
+.overline {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal-600);
+}
+```
+
+### Responsive Typography
+
+```css
+/* Mobile-first, scale up */
+html { font-size: 16px; }
+
+@media (min-width: 768px) {
+  html { font-size: 16px; }
+  h1   { font-size: 2.25rem; }
+}
+
+@media (min-width: 1024px) {
+  h1   { font-size: 2.5rem; }
+}
+
+@media (min-width: 1280px) {
+  h1   { font-size: 3rem; }
+}
+```
+
+---
+
+## 4. Voice & Tone
+
+### Brand Personality
+
+CampusQ speaks like a **knowledgeable friend** — someone who's been through the process, understands the stress, and genuinely wants to help you find the right path.
+
+| Trait | What it means | What it doesn't mean |
+|---|---|---|
+| **Friendly** | Warm, conversational, uses "you" | Overly casual, slang-heavy, immature |
+| **Supportive** | Encouraging, empathetic, patient | Patronizing, hand-holding, dumbing down |
+| **Student-first** | Prioritizes the student's needs and goals | Ignoring institutional partners |
+| **Confident** | Clear, knowledgeable, decisive | Pushy, salesy, aggressive |
+| **Intelligent** | Data-informed, precise, insightful | Jargon-heavy, academic, robotic |
+
+### Writing Principles
+
+#### 1. Lead with the Student
+
+```
+✅ "Find courses that match your goals"
+❌ "Our platform uses AI to match courses"
+
+✅ "You're 3 steps away from your perfect course"
+❌ "Complete our 3-step matching process"
+```
+
+#### 2. Be Clear, Not Clever
+
+```
+✅ "Compare courses side by side"
+❌ "Unleash the power of comparative analytics"
+
+✅ "We couldn't find a match. Try adjusting your preferences."
+❌ "Oopsie! Looks like our matchmaker is stumped! 🤷"
+```
+
+#### 3. Encourage, Don't Pressure
+
+```
+✅ "Ready to explore your options?"
+❌ "Don't miss out! Start now before it's too late!"
+
+✅ "Your results are ready"
+❌ "ACT NOW to see your results!!!"
+```
+
+#### 4. Use Active Voice
+
+```
+✅ "We matched you with 12 courses"
+❌ "12 courses have been matched to your profile"
+```
+
+### Tone Spectrum
+
+The tone shifts depending on context, but always stays within the brand personality:
+
+| Context | Tone | Example |
+|---|---|---|
+| **Onboarding** | Warm, exciting | *"Welcome! Let's find the perfect course for you."* |
+| **Quiz / Matching** | Encouraging, light | *"Great choice! Just a few more questions to go."* |
+| **Results** | Confident, informative | *"Based on your interests, here are your top matches."* |
+| **Errors** | Calm, helpful | *"Something went wrong. Let's try that again."* |
+| **Success** | Celebratory, warm | *"You did it! Your shortlist is ready to review."* |
+| **Emails** | Friendly, personal | *"Hi [Name], we've found some new courses you might love."* |
+| **Legal / Compliance** | Clear, straightforward | *"We respect your privacy. Here's how we handle your data."* |
+
+### Tagline Usage
+
+> **"Intelligent Course Matching"**
+
+- Always appears in **sentence case** (not ALL CAPS)
+- Positioned below the logo or in the hero section
+- Set in **Nunito, 600 weight**, Teal or Navy
+- Never modify, abbreviate, or translate without approval
+
+### Footer Credit
+
+> **"A product of ANZ Global Education"**
+
+- Appears in footer, in `Open Sans` Regular, `14px`, `Gray-500`
+- "ANZ Global Education" may be linked to the parent company website
+- Do not abbreviate to "ANZGE" in public-facing content
+
+---
+
+## 5. Iconography
+
+### Icon Family: Lucide
+
+CampusQ uses the **Lucide** icon set for all UI icons. Lucide provides a consistent, clean line-icon system with uniform stroke widths.
+
+```
+npm install lucide-react
+```
+
+### Icon Specifications
+
+| Property | Value |
+|---|---|
+| **Default size** | `24px × 24px` |
+| **Stroke width** | `1.75px` (consistent with Lucide defaults) |
+| **Small icons** | `16px × 16px`, stroke `1.5px` |
+| **Large icons** | `32px × 32px`, stroke `2px` |
+| **Color** | Inherits text color (`currentColor`) |
+| **Corner radius** | Matches Lucide's default rounded joins |
+
+### Icon Usage
+
+```jsx
+import { Search, GraduationCap, BookOpen, MapPin } from 'lucide-react';
+
+// Standard usage
+<Search size={24} strokeWidth={1.75} />
+
+// In buttons
+<Button>
+  <Search size={16} className="mr-2" />
+  Search Courses
+</Button>
+```
+
+### Per-Discipline Color Coding
+
+Each academic discipline receives a unique color for visual identification in quiz results, cards, and badges:
+
+| Discipline | Color | Hex | Icon Example |
+|---|---|---|---|
+| **Business & Management** | Navy | `#1E2A5E` | `Briefcase` |
+| **Technology & IT** | Teal | `#2DBDB6` | `Monitor` |
+| **Health Sciences** | Green | `#16A34A` | `Heart` |
+| **Engineering** | Orange | `#FF5000` | `Wrench` |
+| **Arts & Humanities** | Purple | `#7C3AED` | `Palette` |
+| **Sciences** | Blue | `#2563EB` | `Atom` |
+| **Education** | Amber | `#D97706` | `GraduationCap` |
+| **Law** | Slate | `#475569` | `Scale` |
+| **Hospitality & Tourism** | Rose | `#E11D48` | `Utensils` |
+| **Design & Creative** | Pink | `#DB2777` | `PenTool` |
+
+```jsx
+// Discipline badge component
+<Badge
+  icon={<Briefcase size={14} />}
+  label="Business & Management"
+  color="#1E2A5E"
+  bgColor="#E8EAF0"
+/>
+```
+
+### Icon Don'ts
+
+| Rule |
+|---|
+| 🚫 Don't mix Lucide with other icon sets (Font Awesome, Heroicons, etc.) |
+| 🚫 Don't use filled icons — always use the outline/line variant |
+| 🚫 Don't scale icons with CSS `transform` — use the `size` prop |
+| 🚫 Don't use icons without accessible labels (`aria-label` or adjacent text) |
+
+---
+
+## 6. UI Components
+
+### Design Tokens (CSS Custom Properties)
+
+```css
+:root {
+  /* ── Spacing ──────────────────────────── */
+  --space-xs:   0.25rem;   /*  4px  */
+  --space-sm:   0.5rem;    /*  8px  */
+  --space-md:   1rem;      /* 16px  */
+  --space-lg:   1.5rem;    /* 24px  */
+  --space-xl:   2rem;      /* 32px  */
+  --space-2xl:  3rem;      /* 48px  */
+  --space-3xl:  4rem;      /* 64px  */
+
+  /* ── Border Radius ────────────────────── */
+  --radius-sm:  0.25rem;   /*  4px  */
+  --radius-md:  0.375rem;  /*  6px — default for cards, inputs */
+  --radius-lg:  0.5rem;    /*  8px — modals, large cards       */
+  --radius-xl:  0.75rem;   /* 12px — feature cards              */
+  --radius-full: 9999px;   /* pills, avatars                    */
+
+  /* ── Shadows ──────────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(30, 42, 94, 0.06);
+  --shadow-md:  0 4px 6px -1px rgba(30, 42, 94, 0.08),
+                0 2px 4px -2px rgba(30, 42, 94, 0.04);
+  --shadow-lg:  0 10px 15px -3px rgba(30, 42, 94, 0.08),
+                0 4px 6px -4px rgba(30, 42, 94, 0.04);
+  --shadow-xl:  0 20px 25px -5px rgba(30, 42, 94, 0.1),
+                0 8px 10px -6px rgba(30, 42, 94, 0.06);
+
+  /* ── Transitions ──────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   350ms ease;
+}
+```
+
+### Buttons
+
+#### Button Variants
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
+│  │  Find Courses │  │  Apply Now   │  │  Learn More  │         │
+│  │   (Primary)   │  │   (Accent)   │  │   (Ghost)    │         │
+│  └──────────────┘  └──────────────┘  └──────────────┘         │
+│                                                                 │
+│  ┌──────────────┐  ┌──────────────┐                            │
+│  │  Compare  ◻  │  │  Disabled    │                            │
+│  │  (Outline)    │  │  (Disabled)  │                            │
+│  └──────────────┘  └──────────────┘                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+```css
+/* Base button */
+.btn {
+  font-family: var(--font-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Primary — Teal */
+.btn-primary {
+  background: var(--teal-400);
+  color: #FFFFFF;
+  border-color: var(--teal-400);
+}
+.btn-primary:hover {
+  background: var(--teal-600);
+  border-color: var(--teal-600);
+}
+.btn-primary:active {
+  background: var(--teal-700);
+  transform: translateY(1px);
+}
+.btn-primary:focus-visible {
+  outline: 3px solid var(--teal-200);
+  outline-offset: 2px;
+}
+
+/* Accent — Orange */
+.btn-accent {
+  background: #FF5000;
+  color: #FFFFFF;
+  border-color: #FF5000;
+}
+.btn-accent:hover {
+  background: #E04600;
+  border-color: #E04600;
+}
+
+/* Ghost */
+.btn-ghost {
+  background: transparent;
+  color: var(--teal-600);
+  border-color: transparent;
+}
+.btn-ghost:hover {
+  background: var(--teal-50);
+}
+
+/* Outline */
+.btn-outline {
+  background: transparent;
+  color: var(--navy-500);
+  border-color: var(--gray-300);
+}
+.btn-outline:hover {
+  border-color: var(--teal-400);
+  color: var(--teal-600);
+  background: var(--teal-50);
+}
+
+/* Disabled */
+.btn:disabled {
+  background: var(--gray-200);
+  color: var(--gray-400);
+  border-color: var(--gray-200);
+  cursor: not-allowed;
+  transform: none;
+}
+```
+
+#### Button Sizes
+
+| Size | Padding | Font Size | Icon Size | Use Case |
+|---|---|---|---|---|
+| **Small** | `0.375rem 0.75rem` | `0.75rem` | `14px` | Inline actions, table rows |
+| **Medium (default)** | `0.625rem 1.25rem` | `0.875rem` | `16px` | Standard buttons |
+| **Large** | `0.75rem 1.75rem` | `1rem` | `20px` | Hero CTAs, primary actions |
+
+### Cards
+
+```css
+.card {
+  background: #FFFFFF;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal),
+              transform var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Course match card */
+.card-course {
+  border-left: 4px solid var(--teal-400);
+}
+
+/* Featured / high-match card */
+.card-featured {
+  border: 2px solid var(--teal-400);
+  box-shadow: var(--shadow-md);
+}
+```
+
+#### Card Anatomy
+
+```
+┌────────────────────────────────────────┐
+│  ┌─────┐                               │
+│  │ 🎓  │  Overline: DISCIPLINE         │
+│  └─────┘  H4: Course Title             │
+│           Body: University Name         │
+│                                         │
+│  ┌────────────────────────────┐        │
+│  │  Match: ████████░░ 85%     │        │
+│  └────────────────────────────┘        │
+│                                         │
+│  📍 Location   ⏱ Duration   💰 Fee    │
+│                                         │
+│  ┌────────────┐  ┌────────────┐        │
+│  │ Learn More  │  │  Compare   │        │
+│  └────────────┘  └────────────┘        │
+└────────────────────────────────────────┘
+```
+
+### Form Inputs
+
+```css
+.input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: #FFFFFF;
+  color: var(--gray-800);
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--gray-400);
+}
+
+.input:focus {
+  border-color: var(--teal-400);
+  box-shadow: 0 0 0 3px var(--teal-50);
+  outline: none;
+}
+
+.input-error {
+  border-color: #DC2626;
+  box-shadow: 0 0 0 3px #FEF2F2;
+}
+
+.input-label {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: var(--space-xs);
+}
+```
+
+### Spacing System
+
+Use the **8px grid** consistently:
+
+```
+4px  (xs)  — tight internal spacing
+8px  (sm)  — between related elements
+16px (md)  — standard padding, gaps
+24px (lg)  — section internal padding
+32px (xl)  — between sections
+48px (2xl) — between major sections
+64px (3xl) — page-level spacing
+```
+
+### Layout Grid
+
+```css
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .container { padding: 0 var(--space-xl); }
+}
+
+/* 12-column grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-lg);
+}
+```
+
+### Dark Mode
+
+```css
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary:    #0F1220;
+  --bg-secondary:  #1A1F35;
+  --bg-tertiary:   #242B45;
+  --bg-elevated:   #2A3250;
+
+  /* Text */
+  --text-primary:   #F1F3F7;
+  --text-secondary: #9BA3B5;
+  --text-muted:     #6E7891;
+
+  /* Borders */
+  --border-color:  #2A3250;
+
+  /* Brand colors remain vibrant */
+  --teal-400: #38D6CF;     /* Slightly brighter for dark bg */
+  --navy-text: #F1F3F7;    /* Swap to light text */
+
+  /* Shadows become darker */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+
+  /* Cards */
+  --card-bg: var(--bg-secondary);
+  --card-border: var(--border-color);
+}
+
+/* Dark mode card */
+[data-theme="dark"] .card {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* Dark mode input */
+[data-theme="dark"] .input {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+```
+
+#### Dark Mode Palette Preview
+
+| Element | Light Mode | Dark Mode |
+|---|---|---|
+| Page background | `#FFFFFF` | `#0F1220` |
+| Card background | `#FFFFFF` | `#1A1F35` |
+| Primary text | `#2D3648` | `#F1F3F7` |
+| Secondary text | `#6E7891` | `#9BA3B5` |
+| Borders | `#E2E5EC` | `#2A3250` |
+| Teal accent | `#2DBDB6` | `#38D6CF` |
+| Navy (headings) | `#1E2A5E` | `#F1F3F7` |
+
+---
+
+## 7. Photography & Imagery
+
+### Photography Principles
+
+All photography used in CampusQ materials should reinforce the brand values of **inclusivity, aspiration, and warmth**.
+
+#### Subject Guidelines
+
+| Guideline | Details |
+|---|---|
+| **Diversity** | Feature students from diverse ethnic, cultural, and geographic backgrounds. CampusQ serves international students — imagery must reflect this. |
+| **Age range** | Primarily 18–35, but include mature-age learners where appropriate. |
+| **Settings** | Australian university campuses, libraries, lecture halls, collaborative study spaces, cityscapes (Sydney, Melbourne, Brisbane, Perth, Adelaide). |
+| **Activities** | Studying, collaborating, using technology, exploring campus, graduating, socializing. |
+| **Group compositions** | Mixed gender, mixed ethnicity groups. Avoid token representation — groups should feel natural. |
+
+#### Mood & Tone
+
+```
+✅ Warm, natural lighting (golden hour, soft daylight)
+✅ Candid, authentic moments (not overly staged)
+✅ Aspirational but relatable
+✅ Clean, uncluttered compositions
+✅ Student as the hero/focal point
+
+❌ Cold, fluorescent lighting
+❌ Stock photo clichés (pointing at whiteboards, forced smiles)
+❌ Overly posed or corporate
+❌ Cluttered or chaotic scenes
+❌ Imagery without context or purpose
+```
+
+#### Image Treatment
+
+```css
+/* Standard image container */
+.img-container {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Hero overlay */
+.hero-img-overlay {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 42, 94, 0.85) 0%,
+    rgba(45, 189, 182, 0.6) 100%
+  );
+}
+
+/* Subtle brand tint for backgrounds */
+.img-tinted {
+  filter: saturate(0.9) brightness(1.02);
+}
+```
+
+### Illustration Style
+
+When photography isn't available, use:
+
+- **Flat, minimal illustrations** with brand colors
+- Navy outlines with Teal and Orange accents
+- Rounded shapes consistent with the logo's aesthetic
+- Inclusive character representation
+
+### Stock Photography Sources (Recommended)
+
+- **Unsplash** — Search for Australian university, diverse students
+- **Pexels** — Free, high-quality campus imagery
+- **Custom photography** — Preferred for hero images and key marketing materials
+
+---
+
+## Asset Checklist
+
+| Asset | Format | Sizes |
+|---|---|---|
+| Logo — Full Color | SVG, PNG | `@1x`, `@2x`, `@3x` |
+| Logo — Reversed | SVG, PNG | `@1x`, `@2x`, `@3x` |
+| Logo — Monochrome | SVG, PNG | `@1x`, `@2x`, `@3x` |
+| Favicon | ICO, SVG, PNG | `16px`, `32px`, `48px` |
+| Apple Touch Icon | PNG | `180px` |
+| OG Image | PNG | `1200×630px` |
+| App Icon | PNG | `512×512px` |
+| Fonts | WOFF2, WOFF | Nunito: 400, 600, 700, 800 |
+| | | Open Sans: 400, 600 |
+| Color Swatch File | ASE, CLR | — |
+
+---
+
+## Quick Reference Card
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   campQ — Brand Quick Reference                            │
+│                                                             │
+│   COLORS                                                    │
+│   ■ Navy     #1E2A5E    Headings, trust                   │
+│   ■ Teal     #2DBDB6    CTAs, links, accents              │
+│   ■ Orange   #FF5000    Action, urgency                   │
+│   ■ Gray     #4A5468    Body text                         │
+│                                                             │
+│   FONTS                                                     │
+│   Headings:  Nunito (700)                                  │
+│   Body:      Open Sans (400)                               │
+│                                                             │
+│   RADIUS     6px default (rounded-md)                      │
+│   ICONS      Lucide, 24px, 1.75px stroke                  │
+│   GRID       8px spacing unit                              │
+│                                                             │
+│   VOICE      Friendly · Supportive · Confident             │
+│   TAGLINE    "Intelligent Course Matching"                 │
+│   PARENT     A product of ANZ Global Education             │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+<div align="center">
+
+**CampusQ Brand Guidelines v1.0**
+*Last updated: February 2026*
+
+*A product of ANZ Global Education*
+
+</div>
