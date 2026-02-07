@@ -285,7 +285,7 @@ export function Footer() {
                 <AccordionItem
                   key={section.title}
                   value={`section-${index}`}
-                  className="border-white/10"
+                  className={`border-white/10 ${index === footerSections.length - 1 ? "border-b-0" : ""}`}
                 >
                   <AccordionTrigger
                     className="text-xs font-bold text-[#2DBDB6] uppercase tracking-widest py-3.5 hover:no-underline [&>svg]:text-white/40"
