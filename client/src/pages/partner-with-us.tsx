@@ -183,9 +183,8 @@ export default function PartnerWithUs() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
                 size="lg" 
-                variant="secondary"
                 onClick={() => setShowInstitutionAuthModal(true)}
-                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group"
+                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-register-institution"
               >
                 Become a Partner
@@ -197,7 +196,7 @@ export default function PartnerWithUs() {
                 onClick={() => {
                   document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm"
+                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold bg-white/10 text-white border-white/30 backdrop-blur-sm"
                 data-testid="button-learn-more"
               >
                 Explore Benefits
@@ -378,7 +377,7 @@ export default function PartnerWithUs() {
               <Button 
                 size="lg"
                 onClick={() => setShowInstitutionAuthModal(true)}
-                className="min-w-[280px]"
+                className="min-w-[280px] bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-join-partners"
               >
                 Join Our Partner Network
@@ -431,9 +430,8 @@ export default function PartnerWithUs() {
             </p>
             <Button 
               size="lg" 
-              variant="secondary"
               onClick={() => setShowInstitutionAuthModal(true)}
-              className="min-w-[280px] h-14 text-lg font-semibold"
+              className="min-w-[280px] h-14 text-lg font-semibold bg-accent text-accent-foreground border-accent-border"
               data-testid="button-register-cta-bottom"
             >
               Become a Partner Today
