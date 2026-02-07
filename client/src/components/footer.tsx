@@ -41,15 +41,6 @@ const footerSections: FooterSection[] = [
     ],
   },
   {
-    title: "KNOWLEDGE BASE",
-    links: [
-      { label: "About Australia", href: "/blog?category=australia" },
-      { label: "Student Visa 101", href: "/blog?category=visa" },
-      { label: "Work While Studying", href: "/blog?category=work" },
-      { label: "Life In Australia", href: "/blog?category=life" },
-    ],
-  },
-  {
     title: "ABOUT CAMPQ",
     links: [
       { label: "Our Story", href: "/our-story" },
@@ -194,8 +185,8 @@ export function Footer() {
               </div>
 
               {/* Link Columns — occupies remaining 9 cols, split into sub-grid */}
-              <div className="lg:col-span-9 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-                {footerSections.slice(0, 5).map((section) => (
+              <div className="lg:col-span-9 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                {footerSections.slice(0, 4).map((section) => (
                   <div key={section.title}>
                     <h3 className="text-xs font-bold text-[#2DBDB6] mb-4 tracking-widest">
                       {section.title}
@@ -218,7 +209,7 @@ export function Footer() {
 
                 {/* Left: Legal Links inline */}
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  {footerSections[5].links.map((link) => (
+                  {footerSections[4].links.map((link) => (
                     <FooterLinkItem key={link.label} link={link} />
                   ))}
                 </div>
