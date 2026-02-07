@@ -340,7 +340,7 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-1.5 text-white/25">
               <GraduationCap className="h-3.5 w-3.5" />
-              <span className="text-[10px]">Empowering global education through technology</span>
+              <span className="text-[10px]">Empowering global education through technology. Developed in Australia for the world</span>
             </div>
           </div>
         </div>
