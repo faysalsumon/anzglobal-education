@@ -75,7 +75,6 @@ const footerSections: FooterSection[] = [
       { label: "Terms of Use", href: "/terms" },
       { label: "Cookie Policy", href: "/cookie-policy" },
       { label: "Disclaimer", href: "/disclaimer" },
-      { label: "Refund Policy", href: "/refund-policy" },
     ],
   },
 ];

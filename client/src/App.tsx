@@ -62,6 +62,8 @@ const AdminApplicationDetail = lazy(() => import("@/pages/admin-application-deta
 const ChatPage = lazy(() => import("@/pages/chat"));
 const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const CookiePolicy = lazy(() => import("@/pages/cookie-policy"));
+const Disclaimer = lazy(() => import("@/pages/disclaimer"));
 const AffiliatePage = lazy(() => import("@/pages/affiliate"));
 const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
 const AuthCallback = lazy(() => import("@/pages/auth-callback"));
@@ -114,6 +116,8 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/browse" component={PublicBrowse} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/cookie-policy" component={CookiePolicy} />
+        <Route path="/disclaimer" component={Disclaimer} />
         <Route path="/affiliate" component={AffiliatePage} />
         <Route path="/developers" component={Developers} />
         <Route path="/reset-password" component={ResetPasswordPage} />
