@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,6 @@ import {
   Award
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
-import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 
@@ -47,7 +45,6 @@ interface FeaturedData {
 }
 
 export default function PartnerWithUs() {
-  const [showInstitutionAuthModal, setShowInstitutionAuthModal] = useState(false);
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
@@ -183,12 +180,14 @@ export default function PartnerWithUs() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
                 size="lg" 
-                onClick={() => setShowInstitutionAuthModal(true)}
+                asChild
                 className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-register-institution"
               >
-                Become a Partner
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                <Link href="/institution/login">
+                  Become a Partner
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
               <Button 
                 size="lg" 
@@ -376,12 +375,14 @@ export default function PartnerWithUs() {
             <div className="text-center">
               <Button 
                 size="lg"
-                onClick={() => setShowInstitutionAuthModal(true)}
+                asChild
                 className="min-w-[280px] bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-join-partners"
               >
-                Join Our Partner Network
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href="/institution/login">
+                  Join Our Partner Network
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -430,22 +431,19 @@ export default function PartnerWithUs() {
             </p>
             <Button 
               size="lg" 
-              onClick={() => setShowInstitutionAuthModal(true)}
+              asChild
               className="min-w-[280px] h-14 text-lg font-semibold bg-accent text-accent-foreground border-accent-border"
               data-testid="button-register-cta-bottom"
             >
-              Become a Partner Today
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link href="/institution/login">
+                Become a Partner Today
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Institution Auth Modal */}
-      <InstitutionAuthModal 
-        open={showInstitutionAuthModal} 
-        onOpenChange={setShowInstitutionAuthModal}
-      />
     </PublicLayout>
   );
 }
