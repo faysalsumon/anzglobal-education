@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
-import { FileText, Shield, Users, AlertTriangle, Scale, Mail } from "lucide-react";
+import { FileText, Shield, Users, AlertTriangle, Scale } from "lucide-react";
 
 export default function TermsOfService() {
   return (
@@ -192,24 +192,6 @@ export default function TermsOfService() {
                   <p>
                     These Terms are governed by the laws of New South Wales, Australia. Any disputes arising from these Terms or your use of the Platform shall be subject to the exclusive jurisdiction of the courts of New South Wales.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contact */}
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                  <Mail className="h-6 w-6 text-primary" />
-                  Contact Us
-                </h2>
-                <div className="space-y-4 text-muted-foreground leading-relaxed">
-                  <p>If you have any questions about these Terms, please contact us:</p>
-                  <ul className="list-none space-y-2">
-                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
-                    <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
-                    <li><strong>Phone:</strong> +61 401 125 380</li>
-                  </ul>
                 </div>
               </CardContent>
             </Card>

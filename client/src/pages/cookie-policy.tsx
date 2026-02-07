@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
-import { Cookie, Shield, Settings, Eye, Globe, Mail } from "lucide-react";
+import { Cookie, Shield, Settings, Eye, Globe } from "lucide-react";
 
 export default function CookiePolicy() {
   return (
@@ -158,23 +158,6 @@ export default function CookiePolicy() {
                   <p>
                     We may update this Cookie Policy from time to time to reflect changes in technology, legislation, or our business practices. We will post any changes on this page and update the "Last updated" date at the top. We encourage you to review this policy periodically.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-                  <Mail className="h-6 w-6 text-primary" />
-                  Contact Us
-                </h2>
-                <div className="space-y-4 text-muted-foreground leading-relaxed">
-                  <p>If you have any questions about our use of cookies, please contact us:</p>
-                  <ul className="list-none space-y-2">
-                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
-                    <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
-                    <li><strong>Phone:</strong> +61 401 125 380</li>
-                  </ul>
                 </div>
               </CardContent>
             </Card>
