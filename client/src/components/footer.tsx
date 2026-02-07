@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone, BookOpen, MapPin, Mail, GraduationCap } from "lucide-react";
+import { Sparkles, Brain, Zap, Database, Boxes, Smartphone, BookOpen, GraduationCap } from "lucide-react";
 import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
 import whiteLogoUrl from "@assets/White_Logo_Primary-Dark_Background_400x120_1770431203113.png";
 import anzLogoUrl from "@assets/ANZ_PNG_Logo_(1)_1770437147511.png";
@@ -79,13 +79,6 @@ const footerSections: FooterSection[] = [
   },
 ];
 
-const socialLinks = [
-  { href: "https://www.facebook.com/anzglobal", icon: Facebook, label: "Facebook", testId: "social-facebook" },
-  { href: "https://www.instagram.com/anzglobal/#", icon: Instagram, label: "Instagram", testId: "social-instagram" },
-  { href: "https://www.linkedin.com/company/anzglobal", icon: Linkedin, label: "LinkedIn", testId: "social-linkedin" },
-  { href: "https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ", icon: Youtube, label: "YouTube", testId: "social-youtube" },
-  { href: "https://x.com/anz_global", icon: Twitter, label: "X", testId: "social-twitter" },
-];
 
 function FooterLinkItem({ link }: { link: FooterLink }) {
   const className = "text-sm text-white/60 transition-opacity hover:opacity-80";
@@ -141,35 +134,6 @@ export function Footer() {
                 <p className="text-sm text-white/50 leading-relaxed">
                   Intelligent course matching powered by AI. Connecting international students with the right courses at the right institutions across Australia and beyond.
                 </p>
-
-                {/* Contact Info */}
-                <div className="flex flex-col gap-2.5 mt-1">
-                  <div className="flex items-center gap-2.5 text-white/50">
-                    <MapPin className="h-4 w-4 shrink-0 text-[#2DBDB6]" />
-                    <span className="text-xs">Melbourne, Victoria, Australia</span>
-                  </div>
-                  <a href="mailto:info@campq.com.au" className="flex items-center gap-2.5 text-white/50 transition-opacity hover:opacity-80" data-testid="link-footer-email">
-                    <Mail className="h-4 w-4 shrink-0 text-[#2DBDB6]" />
-                    <span className="text-xs">info@campq.com.au</span>
-                  </a>
-                </div>
-
-                {/* Social Icons */}
-                <div className="flex items-center gap-2 mt-2">
-                  {socialLinks.map((social) => (
-                    <a
-                      key={social.testId}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full bg-white/10 text-white/70 flex items-center justify-center transition-all hover-elevate"
-                      data-testid={social.testId}
-                      aria-label={`Follow us on ${social.label}`}
-                    >
-                      <social.icon className="h-4 w-4" />
-                    </a>
-                  ))}
-                </div>
 
                 {/* Backed by ANZ Global Education */}
                 <div className="flex items-center gap-2.5 mt-4 pt-4 border-t border-white/10">
@@ -305,35 +269,6 @@ export function Footer() {
                 </AccordionItem>
               ))}
             </Accordion>
-
-            {/* Contact Info */}
-            <div className="flex flex-col items-center gap-2 mt-8 pt-6 border-t border-white/10">
-              <div className="flex items-center gap-2 text-white/40">
-                <MapPin className="h-3.5 w-3.5 text-[#2DBDB6]" />
-                <span className="text-xs">Melbourne, Victoria, Australia</span>
-              </div>
-              <a href="mailto:info@campq.com.au" className="flex items-center gap-2 text-white/40 transition-opacity hover:opacity-80" data-testid="link-footer-email-mobile">
-                <Mail className="h-3.5 w-3.5 text-[#2DBDB6]" />
-                <span className="text-xs">info@campq.com.au</span>
-              </a>
-            </div>
-
-            {/* Social Icons */}
-            <div className="flex items-center justify-center gap-3 mt-6">
-              {socialLinks.map((social) => (
-                <a
-                  key={`${social.testId}-mobile`}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-9 h-9 rounded-full bg-white/10 text-white/70 flex items-center justify-center transition-all hover-elevate"
-                  data-testid={`${social.testId}-mobile`}
-                  aria-label={`Follow us on ${social.label}`}
-                >
-                  <social.icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
 
             {/* Backed by ANZ Global Education - Mobile */}
             <div className="flex flex-col items-center gap-2 mt-5">
