@@ -1133,7 +1133,7 @@ export const tags = pgTable("tags", {
   category: tagCategoryEnum("category").notNull(),
   appliesTo: tagAppliesToEnum("applies_to").default('courses').notNull(), // What entity types this tag applies to
   description: text("description"),
-  color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #FF5000
+  color: varchar("color", { length: 7 }), // Hex color for badge display e.g., #2DBDB6
   displayOrder: integer("display_order").default(0),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

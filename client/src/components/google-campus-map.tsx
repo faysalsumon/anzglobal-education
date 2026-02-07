@@ -52,7 +52,7 @@ export function GoogleCampusMap({
         height: ${isSelected ? "48px" : "40px"};
         border-radius: 50%;
         overflow: hidden;
-        border: ${isSelected ? "3px solid #3455A5" : "2px solid #FF5000"};
+        border: ${isSelected ? "3px solid #1E2A5E" : "2px solid #2DBDB6"};
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         background: white;
         cursor: pointer;
@@ -83,7 +83,7 @@ export function GoogleCampusMap({
               justify-content: center;
               font-weight: bold;
               font-size: 12px;
-              color: #FF5000;
+              color: #2DBDB6;
               background: white;
             ">${institutionName.charAt(0).toUpperCase()}</div>
           `;
@@ -99,7 +99,7 @@ export function GoogleCampusMap({
             justify-content: center;
             font-weight: bold;
             font-size: 12px;
-            color: #FF5000;
+            color: #2DBDB6;
             background: white;
           ">${institutionName.charAt(0).toUpperCase()}</div>
         `;
@@ -255,7 +255,7 @@ export function GoogleCampusMap({
         height: ${isSelected ? "48px" : "40px"};
         border-radius: 50%;
         overflow: hidden;
-        border: ${isSelected ? "3px solid #3455A5" : "2px solid #FF5000"};
+        border: ${isSelected ? "3px solid #1E2A5E" : "2px solid #2DBDB6"};
         box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         background: white;
         cursor: pointer;
@@ -287,7 +287,7 @@ export function GoogleCampusMap({
             justify-content: center;
             font-weight: bold;
             font-size: 12px;
-            color: #FF5000;
+            color: #2DBDB6;
             background: white;
           ">${institutionName.charAt(0).toUpperCase()}</div>
         `;

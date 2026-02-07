@@ -1,18 +1,18 @@
-# ANZ Global Education Platform
+# CampQ Education Platform
 
 ## Overview
-ANZ Global Education is an AI-powered platform designed to connect international students with global universities. Its primary purpose is to streamline the process of course discovery, student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform aims to enhance access to education, reduce administrative burdens, and capitalize on the international education market.
+CampQ (formerly ANZ Global Education) is an AI-powered platform designed to connect international students with global universities. Its primary purpose is to streamline the process of course discovery, student profile creation, and provide comprehensive application and course management tools for educational institutions. The platform aims to enhance access to education, reduce administrative burdens, and capitalize on the international education market. Tagline: "intelligent course matching".
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
-The platform adheres to ANZ Global Education's brand identity, utilizing a specific color palette (Primary Blue #3465A5, Secondary Dark Gray #333333, Accent Orange #FF5000) and typography (Nunito, Open Sans). Accessibility meeting WCAG AA standards is a priority, featuring a dual navigation system and a 3-column admin dashboard with dark mode support.
+The platform adheres to CampQ's brand identity, utilizing a specific color palette (Primary Navy #1E2A5E, Secondary Dark Navy #141D45, Accent Teal #2DBDB6) and typography (Nunito, Open Sans). Accessibility meeting WCAG AA standards is a priority, featuring a dual navigation system and a 3-column admin dashboard with dark mode support.
 
 ### UI/UX Decisions
-- **Branding**: Adherence to ANZ Global Education's brand identity with a specific color palette and typography.
+- **Branding**: CampQ brand identity with Navy (#1E2A5E) as primary, Teal (#2DBDB6) as accent. All logo assets in attached_assets/. Brand guidelines page in admin dashboard.
 - **Accessibility**: WCAG AA standards, dual navigation, 3-column admin dashboard with dark mode.
-- **AI Chat Agent**: Floating human avatar ("Zan from ANZ Global Education") with a sales-focused personality, guiding users towards registration and course search, employing topic guardrails and a RAG-powered knowledge base.
+- **AI Chat Agent**: Floating human avatar ("Zan from CampQ") with a sales-focused personality, guiding users towards registration and course search, employing topic guardrails and a RAG-powered knowledge base.
 - **Mobile UI Patterns**: Modern mobile-first patterns including:
   - **Sticky Bottom CTA Bar**: Always visible on mobile (z-50) with Save, Apply, and action buttons.
   - **Mobile Bottom Tab Navigation**: Icon-only section navigation bar (z-40) above CTA bar with smooth scroll-to-section.

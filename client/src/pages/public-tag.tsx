@@ -191,7 +191,7 @@ export default function PublicTagPage() {
       <div className="min-h-screen">
         <section 
           className="py-12"
-          style={{ backgroundColor: tag.color || '#3455A5' }}
+          style={{ backgroundColor: tag.color || '#1E2A5E' }}
         >
           <div className="container mx-auto px-4">
             <Breadcrumb className="mb-6" data-testid="breadcrumb">

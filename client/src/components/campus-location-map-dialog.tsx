@@ -112,7 +112,7 @@ export function CampusLocationMapDialog({
             icon: {
               path: google.maps.SymbolPath.CIRCLE,
               scale: 12,
-              fillColor: "#3455A5",
+              fillColor: "#1E2A5E",
               fillOpacity: 1,
               strokeColor: "#ffffff",
               strokeWeight: 3,
@@ -134,7 +134,7 @@ export function CampusLocationMapDialog({
                   href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #3455A5; text-decoration: none; font-weight: 500;"
+                  style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #1E2A5E; text-decoration: none; font-weight: 500;"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>

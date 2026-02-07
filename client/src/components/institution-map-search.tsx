@@ -67,7 +67,7 @@ export function InstitutionMapSearch({
       height: ${isSelected ? "52px" : "44px"};
       border-radius: 50%;
       overflow: hidden;
-      border: ${isSelected ? "4px solid #3455A5" : "3px solid #FF5000"};
+      border: ${isSelected ? "4px solid #1E2A5E" : "3px solid #2DBDB6"};
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       background: white;
       cursor: pointer;
@@ -98,7 +98,7 @@ export function InstitutionMapSearch({
             justify-content: center;
             font-weight: bold;
             font-size: 14px;
-            color: #FF5000;
+            color: #2DBDB6;
             background: white;
           ">${campus.institutionName.charAt(0).toUpperCase()}</div>
         `;
@@ -114,7 +114,7 @@ export function InstitutionMapSearch({
           justify-content: center;
           font-weight: bold;
           font-size: 14px;
-          color: #FF5000;
+          color: #2DBDB6;
           background: white;
         ">${campus.institutionName.charAt(0).toUpperCase()}</div>
       `;
@@ -185,7 +185,7 @@ export function InstitutionMapSearch({
             if (prevContent) {
               prevContent.style.width = "44px";
               prevContent.style.height = "44px";
-              prevContent.style.border = "3px solid #FF5000";
+              prevContent.style.border = "3px solid #2DBDB6";
             }
           }
         }
@@ -195,7 +195,7 @@ export function InstitutionMapSearch({
         if (currentContent) {
           currentContent.style.width = "52px";
           currentContent.style.height = "52px";
-          currentContent.style.border = "4px solid #3455A5";
+          currentContent.style.border = "4px solid #1E2A5E";
         }
 
         const viewDetailsId = `view-details-${markerId.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
@@ -206,7 +206,7 @@ export function InstitutionMapSearch({
                 <img src="${campus.institutionLogo}" alt="${campus.institutionName}" 
                   style="width: 40px; height: 40px; border-radius: 6px; object-fit: contain; border: 1px solid #eee; background: white;" />
               ` : `
-                <div style="width: 40px; height: 40px; border-radius: 6px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #FF5000;">
+                <div style="width: 40px; height: 40px; border-radius: 6px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #2DBDB6;">
                   ${campus.institutionName.charAt(0).toUpperCase()}
                 </div>
               `}
@@ -224,7 +224,7 @@ export function InstitutionMapSearch({
               ${campus.providerType ? `<span style="display: inline-block; padding: 2px 8px; background: #f0f0f0; border-radius: 4px; font-size: 11px; color: #666;">${campus.providerType}</span>` : '<span></span>'}
               <button id="${viewDetailsId}" data-testid="button-view-institution-details" style="
                 padding: 6px 12px;
-                background: #3455A5;
+                background: #1E2A5E;
                 color: white;
                 border: none;
                 border-radius: 4px;
