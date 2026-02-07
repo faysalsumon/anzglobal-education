@@ -60,12 +60,12 @@ const footerSections: FooterSection[] = [
   {
     title: "POPULAR COURSES",
     links: [
-      { label: "Social Work", href: "/courses?search=Social+Work" },
-      { label: "Early Childhood Education", href: "/courses?search=Early+Childhood" },
-      { label: "Engineering", href: "/courses?search=Engineering" },
-      { label: "Nursing", href: "/courses?search=Nursing" },
-      { label: "Information Technology", href: "/courses?search=Information+Technology" },
-      { label: "Trade", href: "/courses?search=Trade" },
+      { label: "Business & Finance", href: "/courses?discipline=Accounting%2C+Business+%26+Finance" },
+      { label: "Information Technology", href: "/courses?discipline=Computer+Science+%26+IT" },
+      { label: "Arts & Design", href: "/courses?discipline=Arts%2C+Design+%26+Architecture" },
+      { label: "Hospitality", href: "/courses?discipline=Hospitality%2C+Leisure+%26+Sports" },
+      { label: "Education", href: "/courses?discipline=Education+%26+Training" },
+      { label: "Trade", href: "/courses?discipline=Trade" },
     ],
   },
   {
