@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone, BookOpen, MapPin, Mail, GraduationCap } from "lucide-react";
 import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
 import whiteLogoUrl from "@assets/White_Logo_Primary-Dark_Background_400x120_1770431203113.png";
+import anzLogoUrl from "@assets/WHITE_no_Background_1770436368004.jpeg";
 import {
   Accordion,
   AccordionContent,
@@ -179,6 +180,17 @@ export function Footer() {
                     </a>
                   ))}
                 </div>
+
+                {/* Backed by ANZ Global Education */}
+                <div className="flex items-center gap-2.5 mt-4 pt-4 border-t border-white/10">
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium whitespace-nowrap">Backed by</span>
+                  <img
+                    src={anzLogoUrl}
+                    alt="ANZ Global Education"
+                    className="h-6 object-contain opacity-50"
+                    data-testid="img-anz-logo"
+                  />
+                </div>
               </div>
 
               {/* Link Columns — occupies remaining 9 cols, split into sub-grid */}
@@ -331,6 +343,17 @@ export function Footer() {
                   <social.icon className="h-4 w-4" />
                 </a>
               ))}
+            </div>
+
+            {/* Backed by ANZ Global Education - Mobile */}
+            <div className="flex flex-col items-center gap-2 mt-5">
+              <span className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Backed by</span>
+              <img
+                src={anzLogoUrl}
+                alt="ANZ Global Education"
+                className="h-5 object-contain opacity-50"
+                data-testid="img-anz-logo-mobile"
+              />
             </div>
 
             {/* App Badges */}
