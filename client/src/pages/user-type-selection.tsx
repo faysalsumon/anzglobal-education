@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 
 export default function UserTypeSelection() {
   const [, navigate] = useLocation();
@@ -32,8 +32,8 @@ export default function UserTypeSelection() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <div className="w-full max-w-4xl space-y-8">
         <div className="text-center space-y-4">
-          <img src={logoUrl} alt="ANZ Global Education" className="h-12 w-auto mx-auto mb-6" />
-          <h1 className="text-4xl font-bold text-foreground">Welcome to ANZ Global Education</h1>
+          <img src={logoUrl} alt="CampQ" className="h-12 w-auto mx-auto mb-6" />
+          <h1 className="text-4xl font-bold text-foreground">Welcome to CampQ</h1>
           <p className="text-lg text-muted-foreground">Please select how you'd like to use the platform</p>
         </div>
 

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { LucideIcon } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
 import { performLogout } from "@/lib/logout";
@@ -194,7 +194,7 @@ export function UniversitySidebar({ className }: UniversitySidebarProps) {
       )}>
         <div className="w-16 flex flex-col items-center py-4 border-r bg-muted/30">
           <Link href="/" className="mb-6" aria-label="Go to homepage" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ Global Education logo" width={32} height={32} className="h-8 w-8 object-contain" />
+            <img src={logoUrl} alt="CampQ logo" width={32} height={32} className="h-8 w-8 object-contain" />
           </Link>
 
           <ScrollArea className="flex-1 w-full">

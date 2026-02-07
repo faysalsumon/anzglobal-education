@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 import {
   LayoutDashboard,
   Search,
@@ -115,7 +115,7 @@ export function TopNavBar() {
       <div className="flex h-16 items-center justify-between px-4 md:px-6 gap-4">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1.5 -mx-2" data-testid="link-logo">
-          <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto" />
+          <img src={logoUrl} alt="CampQ" className="h-8 w-auto" />
           <span className="hidden lg:inline-block text-xs font-medium text-muted-foreground">
             AI-Powered Platform
           </span>

@@ -546,7 +546,7 @@ router.post('/enroll-totp', async (req: Request, res: Response) => {
 
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
-      friendlyName: 'ANZ Global Education Authenticator',
+      friendlyName: 'CampQ Authenticator',
     });
 
     if (error) {

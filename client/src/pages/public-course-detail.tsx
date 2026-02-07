@@ -321,7 +321,7 @@ export default function PublicCourseDetail() {
   // Prepare SEO data
   const siteUrl = window.location.origin;
   const courseUrl = `${siteUrl}/courses/${courseId}`;
-  const metaTitle = `${course.title} - ${course.university?.name || 'University'} | ANZ Global Education`;
+  const metaTitle = `${course.title} - ${course.university?.name || 'University'} | CampQ`;
   const metaDescription = course.description 
     ? course.description.substring(0, 160)
     : `Study ${course.title} at ${course.university?.name || 'a top university'}. ${course.level || 'Degree'} program in ${course.subject || 'your field'}. ${course.country ? `Location: ${course.country}.` : ''}`;
@@ -498,7 +498,7 @@ export default function PublicCourseDetail() {
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="CampQ" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -1874,7 +1874,7 @@ export default function PublicCourseDetail() {
             <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-apply">
               <h3 className="font-semibold mb-2" data-testid="faq-question-apply">How do I apply for {course.title}?</h3>
               <p className="text-muted-foreground" data-testid="faq-answer-apply">
-                You can apply for {course.title} through ANZ Global Education. 
+                You can apply for {course.title} through CampQ. 
                 Create an account, complete your student profile, and submit your application. 
                 Our team will guide you through the visa process and help you get started.
               </p>

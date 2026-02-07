@@ -63,7 +63,7 @@ export default function PublicBlogArchive() {
   // SEO data
   const siteUrl = window.location.origin;
   const pageUrl = `${siteUrl}/blog`;
-  const pageTitle = "Blog - ANZ Global Education";
+  const pageTitle = "Blog - CampQ";
   const pageDescription = "Insights, guides, and updates from the world of international education. Discover expert advice on studying abroad, university selection, and student success.";
   const ogImage = `${siteUrl}/og-image.png`;
 
@@ -82,7 +82,7 @@ export default function PublicBlogArchive() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="CampQ" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />

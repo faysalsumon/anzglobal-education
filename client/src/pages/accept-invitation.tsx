@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, CheckCircle, XCircle, Mail, Shield, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 
 const acceptFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -120,7 +120,7 @@ export default function AcceptInvitation() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-12 mx-auto mb-4" />
+            <img src={logoUrl} alt="CampQ" className="h-12 mx-auto mb-4" />
             <CardTitle className="text-xl text-destructive">Invalid Link</CardTitle>
             <CardDescription>
               No invitation token was provided. Please use the link from your invitation email.
@@ -158,7 +158,7 @@ export default function AcceptInvitation() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-12 mx-auto mb-4" />
+            <img src={logoUrl} alt="CampQ" className="h-12 mx-auto mb-4" />
             <XCircle className="h-16 w-16 mx-auto text-destructive mb-4" />
             <CardTitle className="text-xl">Invitation Invalid</CardTitle>
             <CardDescription className="text-destructive">
@@ -185,7 +185,7 @@ export default function AcceptInvitation() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-12 mx-auto mb-4" />
+            <img src={logoUrl} alt="CampQ" className="h-12 mx-auto mb-4" />
             <CheckCircle className="h-16 w-16 mx-auto text-green-600 mb-4" />
             <CardTitle className="text-xl">Account Created!</CardTitle>
             <CardDescription>
@@ -204,8 +204,8 @@ export default function AcceptInvitation() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={logoUrl} alt="ANZ Global Education" className="h-12 mx-auto mb-4" />
-          <CardTitle className="text-xl">Join ANZ Global Education</CardTitle>
+          <img src={logoUrl} alt="CampQ" className="h-12 mx-auto mb-4" />
+          <CardTitle className="text-xl">Join CampQ</CardTitle>
           <CardDescription>
             Complete your account setup to get started
           </CardDescription>

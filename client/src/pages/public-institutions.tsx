@@ -443,7 +443,7 @@ export default function PublicInstitutions() {
   // SEO data
   const siteUrl = window.location.origin;
   const pageUrl = `${siteUrl}/institutions`;
-  const pageTitle = "Find Institutions - ANZ Global Education";
+  const pageTitle = "Find Institutions - CampQ";
   const pageDescription = `Explore ${filterMetadata?.totalCount || 100}+ top universities and institutions worldwide. Search by country, ranking, programs, and facilities. Find your ideal institution for international study.`;
   const ogImage = `${siteUrl}/og-image.png`;
 
@@ -855,7 +855,7 @@ export default function PublicInstitutions() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="CampQ" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={pageUrl} />
         <meta name="twitter:title" content={pageTitle} />

@@ -159,7 +159,7 @@ export default function ForcePasswordReset() {
     return (
       <>
         <Helmet>
-          <title>Preparing Password Reset - ANZ Global Education</title>
+          <title>Preparing Password Reset - CampQ</title>
         </Helmet>
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-4">
           <Card className="w-full max-w-md">
@@ -183,7 +183,7 @@ export default function ForcePasswordReset() {
     return (
       <>
         <Helmet>
-          <title>Password Changed - ANZ Global Education</title>
+          <title>Password Changed - CampQ</title>
         </Helmet>
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-4">
           <Card className="w-full max-w-md">
@@ -206,8 +206,8 @@ export default function ForcePasswordReset() {
   return (
     <>
       <Helmet>
-        <title>Set New Password - ANZ Global Education</title>
-        <meta name="description" content="Set your new password for your ANZ Global Education account." />
+        <title>Set New Password - CampQ</title>
+        <meta name="description" content="Set your new password for your CampQ account." />
       </Helmet>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-4">
         <Card className="w-full max-w-md">

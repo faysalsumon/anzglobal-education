@@ -113,15 +113,15 @@ export default function PartnerWithUs() {
   return (
     <PublicLayout>
       <Helmet>
-        <title>Partner with ANZ Global Education - Expand Your International Reach</title>
+        <title>Partner with CampQ - Expand Your International Reach</title>
         <meta 
           name="description" 
-          content="Join 50+ leading institutions on ANZ Global Education's platform. Access qualified international students from 80+ countries with AI-powered matching, automated workflows, and comprehensive marketing support." 
+          content="Join 50+ leading institutions on CampQ's platform. Access qualified international students from 80+ countries with AI-powered matching, automated workflows, and comprehensive marketing support." 
         />
-        <meta property="og:title" content="Partner with ANZ Global Education - Expand Your International Reach" />
+        <meta property="og:title" content="Partner with CampQ - Expand Your International Reach" />
         <meta 
           property="og:description" 
-          content="Join 50+ leading institutions on ANZ Global Education's platform. Access qualified international students from 80+ countries with AI-powered matching and comprehensive support." 
+          content="Join 50+ leading institutions on CampQ's platform. Access qualified international students from 80+ countries with AI-powered matching and comprehensive support." 
         />
         <meta property="og:type" content="website" />
         <meta name="keywords" content="international student recruitment, education partnership, Australian universities, global student platform, institution partnership" />
@@ -141,7 +141,7 @@ export default function PartnerWithUs() {
             </Badge>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight" data-testid="heading-hero">
-              Expand Your International Reach with ANZ Global
+              Expand Your International Reach with CampQ
             </h1>
             
             <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-10 max-w-4xl mx-auto leading-relaxed">
@@ -204,7 +204,7 @@ export default function PartnerWithUs() {
               Partnership Benefits
             </Badge>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Benefits of Partnership with ANZ Global Education
+              Benefits of Partnership with CampQ
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground">
               Join leading institutions across Australia and unlock the full potential of global student recruitment
@@ -387,7 +387,7 @@ export default function PartnerWithUs() {
               Ready to Transform Your International Recruitment?
             </h2>
             <p className="text-lg md:text-xl mb-10 opacity-90 max-w-2xl mx-auto">
-              Join the ANZ Global Education platform today and gain immediate access to qualified international students from 80+ countries worldwide.
+              Join the CampQ platform today and gain immediate access to qualified international students from 80+ countries worldwide.
             </p>
             <Button 
               size="lg" 

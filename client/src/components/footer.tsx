@@ -74,7 +74,7 @@ const footerSections: FooterSection[] = [
     ],
   },
   {
-    title: "ABOUT ANZ",
+    title: "ABOUT CAMPQ",
     links: [
       { label: "Our Story", href: "/our-story" },
       { label: "Student Reviews", href: "/student-reviews" },
@@ -217,7 +217,7 @@ export function Footer() {
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading">
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Get the CampQ App (Coming Soon)</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4" data-testid="app-store-badges">
                 <div data-testid="badge-app-store">
@@ -368,7 +368,7 @@ export function Footer() {
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading-mobile">
                 <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
+                <span className="text-xs uppercase tracking-wider font-medium">Get the CampQ App (Coming Soon)</span>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3" data-testid="app-store-badges-mobile">
                 <div data-testid="badge-app-store-mobile">
@@ -422,7 +422,7 @@ export function Footer() {
       <div className="bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 md:px-6 py-4">
           <p className="text-sm text-center" data-testid="text-copyright">
-            Copyright {currentYear} | ANZ Global Education. All rights reserved.
+            Copyright {currentYear} | CampQ. All rights reserved.
           </p>
         </div>
       </div>

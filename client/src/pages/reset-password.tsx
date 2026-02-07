@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 
 export default function ResetPasswordPage() {
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
       <header className="border-b bg-background/95 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">
           <a href="/" className="flex items-center" data-testid="link-logo">
-            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
+            <img src={logoUrl} alt="CampQ" className="h-9 w-auto" />
           </a>
         </div>
       </header>
@@ -251,7 +251,7 @@ export default function ResetPasswordPage() {
 
       <footer className="border-t py-4 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Copyright {new Date().getFullYear()} | ANZ Global Education</p>
+          <p>Copyright {new Date().getFullYear()} | CampQ</p>
         </div>
       </footer>
     </div>

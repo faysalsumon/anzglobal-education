@@ -6,8 +6,8 @@ export default function PrivacyPolicy() {
   return (
     <>
       <Helmet>
-        <title>Privacy Policy | ANZ Global Education</title>
-        <meta name="description" content="Learn how ANZ Global Education collects, uses, and protects your personal information. Read our comprehensive Privacy Policy." />
+        <title>Privacy Policy | CampQ</title>
+        <meta name="description" content="Learn how CampQ collects, uses, and protects your personal information. Read our comprehensive Privacy Policy." />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
@@ -36,7 +36,7 @@ export default function PrivacyPolicy() {
                   Our Commitment to Privacy
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  ANZ Global Education Pty Ltd ("we," "us," or "our") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website, mobile applications, and services (collectively, the "Platform").
+                  CampQ Pty Ltd ("we," "us," or "our") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website, mobile applications, and services (collectively, the "Platform").
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
                   We comply with the Australian Privacy Act 1988 (Cth), the Australian Privacy Principles (APPs), and applicable New Zealand privacy legislation. By using our Platform, you consent to the practices described in this policy.

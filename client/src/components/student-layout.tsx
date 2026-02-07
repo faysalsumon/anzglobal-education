@@ -29,7 +29,7 @@ import type { StudentProfile } from "@shared/schema";
 import { performLogout } from "@/lib/logout";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { Link } from "wouter";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -122,7 +122,7 @@ function StudentLayoutContent({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
             <Link href="/" aria-label="Go to homepage" data-testid="link-logo" className="flex items-center">
-              <img src={logoUrl} alt="ANZ Global Education" width={32} height={32} className="h-8 w-8 object-contain" />
+              <img src={logoUrl} alt="CampQ" width={32} height={32} className="h-8 w-8 object-contain" />
             </Link>
           </div>
 

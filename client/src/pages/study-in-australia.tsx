@@ -143,7 +143,7 @@ export default function StudyInAustralia() {
   return (
     <PublicLayout>
       <Helmet>
-        <title>Study in Australia - Built by International Students for International Students | ANZ Global Education</title>
+        <title>Study in Australia - Built by International Students for International Students | CampQ</title>
         <meta 
           name="description" 
           content="Discover 22,000+ courses across 1,100+ Australian institutions. Built by international students who understand your journey. Get AI-powered course matching, expert guidance, and simplified applications." 
@@ -158,7 +158,7 @@ export default function StudyInAustralia() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:image" content={`${siteUrl}${heroImage}`} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="CampQ" />
         
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -178,7 +178,7 @@ export default function StudyInAustralia() {
             "url": pageUrl,
             "provider": {
               "@type": "EducationalOrganization",
-              "name": "ANZ Global Education",
+              "name": "CampQ",
               "description": "Built by international students, for international students",
               "url": siteUrl,
               "address": {
@@ -192,7 +192,7 @@ export default function StudyInAustralia() {
               "description": "Access to 1,100+ institutions and 22,000+ courses across Australia",
               "provider": {
                 "@type": "EducationalOrganization",
-                "name": "ANZ Global Education"
+                "name": "CampQ"
               },
               "educationalCredentialAwarded": "Various (Undergraduate, Postgraduate, Vocational)",
               "numberOfCredits": "22000+ courses available"
@@ -293,7 +293,7 @@ export default function StudyInAustralia() {
                 SIMPLIFYING YOUR ADMISSION PROCESS
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-                Admission Process with ANZ Global Education covers 1,100 institutions and 22,000 courses in Australia. Finding the right course can be overwhelming, but we can simplify it for you.
+                Admission Process with CampQ covers 1,100 institutions and 22,000 courses in Australia. Finding the right course can be overwhelming, but we can simplify it for you.
               </p>
             </div>
 
@@ -354,7 +354,7 @@ export default function StudyInAustralia() {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12 md:mb-16">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4" data-testid="heading-why-choose">
-                Why Choose ANZ Global Education?
+                Why Choose CampQ?
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
                 We're not just a platform—we're your partners in this journey because we've lived it ourselves.
@@ -487,7 +487,7 @@ export default function StudyInAustralia() {
                 Success Stories
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-                Join thousands of international students who found their path through ANZ Global Education.
+                Join thousands of international students who found their path through CampQ.
               </p>
             </div>
 
@@ -529,7 +529,7 @@ export default function StudyInAustralia() {
               Ready to Start Your Australian Education Journey?
             </h2>
             <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto">
-              Join thousands of international students who trust ANZ Global Education. Create your free account and discover your perfect course today.
+              Join thousands of international students who trust CampQ. Create your free account and discover your perfect course today.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -29,8 +29,9 @@ import {
   Contact,
   FileText,
   LogOut,
+  Palette,
 } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 import { performLogout } from "@/lib/logout";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 
@@ -143,10 +144,20 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     },
   ];
 
+  const documentationItems = [
+    {
+      icon: Palette,
+      label: "Brand Guidelines",
+      value: "brand-guidelines",
+      show: true,
+    },
+  ];
+
   const visibleCRM = crmItems.filter(item => item.show);
   const visibleManagement = managementItems.filter(item => item.show);
   const visibleContent = contentItems.filter(item => item.show);
   const visibleTools = toolsItems.filter(item => item.show);
+  const visibleDocumentation = documentationItems.filter(item => item.show);
 
   const handleItemClick = (value: string) => {
     onTabChange(value);
@@ -158,7 +169,7 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
     <Sidebar collapsible="icon" data-testid="admin-sidebar">
       <SidebarHeader className="border-b border-border/40 px-2 py-3">
         <div className="flex items-center gap-2 px-1">
-          <img src={logoUrl} alt="ANZ Global Education logo" width={80} height={24} className="h-6 w-auto group-data-[collapsible=icon]:hidden" />
+          <img src={logoUrl} alt="CampQ logo" width={80} height={24} className="h-6 w-auto group-data-[collapsible=icon]:hidden" />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-xs font-semibold">Admin</span>
             <span className="text-[10px] text-muted-foreground">Dashboard</span>
@@ -261,6 +272,35 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleTools.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.value}>
+                      <SidebarMenuButton
+                        onClick={() => handleItemClick(item.value)}
+                        isActive={activeTab === item.value}
+                        tooltip={item.label}
+                        size="default"
+                        data-testid={`sidebar-${item.value}`}
+                        className="h-9 text-sm"
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Documentation Section */}
+        {visibleDocumentation.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-1.5 text-[10px] uppercase tracking-wide">Documentation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleDocumentation.map((item) => {
                   const Icon = item.icon;
                   return (
                     <SidebarMenuItem key={item.value}>

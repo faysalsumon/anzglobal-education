@@ -28,12 +28,12 @@ export default function OurStory() {
   return (
     <>
       <Helmet>
-        <title>About Us - ANZ Global Education | AI-Powered Education Technology</title>
+        <title>About Us - CampQ | AI-Powered Education Technology</title>
         <meta 
           name="description" 
-          content="ANZ Global Education is an AI-powered edutech platform connecting international students with global universities. Smart course matching, streamlined applications, and intelligent tools for students and institutions." 
+          content="CampQ is an AI-powered edutech platform connecting international students with global universities. Smart course matching, streamlined applications, and intelligent tools for students and institutions." 
         />
-        <meta property="og:title" content="About Us - ANZ Global Education" />
+        <meta property="og:title" content="About Us - CampQ" />
         <meta property="og:description" content="An AI-powered edutech platform transforming how students discover courses and how institutions connect with qualified candidates." />
         <meta property="og:type" content="website" />
       </Helmet>
@@ -78,7 +78,7 @@ export default function OurStory() {
                         What We Do
                       </h2>
                       <p className="text-lg text-muted-foreground leading-relaxed" data-testid="text-what-we-do">
-                        ANZ Global Education is an <strong className="text-foreground">AI-powered edutech platform</strong> that 
+                        CampQ is an <strong className="text-foreground">AI-powered edutech platform</strong> that 
                         transforms how international students discover courses and how educational institutions 
                         connect with qualified candidates. Our technology eliminates the friction in international 
                         education—making the process faster, smarter, and more transparent for everyone.

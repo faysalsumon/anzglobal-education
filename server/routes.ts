@@ -12392,7 +12392,7 @@ From Sydney's beaches to Melbourne's culture, Brisbane's sunshine to Perth's nat
 
 ## Start Your Australian Education Journey
 
-Ready to take the next step? Contact ANZ Global Education to explore courses and universities that match your goals and aspirations.`,
+Ready to take the next step? Contact CampQ to explore courses and universities that match your goals and aspirations.`,
           category: "Study in Australia",
           tags: ["international students", "australian universities", "study abroad", "higher education", "student visa"],
           metaTitle: "Top 10 Reasons International Students Choose Australia | Study in Australia",
@@ -12491,7 +12491,7 @@ Processing times vary but typically range from 4-6 weeks.
 
 ## Need Help with Your Visa Application?
 
-ANZ Global Education provides comprehensive visa guidance. Our experts can help you prepare a strong application and avoid common pitfalls.`,
+CampQ provides comprehensive visa guidance. Our experts can help you prepare a strong application and avoid common pitfalls.`,
           category: "Student Visa",
           tags: ["student visa", "subclass 500", "visa application", "immigration", "australia visa"],
           metaTitle: "Australian Student Visa 500 Guide 2024 | Complete Application Process",
@@ -12604,7 +12604,7 @@ Look for courses that offer:
 
 ## Make an Informed Decision
 
-At ANZ Global Education, we help students find their perfect course match. Our counselors provide personalized guidance based on your goals, budget, and preferences.`,
+At CampQ, we help students find their perfect course match. Our counselors provide personalized guidance based on your goals, budget, and preferences.`,
           category: "Course Selection",
           tags: ["university selection", "course guide", "australian courses", "career planning", "education advice"],
           metaTitle: "How to Choose the Right Course & University in Australia 2024",
@@ -12730,7 +12730,7 @@ International students can work:
 
 ## Plan Your Budget Today
 
-Contact ANZ Global Education for personalized financial planning advice and help finding affordable study options in Australia.`,
+Contact CampQ for personalized financial planning advice and help finding affordable study options in Australia.`,
           category: "Student Life",
           tags: ["cost of living", "budget", "student finance", "accommodation", "money saving"],
           metaTitle: "Cost of Living in Australia 2024 | International Student Budget Guide",
@@ -12865,7 +12865,7 @@ Studying in regional Australia provides advantages:
 
 ## Start Your Migration Journey
 
-ANZ Global Education helps students choose courses aligned with their migration goals. Our advisors understand the connection between education and immigration pathways.`,
+CampQ helps students choose courses aligned with their migration goals. Our advisors understand the connection between education and immigration pathways.`,
           category: "Immigration",
           tags: ["permanent residency", "skilled migration", "PR pathway", "graduate visa", "australian immigration"],
           metaTitle: "Pathways to PR in Australia After Graduation | Immigration Guide 2024",
@@ -13027,7 +13027,7 @@ Consider these factors:
 
 ## Let Us Help You Decide
 
-ANZ Global Education counselors have firsthand knowledge of all Australian cities. Contact us for personalized advice on choosing your study destination.`,
+CampQ counselors have firsthand knowledge of all Australian cities. Contact us for personalized advice on choosing your study destination.`,
           category: "Study in Australia",
           tags: ["australian cities", "study destination", "sydney", "melbourne", "brisbane", "perth", "adelaide"],
           metaTitle: "Best Cities in Australia for Students 2024 | City Comparison Guide",
@@ -13191,7 +13191,7 @@ For Australian university applications, **PTE Academic** often provides the most
 
 ## Get Expert Guidance
 
-ANZ Global Education helps students prepare for English tests and choose the right option for their goals. Contact us for personalized advice.`,
+CampQ helps students prepare for English tests and choose the right option for their goals. Contact us for personalized advice.`,
           category: "Admissions",
           tags: ["IELTS", "PTE", "TOEFL", "english test", "university admission", "test preparation"],
           metaTitle: "IELTS vs PTE vs TOEFL 2024 | Best English Test for Australia",
@@ -13371,7 +13371,7 @@ Stand out by showcasing what makes you special.
 
 ## Get Help Finding Scholarships
 
-ANZ Global Education maintains a database of scholarship opportunities matched to student profiles. Contact us to discover scholarships you may qualify for.`,
+CampQ maintains a database of scholarship opportunities matched to student profiles. Contact us to discover scholarships you may qualify for.`,
           category: "Scholarships",
           tags: ["scholarships", "financial aid", "funding", "university scholarships", "government scholarships"],
           metaTitle: "Scholarships for International Students Australia 2024 | Complete Guide",
@@ -13547,7 +13547,7 @@ Every job teaches valuable skills:
 
 ## Get Support
 
-ANZ Global Education provides career guidance and can connect you with employers who value international students. Contact us for assistance.`,
+CampQ provides career guidance and can connect you with employers who value international students. Contact us for assistance.`,
           category: "Student Life",
           tags: ["part-time work", "student employment", "work rights", "jobs australia", "work visa"],
           metaTitle: "Working While Studying in Australia 2024 | Student Work Rights Guide",
@@ -13738,7 +13738,7 @@ Australia is generally very safe, but:
 
 ## We're Here to Help
 
-ANZ Global Education provides pre-departure orientations and ongoing support for international students. Contact us with any questions about life in Australia.`,
+CampQ provides pre-departure orientations and ongoing support for international students. Contact us with any questions about life in Australia.`,
           category: "Student Life",
           tags: ["australian culture", "student life", "living in australia", "preparation", "international students"],
           metaTitle: "Life in Australia for International Students | Pre-Arrival Guide 2024",
@@ -14089,7 +14089,7 @@ ANZ Global Education provides pre-departure orientations and ongoing support for
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI();
       
-      const systemPrompt = `You are an expert SEO copywriter for ANZ Global Education, an international education platform. 
+      const systemPrompt = `You are an expert SEO copywriter for CampQ, an international education platform. 
 Generate optimized meta title and description for better search engine rankings and click-through rates.
 
 STRICT Rules:
@@ -14098,7 +14098,7 @@ STRICT Rules:
 - Focus on international students studying in Australia
 - Use action words and benefits
 - Include relevant keywords naturally
-- Do NOT include "| ANZ Global Education" in the title - keep it short and focused`;
+- Do NOT include "| CampQ" in the title - keep it short and focused`;
 
       const userPrompt = entityType === 'course' 
         ? `Generate SEO metadata for this course:
@@ -14800,7 +14800,7 @@ ${universities.map((uni) => `  <url>
   app.get("/robots.txt", (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     
-    const robotsTxt = `# ANZ Global Education - Robots.txt
+    const robotsTxt = `# CampQ - Robots.txt
 # Allow all crawlers including AI bots
 
 # Google and traditional search engines

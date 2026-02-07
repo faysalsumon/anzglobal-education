@@ -43,7 +43,7 @@ import {
 import { Search, MapPin, DollarSign, Clock, GraduationCap, Sparkles, LogIn, ArrowLeft, Eye, Home, Heart, GitCompare, X, Mail, Building2, Filter, BookOpen, Layers, Globe, ChevronDown, ChevronRight, RotateCcw, ArrowUpDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { CourseWithDetails, University, Favorite, CourseComparison, SubDiscipline } from "@shared/schema";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -825,7 +825,7 @@ export default function PublicCourses() {
   // SEO data
   const siteUrl = window.location.origin;
   const pageUrl = `${siteUrl}/courses`;
-  const pageTitle = "Find Courses - ANZ Global Education";
+  const pageTitle = "Find Courses - CampQ";
   const pageDescription = `Explore ${courses.length}+ international courses from top universities worldwide. Search by subject, level, country, and more. Compare courses and find your perfect academic path.`;
   const ogImage = `${siteUrl}/og-image.png`;
 
@@ -844,7 +844,7 @@ export default function PublicCourses() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="CampQ" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />

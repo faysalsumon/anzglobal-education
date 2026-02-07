@@ -327,7 +327,7 @@ export function ChatWidget() {
                   <AvatarImage src={chatAvatarImage} alt="Zan" />
                   <AvatarFallback className="bg-primary text-primary-foreground text-lg">Z</AvatarFallback>
                 </Avatar>
-                <h4 className="font-semibold text-sm mb-1">Hi, I'm Zan from ANZ Global Education!</h4>
+                <h4 className="font-semibold text-sm mb-1">Hi, I'm Zan from CampQ!</h4>
                 <p className="text-xs text-muted-foreground mb-3">
                   Ask me about courses, universities, admission requirements, or anything else about studying abroad.
                 </p>

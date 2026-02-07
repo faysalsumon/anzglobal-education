@@ -83,7 +83,7 @@ export async function createInvitation(data: CreateInvitationData): Promise<Invi
 
     const inviterName = inviter[0]?.firstName && inviter[0]?.lastName 
       ? `${inviter[0].firstName} ${inviter[0].lastName}`
-      : inviter[0]?.email || 'ANZ Global Education';
+      : inviter[0]?.email || 'CampQ';
 
     console.log(`[Invitation] Sending email to ${data.email} for role ${role[0].displayName}`);
     
@@ -272,7 +272,7 @@ export async function resendInvitation(invitationId: string, inviterId: string):
 
     const inviterName = inviter[0]?.firstName && inviter[0]?.lastName 
       ? `${inviter[0].firstName} ${inviter[0].lastName}`
-      : inviter[0]?.email || 'ANZ Global Education';
+      : inviter[0]?.email || 'CampQ';
 
     await sendTeamInvitationEmail({
       email: invitation.email,
