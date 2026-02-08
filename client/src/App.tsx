@@ -40,8 +40,6 @@ const PublicInstitutions = lazy(() => import("@/pages/public-institutions"));
 const PublicInstitutionDetail = lazy(() => import("@/pages/public-institution-detail"));
 const PublicBlogArchive = lazy(() => import("@/pages/public-blog-archive"));
 const PublicBlogDetail = lazy(() => import("@/pages/public-blog-detail"));
-const PublicBrowse = lazy(() => import("@/pages/public-browse"));
-const PublicTag = lazy(() => import("@/pages/public-tag"));
 const CompareCourses = lazy(() => import("@/pages/compare-courses"));
 const Contact = lazy(() => import("@/pages/contact"));
 const PartnerWithUs = lazy(() => import("@/pages/partner-with-us"));
@@ -110,8 +108,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/institutions" component={PublicInstitutions} />
         <Route path="/blog/:slug" component={PublicBlogDetail} />
         <Route path="/blog" component={PublicBlogArchive} />
-        <Route path="/browse/:slug" component={PublicTag} />
-        <Route path="/browse" component={PublicBrowse} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/affiliate" component={AffiliatePage} />

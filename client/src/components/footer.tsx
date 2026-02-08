@@ -42,7 +42,6 @@ const footerNav = [
       { label: "Courses", href: "/courses" },
       { label: "Institutions", href: "/institutions" },
       { label: "Study in Australia", href: "/study-in-australia" },
-      { label: "Browse Categories", href: "/browse" },
       { label: "Blog", href: "/blog" },
     ],
   },
