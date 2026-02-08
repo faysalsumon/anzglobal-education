@@ -1,114 +1,67 @@
 import { Link } from "wouter";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter, Sparkles, Brain, Zap, Database, Boxes, Smartphone, BookOpen } from "lucide-react";
-import { SiOpenai, SiApple, SiGoogleplay } from "react-icons/si";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
-// AI Technology partners configuration
-const aiTechnologies = [
+const socialLinks = [
   {
-    name: "OpenAI",
-    icon: SiOpenai,
-    description: "Advanced language models",
+    name: "Facebook",
+    href: "https://www.facebook.com/anzglobal",
+    icon: Facebook,
+    testId: "social-facebook",
   },
   {
-    name: "Anthropic",
-    icon: Brain,
-    description: "Claude AI assistant",
+    name: "Instagram",
+    href: "https://www.instagram.com/anzglobal",
+    icon: Instagram,
+    testId: "social-instagram",
   },
   {
-    name: "OpenRouter",
-    icon: Zap,
-    description: "Multi-model gateway",
+    name: "LinkedIn",
+    href: "https://www.linkedin.com/company/anzglobal",
+    icon: Linkedin,
+    testId: "social-linkedin",
   },
   {
-    name: "Pinecone",
-    icon: Database,
-    description: "Vector database",
+    name: "YouTube",
+    href: "https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ",
+    icon: Youtube,
+    testId: "social-youtube",
   },
   {
-    name: "RAG",
-    icon: BookOpen,
-    description: "Knowledge retrieval",
-  },
-  {
-    name: "Blockchain",
-    icon: Boxes,
-    description: "Document verification",
+    name: "X",
+    href: "https://x.com/anz_global",
+    icon: Twitter,
+    testId: "social-twitter",
   },
 ];
 
-// Footer configuration
-interface FooterLink {
-  label: string;
-  href: string;
-  external?: boolean;
-}
-
-interface FooterSection {
-  title: string;
-  links: FooterLink[];
-}
-
-const footerSections: FooterSection[] = [
+const footerNav = [
   {
-    title: "QUICK LINK",
+    title: "Explore",
     links: [
-      { label: "Find Institutions", href: "/institutions" },
-      { label: "Find Courses", href: "/courses" },
-      { label: "Partner with Us", href: "/partner-with-us" },
+      { label: "Courses", href: "/courses" },
+      { label: "Institutions", href: "/institutions" },
       { label: "Study in Australia", href: "/study-in-australia" },
+      { label: "Browse Categories", href: "/browse" },
+      { label: "Blog", href: "/blog" },
     ],
   },
   {
-    title: "KNOWLEDGE BASE",
-    links: [
-      { label: "About Australia", href: "/blog?category=australia" },
-      { label: "Student Visa 101", href: "/blog?category=visa" },
-      { label: "Work While Studying", href: "/blog?category=work" },
-      { label: "Life In Australia", href: "/blog?category=life" },
-    ],
-  },
-  {
-    title: "ABOUT ANZ",
+    title: "Company",
     links: [
       { label: "Our Story", href: "/our-story" },
       { label: "Student Reviews", href: "/student-reviews" },
       { label: "Contact Us", href: "/contact" },
+      { label: "Partner with Us", href: "/partner-with-us" },
       { label: "Affiliate Program", href: "/affiliate" },
+      { label: "Developers", href: "/developers" },
     ],
   },
   {
-    title: "FOR INSTITUTIONS",
-    links: [
-      { label: "Institution Login", href: "/auth" },
-      { label: "Become a Partner", href: "/partner-with-us" },
-      { label: "Partner Support", href: "/contact?topic=partner" },
-    ],
-  },
-  {
-    title: "POPULAR COURSES",
-    links: [
-      { label: "Social Work", href: "/courses?search=Social+Work" },
-      { label: "Early Childhood Education", href: "/courses?search=Early+Childhood" },
-      { label: "Engineering", href: "/courses?search=Engineering" },
-      { label: "Nursing", href: "/courses?search=Nursing" },
-      { label: "Information Technology", href: "/courses?search=Information+Technology" },
-      { label: "Trade", href: "/courses?search=Trade" },
-    ],
-  },
-  {
-    title: "LEGAL",
+    title: "Legal",
     links: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Use", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookie-policy" },
-      { label: "Disclaimer", href: "/disclaimer" },
-      { label: "Refund Policy", href: "/refund-policy" },
     ],
   },
 ];
@@ -117,312 +70,67 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t bg-background" data-testid="footer">
-      {/* Desktop Footer - Grid Layout */}
-      <div className="hidden md:block">
-        <div className="container mx-auto px-4 md:px-6 py-12 md:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-            {footerSections.map((section) => (
-              <div key={section.title}>
-                <h3 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wide">
-                  {section.title}
-                </h3>
-                <ul className="space-y-3">
-                  {section.links.map((link) => (
-                    <li key={link.label}>
-                      {link.external ? (
-                        <a
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                        >
-                          {link.label}
-                        </a>
-                      ) : (
-                        <Link
-                          href={link.href}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                        >
-                          {link.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          
-          {/* Social Media Icons - Desktop */}
-          <div className="mt-12 pt-8 border-t border-border">
-            <div className="flex items-center justify-center gap-4">
-              <a
-                href="https://www.facebook.com/anzglobal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-facebook"
-                aria-label="Follow us on Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/anzglobal/#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-instagram"
-                aria-label="Follow us on Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.linkedin.com/company/anzglobal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-linkedin"
-                aria-label="Follow us on LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-youtube"
-                aria-label="Subscribe on YouTube"
-              >
-                <Youtube className="h-5 w-5" />
-              </a>
-              <a
-                href="https://x.com/anz_global"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-twitter"
-                aria-label="Follow us on X"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-          
-          {/* Mobile App Badges - Desktop */}
-          <div className="mt-8 pt-8 border-t border-border">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading">
-                <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-4" data-testid="app-store-badges">
-                <div data-testid="badge-app-store">
-                  <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
-                    <SiApple className="h-6 w-6" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-[10px]">Download on the</span>
-                      <span className="text-sm font-semibold">App Store</span>
-                    </div>
-                  </div>
-                </div>
-                <div data-testid="badge-google-play">
-                  <div className="flex items-center gap-2.5 bg-foreground text-background rounded-md px-4 py-2.5 opacity-60 cursor-default">
-                    <SiGoogleplay className="h-5 w-5" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-[10px]">GET IT ON</span>
-                      <span className="text-sm font-semibold">Google Play</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <footer className="border-t bg-card dark:bg-card" data-testid="footer">
+      <div className="container mx-auto px-4 md:px-6 py-10 md:py-14">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-5">
+          <div className="col-span-2 md:col-span-1 lg:col-span-2">
+            <Link href="/" aria-label="Go to homepage" data-testid="footer-logo">
+              <img
+                src={logoUrl}
+                alt="ANZ Global Education"
+                className="h-8 w-auto mb-4"
+              />
+            </Link>
+            <p className="text-sm text-muted-foreground max-w-xs mb-6">
+              Connecting international students with world-class Australian education opportunities.
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground transition-colors hover-elevate"
+                  aria-label={`Follow us on ${social.name}`}
+                  data-testid={social.testId}
+                >
+                  <social.icon className="h-4 w-4" />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Powered by AI Section - Desktop */}
-          <div className="mt-8 pt-8 border-t border-border">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Cutting Edge Technology for Future</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {aiTechnologies.map((tech) => (
-                  <div
-                    key={tech.name}
-                    className="flex items-center gap-2 text-muted-foreground/60"
-                    title={tech.description}
-                    data-testid={`ai-tech-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <tech.icon className="h-5 w-5" />
-                    <span className="text-sm font-medium">{tech.name}</span>
-                  </div>
+          {footerNav.map((section) => (
+            <div key={section.title}>
+              <h3
+                className="text-sm font-semibold text-foreground mb-4"
+                data-testid={`footer-heading-${section.title.toLowerCase()}`}
+              >
+                {section.title}
+              </h3>
+              <ul className="space-y-2.5">
+                {section.links.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Mobile Footer - Accordion Layout */}
-      <div className="md:hidden">
-        <div className="container mx-auto px-4 py-8">
-          <Accordion type="single" collapsible className="w-full">
-            {footerSections.map((section, index) => (
-              <AccordionItem key={section.title} value={`section-${index}`}>
-                <AccordionTrigger className="text-sm font-semibold uppercase tracking-wide py-4">
-                  {section.title}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-3 pb-4">
-                    {section.links.map((link) => (
-                      <li key={link.label}>
-                        {link.external ? (
-                          <a
-                            href={link.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors block"
-                            data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                          >
-                            {link.label}
-                          </a>
-                        ) : (
-                          <Link
-                            href={link.href}
-                            className="text-sm text-muted-foreground hover:text-foreground transition-colors block"
-                            data-testid={`footer-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                          >
-                            {link.label}
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-          
-          {/* Social Media Icons - Mobile */}
-          <div className="mt-8 pt-8 border-t border-border">
-            <div className="flex items-center justify-center gap-4">
-              <a
-                href="https://www.facebook.com/anzglobal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-facebook-mobile"
-                aria-label="Follow us on Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/anzglobal/#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-instagram-mobile"
-                aria-label="Follow us on Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.linkedin.com/company/anzglobal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-linkedin-mobile"
-                aria-label="Follow us on LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-youtube-mobile"
-                aria-label="Subscribe on YouTube"
-              >
-                <Youtube className="h-5 w-5" />
-              </a>
-              <a
-                href="https://x.com/anz_global"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary flex items-center justify-center transition-all hover-elevate"
-                data-testid="social-twitter-mobile"
-                aria-label="Follow us on X"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-          
-          {/* Mobile App Badges - Mobile */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground" data-testid="text-app-section-heading-mobile">
-                <Smartphone className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Get the ANZ Global App (Coming Soon)</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-3" data-testid="app-store-badges-mobile">
-                <div data-testid="badge-app-store-mobile">
-                  <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
-                    <SiApple className="h-5 w-5" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-[9px]">Download on the</span>
-                      <span className="text-xs font-semibold">App Store</span>
-                    </div>
-                  </div>
-                </div>
-                <div data-testid="badge-google-play-mobile">
-                  <div className="flex items-center gap-2 bg-foreground text-background rounded-md px-3 py-2 opacity-60 cursor-default">
-                    <SiGoogleplay className="h-4 w-4" />
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-[9px]">GET IT ON</span>
-                      <span className="text-xs font-semibold">Google Play</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Powered by AI Section - Mobile */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-medium">Powered by Cutting Edge Technology for Future</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {aiTechnologies.map((tech) => (
-                  <div
-                    key={tech.name}
-                    className="flex items-center gap-2 text-muted-foreground/60"
-                    title={tech.description}
-                    data-testid={`ai-tech-mobile-${tech.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <tech.icon className="h-4 w-4" />
-                    <span className="text-xs font-medium">{tech.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Copyright Bar - Blue Background */}
       <div className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 md:px-6 py-4">
-          <p className="text-sm text-center" data-testid="text-copyright">
-            Copyright {currentYear} | ANZ Global Education. All rights reserved.
+        <div className="container mx-auto px-4 md:px-6 py-3.5">
+          <p className="text-xs text-center opacity-90" data-testid="text-copyright">
+            &copy; {currentYear} ANZ Global Education. All rights reserved. A product of ANZ Global Education.
           </p>
         </div>
       </div>
