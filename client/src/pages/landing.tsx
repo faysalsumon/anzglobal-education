@@ -346,9 +346,8 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Right: Search + Visual */}
-            <div className="space-y-6">
-              {/* AI Search Card */}
+            {/* Right: Search */}
+            <div>
               <Card className="border-border/50 shadow-lg">
                 <CardContent className="p-5 sm:p-6">
                   <div className="flex items-center gap-2 mb-4">
@@ -363,24 +362,6 @@ export default function Landing() {
                   <NaturalLanguageSearch variant="light" />
                 </CardContent>
               </Card>
-
-              {/* Quick discipline links */}
-              <div className="text-center lg:text-left">
-                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Popular disciplines</p>
-                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
-                  {["Computer Science & IT", "Accounting, Business & Finance", "Engineering & Technology", "Health & Medical Sciences", "Arts, Design & Architecture"].map((discipline) => (
-                    <Link 
-                      key={discipline}
-                      href={`/courses?discipline=${encodeURIComponent(discipline)}`}
-                      data-testid={`link-hero-discipline-${discipline.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    >
-                      <Badge variant="outline" className="cursor-pointer text-xs">
-                        {discipline}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>

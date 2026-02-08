@@ -271,7 +271,7 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
       {/* Example Suggestions */}
       <div className="flex flex-wrap gap-2 justify-center">
         <span className={`text-sm self-center font-medium ${isLight ? "text-muted-foreground" : "text-white/80"}`}>Try:</span>
-        {exampleQueries.slice(0, 3).map((example, index) => (
+        {exampleQueries.slice(0, 2).map((example, index) => (
           <button
             key={index}
             onClick={() => handleExampleClick(example)}
@@ -285,11 +285,6 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
             "{example}"
           </button>
         ))}
-      </div>
-
-      {/* Search Tips */}
-      <div className={`text-center text-sm ${isLight ? "text-muted-foreground" : "text-white/90"}`}>
-        <p className="font-medium">Describe what you want in plain English - our AI will understand!</p>
       </div>
     </div>
   );
