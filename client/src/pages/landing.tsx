@@ -310,17 +310,6 @@ export default function Landing() {
                   Match My Course
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  asChild
-                  size="lg" 
-                  variant="outline"
-                  data-testid="button-hero-explore-courses"
-                >
-                  <Link href="/courses">
-                    <Search className="mr-2 h-5 w-5" />
-                    Explore Courses
-                  </Link>
-                </Button>
               </div>
 
               {/* Benefit badges */}

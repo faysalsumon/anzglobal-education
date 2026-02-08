@@ -1,7 +1,7 @@
 import { useState, useRef, KeyboardEvent, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, GraduationCap, Building2 } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -19,18 +19,13 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
   const isLight = variant === "light";
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
+  const searchType = "courses" as const;
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Fetch actual courses from database
   const { data: courses = [] } = useQuery<CourseWithUniversity[]>({
     queryKey: ["/api/courses"],
-  });
-
-  // Fetch actual institutions from database
-  const { data: institutions = [] } = useQuery<University[]>({
-    queryKey: ["/api/institutions"],
   });
 
   // Generate dynamic course examples from database
@@ -80,54 +75,7 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
     return examples.sort(() => Math.random() - 0.5).slice(0, 5);
   }, [courses]);
 
-  // Generate dynamic institution examples from database
-  const institutionExamples = useMemo(() => {
-    if (institutions.length === 0) {
-      return [
-        "Find universities in Australia",
-        "Show me TAFE institutions",
-        "Search for business schools",
-      ];
-    }
-
-    const examples: string[] = [];
-    const uniqueTypes = new Set<string>();
-    const institutionNames: string[] = [];
-
-    // Collect unique provider types and institution names
-    institutions.forEach(institution => {
-      if (institution.providerType) uniqueTypes.add(institution.providerType);
-      if (institution.name) institutionNames.push(institution.name);
-    });
-
-    const types = Array.from(uniqueTypes).slice(0, 3);
-    const names = institutionNames.slice(0, 2);
-
-    // Generate type-based examples
-    types.forEach((type, index) => {
-      if (index === 0) {
-        examples.push(`Find ${type} in Australia`);
-      } else if (index === 1) {
-        examples.push(`Show me ${type} institutions`);
-      } else {
-        examples.push(`${type} programs`);
-      }
-    });
-
-    // Add general search examples
-    if (names.length > 0) {
-      examples.push(`Universities in Australia`);
-    }
-    
-    if (institutions.length > 5) {
-      examples.push(`Find top institutions for international students`);
-    }
-
-    // Shuffle and return top 5
-    return examples.sort(() => Math.random() - 0.5).slice(0, 5);
-  }, [institutions]);
-  
-  const exampleQueries = searchType === "courses" ? courseExamples : institutionExamples;
+  const exampleQueries = courseExamples;
 
   const placeholderText = useTypingAnimation({
     phrases: exampleQueries,
@@ -272,40 +220,6 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
-      {/* Search Type Toggle */}
-      <div className="flex gap-2 justify-center">
-        <Button
-          variant={searchType === "courses" ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            setSearchType("courses");
-            setQuery("");
-          }}
-          className={searchType === "courses" 
-            ? (isLight ? "" : "bg-white text-primary") 
-            : (isLight ? "" : "bg-white/10 border-white/30 text-white backdrop-blur-sm")}
-          data-testid="button-search-type-courses"
-        >
-          <GraduationCap className="h-4 w-4 mr-2" />
-          Courses
-        </Button>
-        <Button
-          variant={searchType === "institutions" ? "default" : "outline"}
-          size="sm"
-          onClick={() => {
-            setSearchType("institutions");
-            setQuery("");
-          }}
-          className={searchType === "institutions" 
-            ? (isLight ? "" : "bg-white text-primary") 
-            : (isLight ? "" : "bg-white/10 border-white/30 text-white backdrop-blur-sm")}
-          data-testid="button-search-type-institutions"
-        >
-          <Building2 className="h-4 w-4 mr-2" />
-          Institutions
-        </Button>
-      </div>
-
       {/* Main Search Bar */}
       <div className="relative">
         <div className="relative group">
