@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,14 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings, Home } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Home } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -33,7 +25,6 @@ interface PublicHeaderProps {
 }
 
 export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
   const { signOut } = useSupabaseAuth();
@@ -273,144 +264,9 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             )}
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile: Notification bell only (navigation moved to bottom tab bar) */}
           <div className="md:hidden flex items-center gap-2">
-            {/* Show notification bell on mobile for logged-in users */}
             {isAuthenticated && user && <NotificationBell />}
-            
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                {isAuthenticated && user ? (
-                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="Open user menu" data-testid="button-mobile-menu">
-                    <Avatar className="h-8 w-8">
-                      {profileImageUrl && (
-                        <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
-                      )}
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                ) : (
-                  <Button variant="ghost" size="icon" aria-label="Open menu" data-testid="button-mobile-menu">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                )}
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] p-0">
-                <SheetHeader className="p-4 border-b">
-                  {isAuthenticated && user ? (
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        {profileImageUrl && (
-                          <AvatarImage src={profileImageUrl} alt={user?.email || "User"} />
-                        )}
-                        <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                          {getUserInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <SheetTitle className="text-left text-sm">
-                          {user?.firstName && user?.lastName 
-                            ? `${user.firstName} ${user.lastName}`
-                            : user?.email}
-                        </SheetTitle>
-                        <p className="text-xs text-muted-foreground">{getUserRoleDisplay()}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <SheetTitle className="text-left">Menu</SheetTitle>
-                  )}
-                </SheetHeader>
-                <nav className="flex flex-col p-4">
-                  {/* User actions for logged-in users */}
-                  {isAuthenticated && user && (
-                    <>
-                      <Link
-                        href={getDashboardUrl()}
-                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-dashboard"
-                      >
-                        <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-                        Dashboard
-                      </Link>
-                      <Link
-                        href={getMessagesUrl()}
-                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-messages"
-                      >
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        Messages
-                      </Link>
-                      <Link
-                        href={getProfileUrl()}
-                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid="mobile-link-profile"
-                      >
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        My Profile
-                      </Link>
-                      <div className="my-2 border-t" />
-                    </>
-                  )}
-                  
-                  {/* Navigation items */}
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="flex items-center gap-3 px-3 py-3 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors"
-                        onClick={() => setMobileMenuOpen(false)}
-                        data-testid={`mobile-link-${item.title.toLowerCase()}`}
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        {item.title}
-                      </Link>
-                    );
-                  })}
-                  
-                  <div className="mt-4 pt-4 border-t">
-                    {isAuthenticated && user ? (
-                      <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                        data-testid="button-mobile-logout"
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                      </Button>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          className="w-full bg-accent text-white border-accent-border"
-                          asChild
-                          data-testid="button-mobile-login"
-                        >
-                          <a href="/auth?mode=login" onClick={() => setMobileMenuOpen(false)}>Login</a>
-                        </Button>
-                        <Button
-                          variant="default"
-                          className="w-full"
-                          asChild
-                          data-testid="button-mobile-signup"
-                        >
-                          <a href="/auth?mode=signup" onClick={() => setMobileMenuOpen(false)}>Sign up</a>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </div>

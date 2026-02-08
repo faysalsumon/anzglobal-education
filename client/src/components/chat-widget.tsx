@@ -51,6 +51,20 @@ export function ChatWidget() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
+  useEffect(() => {
+    const handleOpenChat = () => {
+      setIsOpen((prev) => {
+        if (!prev) {
+          setIsMinimized(false);
+          setUnreadCount(0);
+        }
+        return true;
+      });
+    };
+    window.addEventListener("open-chat-widget", handleOpenChat);
+    return () => window.removeEventListener("open-chat-widget", handleOpenChat);
+  }, []);
+
   // Custom markdown components for CTA buttons
   const markdownComponents: Components = useMemo(() => ({
     a: ({ href, children }) => {
@@ -197,7 +211,7 @@ export function ChatWidget() {
   if (!isOpen) {
     return (
       <div 
-        className="fixed bottom-36 right-3 md:bottom-8 md:right-4 z-40"
+        className="fixed bottom-20 right-3 md:bottom-8 md:right-4 z-40"
         data-testid="chat-widget-trigger"
         onMouseEnter={() => setIsCollapsed(false)}
         onMouseLeave={() => setIsCollapsed(true)}

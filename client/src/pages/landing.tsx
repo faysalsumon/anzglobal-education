@@ -13,7 +13,7 @@ import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
-import { CourseMatchQuiz } from "@/components/course-match-quiz";
+
 
 interface PlatformStats {
   institutionCount: number;
@@ -63,7 +63,7 @@ export default function Landing() {
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
-  const [quizOpen, setQuizOpen] = useState(false);
+  const openQuiz = () => window.dispatchEvent(new CustomEvent("open-course-quiz"));
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
@@ -232,7 +232,7 @@ export default function Landing() {
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (
-    <PublicLayout>
+    <PublicLayout onMatchClick={openQuiz}>
       <div className="landing-sections">
       <Helmet>
         {/* Primary Meta Tags */}
@@ -303,7 +303,7 @@ export default function Landing() {
                 <Button 
                   size="lg" 
                   className="px-8 text-base bg-accent text-white border-accent-border"
-                  onClick={() => setQuizOpen(true)}
+                  onClick={openQuiz}
                   data-testid="button-hero-find-my-course"
                 >
                   <Sparkles className="mr-2 h-5 w-5" />
@@ -1298,7 +1298,6 @@ export default function Landing() {
 
       </div>
 
-      <CourseMatchQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
     </PublicLayout>
   );
 }
