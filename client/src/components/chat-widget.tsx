@@ -211,7 +211,7 @@ export function ChatWidget() {
   if (!isOpen) {
     return (
       <div 
-        className="fixed bottom-20 right-3 md:bottom-8 md:right-4 z-40"
+        className="fixed bottom-20 right-3 md:bottom-8 md:right-4 z-40 hidden md:block"
         data-testid="chat-widget-trigger"
         onMouseEnter={() => setIsCollapsed(false)}
         onMouseLeave={() => setIsCollapsed(true)}
