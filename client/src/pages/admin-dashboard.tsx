@@ -85,7 +85,6 @@ import { AdminQualificationTypesPanel } from "@/components/admin-qualification-t
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 import { ListPagination } from "@/components/list-pagination";
 import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
-import { AdminBrandGuidelines } from "@/components/admin-brand-guidelines";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -475,7 +474,7 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'brand-guidelines'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
@@ -530,7 +529,6 @@ export default function AdminDashboard() {
     'web-scraping': 'Web Scraping',
     'activity-logs': 'Activity Logs',
     'ai-settings': 'AI Settings',
-    'brand-guidelines': 'Brand Guidelines',
     'team': 'Team Invitations',
     'blogs': 'Blogs',
     'website-content': 'Website Content',
@@ -558,7 +556,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'brand-guidelines'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -1871,7 +1869,7 @@ export default function AdminDashboard() {
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard | CampQ</title>
+        <title>Admin Dashboard | ANZ Global Education</title>
         <meta name="robots" content="noindex, nofollow, noai, noimageai" />
       </Helmet>
       <div className="flex h-screen w-full overflow-hidden bg-muted/30">
@@ -3359,10 +3357,6 @@ export default function AdminDashboard() {
         {/* Partner API Keys Tab - Platform Admin/CTO Only */}
         {activeTab === "api-keys" && hasFullAdminAccess && (
           <AdminApiKeysPanel />
-        )}
-
-        {activeTab === "brand-guidelines" && (
-          <AdminBrandGuidelines />
         )}
 
               </div>

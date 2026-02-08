@@ -9,7 +9,7 @@ if (!apiKey) {
 const resend = apiKey ? new Resend(apiKey) : null;
 
 // Email configuration
-const FROM_EMAIL = 'CampQ <noreply@anzglobal.com.au>';
+const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobal.com.au>';
 const ADMIN_EMAIL = 'admin@anzglobal.com.au';
 
 interface ContactInquiryEmailData {
@@ -46,7 +46,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Thank you for contacting CampQ</title>
+      <title>Thank you for contacting ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -55,9 +55,9 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
               </tr>
@@ -72,11 +72,11 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
                   </p>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    We have successfully received your ${isStudent ? 'study inquiry' : 'partnership inquiry'} and appreciate your interest in CampQ.
+                    We have successfully received your ${isStudent ? 'study inquiry' : 'partnership inquiry'} and appreciate your interest in ANZ Global Education.
                   </p>
                   
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #1E2A5E; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #1E2A5E; margin: 0 0 15px 0; font-size: 18px;">Your Inquiry Details:</h3>
+                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Your Inquiry Details:</h3>
                     <table cellpadding="5" cellspacing="0" style="width: 100%;">
                       ${isStudent ? `
                         <tr>
@@ -148,7 +148,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
                   
                   <!-- CTA Button -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Visit Our Website</a>
+                    <a href="https://anzglobaleducation.com" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Visit Our Website</a>
                   </div>
                 </td>
               </tr>
@@ -157,10 +157,10 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    CampQ - Connecting Students with Global Opportunities
+                    ANZ Global Education - Connecting Students with Global Opportunities
                   </p>
                   <p style="color: #999999; font-size: 12px; margin: 0;">
-                    © 2024 CampQ. All rights reserved.
+                    © 2024 ANZ Global Education. All rights reserved.
                   </p>
                 </td>
               </tr>
@@ -186,7 +186,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>New Contact Inquiry - CampQ</title>
+      <title>New Contact Inquiry - ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -195,8 +195,8 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background-color: ${isStudent ? '#1E2A5E' : '#2DBDB6'}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background-color: ${isStudent ? '#3465A5' : '#FF5000'}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Inquiry ID: ${data.id}</p>
                 </td>
@@ -222,7 +222,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
                       <tr>
                         <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Email:</strong></td>
                         <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="mailto:${data.email}" style="color: #1E2A5E; text-decoration: none;">${data.email}</a>
+                          <a href="mailto:${data.email}" style="color: #3465A5; text-decoration: none;">${data.email}</a>
                         </td>
                       </tr>
                       ${data.phone ? `
@@ -267,7 +267,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
                       <tr style="background-color: #f8f9fa;">
                         <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Email:</strong></td>
                         <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="mailto:${data.email}" style="color: #1E2A5E; text-decoration: none;">${data.email}</a>
+                          <a href="mailto:${data.email}" style="color: #3465A5; text-decoration: none;">${data.email}</a>
                         </td>
                       </tr>
                       ${data.phone ? `
@@ -280,7 +280,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
                       <tr style="background-color: #f8f9fa;">
                         <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Website:</strong></td>
                         <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="${data.website}" style="color: #1E2A5E; text-decoration: none;">${data.website}</a>
+                          <a href="${data.website}" style="color: #3465A5; text-decoration: none;">${data.website}</a>
                         </td>
                       </tr>
                       ` : ''}
@@ -294,13 +294,13 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
                   </table>
                   
                   <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 18px;">Message</h3>
-                  <div style="background-color: #f8f9fa; border-left: 4px solid ${isStudent ? '#1E2A5E' : '#2DBDB6'}; padding: 15px; border-radius: 4px;">
+                  <div style="background-color: #f8f9fa; border-left: 4px solid ${isStudent ? '#3465A5' : '#FF5000'}; padding: 15px; border-radius: 4px;">
                     <p style="color: #333333; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.message}</p>
                   </div>
                   
                   <!-- CTA Buttons -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/admin/dashboard" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">View in Dashboard</a>
+                    <a href="https://anzglobaleducation.com/admin/dashboard" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">View in Dashboard</a>
                     <a href="mailto:${data.email}" style="display: inline-block; background-color: #28a745; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">Reply to Inquiry</a>
                   </div>
                 </td>
@@ -310,7 +310,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
               <tr>
                 <td style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #999999; font-size: 12px; margin: 0;">
-                    This is an automated notification from CampQ Contact System
+                    This is an automated notification from ANZ Global Education Contact System
                   </p>
                 </td>
               </tr>
@@ -423,8 +423,8 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Update</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your application has been updated</p>
                 </td>
@@ -435,20 +435,20 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
                     Great news! Your application for <strong>${data.courseTitle}</strong> at <strong>${data.universityName}</strong> has progressed to the next stage.
                   </p>
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #1E2A5E; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #1E2A5E; margin: 0 0 15px 0; font-size: 18px;">Current Stage:</h3>
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Current Stage:</h3>
                     <p style="color: #333333; font-size: 20px; font-weight: bold; margin: 0;">${data.currentStage}</p>
                     ${data.previousStage ? `<p style="color: #666666; font-size: 14px; margin: 10px 0 0 0;">Previously: ${data.previousStage}</p>` : ''}
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
+                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
                   </div>
                 </td>
               </tr>
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">CampQ</p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 CampQ. All rights reserved.</p>
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
                 </td>
               </tr>
             </table>
@@ -479,8 +479,8 @@ function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background-color: #2DBDB6; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background-color: #FF5000; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Document Request</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Action Required</p>
                 </td>
@@ -501,20 +501,20 @@ function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
                     ${data.documentTypes?.map(doc => `<li>${doc}</li>`).join('')}
                   </ul>
                   ${data.requestNote ? `
-                    <div style="background-color: #f8f9fa; border-left: 4px solid #1E2A5E; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px; border-radius: 4px; margin: 20px 0;">
                       <p style="color: #666666; font-size: 14px; margin: 0;"><strong>Note:</strong></p>
                       <p style="color: #333333; font-size: 14px; margin: 10px 0 0 0;">${data.requestNote}</p>
                     </div>
                   ` : ''}
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #2DBDB6; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
+                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
                   </div>
                 </td>
               </tr>
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">CampQ</p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 CampQ. All rights reserved.</p>
+                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
+                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
                 </td>
               </tr>
             </table>
@@ -607,13 +607,13 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
       ctaUrl: 'https://anzglobal.com.au/courses'
     },
     institution: {
-      title: 'Welcome to CampQ!',
+      title: 'Welcome to ANZ Global Education!',
       description: 'Your institution account is now active. Start connecting with international students and showcase your programs.',
       cta: 'Access Your Dashboard',
       ctaUrl: 'https://anzglobal.com.au/university/dashboard'
     },
     admin: {
-      title: 'Welcome to CampQ!',
+      title: 'Welcome to ANZ Global Education!',
       description: 'Your admin account has been activated.',
       cta: 'Go to Admin Dashboard',
       ctaUrl: 'https://anzglobal.com.au/admin/dashboard'
@@ -628,7 +628,7 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to CampQ</title>
+      <title>Welcome to ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -636,9 +636,9 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
               </tr>
@@ -652,8 +652,8 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
                     ${msg.description}
                   </p>
                   ${data.userType === 'student' ? `
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #1E2A5E; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #1E2A5E; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
                     <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
                       <li>Complete your profile to get personalized recommendations</li>
                       <li>Browse courses from top Australian universities</li>
@@ -663,7 +663,7 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
                   </div>
                   ` : ''}
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="${msg.ctaUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">${msg.cta}</a>
+                    <a href="${msg.ctaUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">${msg.cta}</a>
                   </div>
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
                     Need help? Our support team is here for you at support@anzglobal.com.au
@@ -673,8 +673,8 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
-                    CampQ | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #1E2A5E;">www.anzglobal.com.au</a>
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -700,7 +700,7 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Complete Your Profile - CampQ</title>
+      <title>Complete Your Profile - ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -708,9 +708,9 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Complete Your Profile</p>
                 </td>
               </tr>
@@ -723,14 +723,14 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
                     A complete profile helps universities understand your background better and increases your chances of a successful application.
                   </p>
-                  <div style="background-color: #fff3cd; border-left: 4px solid #2DBDB6; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #2DBDB6; margin: 0 0 15px 0; font-size: 18px;">Missing Information:</h3>
+                  <div style="background-color: #fff3cd; border-left: 4px solid #FF5000; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #FF5000; margin: 0 0 15px 0; font-size: 18px;">Missing Information:</h3>
                     <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
                       ${missingFieldsList}
                     </ul>
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/profile" style="display: inline-block; background-color: #2DBDB6; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
+                    <a href="https://anzglobal.com.au/student/profile" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
                   </div>
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
                     Having a complete profile makes your applications stand out and helps us match you with the right courses.
@@ -740,8 +740,8 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
-                    CampQ | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #1E2A5E;">www.anzglobal.com.au</a>
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -765,7 +765,7 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Application Submitted - CampQ</title>
+      <title>Application Submitted - ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -773,8 +773,8 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Submitted!</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Congratulations on taking this step</p>
                 </td>
@@ -785,8 +785,8 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
                     Your application has been successfully submitted and is now being reviewed.
                   </p>
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #1E2A5E; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #1E2A5E; margin: 0 0 15px 0; font-size: 18px;">Application Details:</h3>
+                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Application Details:</h3>
                     <table cellpadding="8" cellspacing="0" style="width: 100%;">
                       <tr>
                         <td style="color: #666666; font-size: 14px;"><strong>Application ID:</strong></td>
@@ -816,15 +816,15 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
                     </ol>
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
+                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
                   </div>
                 </td>
               </tr>
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
-                    CampQ | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #1E2A5E;">www.anzglobal.com.au</a>
+                    ANZ Global Education | Your Gateway to Global Education<br>
+                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -848,7 +848,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
     await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: `Welcome to CampQ, ${data.firstName}!`,
+      subject: `Welcome to ANZ Global Education, ${data.firstName}!`,
       html: getWelcomeEmailHtml(data),
     });
 
@@ -882,7 +882,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your CampQ Account</title>
+      <title>Your ANZ Global Education Account</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -891,9 +891,9 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Account Has Been Created</p>
                 </td>
               </tr>
@@ -904,7 +904,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
                   <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome, ${data.firstName}!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.createdByName}</strong> has created an account for you on the CampQ platform.
+                    <strong>${data.createdByName}</strong> has created an account for you on the ANZ Global Education platform.
                   </p>
                   
                   <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -931,7 +931,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
                   <table cellpadding="0" cellspacing="0" width="100%">
                     <tr>
                       <td align="center" style="padding: 20px 0;">
-                        <a href="${loginUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                        <a href="${loginUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: 600;">
                           Sign In to Your Account
                         </a>
                       </td>
@@ -940,7 +940,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
                   
                   <p style="color: #888888; font-size: 12px; margin-top: 30px;">
                     If the button doesn't work, copy and paste this link into your browser:<br>
-                    <a href="${loginUrl}" style="color: #1E2A5E;">${loginUrl}</a>
+                    <a href="${loginUrl}" style="color: #3465A5;">${loginUrl}</a>
                   </p>
                 </td>
               </tr>
@@ -949,7 +949,7 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
               <tr>
                 <td style="background-color: #f8f9fa; padding: 20px 40px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
-                    CampQ - Your Gateway to Global Education
+                    ANZ Global Education - Your Gateway to Global Education
                   </p>
                   <p style="color: #888888; font-size: 11px; margin: 10px 0 0 0;">
                     If you didn't expect this email, please contact your administrator.
@@ -975,7 +975,7 @@ export async function sendAdminCreatedUserEmail(data: AdminCreatedUserEmailData)
     await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: `Your CampQ Account Has Been Created`,
+      subject: `Your ANZ Global Education Account Has Been Created`,
       html: getAdminCreatedUserEmailHtml(data),
     });
 
@@ -1081,7 +1081,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
             <td align="center">
               <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
                     <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Admin Signup</h1>
                   </td>
                 </tr>
@@ -1093,7 +1093,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
                       A new user has signed up as a platform administrator and is awaiting your approval.
                     </p>
                     
-                    <div style="background-color: #f8f9fa; border-left: 4px solid #1E2A5E; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 20px 0; border-radius: 4px;">
                       <p style="margin: 0 0 10px 0;"><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
                       <p style="margin: 0;"><strong>Email:</strong> ${data.email}</p>
                     </div>
@@ -1103,7 +1103,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
                     </p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard#users" style="background-color: #1E2A5E; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
+                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard#users" style="background-color: #3465A5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
                     </div>
                   </td>
                 </tr>
@@ -1149,7 +1149,7 @@ export async function sendAdminApprovedNotification(data: AdminApprovedNotificat
             <td align="center">
               <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #10b981 0%, #1E2A5E 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #3465A5 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
                     <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Account Approved!</h1>
                   </td>
                 </tr>
@@ -1186,7 +1186,7 @@ export async function sendAdminApprovedNotification(data: AdminApprovedNotificat
     await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: 'Your Admin Account Has Been Approved - CampQ',
+      subject: 'Your Admin Account Has Been Approved - ANZ Global Education',
       html,
     });
 
@@ -1236,7 +1236,7 @@ export async function sendAdminRejectedNotification(data: AdminRejectedNotificat
                     ` : ''}
                     
                     <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      If you believe this was in error or have questions, please contact our team at <a href="mailto:support@anzglobal.com.au" style="color: #1E2A5E;">support@anzglobal.com.au</a>.
+                      If you believe this was in error or have questions, please contact our team at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>.
                     </p>
                   </td>
                 </tr>
@@ -1251,7 +1251,7 @@ export async function sendAdminRejectedNotification(data: AdminRejectedNotificat
     await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: 'Admin Account Request Update - CampQ',
+      subject: 'Admin Account Request Update - ANZ Global Education',
       html,
     });
 
@@ -1293,7 +1293,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>You're Invited to Join CampQ</title>
+      <title>You're Invited to Join ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -1302,9 +1302,9 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're Invited to Join Our Team!</p>
                 </td>
               </tr>
@@ -1315,11 +1315,11 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
                   <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome to the Team!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.inviterName}</strong> has invited you to join the CampQ platform as a <strong>${data.roleName}</strong>.
+                    <strong>${data.inviterName}</strong> has invited you to join the ANZ Global Education platform as a <strong>${data.roleName}</strong>.
                   </p>
                   
                   ${data.note ? `
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #1E2A5E; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
+                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
                     <p style="color: #555555; font-size: 14px; font-style: italic; margin: 0;">"${data.note}"</p>
                   </div>
                   ` : ''}
@@ -1330,7 +1330,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
                   
                   <!-- CTA Button -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="${inviteUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 18px; font-weight: bold;">Accept Invitation</a>
+                    <a href="${inviteUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 18px; font-weight: bold;">Accept Invitation</a>
                   </div>
                   
                   <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
@@ -1342,7 +1342,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
                   <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
                     If the button doesn't work, copy and paste this link into your browser:
                   </p>
-                  <p style="color: #1E2A5E; font-size: 12px; word-break: break-all; margin: 5px 0 0 0;">
+                  <p style="color: #3465A5; font-size: 12px; word-break: break-all; margin: 5px 0 0 0;">
                     ${inviteUrl}
                   </p>
                 </td>
@@ -1352,7 +1352,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    CampQ - Your Gateway to Global Education
+                    ANZ Global Education - Your Gateway to Global Education
                   </p>
                   <p style="color: #999999; font-size: 12px; margin: 0;">
                     If you didn't expect this invitation, you can safely ignore this email.
@@ -1386,7 +1386,7 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Password Changed - CampQ</title>
+      <title>Password Changed - ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -1395,9 +1395,9 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Account Security Notification</p>
                 </td>
               </tr>
@@ -1418,10 +1418,10 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
                   </p>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Your password for your CampQ account (<strong>${data.email}</strong>) has been successfully changed.
+                    Your password for your ANZ Global Education account (<strong>${data.email}</strong>) has been successfully changed.
                   </p>
                   
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #1E2A5E; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
                     <p style="color: #555555; font-size: 14px; margin: 0;">
                       <strong>Changed at:</strong> ${changedAt} (AEST)
                     </p>
@@ -1429,7 +1429,7 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
                   
                   <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
                     <p style="color: #856404; margin: 0; font-size: 14px;">
-                      <strong>Didn't make this change?</strong> If you did not change your password, please contact our support team immediately at <a href="mailto:support@anzglobal.com.au" style="color: #1E2A5E;">support@anzglobal.com.au</a>
+                      <strong>Didn't make this change?</strong> If you did not change your password, please contact our support team immediately at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>
                     </p>
                   </div>
                   
@@ -1443,7 +1443,7 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
               <tr>
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    CampQ - Your Gateway to Global Education
+                    ANZ Global Education - Your Gateway to Global Education
                   </p>
                   <p style="color: #999999; font-size: 12px; margin: 0;">
                     This is an automated security notification. Please do not reply to this email.
@@ -1472,7 +1472,7 @@ export async function sendPasswordChangedEmail(data: { email: string; firstName?
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: 'Password Changed - CampQ',
+      subject: 'Password Changed - ANZ Global Education',
       html: getPasswordChangedEmailHtml(data),
     });
 
@@ -1503,7 +1503,7 @@ export async function sendTeamInvitationEmail(data: TeamInvitationEmailData): Pr
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: `You're Invited to Join CampQ as ${data.roleName}`,
+      subject: `You're Invited to Join ANZ Global Education as ${data.roleName}`,
       html: getTeamInvitationEmailHtml(data),
     });
 
@@ -1546,7 +1546,7 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your Friend Invited You to CampQ</title>
+      <title>Your Friend Invited You to ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -1555,9 +1555,9 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">CampQ</h1>
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
                 </td>
               </tr>
@@ -1568,11 +1568,11 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
                   <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hi ${data.inviteeName}!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.referrerName}</strong> thinks you'd love CampQ and has invited you to join!
+                    <strong>${data.referrerName}</strong> thinks you'd love ANZ Global Education and has invited you to join!
                   </p>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    CampQ helps international students discover and apply to universities in Australia and beyond. 
+                    ANZ Global Education helps international students discover and apply to universities in Australia and beyond. 
                     With our AI-powered platform, you can:
                   </p>
                   
@@ -1587,7 +1587,7 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
                   <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
                     <tr>
                       <td align="center">
-                        <a href="${signupUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        <a href="${signupUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
                           Create Your Free Account
                         </a>
                       </td>
@@ -1604,7 +1604,7 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
               <tr>
                 <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
                   <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
-                    CampQ | Connecting Students with Global Opportunities
+                    ANZ Global Education | Connecting Students with Global Opportunities
                   </p>
                   <p style="color: #aaaaaa; font-size: 11px; margin: 10px 0 0 0; text-align: center;">
                     This email was sent because ${data.referrerName} invited you to join.
@@ -1632,7 +1632,7 @@ export async function sendReferralInvitationEmail(data: ReferralInvitationEmailD
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.to,
-      subject: `${data.referrerName} invited you to join CampQ!`,
+      subject: `${data.referrerName} invited you to join ANZ Global Education!`,
       html: getReferralInvitationEmailHtml(data),
     });
 
@@ -1682,7 +1682,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Great News!</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Referral Just Registered</p>
                 </td>
@@ -1694,7 +1694,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
                   <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.referrerName}!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Woohoo! <strong>${data.inviteeName || data.inviteeEmail}</strong> just joined CampQ thanks to you! You're amazing!
+                    Woohoo! <strong>${data.inviteeName || data.inviteeEmail}</strong> just joined ANZ Global Education thanks to you! You're amazing!
                   </p>
                   
                   <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
@@ -1721,7 +1721,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
                   <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
                     <tr>
                       <td align="center">
-                        <a href="${affiliateUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        <a href="${affiliateUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
                           Invite More Friends Now
                         </a>
                       </td>
@@ -1729,7 +1729,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
                   </table>
                   
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
-                    Thank you for spreading the word about CampQ!
+                    Thank you for spreading the word about ANZ Global Education!
                   </p>
                 </td>
               </tr>
@@ -1738,7 +1738,7 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
               <tr>
                 <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
                   <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
-                    CampQ | Connecting Students with Global Opportunities
+                    ANZ Global Education | Connecting Students with Global Opportunities
                   </p>
                 </td>
               </tr>
@@ -1774,7 +1774,7 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to CampQ</title>
+      <title>Welcome to ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -1783,10 +1783,10 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Your Journey Starts Here</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Welcome to CampQ</p>
+                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Welcome to ANZ Global Education</p>
                 </td>
               </tr>
               
@@ -1796,11 +1796,11 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
                   <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.firstName}!</h2>
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Welcome to CampQ! We're thrilled to have you join thousands of students pursuing their dream of studying abroad.
+                    Welcome to ANZ Global Education! We're thrilled to have you join thousands of students pursuing their dream of studying abroad.
                   </p>
                   
                   <div style="background-color: #f0f7ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <h3 style="color: #1E2A5E; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
+                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
                     <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0; padding-left: 20px;">
                       <li>Complete your profile to get personalized course matches</li>
                       <li>Browse 1000+ courses across top Australian universities</li>
@@ -1812,7 +1812,7 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
                   <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
                     <tr>
                       <td align="center">
-                        <a href="${profileUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
                           Complete Your Profile
                         </a>
                       </td>
@@ -1825,7 +1825,7 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
                   
                   <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
                     Or explore our course catalog:
-                    <a href="${coursesUrl}" style="color: #1E2A5E; text-decoration: none; font-weight: 600;">Browse Courses</a>
+                    <a href="${coursesUrl}" style="color: #3465A5; text-decoration: none; font-weight: 600;">Browse Courses</a>
                   </p>
                 </td>
               </tr>
@@ -1834,7 +1834,7 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
               <tr>
                 <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
-                    © 2026 CampQ
+                    © 2026 ANZ Global Education
                   </p>
                   <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
                     You're receiving this because you signed up at anzglobal.com.au
@@ -1862,7 +1862,7 @@ export async function sendStudentWelcomeEmail(data: StudentWelcomeEmailData): Pr
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: data.email,
-      subject: `Welcome to CampQ, ${data.firstName}!`,
+      subject: `Welcome to ANZ Global Education, ${data.firstName}!`,
       html: getStudentWelcomeEmailHtml(data),
     });
 
@@ -1916,7 +1916,7 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
       break;
     default:
       greeting = `Hey ${data.firstName}!`;
-      message = `Complete your profile to get the most out of CampQ.`;
+      message = `Complete your profile to get the most out of ANZ Global Education.`;
   }
   
   const sectionsHtml = data.incompleteSections.length > 0 
@@ -1935,7 +1935,7 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Complete Your Profile - CampQ</title>
+      <title>Complete Your Profile - ANZ Global Education</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
       <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
@@ -1944,8 +1944,8 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E2A5E 0%, #2DBDB6 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="CampQ" style="width: 80px; height: auto; margin-bottom: 16px;" />
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Complete Your Profile</h1>
                   <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're ${data.completionPercentage}% there!</p>
                 </td>
@@ -1962,7 +1962,7 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
                   
                   <!-- Progress Bar -->
                   <div style="background-color: #e9ecef; border-radius: 10px; height: 20px; margin: 20px 0; overflow: hidden;">
-                    <div style="background: linear-gradient(90deg, #1E2A5E 0%, #2DBDB6 100%); height: 100%; width: ${data.completionPercentage}%; border-radius: 10px;"></div>
+                    <div style="background: linear-gradient(90deg, #3465A5 0%, #FF5000 100%); height: 100%; width: ${data.completionPercentage}%; border-radius: 10px;"></div>
                   </div>
                   <p style="color: #888888; font-size: 14px; text-align: center; margin: 0 0 20px 0;">
                     ${data.completionPercentage}% Complete
@@ -1987,7 +1987,7 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
                   <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
                     <tr>
                       <td align="center">
-                        <a href="${profileUrl}" style="display: inline-block; background-color: #1E2A5E; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
                           Complete My Profile
                         </a>
                       </td>
@@ -2000,7 +2000,7 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
               <tr>
                 <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
-                    © 2026 CampQ
+                    © 2026 ANZ Global Education
                   </p>
                   <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
                     <a href="${baseUrl}/unsubscribe" style="color: #888888; text-decoration: underline;">Unsubscribe</a> from reminder emails
@@ -2036,7 +2036,7 @@ export async function sendProfileCompletionReminder(data: ProfileCompletionRemin
         subject = `${data.firstName}, we miss you! Your profile is waiting`;
         break;
       default:
-        subject = `Complete your profile - CampQ`;
+        subject = `Complete your profile - ANZ Global Education`;
     }
     
     console.log(`[Email] Sending profile completion reminder #${data.reminderNumber} to ${data.email}`);

@@ -227,7 +227,7 @@ export default function Landing() {
 
   // SEO data
   const siteUrl = window.location.origin;
-  const pageTitle = "CampQ - Connect Universities and Students Worldwide";
+  const pageTitle = "ANZ Global Education - Connect Universities and Students Worldwide";
   const pageDescription = "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
   const ogImage = `${siteUrl}/og-image.png`;
 
@@ -247,7 +247,7 @@ export default function Landing() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="CampQ" />
+        <meta property="og:site_name" content="ANZ Global Education" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -261,7 +261,7 @@ export default function Landing() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "CampQ",
+            "name": "ANZ Global Education",
             "url": siteUrl,
             "logo": `${siteUrl}/logo.png`,
             "description": pageDescription,
@@ -812,7 +812,7 @@ export default function Landing() {
                     <div className="aspect-video">
                       <iframe
                         src="https://www.youtube.com/embed/pJSJAu4Piws"
-                        title="Transform Your Study Experience in Australia from Bangladesh with CampQ"
+                        title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
                         className="w-full h-full"
@@ -1008,7 +1008,7 @@ export default function Landing() {
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose CampQ?</h2>
+            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose ANZ Global Education?</h2>
             <p className="text-lg text-muted-foreground">Connecting ambitious students with world-class institutions since 2017</p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">

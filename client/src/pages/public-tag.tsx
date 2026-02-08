@@ -88,7 +88,7 @@ export default function PublicTagPage() {
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
   const pageUrl = `${siteUrl}/browse/${slug}`;
 
-  const metaTitle = tag ? `${tag.name} Courses & Programs | CampQ` : "Browse by Tag";
+  const metaTitle = tag ? `${tag.name} Courses & Programs | ANZ Global Education` : "Browse by Tag";
   const metaDescription = tag ? formatTagDescription(tag) : "Browse courses and institutions by category.";
 
   const structuredData = tag ? {
@@ -172,7 +172,7 @@ export default function PublicTagPage() {
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
-        <meta property="og:site_name" content="CampQ" />
+        <meta property="og:site_name" content="ANZ Global Education" />
 
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={metaTitle} />
@@ -191,7 +191,7 @@ export default function PublicTagPage() {
       <div className="min-h-screen">
         <section 
           className="py-12"
-          style={{ backgroundColor: tag.color || '#1E2A5E' }}
+          style={{ backgroundColor: tag.color || '#3455A5' }}
         >
           <div className="container mx-auto px-4">
             <Breadcrumb className="mb-6" data-testid="breadcrumb">

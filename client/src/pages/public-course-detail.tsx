@@ -321,7 +321,7 @@ export default function PublicCourseDetail() {
   // Prepare SEO data
   const siteUrl = window.location.origin;
   const courseUrl = `${siteUrl}/courses/${courseId}`;
-  const metaTitle = `${course.title} - ${course.university?.name || 'University'} | CampQ`;
+  const metaTitle = `${course.title} - ${course.university?.name || 'University'} | ANZ Global Education`;
   const metaDescription = course.description 
     ? course.description.substring(0, 160)
     : `Study ${course.title} at ${course.university?.name || 'a top university'}. ${course.level || 'Degree'} program in ${course.subject || 'your field'}. ${course.country ? `Location: ${course.country}.` : ''}`;
@@ -498,7 +498,7 @@ export default function PublicCourseDetail() {
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="CampQ" />
+        <meta property="og:site_name" content="ANZ Global Education" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -663,8 +663,8 @@ export default function PublicCourseDetail() {
                     <div className="flex flex-wrap items-center gap-2 mt-3">
                       {(() => {
                         const colorPalette = [
-                          { text: "text-[#1E2A5E]", border: "border-[#1E2A5E]/30" },
-                          { text: "text-[#2DBDB6]", border: "border-[#2DBDB6]/30" },
+                          { text: "text-[#3455A5]", border: "border-[#3455A5]/30" },
+                          { text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
                           { text: "text-[#10b981]", border: "border-[#10b981]/30" },
                           { text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
                           { text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
@@ -850,7 +850,7 @@ export default function PublicCourseDetail() {
                           {computedIntakes.map((intake, index) => {
                             const statusColors = {
                               open: { text: "text-[#10b981]", border: "border-[#10b981]/30", label: "Open" },
-                              upcoming: { text: "text-[#1E2A5E]", border: "border-[#1E2A5E]/30", label: "Upcoming" },
+                              upcoming: { text: "text-[#3455A5]", border: "border-[#3455A5]/30", label: "Upcoming" },
                               closed: { text: "text-muted-foreground", border: "border-muted/30", label: "Closed" },
                             };
                             const color = statusColors[intake.status];
@@ -1507,8 +1507,8 @@ export default function PublicCourseDetail() {
                       <div className="flex flex-wrap gap-2">
                         {(() => {
                           const colorPalette = [
-                            { dot: "bg-[#1E2A5E]", text: "text-[#1E2A5E]", border: "border-[#1E2A5E]/30" },
-                            { dot: "bg-[#2DBDB6]", text: "text-[#2DBDB6]", border: "border-[#2DBDB6]/30" },
+                            { dot: "bg-[#3455A5]", text: "text-[#3455A5]", border: "border-[#3455A5]/30" },
+                            { dot: "bg-[#FF5000]", text: "text-[#FF5000]", border: "border-[#FF5000]/30" },
                             { dot: "bg-[#10b981]", text: "text-[#10b981]", border: "border-[#10b981]/30" },
                             { dot: "bg-[#8b5cf6]", text: "text-[#8b5cf6]", border: "border-[#8b5cf6]/30" },
                             { dot: "bg-[#f59e0b]", text: "text-[#f59e0b]", border: "border-[#f59e0b]/30" },
@@ -1874,7 +1874,7 @@ export default function PublicCourseDetail() {
             <div className="bg-background rounded-lg p-5 border" data-testid="faq-item-apply">
               <h3 className="font-semibold mb-2" data-testid="faq-question-apply">How do I apply for {course.title}?</h3>
               <p className="text-muted-foreground" data-testid="faq-answer-apply">
-                You can apply for {course.title} through CampQ. 
+                You can apply for {course.title} through ANZ Global Education. 
                 Create an account, complete your student profile, and submit your application. 
                 Our team will guide you through the visa process and help you get started.
               </p>

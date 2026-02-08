@@ -41,7 +41,7 @@ import {
   Key,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 
 interface NavRoute {
   icon: LucideIcon;
@@ -224,7 +224,7 @@ export function AdminMegaSidebar({
           {/* Logo - Fixed header height to match main header */}
           <div className="h-14 flex-shrink-0 flex items-center justify-center border-b border-border">
             <Link href="/" data-testid="link-logo-home">
-              <img src={logoUrl} alt="CampQ" className="h-8 w-8 object-contain cursor-pointer hover:opacity-80 transition-opacity" />
+              <img src={logoUrl} alt="ANZ" className="h-8 w-8 object-contain cursor-pointer hover:opacity-80 transition-opacity" />
             </Link>
           </div>
 

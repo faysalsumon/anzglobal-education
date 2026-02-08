@@ -18,7 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Menu, GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Settings, Home } from "lucide-react";
-import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
@@ -159,7 +159,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center" aria-label="Go to homepage" data-testid="link-logo">
-              <img src={logoUrl} alt="CampQ logo" width={120} height={36} className="h-9 w-auto" />
+              <img src={logoUrl} alt="ANZ Global Education logo" width={120} height={36} className="h-9 w-auto" />
             </Link>
 
           {/* Desktop Navigation */}

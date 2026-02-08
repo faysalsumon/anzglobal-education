@@ -1,13 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
-import { FileText, Shield, Users, AlertTriangle, Scale } from "lucide-react";
+import { FileText, Shield, Users, AlertTriangle, Scale, Mail } from "lucide-react";
 
 export default function TermsOfService() {
   return (
     <>
       <Helmet>
-        <title>Terms of Service | CampQ</title>
-        <meta name="description" content="Read our Terms of Service to understand the rules and guidelines for using CampQ platform." />
+        <title>Terms of Service | ANZ Global Education</title>
+        <meta name="description" content="Read our Terms of Service to understand the rules and guidelines for using ANZ Global Education platform." />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
@@ -36,10 +36,10 @@ export default function TermsOfService() {
                   Agreement to Terms
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Welcome to CampQ. By accessing or using our website, mobile applications, and services (collectively, the "Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Platform.
+                  Welcome to ANZ Global Education. By accessing or using our website, mobile applications, and services (collectively, the "Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use our Platform.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  CampQ Pty Ltd ("we," "us," or "our") provides an online platform connecting international students with educational institutions in Australia and New Zealand. These Terms govern your use of our services, including course search, application submission, and related features.
+                  ANZ Global Education Pty Ltd ("we," "us," or "our") provides an online platform connecting international students with educational institutions in Australia and New Zealand. These Terms govern your use of our services, including course search, application submission, and related features.
                 </p>
               </CardContent>
             </Card>
@@ -75,7 +75,7 @@ export default function TermsOfService() {
                   Our Services
                 </h2>
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
-                  <p>CampQ provides the following services:</p>
+                  <p>ANZ Global Education provides the following services:</p>
                   <ul className="list-disc pl-6 space-y-2">
                     <li><strong>Course Discovery:</strong> Search and compare courses from partner institutions across Australia and New Zealand</li>
                     <li><strong>Application Assistance:</strong> Submit applications to educational institutions through our platform</li>
@@ -102,7 +102,7 @@ export default function TermsOfService() {
                   <ul className="list-disc pl-6 space-y-2">
                     <li>Provide truthful and accurate information in all applications and communications</li>
                     <li>Submit genuine documents and not engage in document fraud or misrepresentation</li>
-                    <li>Respect the intellectual property rights of CampQ and partner institutions</li>
+                    <li>Respect the intellectual property rights of ANZ Global Education and partner institutions</li>
                     <li>Not use automated systems, bots, or scrapers without our written permission</li>
                     <li>Not attempt to gain unauthorized access to our systems or other users' accounts</li>
                     <li>Not use the Platform for any unlawful purpose or to violate any applicable laws</li>
@@ -118,7 +118,7 @@ export default function TermsOfService() {
                 <h2 className="text-2xl font-semibold mb-4">Fees and Payments</h2>
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>
-                    CampQ's course search and basic application services are provided free of charge to students. We receive commissions from partner institutions for successful enrollments.
+                    ANZ Global Education's course search and basic application services are provided free of charge to students. We receive commissions from partner institutions for successful enrollments.
                   </p>
                   <p>
                     Some premium services may incur fees, which will be clearly disclosed before you commit. Any fees paid to educational institutions (such as application fees, tuition, or deposits) are subject to the institution's own refund policies.
@@ -151,7 +151,7 @@ export default function TermsOfService() {
                     <strong>Service Availability:</strong> We aim to maintain continuous service but cannot guarantee uninterrupted access. We may modify, suspend, or discontinue features with or without notice.
                   </p>
                   <p>
-                    <strong>Limitation of Liability:</strong> To the maximum extent permitted by law, CampQ shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform.
+                    <strong>Limitation of Liability:</strong> To the maximum extent permitted by law, ANZ Global Education shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform.
                   </p>
                 </div>
               </CardContent>
@@ -163,7 +163,7 @@ export default function TermsOfService() {
                 <h2 className="text-2xl font-semibold mb-4">Intellectual Property</h2>
                 <div className="space-y-4 text-muted-foreground leading-relaxed">
                   <p>
-                    All content on the Platform, including text, graphics, logos, images, and software, is the property of CampQ or our licensors and is protected by copyright, trademark, and other intellectual property laws.
+                    All content on the Platform, including text, graphics, logos, images, and software, is the property of ANZ Global Education or our licensors and is protected by copyright, trademark, and other intellectual property laws.
                   </p>
                   <p>
                     You may not reproduce, distribute, modify, or create derivative works from our content without our prior written consent. Personal, non-commercial use of the Platform for educational purposes is permitted.
@@ -192,6 +192,24 @@ export default function TermsOfService() {
                   <p>
                     These Terms are governed by the laws of New South Wales, Australia. Any disputes arising from these Terms or your use of the Platform shall be subject to the exclusive jurisdiction of the courts of New South Wales.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact */}
+            <Card>
+              <CardContent className="pt-6">
+                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                  <Mail className="h-6 w-6 text-primary" />
+                  Contact Us
+                </h2>
+                <div className="space-y-4 text-muted-foreground leading-relaxed">
+                  <p>If you have any questions about these Terms, please contact us:</p>
+                  <ul className="list-none space-y-2">
+                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
+                    <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
+                    <li><strong>Phone:</strong> +61 401 125 380</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

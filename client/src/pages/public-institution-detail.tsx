@@ -322,7 +322,7 @@ export default function PublicInstitutionDetail() {
 
   const siteUrl = window.location.origin;
   const institutionUrl = `${siteUrl}/institutions/${institutionId}`;
-  const metaTitle = `${institution.name} - ${institution.country || 'International University'} | CampQ`;
+  const metaTitle = `${institution.name} - ${institution.country || 'International University'} | ANZ Global Education`;
   const metaDescription = institution.smallDescription || institution.description?.substring(0, 160) || 
     `Discover ${institution.name}, a ${institution.providerType || 'leading institution'} in ${institution.country || 'international education'}.`;
 

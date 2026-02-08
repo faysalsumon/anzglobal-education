@@ -10,6 +10,7 @@ import {
   Building2,
   GraduationCap,
   Mail,
+  Phone,
   MapPin,
   CheckCircle2,
   Send,
@@ -30,6 +31,7 @@ const officeLocations = {
     country: "Australia",
     address: "Level 2, 3/94 Eucumbene Drive",
     city: "Ravenhall, VIC 3023",
+    phone: "+61 401 125 380",
     email: "info@anzglobaleducation.com.au",
     hours: "Mon-Fri: 9AM-6PM AEDT",
     coordinates: { lat: -37.7655, lng: 144.7765 },
@@ -40,6 +42,7 @@ const officeLocations = {
     country: "Bangladesh",
     address: "Block E, NI Tower, Level 4, Road 10",
     city: "Banani, Dhaka 1213",
+    phone: "+880 1602-122338",
     email: "info@anzglobal.com.bd",
     hours: "Sun-Thu: 9AM-6PM BST",
     coordinates: { lat: 23.7937, lng: 90.4066 },
@@ -292,6 +295,19 @@ function OfficeFinder() {
                 <p className="font-medium">Address</p>
                 <p className="text-sm text-muted-foreground">{selectedOffice.address}</p>
                 <p className="text-sm text-muted-foreground">{selectedOffice.city}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Phone className="w-5 h-5 text-primary mt-0.5" />
+              <div>
+                <p className="font-medium">Phone</p>
+                <a 
+                  href={`tel:${selectedOffice.phone}`}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {selectedOffice.phone}
+                </a>
               </div>
             </div>
 
@@ -971,6 +987,12 @@ export default function Contact() {
                       <span>Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a href="tel:+61401125380" className="hover:text-primary transition-colors">
+                        +61 401 125 380
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       <a href="mailto:info@anzglobaleducation.com.au" className="hover:text-primary transition-colors">
                         info@anzglobaleducation.com.au
@@ -1000,6 +1022,12 @@ export default function Contact() {
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span>Block E, NI Tower, Level 4, Road 10, Banani, Dhaka 1213</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a href="tel:+8801602122338" className="hover:text-primary transition-colors">
+                        +880 1602-122338
+                      </a>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-muted-foreground" />

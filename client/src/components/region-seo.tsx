@@ -54,8 +54,8 @@ export function RegionSEO({
   });
 
   const siteTitle = region?.code === "BD" 
-    ? "CampQ বাংলাদেশ" 
-    : "CampQ";
+    ? "ANZ Global Education বাংলাদেশ" 
+    : "ANZ Global Education";
 
   const fullTitle = `${title} | ${siteTitle}`;
 
@@ -109,14 +109,14 @@ export function generateRegionMeta(regionCode: string, locale: string) {
   };
 
   const siteName: Record<string, Record<string, string>> = {
-    AU: { en: "CampQ Australia" },
-    BD: { en: "CampQ Bangladesh", bn: "এএনজেড গ্লোবাল এডুকেশন বাংলাদেश" },
-    IN: { en: "CampQ India" },
-    PK: { en: "CampQ Pakistan" },
+    AU: { en: "ANZ Global Education Australia" },
+    BD: { en: "ANZ Global Education Bangladesh", bn: "এএনজেড গ্লোবাল এডুকেশন বাংলাদেश" },
+    IN: { en: "ANZ Global Education India" },
+    PK: { en: "ANZ Global Education Pakistan" },
   };
 
   return {
     regionName: regionNames[regionCode]?.[locale] || regionNames[regionCode]?.en || regionCode,
-    siteName: siteName[regionCode]?.[locale] || siteName[regionCode]?.en || "CampQ",
+    siteName: siteName[regionCode]?.[locale] || siteName[regionCode]?.en || "ANZ Global Education",
   };
 }

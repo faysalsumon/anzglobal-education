@@ -89,7 +89,7 @@ export default function PublicBrowsePage() {
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
   const pageUrl = `${siteUrl}/browse`;
 
-  const metaTitle = "Browse Courses & Institutions by Category | CampQ";
+  const metaTitle = "Browse Courses & Institutions by Category | ANZ Global Education";
   const metaDescription = "Explore courses and universities in Australia by category. Filter by delivery mode, career outcomes, industry sectors, and more. Find your perfect study program.";
 
   const structuredData = {
@@ -161,7 +161,7 @@ export default function PublicBrowsePage() {
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
-        <meta property="og:site_name" content="CampQ" />
+        <meta property="og:site_name" content="ANZ Global Education" />
 
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={metaTitle} />

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { Mail, Lock, Building2, GraduationCap, Eye, EyeOff } from "lucide-react";
-import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { clearCsrfToken } from "@/hooks/useCsrf";
 
@@ -104,7 +104,7 @@ export default function InstitutionLogin() {
       <header className="border-b bg-background/95 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">
           <Link href="/" className="flex items-center" data-testid="link-logo">
-            <img src={logoUrl} alt="CampQ" className="h-9 w-auto" />
+            <img src={logoUrl} alt="ANZ Global Education" className="h-9 w-auto" />
           </Link>
         </div>
       </header>
@@ -231,7 +231,7 @@ export default function InstitutionLogin() {
       {/* Footer */}
       <footer className="border-t py-4 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Copyright {new Date().getFullYear()} | CampQ - Institution Portal</p>
+          <p>Copyright {new Date().getFullYear()} | ANZ Global Education - Institution Portal</p>
         </div>
       </footer>
     </div>

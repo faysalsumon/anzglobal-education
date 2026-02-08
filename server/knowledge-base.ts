@@ -339,9 +339,9 @@ async function extractPlatformGuides(): Promise<KnowledgeDocument[]> {
   const guides = [
     {
       id: 'guide-platform-statistics',
-      title: 'CampQ Platform Statistics',
+      title: 'ANZ Global Education Platform Statistics',
       content: `
-CampQ Platform Current Statistics:
+ANZ Global Education Platform Current Statistics:
 
 Total Courses Available: ${totalCourses} courses
 Total Institutions Listed: ${totalInstitutions} institutions
@@ -388,7 +388,7 @@ Note: Immigration policies change frequently. Always verify current requirements
       id: 'guide-applications',
       title: 'How to Apply for Courses',
       content: `
-To apply for courses on CampQ:
+To apply for courses on ANZ Global Education:
 
 1. Create a student account or log in
 2. Browse courses using the search and filters
@@ -413,7 +413,7 @@ Required documents typically include:
       id: 'guide-course-levels',
       title: 'Understanding Course Levels',
       content: `
-CampQ offers courses at various qualification levels:
+ANZ Global Education offers courses at various qualification levels:
 
 - VCE (11-12): Victorian Certificate of Education (high school)
 - Certificate II-IV: Vocational training certificates
@@ -484,7 +484,7 @@ Post-study work rights:
       id: 'guide-platform-features',
       title: 'Platform Features',
       content: `
-CampQ platform features:
+ANZ Global Education platform features:
 
 For Students:
 - Search and filter courses by discipline, level, location, fees
@@ -514,7 +514,7 @@ Search Tips:
       id: 'guide-course-components',
       title: 'Understanding Course Components',
       content: `
-Each course on CampQ includes detailed information:
+Each course on ANZ Global Education includes detailed information:
 
 Course Details:
 - Course Title: The name of the qualification

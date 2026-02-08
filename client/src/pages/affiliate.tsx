@@ -78,7 +78,7 @@ function AffiliateLanding() {
     {
       number: "1",
       title: "Register",
-      description: "Create your free affiliate account with CampQ"
+      description: "Create your free affiliate account with ANZ Global Education"
     },
     {
       number: "2",
@@ -197,7 +197,7 @@ function AffiliateLanding() {
                     Trusted by Education Agents Worldwide
                   </h3>
                   <p className="text-muted-foreground">
-                    CampQ partners with hundreds of institutions across Australia. 
+                    ANZ Global Education partners with hundreds of institutions across Australia. 
                     Our transparent commission structure and reliable payment system make us the 
                     preferred choice for education affiliates.
                   </p>
@@ -260,7 +260,7 @@ function AffiliateDashboard() {
       setInviteDialogOpen(false);
       toast({
         title: "Invitation Sent!",
-        description: "Your friend will receive an email invitation to join CampQ.",
+        description: "Your friend will receive an email invitation to join ANZ Global Education.",
       });
     },
     onError: (error: any) => {
@@ -498,7 +498,7 @@ function AffiliateDashboard() {
                       aria-label="Share on WhatsApp"
                       disabled={!referralData?.referralLink}
                       onClick={() => {
-                        const message = `Join CampQ and start your study abroad journey! Use my referral link: ${referralData?.referralLink}`;
+                        const message = `Join ANZ Global Education and start your study abroad journey! Use my referral link: ${referralData?.referralLink}`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                       }}
                       data-testid="button-share-whatsapp"
@@ -529,7 +529,7 @@ function AffiliateDashboard() {
                       aria-label="Share on X"
                       disabled={!referralData?.referralLink}
                       onClick={() => {
-                        const text = `Start your study abroad journey with CampQ! Use my referral link:`;
+                        const text = `Start your study abroad journey with ANZ Global Education! Use my referral link:`;
                         window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralData?.referralLink || '')}`, '_blank');
                       }}
                       data-testid="button-share-twitter"
@@ -560,7 +560,7 @@ function AffiliateDashboard() {
                       aria-label="Share via SMS"
                       disabled={!referralData?.referralLink}
                       onClick={() => {
-                        const message = `Join CampQ! Use my referral link: ${referralData?.referralLink}`;
+                        const message = `Join ANZ Global Education! Use my referral link: ${referralData?.referralLink}`;
                         window.open(`sms:?&body=${encodeURIComponent(message)}`, '_self');
                       }}
                       data-testid="button-share-sms"
@@ -576,8 +576,8 @@ function AffiliateDashboard() {
                       aria-label="Share via Email"
                       disabled={!referralData?.referralLink}
                       onClick={() => {
-                        const subject = "Study Abroad with CampQ";
-                        const body = `Hi!\n\nI wanted to share this great opportunity with you. CampQ helps international students find the perfect course and university.\n\nUse my referral link to get started: ${referralData?.referralLink}\n\nLooking forward to seeing you there!`;
+                        const subject = "Study Abroad with ANZ Global Education";
+                        const body = `Hi!\n\nI wanted to share this great opportunity with you. ANZ Global Education helps international students find the perfect course and university.\n\nUse my referral link to get started: ${referralData?.referralLink}\n\nLooking forward to seeing you there!`;
                         window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_self');
                       }}
                       data-testid="button-share-email"

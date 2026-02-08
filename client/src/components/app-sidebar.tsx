@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { type StudentProfile } from "@shared/schema";
-import logoUrl from "@assets/Primary_Logo_400x120_1770431203112.png";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +107,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b p-4">
         <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 rounded px-2 py-1 -mx-2 -my-1" data-testid="link-logo">
-          <img src={logoUrl} alt="CampQ" className="h-8 w-auto" />
+          <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-auto" />
         </Link>
       </SidebarHeader>
       <SidebarContent>

@@ -522,7 +522,7 @@ export default function AuthPage() {
                     Log in or sign up in seconds
                   </h1>
                   <p className="text-muted-foreground">
-                    Use your Google account or another service to continue with CampQ (it's free)!
+                    Use your Google account or another service to continue with ANZ Global Education (it's free)!
                   </p>
                 </div>
 
@@ -569,7 +569,7 @@ export default function AuthPage() {
 
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center mb-4">
-                    By continuing, you agree to CampQ's{" "}
+                    By continuing, you agree to ANZ Global Education's{" "}
                     <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-main">Terms of Use</button>. Read our{" "}
                     <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-main">Privacy Policy</button>.
                   </p>
@@ -590,7 +590,7 @@ export default function AuthPage() {
               <>
                 <div className="space-y-2 mb-8">
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                    Continue to CampQ
+                    Continue to ANZ Global
                   </h1>
                   <p className="text-muted-foreground">
                     Choose your preferred sign-in method
@@ -627,7 +627,7 @@ export default function AuthPage() {
 
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
-                    By continuing, you agree to CampQ's{" "}
+                    By continuing, you agree to ANZ Global Education's{" "}
                     <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-options">Terms of Use</button>. Read our{" "}
                     <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-options">Privacy Policy</button>.
                   </p>
@@ -801,7 +801,7 @@ export default function AuthPage() {
 
                 <div className="mt-6 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
-                    By continuing, you agree to CampQ's{" "}
+                    By continuing, you agree to ANZ Global Education's{" "}
                     <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-email">Terms of Use</button>. Read our{" "}
                     <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-email">Privacy Policy</button>.
                   </p>
@@ -915,7 +915,7 @@ export default function AuthPage() {
 
                 <div className="mt-8 pt-6 border-t border-border/50">
                   <p className="text-xs text-muted-foreground text-center">
-                    By continuing, you agree to CampQ's{" "}
+                    By continuing, you agree to ANZ Global Education's{" "}
                     <button onClick={() => setShowTerms(true)} className="text-primary hover:underline" data-testid="link-terms-usertype">Terms of Use</button>. Read our{" "}
                     <button onClick={() => setShowPrivacy(true)} className="text-primary hover:underline" data-testid="link-privacy-usertype">Privacy Policy</button>.
                   </p>
@@ -1049,7 +1049,7 @@ export default function AuthPage() {
             <div className="absolute bottom-8 left-8 right-8">
               <div className="bg-background/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
                 <p className="text-sm font-medium text-foreground">
-                  "CampQ helped me find the perfect course in Australia. The process was so smooth!"
+                  "ANZ Global helped me find the perfect course in Australia. The process was so smooth!"
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">— Maria, Student from Brazil</p>
               </div>
@@ -1060,7 +1060,7 @@ export default function AuthPage() {
 
       <footer className="border-t py-4 bg-background">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Copyright {new Date().getFullYear()} | CampQ</p>
+          <p>Copyright {new Date().getFullYear()} | ANZ Global Education</p>
         </div>
       </footer>
 
@@ -1076,12 +1076,12 @@ export default function AuthPage() {
               
               <section className="space-y-2">
                 <h3 className="font-semibold text-foreground">1. Acceptance of Terms</h3>
-                <p>By accessing and using CampQ's platform, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services.</p>
+                <p>By accessing and using ANZ Global Education's platform, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services.</p>
               </section>
 
               <section className="space-y-2">
                 <h3 className="font-semibold text-foreground">2. Description of Service</h3>
-                <p>CampQ provides an online platform connecting international students with educational institutions. Our services include course discovery, application assistance, and student support services.</p>
+                <p>ANZ Global Education provides an online platform connecting international students with educational institutions. Our services include course discovery, application assistance, and student support services.</p>
               </section>
 
               <section className="space-y-2">
@@ -1102,12 +1102,12 @@ export default function AuthPage() {
 
               <section className="space-y-2">
                 <h3 className="font-semibold text-foreground">5. Intellectual Property</h3>
-                <p>All content on this platform, including text, graphics, logos, and software, is the property of CampQ or its licensors and is protected by copyright and intellectual property laws.</p>
+                <p>All content on this platform, including text, graphics, logos, and software, is the property of ANZ Global Education or its licensors and is protected by copyright and intellectual property laws.</p>
               </section>
 
               <section className="space-y-2">
                 <h3 className="font-semibold text-foreground">6. Limitation of Liability</h3>
-                <p>CampQ is not liable for any indirect, incidental, or consequential damages arising from your use of our services. We do not guarantee admission to any educational institution.</p>
+                <p>ANZ Global Education is not liable for any indirect, incidental, or consequential damages arising from your use of our services. We do not guarantee admission to any educational institution.</p>
               </section>
 
               <section className="space-y-2">

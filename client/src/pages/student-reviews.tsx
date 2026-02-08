@@ -98,7 +98,7 @@ export default function StudentReviews() {
   const organizationWithReviewsSchema = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
-    "name": "CampQ",
+    "name": "ANZ Global Education",
     "url": siteUrl,
     "logo": `${siteUrl}/logo.png`,
     "description": "Australia's trusted education consultancy helping international students achieve their study abroad dreams since 2017.",
@@ -128,20 +128,20 @@ export default function StudentReviews() {
   return (
     <>
       <Helmet>
-        <title>Student Reviews - CampQ</title>
+        <title>Student Reviews - ANZ Global Education</title>
         <meta 
           name="description" 
-          content="Read authentic testimonials from students who achieved their Australian education dreams with CampQ. Real stories, proven success since 2017." 
+          content="Read authentic testimonials from students who achieved their Australian education dreams with ANZ Global Education. Real stories, proven success since 2017." 
         />
         <link rel="canonical" href={pageUrl} />
-        <meta property="og:title" content="Student Reviews - CampQ" />
+        <meta property="og:title" content="Student Reviews - ANZ Global Education" />
         <meta property="og:url" content={pageUrl} />
-        <meta property="og:description" content="Thousands of students trusted CampQ for their Australian study journey. Read their authentic success stories and discover our proven track record." />
+        <meta property="og:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories and discover our proven track record." />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Student Reviews - CampQ" />
-        <meta name="twitter:description" content="Thousands of students trusted CampQ for their Australian study journey. Read their authentic success stories." />
+        <meta name="twitter:title" content="Student Reviews - ANZ Global Education" />
+        <meta name="twitter:description" content="Thousands of students trusted ANZ Global Education for their Australian study journey. Read their authentic success stories." />
         <meta name="twitter:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
         
         <script type="application/ld+json">
@@ -297,7 +297,7 @@ export default function StudentReviews() {
                 Ready to Write Your Success Story?
               </h2>
               <p className="text-lg md:text-xl text-white/90 mb-8">
-                Join thousands of students who trusted CampQ to make their Australian study dreams come true. 
+                Join thousands of students who trusted ANZ Global Education to make their Australian study dreams come true. 
                 Experience our proven track record and personalized support every step of the way.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

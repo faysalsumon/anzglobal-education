@@ -74,10 +74,10 @@ export default function Developers() {
   return (
     <>
       <Helmet>
-        <title>Partner API Documentation | CampQ</title>
-        <meta name="description" content="Integrate with CampQ using our Partner API. Upload institutions and courses programmatically with AI bot support." />
-        <meta property="og:title" content="Partner API Documentation | CampQ" />
-        <meta property="og:description" content="Integrate with CampQ using our Partner API. Upload institutions and courses programmatically with AI bot support." />
+        <title>Partner API Documentation | ANZ Global Education</title>
+        <meta name="description" content="Integrate with ANZ Global Education using our Partner API. Upload institutions and courses programmatically with AI bot support." />
+        <meta property="og:title" content="Partner API Documentation | ANZ Global Education" />
+        <meta property="og:description" content="Integrate with ANZ Global Education using our Partner API. Upload institutions and courses programmatically with AI bot support." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${window.location.origin}/developers`} />
         <meta property="og:image" content="https://anzglobal.com.au/wp-content/uploads/2021/05/logo.png" />
@@ -95,7 +95,7 @@ export default function Developers() {
                 Partner API Documentation
               </h1>
               <p className="text-xl text-muted-foreground mb-8" data-testid="text-page-description">
-                Integrate with CampQ to programmatically upload institutions and courses. 
+                Integrate with ANZ Global Education to programmatically upload institutions and courses. 
                 Perfect for AI bots, data aggregators, and education partners.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

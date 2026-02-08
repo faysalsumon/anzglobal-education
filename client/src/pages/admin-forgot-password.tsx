@@ -57,7 +57,7 @@ export default function AdminForgotPassword() {
               <ShieldCheck className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <div className="text-xl font-bold">CampQ</div>
+              <div className="text-xl font-bold">ANZ Global Education</div>
               <div className="text-xs text-muted-foreground">Central Login Portal</div>
             </div>
           </div>

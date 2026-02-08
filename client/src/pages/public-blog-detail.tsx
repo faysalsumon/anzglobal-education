@@ -126,12 +126,12 @@ export default function PublicBlogDetail() {
     "dateModified": blog.updatedAt || blog.publishedAt,
     "author": {
       "@type": "Organization",
-      "name": "CampQ",
+      "name": "ANZ Global Education",
       "url": siteUrl
     },
     "publisher": {
       "@type": "Organization",
-      "name": "CampQ",
+      "name": "ANZ Global Education",
       "url": siteUrl,
       "logo": {
         "@type": "ImageObject",
@@ -183,7 +183,7 @@ export default function PublicBlogDetail() {
     <PublicLayout>
       <Helmet>
         {/* Primary Meta Tags */}
-        <title>{metaTitle} | CampQ</title>
+        <title>{metaTitle} | ANZ Global Education</title>
         <meta name="title" content={metaTitle} />
         <meta name="description" content={metaDescription} />
         <link rel="canonical" href={blogUrl} />
@@ -194,7 +194,7 @@ export default function PublicBlogDetail() {
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="CampQ" />
+        <meta property="og:site_name" content="ANZ Global Education" />
         {blog.publishedAt && (
           <meta property="article:published_time" content={new Date(blog.publishedAt).toISOString()} />
         )}

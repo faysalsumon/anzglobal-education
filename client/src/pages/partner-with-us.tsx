@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,35 +17,19 @@ import {
   Zap,
   ArrowRight,
   Target,
-  FileCheck,
-  MapPin,
-  Award
+  FileCheck
 } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
+import { InstitutionAuthModal } from "@/components/institution-auth-modal";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
 
 interface PlatformStats {
   institutionCount: number;
   courseCount: number;
 }
 
-interface FeaturedInstitution {
-  id: string;
-  name: string;
-  logoUrl: string | null;
-  country: string | null;
-  description: string | null;
-  city: string | null;
-  state: string | null;
-}
-
-interface FeaturedData {
-  institutions: FeaturedInstitution[];
-  courses: unknown[];
-}
-
 export default function PartnerWithUs() {
+  const [showInstitutionAuthModal, setShowInstitutionAuthModal] = useState(false);
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats"],
@@ -113,24 +98,30 @@ export default function PartnerWithUs() {
     }
   ];
 
-  const { data: featuredData } = useQuery<FeaturedData>({
-    queryKey: ["/api/public/featured"],
-  });
-
-  const featuredInstitutions = featuredData?.institutions || [];
+  // Partner logos - these would typically be stored in your assets or database
+  const partnerLogos = [
+    { name: "Leading Australian University", placeholder: true },
+    { name: "International College", placeholder: true },
+    { name: "Technical Institute", placeholder: true },
+    { name: "Education Provider", placeholder: true },
+    { name: "Global Academy", placeholder: true },
+    { name: "Higher Education", placeholder: true },
+    { name: "Professional Institute", placeholder: true },
+    { name: "Australian College", placeholder: true },
+  ];
 
   return (
     <PublicLayout>
       <Helmet>
-        <title>Partner with CampQ - Expand Your International Reach</title>
+        <title>Partner with ANZ Global Education - Expand Your International Reach</title>
         <meta 
           name="description" 
-          content="Join 50+ leading institutions on CampQ's platform. Access qualified international students from 80+ countries with AI-powered matching, automated workflows, and comprehensive marketing support." 
+          content="Join 50+ leading institutions on ANZ Global Education's platform. Access qualified international students from 80+ countries with AI-powered matching, automated workflows, and comprehensive marketing support." 
         />
-        <meta property="og:title" content="Partner with CampQ - Expand Your International Reach" />
+        <meta property="og:title" content="Partner with ANZ Global Education - Expand Your International Reach" />
         <meta 
           property="og:description" 
-          content="Join 50+ leading institutions on CampQ's platform. Access qualified international students from 80+ countries with AI-powered matching and comprehensive support." 
+          content="Join 50+ leading institutions on ANZ Global Education's platform. Access qualified international students from 80+ countries with AI-powered matching and comprehensive support." 
         />
         <meta property="og:type" content="website" />
         <meta name="keywords" content="international student recruitment, education partnership, Australian universities, global student platform, institution partnership" />
@@ -150,7 +141,7 @@ export default function PartnerWithUs() {
             </Badge>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-tight" data-testid="heading-hero">
-              Expand Your International Reach with CampQ
+              Expand Your International Reach with ANZ Global
             </h1>
             
             <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-10 max-w-4xl mx-auto leading-relaxed">
@@ -180,14 +171,13 @@ export default function PartnerWithUs() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button 
                 size="lg" 
-                asChild
-                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group bg-accent text-accent-foreground border-accent-border"
+                variant="secondary"
+                onClick={() => setShowInstitutionAuthModal(true)}
+                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold group"
                 data-testid="button-register-institution"
               >
-                <Link href="/institution/login">
-                  Become a Partner
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                Become a Partner
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
                 size="lg" 
@@ -195,7 +185,7 @@ export default function PartnerWithUs() {
                 onClick={() => {
                   document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold bg-white/10 text-white border-white/30 backdrop-blur-sm"
+                className="min-w-[240px] h-12 md:h-14 text-base md:text-lg font-semibold bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm"
                 data-testid="button-learn-more"
               >
                 Explore Benefits
@@ -214,7 +204,7 @@ export default function PartnerWithUs() {
               Partnership Benefits
             </Badge>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Benefits of Partnership with CampQ
+              Benefits of Partnership with ANZ Global Education
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground">
               Join leading institutions across Australia and unlock the full potential of global student recruitment
@@ -328,61 +318,31 @@ export default function PartnerWithUs() {
               </p>
             </div>
 
-            {featuredInstitutions.length > 0 && (
-              <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-12">
-                {featuredInstitutions.map((institution) => (
-                  <Link 
-                    key={institution.id} 
-                    href={`/institutions/${institution.id}`}
-                    data-testid={`link-partner-institution-${institution.id}`}
-                    className="group text-center"
-                  >
-                    <div className="flex flex-col items-center gap-3 p-4 rounded-lg hover-elevate cursor-pointer">
-                      <div className="w-24 h-24 rounded-full bg-white dark:bg-white border border-border/50 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md transition-shadow">
-                        {institution.logoUrl ? (
-                          <img 
-                            src={institution.logoUrl} 
-                            alt={institution.name}
-                            className="w-[72px] h-[72px] object-contain"
-                            data-testid={`img-partner-institution-logo-${institution.id}`}
-                          />
-                        ) : (
-                          <Building2 className="h-10 w-10 text-primary/40" />
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <h3 
-                          className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors"
-                          data-testid={`text-partner-institution-name-${institution.id}`}
-                        >
-                          {institution.name}
-                        </h3>
-                        <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate" data-testid={`text-partner-institution-location-${institution.id}`}>
-                            {[institution.city, institution.state, institution.country]
-                              .filter(Boolean)
-                              .join(', ')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+            {/* Partner logos grid - placeholder styling */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-12">
+              {partnerLogos.map((partner, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-center p-6 bg-card rounded-lg border border-border/50 hover-elevate h-24"
+                  data-testid={`partner-logo-${index}`}
+                >
+                  <div className="text-center">
+                    <Building2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                    <p className="text-xs text-muted-foreground/60">{partner.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div className="text-center">
               <Button 
                 size="lg"
-                asChild
-                className="min-w-[280px] bg-accent text-accent-foreground border-accent-border"
+                onClick={() => setShowInstitutionAuthModal(true)}
+                className="min-w-[280px]"
                 data-testid="button-join-partners"
               >
-                <Link href="/institution/login">
-                  Join Our Partner Network
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+                Join Our Partner Network
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -427,23 +387,27 @@ export default function PartnerWithUs() {
               Ready to Transform Your International Recruitment?
             </h2>
             <p className="text-lg md:text-xl mb-10 opacity-90 max-w-2xl mx-auto">
-              Join the CampQ platform today and gain immediate access to qualified international students from 80+ countries worldwide.
+              Join the ANZ Global Education platform today and gain immediate access to qualified international students from 80+ countries worldwide.
             </p>
             <Button 
               size="lg" 
-              asChild
-              className="min-w-[280px] h-14 text-lg font-semibold bg-accent text-accent-foreground border-accent-border"
+              variant="secondary"
+              onClick={() => setShowInstitutionAuthModal(true)}
+              className="min-w-[280px] h-14 text-lg font-semibold"
               data-testid="button-register-cta-bottom"
             >
-              <Link href="/institution/login">
-                Become a Partner Today
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+              Become a Partner Today
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
       </section>
 
+      {/* Institution Auth Modal */}
+      <InstitutionAuthModal 
+        open={showInstitutionAuthModal} 
+        onOpenChange={setShowInstitutionAuthModal}
+      />
     </PublicLayout>
   );
 }

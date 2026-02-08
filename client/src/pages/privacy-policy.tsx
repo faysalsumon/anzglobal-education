@@ -1,13 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Helmet } from "react-helmet";
-import { Shield, Lock, Eye, Database, Globe, Users, Settings } from "lucide-react";
+import { Shield, Lock, Eye, Database, Globe, Users, Mail, Settings } from "lucide-react";
 
 export default function PrivacyPolicy() {
   return (
     <>
       <Helmet>
-        <title>Privacy Policy | CampQ</title>
-        <meta name="description" content="Learn how CampQ collects, uses, and protects your personal information. Read our comprehensive Privacy Policy." />
+        <title>Privacy Policy | ANZ Global Education</title>
+        <meta name="description" content="Learn how ANZ Global Education collects, uses, and protects your personal information. Read our comprehensive Privacy Policy." />
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
@@ -36,7 +36,7 @@ export default function PrivacyPolicy() {
                   Our Commitment to Privacy
                 </h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  CampQ Pty Ltd ("we," "us," or "our") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website, mobile applications, and services (collectively, the "Platform").
+                  ANZ Global Education Pty Ltd ("we," "us," or "our") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website, mobile applications, and services (collectively, the "Platform").
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
                   We comply with the Australian Privacy Act 1988 (Cth), the Australian Privacy Principles (APPs), and applicable New Zealand privacy legislation. By using our Platform, you consent to the practices described in this policy.
@@ -249,6 +249,27 @@ export default function PrivacyPolicy() {
                   </p>
                   <p>
                     We encourage you to review this policy periodically to stay informed about how we protect your information.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact */}
+            <Card>
+              <CardContent className="pt-6">
+                <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                  <Mail className="h-6 w-6 text-primary" />
+                  Contact Us
+                </h2>
+                <div className="space-y-4 text-muted-foreground leading-relaxed">
+                  <p>If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
+                  <ul className="list-none space-y-2">
+                    <li><strong>Email:</strong> info@anzglobaleducation.com.au</li>
+                    <li><strong>Address:</strong> Level 2, 3/94 Eucumbene Drive, Ravenhall, VIC 3023, Australia</li>
+                    <li><strong>Phone:</strong> +61 401 125 380</li>
+                  </ul>
+                  <p className="mt-4">
+                    If you are not satisfied with our response, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at <a href="https://www.oaic.gov.au" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.oaic.gov.au</a>.
                   </p>
                 </div>
               </CardContent>

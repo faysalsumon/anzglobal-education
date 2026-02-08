@@ -18,7 +18,7 @@ function getAiClient(): OpenAI {
       apiKey: process.env.OPENROUTER_API_KEY,
       defaultHeaders: {
         "HTTP-Referer": process.env.REPLIT_DEPLOYMENT_URL || "https://replit.com",
-        "X-Title": "StudyMatch - CampQ Platform",
+        "X-Title": "StudyMatch - ANZ Global Education Platform",
       },
     });
   }
@@ -1001,7 +1001,7 @@ High quality stock photo style. No text, no watermarks, no logos, no artificial 
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.REPLIT_DOMAINS?.split(",")[0] || "https://anzglobal.edu",
-        "X-Title": "CampQ"
+        "X-Title": "ANZ Global Education"
       },
       body: JSON.stringify({
         model: "google/gemini-3-pro-image-preview",
