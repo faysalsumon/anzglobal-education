@@ -26,18 +26,111 @@ function getEmailBaseUrl(): string {
   return 'https://anzglobal.com.au';
 }
 
+const EMAIL_COLORS = {
+  primary: '#3465A5',
+  primaryDark: '#2a5084',
+  accent: '#FF5000',
+  textDark: '#333333',
+  textBody: '#555555',
+  textSecondary: '#888888',
+  textLight: '#999999',
+  background: '#f5f7fa',
+  card: '#ffffff',
+  border: '#e5e7eb',
+  infoBox: '#eef4fb',
+  warningBox: '#fff5eb',
+  warningText: '#c2410c',
+  success: '#16a34a',
+  successBg: '#f0fdf4',
+  footerBg: '#f9fafb',
+};
+
+const EMAIL_FONT = "'Nunito', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+function emailHeader(baseUrl: string, title: string, subtitle?: string): string {
+  return `
+    <tr>
+      <td style="background: linear-gradient(135deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.primaryDark} 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+        <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: ${EMAIL_FONT};">${title}</h1>
+        ${subtitle ? `<p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">${subtitle}</p>` : ''}
+      </td>
+    </tr>`;
+}
+
+function emailFooter(baseUrl: string): string {
+  return `
+    <tr>
+      <td style="background-color: ${EMAIL_COLORS.footerBg}; padding: 30px 40px; border-radius: 0 0 12px 12px; text-align: center;">
+        <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 13px; margin: 0 0 8px 0; font-family: ${EMAIL_FONT};">
+          ANZ Global Education | Your Gateway to Global Education
+        </p>
+        <p style="color: ${EMAIL_COLORS.textLight}; font-size: 12px; margin: 0;">
+          <a href="${baseUrl}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">www.anzglobal.com.au</a>
+        </p>
+      </td>
+    </tr>`;
+}
+
+function emailButton(href: string, label: string, variant: 'primary' | 'accent' = 'primary'): string {
+  const bg = variant === 'accent' ? EMAIL_COLORS.accent : EMAIL_COLORS.primary;
+  return `
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${href}" style="display: inline-block; background-color: ${bg}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; font-family: ${EMAIL_FONT};">${label}</a>
+    </div>`;
+}
+
+function emailInfoBox(title: string, content: string): string {
+  return `
+    <div style="background-color: ${EMAIL_COLORS.infoBox}; border-left: 4px solid ${EMAIL_COLORS.primary}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <h3 style="color: ${EMAIL_COLORS.primary}; margin: 0 0 12px 0; font-size: 16px; font-family: ${EMAIL_FONT};">${title}</h3>
+      <div style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.6;">${content}</div>
+    </div>`;
+}
+
+function emailWarningBox(content: string): string {
+  return `
+    <div style="background-color: ${EMAIL_COLORS.warningBox}; border-left: 4px solid ${EMAIL_COLORS.accent}; padding: 16px 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <p style="color: ${EMAIL_COLORS.warningText}; margin: 0; font-size: 14px; line-height: 1.5; font-family: ${EMAIL_FONT};">${content}</p>
+    </div>`;
+}
+
+function emailShell(baseUrl: string, title: string, subtitle: string | undefined, bodyContent: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: ${EMAIL_FONT}; background-color: ${EMAIL_COLORS.background};">
+  <table cellpadding="0" cellspacing="0" width="100%" style="background-color: ${EMAIL_COLORS.background}; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table cellpadding="0" cellspacing="0" width="600" style="background-color: ${EMAIL_COLORS.card}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          ${emailHeader(baseUrl, title, subtitle)}
+          <tr>
+            <td style="padding: 40px;">
+              ${bodyContent}
+            </td>
+          </tr>
+          ${emailFooter(baseUrl)}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 interface ContactInquiryEmailData {
   inquiryType: 'student' | 'institution';
-  // Student fields
   studentName?: string;
-  // Institution fields
   institutionName?: string;
   contactPerson?: string;
-  // Common fields
   email: string;
   phone?: string;
   message: string;
-  // Additional fields
   country?: string;
   courseInterest?: string;
   studyLevel?: string;
@@ -46,150 +139,102 @@ interface ContactInquiryEmailData {
   partnershipType?: string;
 }
 
-// HTML email template for user confirmation
 function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
   const name = data.inquiryType === 'student' ? data.studentName : data.contactPerson;
   const isStudent = data.inquiryType === 'student';
   const baseUrl = getEmailBaseUrl();
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Thank you for contacting ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Thank You for Contacting Us!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Dear ${name || 'Valued Contact'},
+    </p>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      We have successfully received your ${isStudent ? 'study inquiry' : 'partnership inquiry'} and appreciate your interest in ANZ Global Education.
+    </p>
+    
+    ${emailInfoBox('Your Inquiry Details:', `
+      <table cellpadding="5" cellspacing="0" style="width: 100%;">
+        ${isStudent ? `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Name:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.studentName}</td>
+          </tr>
+          ${data.country ? `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Country:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.country}</td>
+          </tr>
+          ` : ''}
+          ${data.courseInterest ? `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Course Interest:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.courseInterest}</td>
+          </tr>
+          ` : ''}
+          ${data.studyLevel ? `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Study Level:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.studyLevel}</td>
+          </tr>
+          ` : ''}
+        ` : `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Institution:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.institutionName}</td>
+          </tr>
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Contact Person:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.contactPerson}</td>
+          </tr>
+          ${data.partnershipType ? `
+          <tr>
+            <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Partnership Type:</strong></td>
+            <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.partnershipType}</td>
+          </tr>
+          ` : ''}
+        `}
         <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Thank You for Contacting Us!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Dear ${name || 'Valued Contact'},
-                  </p>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    We have successfully received your ${isStudent ? 'study inquiry' : 'partnership inquiry'} and appreciate your interest in ANZ Global Education.
-                  </p>
-                  
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Your Inquiry Details:</h3>
-                    <table cellpadding="5" cellspacing="0" style="width: 100%;">
-                      ${isStudent ? `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Name:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.studentName}</td>
-                        </tr>
-                        ${data.country ? `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Country:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.country}</td>
-                        </tr>
-                        ` : ''}
-                        ${data.courseInterest ? `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Course Interest:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.courseInterest}</td>
-                        </tr>
-                        ` : ''}
-                        ${data.studyLevel ? `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Study Level:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.studyLevel}</td>
-                        </tr>
-                        ` : ''}
-                      ` : `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Institution:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.institutionName}</td>
-                        </tr>
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Contact Person:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.contactPerson}</td>
-                        </tr>
-                        ${data.partnershipType ? `
-                        <tr>
-                          <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Partnership Type:</strong></td>
-                          <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.partnershipType}</td>
-                        </tr>
-                        ` : ''}
-                      `}
-                      <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Email:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.email}</td>
-                      </tr>
-                      ${data.phone ? `
-                      <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 5px 0;"><strong>Phone:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 5px 0;">${data.phone}</td>
-                      </tr>
-                      ` : ''}
-                    </table>
-                  </div>
-                  
-                  <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 18px;">What Happens Next?</h3>
-                  
-                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; padding-left: 20px;">
-                    <li>Our team will review your inquiry within 24-48 hours</li>
-                    <li>A dedicated counselor will be assigned to assist you</li>
-                    <li>You will receive a personalized response via email</li>
-                    ${isStudent ? 
-                      '<li>We may suggest suitable courses and institutions based on your profile</li>' :
-                      '<li>We will schedule a meeting to discuss partnership opportunities</li>'
-                    }
-                  </ul>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                    If you have any urgent questions, please don't hesitate to contact us directly.
-                  </p>
-                  
-                  <!-- CTA Button -->
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Visit Our Website</a>
-                  </div>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    ANZ Global Education - Connecting Students with Global Opportunities
-                  </p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">
-                    © 2024 ANZ Global Education. All rights reserved.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Email:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.email}</td>
         </tr>
+        ${data.phone ? `
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Phone:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.phone}</td>
+        </tr>
+        ` : ''}
       </table>
-    </body>
-    </html>
+    `)}
+    
+    <h3 style="color: ${EMAIL_COLORS.textDark}; margin: 30px 0 15px 0; font-size: 18px; font-family: ${EMAIL_FONT};">What Happens Next?</h3>
+    
+    <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; padding-left: 20px; font-family: ${EMAIL_FONT};">
+      <li>Our team will review your inquiry within 24-48 hours</li>
+      <li>A dedicated counselor will be assigned to assist you</li>
+      <li>You will receive a personalized response via email</li>
+      ${isStudent ? 
+        '<li>We may suggest suitable courses and institutions based on your profile</li>' :
+        '<li>We will schedule a meeting to discuss partnership opportunities</li>'
+      }
+    </ul>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 20px 0; font-family: ${EMAIL_FONT};">
+      If you have any urgent questions, please don't hesitate to contact us directly.
+    </p>
+    
+    ${emailButton(baseUrl, 'Visit Our Website')}
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Your Gateway to Global Education', bodyContent);
 }
 
-// HTML email template for admin notification
 function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: string }): string {
   const isStudent = data.inquiryType === 'student';
   const baseUrl = getEmailBaseUrl();
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -198,128 +243,120 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>New Contact Inquiry - ANZ Global Education</title>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+    <body style="margin: 0; padding: 0; font-family: ${EMAIL_FONT}; background-color: ${EMAIL_COLORS.background};">
+      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: ${EMAIL_COLORS.background}; padding: 40px 20px;">
         <tr>
           <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
+            <table cellpadding="0" cellspacing="0" width="600" style="background-color: ${EMAIL_COLORS.card}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
               <tr>
-                <td style="background-color: ${isStudent ? '#3465A5' : '#FF5000'}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                <td style="background-color: ${EMAIL_COLORS.primary}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
                   <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Inquiry ID: ${data.id}</p>
+                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: ${EMAIL_FONT};">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
+                  <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">Inquiry ID: ${data.id}</p>
                 </td>
               </tr>
               
-              <!-- Content -->
               <tr>
                 <td style="padding: 30px;">
-                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-                    <p style="color: #856404; margin: 0; font-size: 14px;">
-                      <strong>⚠️ Action Required:</strong> Please review and respond to this inquiry within 24-48 hours.
-                    </p>
-                  </div>
+                  ${emailWarningBox('<strong>Action Required:</strong> Please review and respond to this inquiry within 24-48 hours.')}
                   
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 20px;">Contact Details</h2>
+                  <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 20px; font-family: ${EMAIL_FONT};">Contact Details</h2>
                   
-                  <table cellpadding="8" cellspacing="0" style="width: 100%; border: 1px solid #e0e0e0; border-radius: 6px;">
+                  <table cellpadding="8" cellspacing="0" style="width: 100%; border: 1px solid ${EMAIL_COLORS.border}; border-radius: 6px;">
                     ${isStudent ? `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Name:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.studentName}</td>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Name:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.studentName}</td>
                       </tr>
                       <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Email:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="mailto:${data.email}" style="color: #3465A5; text-decoration: none;">${data.email}</a>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Email:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">
+                          <a href="mailto:${data.email}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${data.email}</a>
                         </td>
                       </tr>
                       ${data.phone ? `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Phone:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.phone}</td>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Phone:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.phone}</td>
                       </tr>
                       ` : ''}
                       ${data.country ? `
-                      <tr ${data.phone ? '' : 'style="background-color: #f8f9fa;"'}>
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Country:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.country}</td>
+                      <tr ${data.phone ? '' : `style="background-color: ${EMAIL_COLORS.footerBg};"`}>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Country:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.country}</td>
                       </tr>
                       ` : ''}
                       ${data.courseInterest ? `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Course Interest:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.courseInterest}</td>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Course Interest:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.courseInterest}</td>
                       </tr>
                       ` : ''}
                       ${data.studyLevel ? `
                       <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Study Level:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.studyLevel}</td>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Study Level:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.studyLevel}</td>
                       </tr>
                       ` : ''}
                       ${data.visaStatus ? `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px;"><strong>Visa Status:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px;">${data.visaStatus}</td>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px;"><strong>Visa Status:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px;">${data.visaStatus}</td>
                       </tr>
                       ` : ''}
                     ` : `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Institution:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.institutionName}</td>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Institution:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.institutionName}</td>
                       </tr>
                       <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Contact Person:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.contactPerson}</td>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Contact Person:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.contactPerson}</td>
                       </tr>
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Email:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="mailto:${data.email}" style="color: #3465A5; text-decoration: none;">${data.email}</a>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Email:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">
+                          <a href="mailto:${data.email}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${data.email}</a>
                         </td>
                       </tr>
                       ${data.phone ? `
                       <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Phone:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">${data.phone}</td>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Phone:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">${data.phone}</td>
                       </tr>
                       ` : ''}
                       ${data.website ? `
-                      <tr style="background-color: #f8f9fa;">
-                        <td style="color: #666666; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>Website:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px; border-bottom: 1px solid #e0e0e0;">
-                          <a href="${data.website}" style="color: #3465A5; text-decoration: none;">${data.website}</a>
+                      <tr style="background-color: ${EMAIL_COLORS.footerBg};">
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};"><strong>Website:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px; border-bottom: 1px solid ${EMAIL_COLORS.border};">
+                          <a href="${data.website}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${data.website}</a>
                         </td>
                       </tr>
                       ` : ''}
                       ${data.partnershipType ? `
                       <tr>
-                        <td style="color: #666666; font-size: 14px; padding: 10px;"><strong>Partnership Type:</strong></td>
-                        <td style="color: #333333; font-size: 14px; padding: 10px;">${data.partnershipType}</td>
+                        <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 10px;"><strong>Partnership Type:</strong></td>
+                        <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 10px;">${data.partnershipType}</td>
                       </tr>
                       ` : ''}
                     `}
                   </table>
                   
-                  <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 18px;">Message</h3>
-                  <div style="background-color: #f8f9fa; border-left: 4px solid ${isStudent ? '#3465A5' : '#FF5000'}; padding: 15px; border-radius: 4px;">
-                    <p style="color: #333333; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.message}</p>
+                  <h3 style="color: ${EMAIL_COLORS.textDark}; margin: 30px 0 15px 0; font-size: 18px; font-family: ${EMAIL_FONT};">Message</h3>
+                  <div style="background-color: ${EMAIL_COLORS.infoBox}; border-left: 4px solid ${EMAIL_COLORS.primary}; padding: 15px; border-radius: 0 6px 6px 0;">
+                    <p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${data.message}</p>
                   </div>
                   
-                  <!-- CTA Buttons -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}/admin/dashboard" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">View in Dashboard</a>
-                    <a href="mailto:${data.email}" style="display: inline-block; background-color: #28a745; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">Reply to Inquiry</a>
+                    <a href="${baseUrl}/admin/dashboard" style="display: inline-block; background-color: ${EMAIL_COLORS.primary}; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: 600; margin: 0 10px; font-family: ${EMAIL_FONT};">View in Dashboard</a>
+                    <a href="mailto:${data.email}" style="display: inline-block; background-color: ${EMAIL_COLORS.primary}; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: 600; margin: 0 10px; font-family: ${EMAIL_FONT};">Reply to Inquiry</a>
                   </div>
                 </td>
               </tr>
               
-              <!-- Footer -->
               <tr>
-                <td style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #999999; font-size: 12px; margin: 0;">
+                <td style="background-color: ${EMAIL_COLORS.footerBg}; padding: 20px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: ${EMAIL_COLORS.textLight}; font-size: 12px; margin: 0; font-family: ${EMAIL_FONT};">
                     This is an automated notification from ANZ Global Education Contact System
                   </p>
                 </td>
@@ -357,7 +394,6 @@ export async function sendContactInquiryConfirmation(data: ContactInquiryEmailDa
   } catch (error: any) {
     console.error('Error sending confirmation email:', error);
     console.error('Error details:', error.message);
-    // Don't throw error to prevent blocking the inquiry submission
   }
 }
 
@@ -384,13 +420,11 @@ export async function sendAdminNotification(data: ContactInquiryEmailData & { id
   } catch (error: any) {
     console.error('Error sending admin notification email:', error);
     console.error('Error details:', error.message);
-    // Don't throw error to prevent blocking the inquiry submission
   }
 }
 
 // Combined function to send both emails
 export async function sendContactInquiryEmails(data: ContactInquiryEmailData & { id: string }): Promise<void> {
-  // Send both emails in parallel
   await Promise.all([
     sendContactInquiryConfirmation(data),
     sendAdminNotification(data),
@@ -414,122 +448,42 @@ interface ApplicationEmailData {
   consultantName?: string;
 }
 
-// Stage transition notification HTML
 function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
   const baseUrl = getEmailBaseUrl();
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Application Stage Update</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Update</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your application has been updated</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hello ${data.studentName}!</h2>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Great news! Your application for <strong>${data.courseTitle}</strong> at <strong>${data.universityName}</strong> has progressed to the next stage.
-                  </p>
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Current Stage:</h3>
-                    <p style="color: #333333; font-size: 20px; font-weight: bold; margin: 0;">${data.currentStage}</p>
-                    ${data.previousStage ? `<p style="color: #666666; font-size: 14px; margin: 10px 0 0 0;">Previously: ${data.previousStage}</p>` : ''}
-                  </div>
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Hello ${data.studentName}!</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Great news! Your application for <strong>${data.courseTitle}</strong> at <strong>${data.universityName}</strong> has progressed to the next stage.
+    </p>
+    ${emailInfoBox('Current Stage:', `
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 20px; font-weight: bold; margin: 0;">${data.currentStage}</p>
+      ${data.previousStage ? `<p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; margin: 10px 0 0 0;">Previously: ${data.previousStage}</p>` : ''}
+    `)}
+    ${emailButton(`${baseUrl}/student/applications`, 'View Application')}
   `;
+
+  return emailShell(baseUrl, 'Application Update', 'Your application has been updated', bodyContent);
 }
 
-// Document request notification HTML
 function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
   const baseUrl = getEmailBaseUrl();
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Document Request</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <tr>
-                <td style="background-color: #FF5000; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Document Request</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Action Required</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hello ${data.studentName}!</h2>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    The university has requested additional documents for your application to <strong>${data.courseTitle}</strong>.
-                  </p>
-                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0;">
-                    <p style="color: #856404; margin: 0; font-size: 14px;">
-                      <strong>⚠️ Important:</strong> Please upload the requested documents as soon as possible to avoid delays in processing your application.
-                    </p>
-                  </div>
-                  <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 18px;">Requested Documents:</h3>
-                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-                    ${data.documentTypes?.map(doc => `<li>${doc}</li>`).join('')}
-                  </ul>
-                  ${data.requestNote ? `
-                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px; border-radius: 4px; margin: 20px 0;">
-                      <p style="color: #666666; font-size: 14px; margin: 0;"><strong>Note:</strong></p>
-                      <p style="color: #333333; font-size: 14px; margin: 10px 0 0 0;">${data.requestNote}</p>
-                    </div>
-                  ` : ''}
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">ANZ Global Education</p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">© 2024 ANZ Global Education. All rights reserved.</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Hello ${data.studentName}!</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      The university has requested additional documents for your application to <strong>${data.courseTitle}</strong>.
+    </p>
+    ${emailWarningBox('<strong>Important:</strong> Please upload the requested documents as soon as possible to avoid delays in processing your application.')}
+    <h3 style="color: ${EMAIL_COLORS.textDark}; margin: 30px 0 15px 0; font-size: 18px; font-family: ${EMAIL_FONT};">Requested Documents:</h3>
+    <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      ${data.documentTypes?.map(doc => `<li>${doc}</li>`).join('')}
+    </ul>
+    ${data.requestNote ? emailInfoBox('Note:', `<p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0;">${data.requestNote}</p>`) : ''}
+    ${emailButton(`${baseUrl}/student/applications`, 'Upload Documents', 'accent')}
   `;
+
+  return emailShell(baseUrl, 'Document Request', 'Action Required', bodyContent);
 }
 
 // Send stage transition notification
@@ -600,7 +554,6 @@ interface ApplicationSubmittedEmailData {
   submittedDate: string;
 }
 
-// Welcome email HTML template
 function getWelcomeEmailHtml(data: WelcomeEmailData): string {
   const baseUrl = getEmailBaseUrl();
   const userTypeMessages = {
@@ -626,215 +579,97 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
 
   const msg = userTypeMessages[data.userType] || userTypeMessages.student;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">${msg.title}</h2>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Hi ${data.firstName},
-                  </p>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    ${msg.description}
-                  </p>
-                  ${data.userType === 'student' ? `
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
-                    <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      <li>Complete your profile to get personalized recommendations</li>
-                      <li>Browse courses from top Australian universities</li>
-                      <li>Save your favorite courses to compare later</li>
-                      <li>Start your application when you're ready</li>
-                    </ul>
-                  </div>
-                  ` : ''}
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${msg.ctaUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">${msg.cta}</a>
-                  </div>
-                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
-                    Need help? Our support team is here for you at support@anzglobal.com.au
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #888888; font-size: 12px; margin: 0;">
-                    ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">${msg.title}</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Hi ${data.firstName},
+    </p>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      ${msg.description}
+    </p>
+    ${data.userType === 'student' ? emailInfoBox("What's Next?", `
+      <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>Complete your profile to get personalized recommendations</li>
+        <li>Browse courses from top Australian universities</li>
+        <li>Save your favorite courses to compare later</li>
+        <li>Start your application when you're ready</li>
+      </ul>
+    `) : ''}
+    ${emailButton(msg.ctaUrl, msg.cta)}
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; font-family: ${EMAIL_FONT};">
+      Need help? Our support team is here for you at support@anzglobal.com.au
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Your Gateway to Global Education', bodyContent);
 }
 
-// Profile completion reminder email HTML template
 function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
   const baseUrl = getEmailBaseUrl();
   const missingFieldsList = data.missingFields.map(field => `<li>${field}</li>`).join('');
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Complete Your Profile - ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Complete Your Profile</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Your Profile is ${data.profileCompletion}% Complete</h2>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Hi ${data.firstName},
-                  </p>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    A complete profile helps universities understand your background better and increases your chances of a successful application.
-                  </p>
-                  <div style="background-color: #fff3cd; border-left: 4px solid #FF5000; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #FF5000; margin: 0 0 15px 0; font-size: 18px;">Missing Information:</h3>
-                    <ul style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      ${missingFieldsList}
-                    </ul>
-                  </div>
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}/student/profile" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
-                  </div>
-                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
-                    Having a complete profile makes your applications stand out and helps us match you with the right courses.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #888888; font-size: 12px; margin: 0;">
-                    ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Your Profile is ${data.profileCompletion}% Complete</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Hi ${data.firstName},
+    </p>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      A complete profile helps universities understand your background better and increases your chances of a successful application.
+    </p>
+    ${emailWarningBox(`<h3 style="color: ${EMAIL_COLORS.warningText}; margin: 0 0 15px 0; font-size: 18px; font-family: ${EMAIL_FONT};">Missing Information:</h3>
+      <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        ${missingFieldsList}
+      </ul>`)}
+    ${emailButton(`${baseUrl}/student/profile`, 'Complete Your Profile', 'accent')}
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; font-family: ${EMAIL_FONT};">
+      Having a complete profile makes your applications stand out and helps us match you with the right courses.
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Complete Your Profile', bodyContent);
 }
 
-// Application submitted confirmation email HTML template
 function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): string {
   const baseUrl = getEmailBaseUrl();
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Application Submitted - ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Great News, ${data.studentName}!</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Your application has been successfully submitted and is now being reviewed.
+    </p>
+    ${emailInfoBox('Application Details:', `
+      <table cellpadding="8" cellspacing="0" style="width: 100%;">
         <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Application Submitted!</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Congratulations on taking this step</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Great News, ${data.studentName}!</h2>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Your application has been successfully submitted and is now being reviewed.
-                  </p>
-                  <div style="background-color: #e8f4f8; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">Application Details:</h3>
-                    <table cellpadding="8" cellspacing="0" style="width: 100%;">
-                      <tr>
-                        <td style="color: #666666; font-size: 14px;"><strong>Application ID:</strong></td>
-                        <td style="color: #333333; font-size: 14px;">${data.applicationId}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #666666; font-size: 14px;"><strong>Course:</strong></td>
-                        <td style="color: #333333; font-size: 14px;">${data.courseTitle}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #666666; font-size: 14px;"><strong>Institution:</strong></td>
-                        <td style="color: #333333; font-size: 14px;">${data.institutionName}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #666666; font-size: 14px;"><strong>Submitted:</strong></td>
-                        <td style="color: #333333; font-size: 14px;">${data.submittedDate}</td>
-                      </tr>
-                    </table>
-                  </div>
-                  <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <h3 style="color: #28a745; margin: 0 0 15px 0; font-size: 18px;">What Happens Next?</h3>
-                    <ol style="color: #555555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      <li>Our team will review your application</li>
-                      <li>You may receive requests for additional documents</li>
-                      <li>The institution will assess your application</li>
-                      <li>You'll receive updates at each stage via email</li>
-                    </ol>
-                  </div>
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #888888; font-size: 12px; margin: 0;">
-                    ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px;"><strong>Application ID:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px;">${data.applicationId}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px;"><strong>Course:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px;">${data.courseTitle}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px;"><strong>Institution:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px;">${data.institutionName}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px;"><strong>Submitted:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px;">${data.submittedDate}</td>
         </tr>
       </table>
-    </body>
-    </html>
+    `)}
+    <div style="background-color: ${EMAIL_COLORS.successBg}; border-left: 4px solid ${EMAIL_COLORS.success}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <h3 style="color: ${EMAIL_COLORS.success}; margin: 0 0 15px 0; font-size: 18px; font-family: ${EMAIL_FONT};">What Happens Next?</h3>
+      <ol style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>Our team will review your application</li>
+        <li>You may receive requests for additional documents</li>
+        <li>The institution will assess your application</li>
+        <li>You'll receive updates at each stage via email</li>
+      </ol>
+    </div>
+    ${emailButton(`${baseUrl}/student/applications`, 'Track Your Application')}
   `;
+
+  return emailShell(baseUrl, 'Application Submitted!', 'Congratulations on taking this step', bodyContent);
 }
 
 // Send welcome email to new users
@@ -874,93 +709,37 @@ function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
   const baseUrl = getEmailBaseUrl();
   const loginUrl = `${baseUrl}/admin/login`;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your ANZ Global Education Account</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Account Has Been Created</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome, ${data.firstName}!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.createdByName}</strong> has created an account for you on the ANZ Global Education platform.
-                  </p>
-                  
-                  <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <h3 style="color: #333333; margin: 0 0 15px 0; font-size: 16px;">Your Login Credentials</h3>
-                    <p style="color: #555555; font-size: 14px; margin: 5px 0;">
-                      <strong>Email:</strong> ${data.email}
-                    </p>
-                    <p style="color: #555555; font-size: 14px; margin: 5px 0;">
-                      <strong>Temporary Password:</strong> <code style="background-color: #e9ecef; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${data.tempPassword}</code>
-                    </p>
-                  </div>
-                  
-                  <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
-                    <p style="color: #856404; font-size: 14px; margin: 0;">
-                      <strong>⚠️ Important:</strong> You will be required to change your password when you first log in.
-                    </p>
-                  </div>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                    Click the button below to sign in to your account:
-                  </p>
-                  
-                  <!-- CTA Button -->
-                  <table cellpadding="0" cellspacing="0" width="100%">
-                    <tr>
-                      <td align="center" style="padding: 20px 0;">
-                        <a href="${loginUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 16px; font-weight: 600;">
-                          Sign In to Your Account
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                  
-                  <p style="color: #888888; font-size: 12px; margin-top: 30px;">
-                    If the button doesn't work, copy and paste this link into your browser:<br>
-                    <a href="${loginUrl}" style="color: #3465A5;">${loginUrl}</a>
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 20px 40px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #888888; font-size: 12px; margin: 0;">
-                    ANZ Global Education - Your Gateway to Global Education
-                  </p>
-                  <p style="color: #888888; font-size: 11px; margin: 10px 0 0 0;">
-                    If you didn't expect this email, please contact your administrator.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Welcome, ${data.firstName}!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      <strong>${data.createdByName}</strong> has created an account for you on the ANZ Global Education platform.
+    </p>
+    
+    ${emailInfoBox('Your Login Credentials', `
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; margin: 5px 0;">
+        <strong>Email:</strong> ${data.email}
+      </p>
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; margin: 5px 0;">
+        <strong>Temporary Password:</strong> <code style="background-color: #e9ecef; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${data.tempPassword}</code>
+      </p>
+    `)}
+    
+    ${emailWarningBox('<strong>Important:</strong> You will be required to change your password when you first log in.')}
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 20px 0; font-family: ${EMAIL_FONT};">
+      Click the button below to sign in to your account:
+    </p>
+    
+    ${emailButton(loginUrl, 'Sign In to Your Account')}
+    
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 12px; margin-top: 30px; font-family: ${EMAIL_FONT};">
+      If the button doesn't work, copy and paste this link into your browser:<br>
+      <a href="${loginUrl}" style="color: ${EMAIL_COLORS.primary};">${loginUrl}</a>
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Your Account Has Been Created', bodyContent);
 }
 
 export async function sendAdminCreatedUserEmail(data: AdminCreatedUserEmailData): Promise<void> {
@@ -1066,52 +845,28 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
   }
 
   try {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>New Admin Signup Pending Approval</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Admin Signup</h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 40px;">
-                    <h2 style="color: #333333; margin: 0 0 20px 0;">Action Required: Review New Admin</h2>
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      A new user has signed up as a platform administrator and is awaiting your approval.
-                    </p>
-                    
-                    <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 20px 0; border-radius: 4px;">
-                      <p style="margin: 0 0 10px 0;"><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
-                      <p style="margin: 0;"><strong>Email:</strong> ${data.email}</p>
-                    </div>
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      Please log in to the admin dashboard to review and approve this request.
-                    </p>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                      <a href="${getEmailBaseUrl()}/admin/dashboard#users" style="background-color: #3465A5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
+    const baseUrl = getEmailBaseUrl();
+
+    const bodyContent = `
+      <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Action Required: Review New Admin</h2>
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        A new user has signed up as a platform administrator and is awaiting your approval.
+      </p>
+      
+      ${emailInfoBox('Applicant Details', `
+        <p style="margin: 0 0 10px 0;"><strong>Name:</strong> ${data.firstName} ${data.lastName}</p>
+        <p style="margin: 0;"><strong>Email:</strong> ${data.email}</p>
+      `)}
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        Please log in to the admin dashboard to review and approve this request.
+      </p>
+      
+      ${emailButton(`${baseUrl}/admin/dashboard#users`, 'Review in Dashboard')}
     `;
+
+    const html = emailShell(baseUrl, 'New Admin Signup', 'Pending Approval', bodyContent);
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -1134,52 +889,28 @@ export async function sendAdminApprovedNotification(data: AdminApprovedNotificat
   }
 
   try {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Your Admin Account Has Been Approved</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <tr>
-                  <td style="background: linear-gradient(135deg, #10b981 0%, #3465A5 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Account Approved!</h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 40px;">
-                    <h2 style="color: #333333; margin: 0 0 20px 0;">Welcome to the Team, ${data.firstName}!</h2>
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      Great news! Your administrator account has been approved by ${data.approvedByName}.
-                    </p>
-                    
-                    <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 4px;">
-                      <p style="margin: 0 0 10px 0;"><strong>Assigned Role:</strong> ${formatRole(data.assignedRole)}</p>
-                      <p style="margin: 0;"><strong>Status:</strong> Active</p>
-                    </div>
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      You now have access to the admin dashboard. Log in to get started!
-                    </p>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                      <a href="${getEmailBaseUrl()}/admin/dashboard" style="background-color: #10b981; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
+    const baseUrl = getEmailBaseUrl();
+
+    const bodyContent = `
+      <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Welcome to the Team, ${data.firstName}!</h2>
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        Great news! Your administrator account has been approved by ${data.approvedByName}.
+      </p>
+      
+      <div style="background-color: ${EMAIL_COLORS.successBg}; border-left: 4px solid ${EMAIL_COLORS.success}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+        <p style="margin: 0 0 10px 0; font-family: ${EMAIL_FONT};"><strong>Assigned Role:</strong> ${formatRole(data.assignedRole)}</p>
+        <p style="margin: 0; font-family: ${EMAIL_FONT};"><strong>Status:</strong> Active</p>
+      </div>
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        You now have access to the admin dashboard. Log in to get started!
+      </p>
+      
+      ${emailButton(`${baseUrl}/admin/dashboard`, 'Go to Dashboard')}
     `;
+
+    const html = emailShell(baseUrl, 'Account Approved!', 'Your admin access is ready', bodyContent);
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -1202,49 +933,27 @@ export async function sendAdminRejectedNotification(data: AdminRejectedNotificat
   }
 
   try {
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Admin Account Request Update</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-        <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <tr>
-                  <td style="background-color: #333333; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Account Request Update</h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 40px;">
-                    <h2 style="color: #333333; margin: 0 0 20px 0;">Hello ${data.firstName},</h2>
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      We regret to inform you that your administrator account request was not approved at this time.
-                    </p>
-                    
-                    ${data.reason ? `
-                    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 4px;">
-                      <p style="margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
-                    </div>
-                    ` : ''}
-                    
-                    <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                      If you believe this was in error or have questions, please contact our team at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
+    const baseUrl = getEmailBaseUrl();
+
+    const bodyContent = `
+      <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Hello ${data.firstName},</h2>
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        We regret to inform you that your administrator account request was not approved at this time.
+      </p>
+      
+      ${data.reason ? `
+      <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+        <p style="margin: 0; font-family: ${EMAIL_FONT};"><strong>Reason:</strong> ${data.reason}</p>
+      </div>
+      ` : ''}
+      
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+        If you believe this was in error or have questions, please contact our team at <a href="mailto:support@anzglobal.com.au" style="color: ${EMAIL_COLORS.primary};">support@anzglobal.com.au</a>.
+      </p>
     `;
+
+    const html = emailShell(baseUrl, 'Account Request Update', undefined, bodyContent);
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -1272,9 +981,7 @@ interface TeamInvitationEmailData {
   note?: string;
 }
 
-// HTML email template for team invitation
 function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
-  // Use Replit dev domain in development, fallback to production
   const baseUrl = getEmailBaseUrl();
   const inviteUrl = `${baseUrl}/auth/accept-invite?token=${data.inviteToken}`;
   const expiryDate = new Date(data.expiresAt).toLocaleDateString('en-AU', {
@@ -1283,85 +990,32 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
     day: 'numeric',
   });
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>You're Invited to Join ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're Invited to Join Our Team!</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Welcome to the Team!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.inviterName}</strong> has invited you to join the ANZ Global Education platform as a <strong>${data.roleName}</strong>.
-                  </p>
-                  
-                  ${data.note ? `
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 15px 20px; margin: 20px 0; border-radius: 4px;">
-                    <p style="color: #555555; font-size: 14px; font-style: italic; margin: 0;">"${data.note}"</p>
-                  </div>
-                  ` : ''}
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                    Click the button below to set up your account and get started:
-                  </p>
-                  
-                  <!-- CTA Button -->
-                  <div style="text-align: center; margin: 40px 0;">
-                    <a href="${inviteUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 18px; font-weight: bold;">Accept Invitation</a>
-                  </div>
-                  
-                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
-                    <p style="color: #856404; margin: 0; font-size: 14px;">
-                      <strong>⏰ Note:</strong> This invitation will expire on <strong>${expiryDate}</strong>. Please accept it before then.
-                    </p>
-                  </div>
-                  
-                  <p style="color: #999999; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                    If the button doesn't work, copy and paste this link into your browser:
-                  </p>
-                  <p style="color: #3465A5; font-size: 12px; word-break: break-all; margin: 5px 0 0 0;">
-                    ${inviteUrl}
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    ANZ Global Education - Your Gateway to Global Education
-                  </p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">
-                    If you didn't expect this invitation, you can safely ignore this email.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Welcome to the Team!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      <strong>${data.inviterName}</strong> has invited you to join the ANZ Global Education platform as a <strong>${data.roleName}</strong>.
+    </p>
+    
+    ${data.note ? emailInfoBox('Personal Note', `<p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; font-style: italic; margin: 0;">"${data.note}"</p>`) : ''}
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 20px 0; font-family: ${EMAIL_FONT};">
+      Click the button below to set up your account and get started:
+    </p>
+    
+    ${emailButton(inviteUrl, 'Accept Invitation')}
+    
+    ${emailWarningBox(`<strong>Note:</strong> This invitation will expire on <strong>${expiryDate}</strong>. Please accept it before then.`)}
+    
+    <p style="color: ${EMAIL_COLORS.textLight}; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; font-family: ${EMAIL_FONT};">
+      If the button doesn't work, copy and paste this link into your browser:
+    </p>
+    <p style="color: ${EMAIL_COLORS.primary}; font-size: 12px; word-break: break-all; margin: 5px 0 0 0;">
+      ${inviteUrl}
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', "You're Invited to Join Our Team!", bodyContent);
 }
 
 // Password changed confirmation email HTML template
@@ -1373,84 +1027,38 @@ function getPasswordChangedEmailHtml(data: { email: string; firstName?: string |
     timeStyle: 'short',
     timeZone: 'Australia/Sydney' 
   });
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Password Changed - ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Account Security Notification</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <div style="text-align: center; margin-bottom: 30px;">
-                    <div style="width: 60px; height: 60px; background-color: #d4edda; border-radius: 50%; display: inline-block; line-height: 60px;">
-                      <span style="font-size: 30px;">✓</span>
-                    </div>
-                  </div>
-                  
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px; text-align: center;">Password Successfully Changed</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Hi ${name},
-                  </p>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Your password for your ANZ Global Education account (<strong>${data.email}</strong>) has been successfully changed.
-                  </p>
-                  
-                  <div style="background-color: #f8f9fa; border-left: 4px solid #3465A5; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                    <p style="color: #555555; font-size: 14px; margin: 0;">
-                      <strong>Changed at:</strong> ${changedAt} (AEST)
-                    </p>
-                  </div>
-                  
-                  <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 30px 0;">
-                    <p style="color: #856404; margin: 0; font-size: 14px;">
-                      <strong>Didn't make this change?</strong> If you did not change your password, please contact our support team immediately at <a href="mailto:support@anzglobal.com.au" style="color: #3465A5;">support@anzglobal.com.au</a>
-                    </p>
-                  </div>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">
-                    Thank you for keeping your account secure.
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
-                  <p style="color: #666666; font-size: 14px; margin: 0 0 10px 0;">
-                    ANZ Global Education - Your Gateway to Global Education
-                  </p>
-                  <p style="color: #999999; font-size: 12px; margin: 0;">
-                    This is an automated security notification. Please do not reply to this email.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+
+  const bodyContent = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="width: 60px; height: 60px; background-color: ${EMAIL_COLORS.successBg}; border-radius: 50%; display: inline-block; line-height: 60px;">
+        <span style="font-size: 30px; color: ${EMAIL_COLORS.success};">&#10003;</span>
+      </div>
+    </div>
+    
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; text-align: center; font-family: ${EMAIL_FONT};">Password Successfully Changed</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Hi ${name},
+    </p>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Your password for your ANZ Global Education account (<strong>${data.email}</strong>) has been successfully changed.
+    </p>
+    
+    ${emailInfoBox('Change Details', `
+      <p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; margin: 0;">
+        <strong>Changed at:</strong> ${changedAt} (AEST)
+      </p>
+    `)}
+    
+    ${emailWarningBox('<strong>Didn\'t make this change?</strong> If you did not change your password, please contact our support team immediately at <a href="mailto:support@anzglobal.com.au" style="color: ${EMAIL_COLORS.primary};">support@anzglobal.com.au</a>')}
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0; font-family: ${EMAIL_FONT};">
+      Thank you for keeping your account secure.
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Account Security Notification', bodyContent);
 }
 
 // Send password changed confirmation email
@@ -1532,84 +1140,33 @@ function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): stri
   const baseUrl = getEmailBaseUrl();
   const signupUrl = `${baseUrl}/auth?ref=${data.referralCode}&mode=signup`;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your Friend Invited You to ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ANZ Global Education</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Gateway to Global Education</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hi ${data.inviteeName}!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    <strong>${data.referrerName}</strong> thinks you'd love ANZ Global Education and has invited you to join!
-                  </p>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    ANZ Global Education helps international students discover and apply to universities in Australia and beyond. 
-                    With our AI-powered platform, you can:
-                  </p>
-                  
-                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 30px 0; padding-left: 20px;">
-                    <li>Browse thousands of courses from top institutions</li>
-                    <li>Get personalized course recommendations</li>
-                    <li>Apply to multiple universities with one profile</li>
-                    <li>Track your application status in real-time</li>
-                  </ul>
-                  
-                  <!-- CTA Button -->
-                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
-                    <tr>
-                      <td align="center">
-                        <a href="${signupUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                          Create Your Free Account
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                  
-                  <p style="color: #777777; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                    By signing up through your friend's invitation, you'll both receive special benefits!
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
-                  <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
-                    ANZ Global Education | Connecting Students with Global Opportunities
-                  </p>
-                  <p style="color: #aaaaaa; font-size: 11px; margin: 10px 0 0 0; text-align: center;">
-                    This email was sent because ${data.referrerName} invited you to join.
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Hi ${data.inviteeName}!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      <strong>${data.referrerName}</strong> thinks you'd love ANZ Global Education and has invited you to join!
+    </p>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      ANZ Global Education helps international students discover and apply to universities in Australia and beyond. 
+      With our AI-powered platform, you can:
+    </p>
+    
+    <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.8; margin: 0 0 30px 0; padding-left: 20px; font-family: ${EMAIL_FONT};">
+      <li>Browse thousands of courses from top institutions</li>
+      <li>Get personalized course recommendations</li>
+      <li>Apply to multiple universities with one profile</li>
+      <li>Track your application status in real-time</li>
+    </ul>
+    
+    ${emailButton(signupUrl, 'Create Your Free Account')}
+    
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; font-family: ${EMAIL_FONT};">
+      By signing up through your friend's invitation, you'll both receive special benefits!
+    </p>
   `;
+
+  return emailShell(baseUrl, 'ANZ Global Education', 'Your Gateway to Global Education', bodyContent);
 }
 
 export async function sendReferralInvitationEmail(data: ReferralInvitationEmailData): Promise<boolean> {
@@ -1656,89 +1213,41 @@ function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfi
   const baseUrl = getEmailBaseUrl();
   const affiliateUrl = `${baseUrl}/affiliate`;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your Friend Just Registered!</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Great News!</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Your Referral Just Registered</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.referrerName}!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Woohoo! <strong>${data.inviteeName || data.inviteeEmail}</strong> just joined ANZ Global Education thanks to you! You're amazing!
-                  </p>
-                  
-                  <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-                    <p style="color: #166534; font-size: 16px; margin: 0;">
-                      <strong>You're one step closer to earning!</strong> Once they enrol in a course, your referral bonus will be on its way. Cha-ching!
-                    </p>
-                  </div>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">
-                    Why stop there? The more friends you invite, the more you earn! Share your referral link with:
-                  </p>
-                  
-                  <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 20px; padding: 0;">
-                    <li>Friends who want to study abroad</li>
-                    <li>Colleagues looking for new opportunities</li>
-                    <li>Family members pursuing education goals</li>
-                  </ul>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Every successful referral puts money in your pocket. There's no limit to how much you can earn!
-                  </p>
-                  
-                  <!-- CTA Button -->
-                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
-                    <tr>
-                      <td align="center">
-                        <a href="${affiliateUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                          Invite More Friends Now
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                  
-                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
-                    Thank you for spreading the word about ANZ Global Education!
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
-                  <p style="color: #888888; font-size: 12px; margin: 0; text-align: center;">
-                    ANZ Global Education | Connecting Students with Global Opportunities
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Hey ${data.referrerName}!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Woohoo! <strong>${data.inviteeName || data.inviteeEmail}</strong> just joined ANZ Global Education thanks to you! You're amazing!
+    </p>
+    
+    <div style="background-color: ${EMAIL_COLORS.successBg}; border-left: 4px solid ${EMAIL_COLORS.success}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <p style="color: ${EMAIL_COLORS.success}; font-size: 16px; margin: 0; font-family: ${EMAIL_FONT};">
+        <strong>You're one step closer to earning!</strong> Once they enrol in a course, your referral bonus will be on its way. Cha-ching!
+      </p>
+    </div>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0; font-family: ${EMAIL_FONT};">
+      Why stop there? The more friends you invite, the more you earn! Share your referral link with:
+    </p>
+    
+    <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.8; margin: 0 0 20px 20px; padding: 0; font-family: ${EMAIL_FONT};">
+      <li>Friends who want to study abroad</li>
+      <li>Colleagues looking for new opportunities</li>
+      <li>Family members pursuing education goals</li>
+    </ul>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Every successful referral puts money in your pocket. There's no limit to how much you can earn!
+    </p>
+    
+    ${emailButton(affiliateUrl, 'Invite More Friends Now')}
+    
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; line-height: 1.6; margin: 0; text-align: center; font-family: ${EMAIL_FONT};">
+      Thank you for spreading the word about ANZ Global Education!
+    </p>
   `;
+
+  return emailShell(baseUrl, 'Great News!', 'Your Referral Just Registered', bodyContent);
 }
 
 // =====================================================
@@ -1755,87 +1264,35 @@ function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
   const baseUrl = getEmailBaseUrl();
   const profileUrl = `${baseUrl}/student/profile`;
   const coursesUrl = `${baseUrl}/courses`;
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Your Journey Starts Here</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">Welcome to ANZ Global Education</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">Hey ${data.firstName}!</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Welcome to ANZ Global Education! We're thrilled to have you join thousands of students pursuing their dream of studying abroad.
-                  </p>
-                  
-                  <div style="background-color: #f0f7ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <h3 style="color: #3465A5; margin: 0 0 15px 0; font-size: 18px;">What's Next?</h3>
-                    <ul style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      <li>Complete your profile to get personalized course matches</li>
-                      <li>Browse 1000+ courses across top Australian universities</li>
-                      <li>Get AI-powered recommendations based on your goals</li>
-                    </ul>
-                  </div>
-                  
-                  <!-- CTA Button -->
-                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
-                    <tr>
-                      <td align="center">
-                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                          Complete Your Profile
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Need help? Our friendly Zan assistant is available 24/7 to guide you!
-                  </p>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
-                    Or explore our course catalog:
-                    <a href="${coursesUrl}" style="color: #3465A5; text-decoration: none; font-weight: 600;">Browse Courses</a>
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
-                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
-                    © 2026 ANZ Global Education
-                  </p>
-                  <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
-                    You're receiving this because you signed up at anzglobal.com.au
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">Hey ${data.firstName}!</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Welcome to ANZ Global Education! We're thrilled to have you join thousands of students pursuing their dream of studying abroad.
+    </p>
+    
+    ${emailInfoBox("What's Next?", `
+      <ul style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>Complete your profile to get personalized course matches</li>
+        <li>Browse 1000+ courses across top Australian universities</li>
+        <li>Get AI-powered recommendations based on your goals</li>
+      </ul>
+    `)}
+    
+    ${emailButton(profileUrl, 'Complete Your Profile')}
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      Need help? Our friendly Zan assistant is available 24/7 to guide you!
+    </p>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0; font-family: ${EMAIL_FONT};">
+      Or explore our course catalog:
+      <a href="${coursesUrl}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none; font-weight: 600;">Browse Courses</a>
+    </p>
   `;
+
+  return emailShell(baseUrl, 'Your Journey Starts Here', 'Welcome to ANZ Global Education', bodyContent);
 }
 
 export async function sendStudentWelcomeEmail(data: StudentWelcomeEmailData): Promise<boolean> {
@@ -1876,14 +1333,13 @@ interface ProfileCompletionReminderData {
   firstName: string;
   completionPercentage: number;
   incompleteSections: string[];
-  reminderNumber: number; // 1, 2, or 3
+  reminderNumber: number;
 }
 
 function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): string {
   const baseUrl = getEmailBaseUrl();
   const profileUrl = `${baseUrl}/student/profile`;
   
-  // Different messaging based on reminder number
   let greeting = '';
   let message = '';
   
@@ -1906,100 +1362,45 @@ function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): 
   }
   
   const sectionsHtml = data.incompleteSections.length > 0 
-    ? `
-      <div style="background-color: #fef3cd; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 16px;">Sections to Complete:</h3>
-        <ul style="color: #856404; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+    ? emailWarningBox(`<h3 style="color: ${EMAIL_COLORS.warningText}; margin: 0 0 15px 0; font-size: 16px; font-family: ${EMAIL_FONT};">Sections to Complete:</h3>
+        <ul style="color: ${EMAIL_COLORS.warningText}; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
           ${data.incompleteSections.map(section => `<li>${section}</li>`).join('')}
-        </ul>
-      </div>
-    ` : '';
-  
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Complete Your Profile - ANZ Global Education</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;">
-      <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f7fa; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #3465A5 0%, #FF5000 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Complete Your Profile</h1>
-                  <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 14px;">You're ${data.completionPercentage}% there!</p>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px;">
-                  <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px;">${greeting}</h2>
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    ${message}
-                  </p>
-                  
-                  <!-- Progress Bar -->
-                  <div style="background-color: #e9ecef; border-radius: 10px; height: 20px; margin: 20px 0; overflow: hidden;">
-                    <div style="background: linear-gradient(90deg, #3465A5 0%, #FF5000 100%); height: 100%; width: ${data.completionPercentage}%; border-radius: 10px;"></div>
-                  </div>
-                  <p style="color: #888888; font-size: 14px; text-align: center; margin: 0 0 20px 0;">
-                    ${data.completionPercentage}% Complete
-                  </p>
-                  
-                  <div style="background-color: #d4edda; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                    <h3 style="color: #155724; margin: 0 0 10px 0; font-size: 16px;">What you'll unlock:</h3>
-                    <ul style="color: #155724; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                      <li>Personalized course recommendations</li>
-                      <li>AI-powered application assistance</li>
-                      <li>Faster application processing</li>
-                    </ul>
-                  </div>
-                  
-                  ${sectionsHtml}
-                  
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    It only takes 5-10 minutes to complete!
-                  </p>
-                  
-                  <!-- CTA Button -->
-                  <table cellpadding="0" cellspacing="0" width="100%" style="margin: 30px 0;">
-                    <tr>
-                      <td align="center">
-                        <a href="${profileUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                          Complete My Profile
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px;">
-                  <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0; text-align: center;">
-                    © 2026 ANZ Global Education
-                  </p>
-                  <p style="color: #888888; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
-                    <a href="${baseUrl}/unsubscribe" style="color: #888888; text-decoration: underline;">Unsubscribe</a> from reminder emails
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+        </ul>`)
+    : '';
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-size: 24px; font-family: ${EMAIL_FONT};">${greeting}</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      ${message}
+    </p>
+    
+    <div style="background-color: ${EMAIL_COLORS.border}; border-radius: 10px; height: 20px; margin: 20px 0; overflow: hidden;">
+      <div style="background: linear-gradient(90deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.primaryDark} 100%); height: 100%; width: ${data.completionPercentage}%; border-radius: 10px;"></div>
+    </div>
+    <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; text-align: center; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      ${data.completionPercentage}% Complete
+    </p>
+    
+    <div style="background-color: ${EMAIL_COLORS.successBg}; border-left: 4px solid ${EMAIL_COLORS.success}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <h3 style="color: ${EMAIL_COLORS.success}; margin: 0 0 10px 0; font-size: 16px; font-family: ${EMAIL_FONT};">What you'll unlock:</h3>
+      <ul style="color: ${EMAIL_COLORS.success}; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>Personalized course recommendations</li>
+        <li>AI-powered application assistance</li>
+        <li>Faster application processing</li>
+      </ul>
+    </div>
+    
+    ${sectionsHtml}
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">
+      It only takes 5-10 minutes to complete!
+    </p>
+    
+    ${emailButton(profileUrl, 'Complete My Profile')}
   `;
+
+  return emailShell(baseUrl, 'Complete Your Profile', `You're ${data.completionPercentage}% there!`, bodyContent);
 }
 
 export async function sendProfileCompletionReminder(data: ProfileCompletionReminderData): Promise<boolean> {
@@ -2009,7 +1410,6 @@ export async function sendProfileCompletionReminder(data: ProfileCompletionRemin
   }
 
   try {
-    // Different subjects based on reminder number
     let subject = '';
     switch (data.reminderNumber) {
       case 1:
