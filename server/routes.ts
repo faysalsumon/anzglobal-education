@@ -561,6 +561,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const [courseResult] = await db.select({ count: dsql<number>`count(*)` }).from(courses);
+      const [uniResult] = await db.select({ count: dsql<number>`count(*)` }).from(universities);
+      const [publishedCourses] = await db.select({ count: dsql<number>`count(*)` }).from(courses).where(and(eq(courses.publishStatus, 'published'), eq(courses.approvalStatus, 'approved'), eq(courses.isActive, true)));
+      const [publishedUnis] = await db.select({ count: dsql<number>`count(*)` }).from(universities).where(and(eq(universities.publishStatus, 'published'), eq(universities.approvalStatus, 'approved'), eq(universities.isActive, true)));
+      res.json({
+        status: "ok",
+        database: "connected",
+        env: process.env.NODE_ENV || "development",
+        counts: {
+          totalCourses: courseResult.count,
+          totalInstitutions: uniResult.count,
+          publishedCourses: publishedCourses.count,
+          publishedInstitutions: publishedUnis.count,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Health check failed:", error);
+      res.status(500).json({
+        status: "error",
+        database: "disconnected",
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // CSRF token endpoint
   app.get("/api/csrf-token", csrfTokenEndpoint);
 
@@ -2566,6 +2595,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { discipline, subDisciplineId, specialization, universityId, tags: tagSlugs, search, limit, publishStatus, page, pageSize, includePrivate } = req.query;
       const allCourses = await storage.getAllCourses();
       const allUniversities = await storage.getAllUniversities();
+      
+      console.log(`[API /api/courses] Loaded ${allCourses.length} courses, ${allUniversities.length} universities from DB`);
       
       // Parse limit parameter
       const resultLimit = limit && typeof limit === 'string' ? parseInt(limit, 10) : null;

@@ -124,6 +124,7 @@ const EXCLUDED_PATHS = [
   '.ttf',
   '.eot',
   '/api/partner/', // Partner API is for external bots - has its own authentication
+  '/api/health', // Health check endpoint for monitoring
 ];
 
 function isExcludedPath(path: string): boolean {
