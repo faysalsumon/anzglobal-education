@@ -12,6 +12,20 @@ const resend = apiKey ? new Resend(apiKey) : null;
 const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobal.com.au>';
 const ADMIN_EMAIL = 'admin@anzglobal.com.au';
 
+function getEmailBaseUrl(): string {
+  if (process.env.SITE_URL) {
+    return process.env.SITE_URL.replace(/\/$/, '');
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    const primaryDomain = process.env.REPLIT_DOMAINS.split(',')[0];
+    if (primaryDomain) return `https://${primaryDomain}`;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'https://anzglobal.com.au';
+}
+
 interface ContactInquiryEmailData {
   inquiryType: 'student' | 'institution';
   // Student fields
@@ -36,9 +50,7 @@ interface ContactInquiryEmailData {
 function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
   const name = data.inquiryType === 'student' ? data.studentName : data.contactPerson;
   const isStudent = data.inquiryType === 'student';
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   
   return `
     <!DOCTYPE html>
@@ -148,7 +160,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
                   
                   <!-- CTA Button -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobaleducation.com" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Visit Our Website</a>
+                    <a href="${baseUrl}" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Visit Our Website</a>
                   </div>
                 </td>
               </tr>
@@ -176,9 +188,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
 // HTML email template for admin notification
 function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: string }): string {
   const isStudent = data.inquiryType === 'student';
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   
   return `
     <!DOCTYPE html>
@@ -300,7 +310,7 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
                   
                   <!-- CTA Buttons -->
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobaleducation.com/admin/dashboard" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">View in Dashboard</a>
+                    <a href="${baseUrl}/admin/dashboard" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">View in Dashboard</a>
                     <a href="mailto:${data.email}" style="display: inline-block; background-color: #28a745; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 14px; font-weight: bold; margin: 0 10px;">Reply to Inquiry</a>
                   </div>
                 </td>
@@ -406,9 +416,7 @@ interface ApplicationEmailData {
 
 // Stage transition notification HTML
 function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   return `
     <!DOCTYPE html>
     <html>
@@ -441,7 +449,7 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
                     ${data.previousStage ? `<p style="color: #666666; font-size: 14px; margin: 10px 0 0 0;">Previously: ${data.previousStage}</p>` : ''}
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
+                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">View Application</a>
                   </div>
                 </td>
               </tr>
@@ -462,9 +470,7 @@ function getStageTransitionEmailHtml(data: ApplicationEmailData): string {
 
 // Document request notification HTML
 function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   return `
     <!DOCTYPE html>
     <html>
@@ -507,7 +513,7 @@ function getDocumentRequestEmailHtml(data: ApplicationEmailData): string {
                     </div>
                   ` : ''}
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobaleducation.com/student/applications" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
+                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Upload Documents</a>
                   </div>
                 </td>
               </tr>
@@ -596,27 +602,25 @@ interface ApplicationSubmittedEmailData {
 
 // Welcome email HTML template
 function getWelcomeEmailHtml(data: WelcomeEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const userTypeMessages = {
     student: {
       title: 'Welcome to Your Study Journey!',
       description: 'Your account has been verified and you\'re ready to explore thousands of courses from top universities worldwide.',
       cta: 'Start Exploring Courses',
-      ctaUrl: 'https://anzglobal.com.au/courses'
+      ctaUrl: `${baseUrl}/courses`
     },
     institution: {
       title: 'Welcome to ANZ Global Education!',
       description: 'Your institution account is now active. Start connecting with international students and showcase your programs.',
       cta: 'Access Your Dashboard',
-      ctaUrl: 'https://anzglobal.com.au/university/dashboard'
+      ctaUrl: `${baseUrl}/university/dashboard`
     },
     admin: {
       title: 'Welcome to ANZ Global Education!',
       description: 'Your admin account has been activated.',
       cta: 'Go to Admin Dashboard',
-      ctaUrl: 'https://anzglobal.com.au/admin/dashboard'
+      ctaUrl: `${baseUrl}/admin/dashboard`
     }
   };
 
@@ -674,7 +678,7 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
                     ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -689,9 +693,7 @@ function getWelcomeEmailHtml(data: WelcomeEmailData): string {
 
 // Profile completion reminder email HTML template
 function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const missingFieldsList = data.missingFields.map(field => `<li>${field}</li>`).join('');
   
   return `
@@ -730,7 +732,7 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
                     </ul>
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/profile" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
+                    <a href="${baseUrl}/student/profile" style="display: inline-block; background-color: #FF5000; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Complete Your Profile</a>
                   </div>
                   <p style="color: #888888; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
                     Having a complete profile makes your applications stand out and helps us match you with the right courses.
@@ -741,7 +743,7 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
                     ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -756,9 +758,7 @@ function getProfileReminderEmailHtml(data: ProfileReminderEmailData): string {
 
 // Application submitted confirmation email HTML template
 function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   return `
     <!DOCTYPE html>
     <html>
@@ -816,7 +816,7 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
                     </ol>
                   </div>
                   <div style="text-align: center; margin: 40px 0;">
-                    <a href="https://anzglobal.com.au/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
+                    <a href="${baseUrl}/student/applications" style="display: inline-block; background-color: #3465A5; color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 6px; font-size: 16px; font-weight: bold;">Track Your Application</a>
                   </div>
                 </td>
               </tr>
@@ -824,7 +824,7 @@ function getApplicationSubmittedEmailHtml(data: ApplicationSubmittedEmailData): 
                 <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; text-align: center;">
                   <p style="color: #888888; font-size: 12px; margin: 0;">
                     ANZ Global Education | Your Gateway to Global Education<br>
-                    <a href="https://anzglobal.com.au" style="color: #3465A5;">www.anzglobal.com.au</a>
+                    <a href="${baseUrl}" style="color: #3465A5;">www.anzglobal.com.au</a>
                   </p>
                 </td>
               </tr>
@@ -871,9 +871,7 @@ interface AdminCreatedUserEmailData {
 }
 
 function getAdminCreatedUserEmailHtml(data: AdminCreatedUserEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const loginUrl = `${baseUrl}/admin/login`;
 
   return `
@@ -1103,7 +1101,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
                     </p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard#users" style="background-color: #3465A5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
+                      <a href="${getEmailBaseUrl()}/admin/dashboard#users" style="background-color: #3465A5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Review in Dashboard</a>
                     </div>
                   </td>
                 </tr>
@@ -1171,7 +1169,7 @@ export async function sendAdminApprovedNotification(data: AdminApprovedNotificat
                     </p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                      <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/admin/dashboard" style="background-color: #10b981; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+                      <a href="${getEmailBaseUrl()}/admin/dashboard" style="background-color: #10b981; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
                     </div>
                   </td>
                 </tr>
@@ -1277,9 +1275,7 @@ interface TeamInvitationEmailData {
 // HTML email template for team invitation
 function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
   // Use Replit dev domain in development, fallback to production
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const inviteUrl = `${baseUrl}/auth/accept-invite?token=${data.inviteToken}`;
   const expiryDate = new Date(data.expiresAt).toLocaleDateString('en-AU', {
     year: 'numeric',
@@ -1370,9 +1366,7 @@ function getTeamInvitationEmailHtml(data: TeamInvitationEmailData): string {
 
 // Password changed confirmation email HTML template
 function getPasswordChangedEmailHtml(data: { email: string; firstName?: string | null }): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const name = data.firstName || 'there';
   const changedAt = new Date().toLocaleString('en-AU', { 
     dateStyle: 'full', 
@@ -1535,9 +1529,7 @@ interface ReferralInvitationEmailData {
 }
 
 function getReferralInvitationEmailHtml(data: ReferralInvitationEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const signupUrl = `${baseUrl}/auth?ref=${data.referralCode}&mode=signup`;
 
   return `
@@ -1661,9 +1653,7 @@ interface ReferralRegistrationConfirmationData {
 }
 
 function getReferralRegistrationConfirmationHtml(data: ReferralRegistrationConfirmationData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const affiliateUrl = `${baseUrl}/affiliate`;
 
   return `
@@ -1762,9 +1752,7 @@ interface StudentWelcomeEmailData {
 }
 
 function getStudentWelcomeEmailHtml(data: StudentWelcomeEmailData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const profileUrl = `${baseUrl}/student/profile`;
   const coursesUrl = `${baseUrl}/courses`;
   
@@ -1892,9 +1880,7 @@ interface ProfileCompletionReminderData {
 }
 
 function getProfileCompletionReminderHtml(data: ProfileCompletionReminderData): string {
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-    : (process.env.REPL_URL || 'https://anzglobal.com.au');
+  const baseUrl = getEmailBaseUrl();
   const profileUrl = `${baseUrl}/student/profile`;
   
   // Different messaging based on reminder number
