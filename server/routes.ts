@@ -2751,10 +2751,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Attach tags, university, and feePeriod to each course
+      // Strip base64 thumbnailUrl from listing response to reduce payload size
       const coursesWithTags = courses.map(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
+        const { thumbnailUrl, ...courseWithoutThumbnail } = course;
+        const safeThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith('data:') ? thumbnailUrl : null;
         return {
-          ...course,
+          ...courseWithoutThumbnail,
+          thumbnailUrl: safeThumbnailUrl,
           feePeriod: coursePricingConfigMap[course.id] || 'annual',
           tags: courseTagsMap[course.id] || [],
           university: university ? {
@@ -10968,10 +10972,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userMap = new Map(allUsers.map(u => [u.id, u]));
 
       // Add institution name and logo to each course, plus assignee info
+      // Strip base64 thumbnailUrl from listing to reduce payload size
       const coursesWithInstitution = allCourses.map(course => {
         const institution = allInstitutions.find(i => i.id === course.universityId);
+        const { thumbnailUrl, ...courseWithoutThumbnail } = course;
+        const safeThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith('data:') ? thumbnailUrl : null;
         return {
-          ...course,
+          ...courseWithoutThumbnail,
+          thumbnailUrl: safeThumbnailUrl,
           institutionName: institution?.name || 'Unknown',
           institutionLogo: institution?.logo || null,
           createdByName: course.createdByUserId && userMap.has(course.createdByUserId)
@@ -11387,10 +11395,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Enrich courses with institution names, logos and user names
+      // Strip base64 thumbnailUrl from listing to reduce payload size
       const enrichedCourses = myCourses.map(course => {
         const institution = allInstitutions.find(i => i.id === course.universityId);
+        const { thumbnailUrl, ...courseWithoutThumbnail } = course;
+        const safeThumbnailUrl = thumbnailUrl && !thumbnailUrl.startsWith('data:') ? thumbnailUrl : null;
         return {
-          ...course,
+          ...courseWithoutThumbnail,
+          thumbnailUrl: safeThumbnailUrl,
           institutionName: institution?.name || 'Unknown',
           institutionLogo: institution?.logo || null,
           createdByName: course.createdByUserId && userMap.has(course.createdByUserId) 
