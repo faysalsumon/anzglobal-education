@@ -11,6 +11,20 @@ import { createCrmContactForUser } from './crm-routes';
 
 const router = Router();
 
+function getSiteUrl(): string {
+  if (process.env.SITE_URL) {
+    return process.env.SITE_URL.replace(/\/$/, '');
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    const primaryDomain = process.env.REPLIT_DOMAINS.split(',')[0];
+    if (primaryDomain) return `https://${primaryDomain}`;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'http://localhost:5000';
+}
+
 interface SignUpBody {
   email: string;
   password: string;
@@ -229,7 +243,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/reset-password`,
+      redirectTo: `${getSiteUrl()}/reset-password`,
     });
 
     if (error) {
@@ -653,7 +667,7 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid OAuth provider' });
     }
 
-    const redirectTo = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/auth/callback`;
+    const redirectTo = `${getSiteUrl()}/auth/callback`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provider as any,
@@ -985,7 +999,7 @@ router.post('/admin/invite', async (req: Request, res: Response) => {
         user_type: 'platform_admin',
         invited_by: requestingUser.id,
       },
-      redirectTo: `${process.env.REPLIT_DOMAINS?.split(',')[0] ? 'https://' + process.env.REPLIT_DOMAINS.split(',')[0] : ''}/admin/login`,
+      redirectTo: `${getSiteUrl()}/admin/login`,
     });
 
     if (error) {

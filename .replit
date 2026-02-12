@@ -48,5 +48,8 @@ integrations = ["javascript_openai_ai_integrations:1.0.0", "javascript_database:
 VITE_SUPABASE_URL = "https://gqcrrciewuldswxonfem.supabase.co"
 VITE_SUPABASE_ANON_KEY = "sb_publishable_uA1DDeQO3uqFdJd_Rxz0tw_I-18bmMW"
 
+[userenv.production]
+SITE_URL = "https://anzglobal.com.au"
+
 [objectStorage]
 defaultBucketID = "replit-objstore-70143692-b6b1-4a5f-9015-fadf3da93c68"
