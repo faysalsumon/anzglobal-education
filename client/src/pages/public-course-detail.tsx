@@ -810,36 +810,6 @@ export default function PublicCourseDetail() {
                     )}
                   </div>
 
-                  {course.curriculumUrl && (
-                    <Button 
-                      asChild 
-                      variant="ghost" 
-                      className="w-full text-muted-foreground" 
-                      size="sm"
-                      data-testid="button-visit-course"
-                    >
-                      <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-4 w-4 mr-2" />
-                        Visit Official Course Page
-                      </a>
-                    </Button>
-                  )}
-
-                  {course.sourceUrl && (
-                    <Button 
-                      asChild 
-                      variant="ghost" 
-                      className="w-full text-muted-foreground" 
-                      size="sm"
-                      data-testid="button-source-url"
-                    >
-                      <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View on Institution Website
-                      </a>
-                    </Button>
-                  )}
-
                   <div className="pt-2 border-t">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Sparkles className="h-3 w-3 text-primary" />
@@ -1794,6 +1764,36 @@ export default function PublicCourseDetail() {
                       View Institution Profile
                     </Link>
                   </Button>
+
+                  {/* External Course Links */}
+                  {course.curriculumUrl && (
+                    <Button 
+                      asChild 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground" 
+                      size="sm"
+                      data-testid="button-visit-course"
+                    >
+                      <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
+                        <Globe className="h-4 w-4 mr-2" />
+                        Visit Official Course Page
+                      </a>
+                    </Button>
+                  )}
+                  {course.sourceUrl && (
+                    <Button 
+                      asChild 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground" 
+                      size="sm"
+                      data-testid="button-source-url"
+                    >
+                      <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View on Institution Website
+                      </a>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
