@@ -25,7 +25,6 @@ import {
   ListTodo,
   ClipboardList,
   BarChart3,
-  UserPlus,
   Contact,
   FileText,
   LogOut,
@@ -74,14 +73,8 @@ export function AdminSidebar({ activeTab, onTabChange, hasFullAdminAccess, isCTO
       show: isCTO, // Only CTO
     },
     {
-      icon: UserPlus,
-      label: "CRM Leads",
-      value: "crm-leads",
-      show: false, // Hidden - unified with Contacts
-    },
-    {
       icon: Contact,
-      label: "CRM Contacts",
+      label: "Contacts",
       value: "crm-contacts",
       show: true,
     },

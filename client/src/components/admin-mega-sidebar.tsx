@@ -16,7 +16,6 @@ import {
   ListTodo,
   ClipboardList,
   BarChart3,
-  UserPlus,
   Contact,
   FileText,
   Briefcase,
@@ -98,7 +97,6 @@ export function AdminMegaSidebar({
       routes: [
         { icon: ListTodo, label: "My Tasks", value: "my-tasks", show: true },
         { icon: BarChart3, label: "Team Workload", value: "team-workload", show: isCTO },
-        { icon: UserPlus, label: "Leads", value: "crm-leads", show: false }, // Hidden - unified with Contacts
         { icon: Contact, label: "Contacts", value: "crm-contacts", show: true },
         { icon: ClipboardList, label: "Applications", value: "applications", show: true },
       ],

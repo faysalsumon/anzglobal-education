@@ -253,31 +253,11 @@ export const taskCategoryEnum = pgEnum('task_category', [
   'urgent_action',
 ]);
 
-// CRM Lead status enum
-export const leadStatusEnum = pgEnum('lead_status', [
-  'not_contacted',
-  'contacted',
-  'qualified',
-  'unqualified',
-  'converted',
-  'lost',
-]);
-
 // CRM Lead rating enum
 export const leadRatingEnum = pgEnum('lead_rating', [
   'cold',
   'warm',
   'hot',
-]);
-
-// CRM Lead creation method enum
-export const leadCreationMethodEnum = pgEnum('lead_creation_method', [
-  'manually',
-  'website_form',
-  'facebook_ads',
-  'referral',
-  'import',
-  'other',
 ]);
 
 // CRM Contact type enum
@@ -2648,27 +2628,6 @@ export const messages = pgTable("messages", {
   index("created_at_idx").on(table.createdAt),
 ]);
 
-// Student leads table for information requests from course pages
-export const studentLeads = pgTable("student_leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone").notNull(),
-  country: text("country"), // Student's home country
-  visaStatus: text("visa_status").notNull(), // Current visa information/status
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
-  status: varchar("status", { length: 20 }).notNull().default("new"), // 'new', 'contacted', 'converted'
-  notes: text("notes"), // Admin/consultant notes
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("course_idx").on(table.courseId),
-  index("university_idx").on(table.universityId),
-  index("status_idx").on(table.status),
-  index("created_at_leads_idx").on(table.createdAt),
-]);
-
 // Enums for CSV import batches
 export const importBatchTypeEnum = pgEnum('import_batch_type', ['universities', 'courses']);
 export const importBatchStatusEnum = pgEnum('import_batch_status', ['pending', 'approved', 'rejected', 'failed']);
@@ -2696,145 +2655,11 @@ export const contactSubmissions = pgTable("contact_submissions", {
 ]);
 
 // ============================================
-// CRM LEADS AND CONTACTS TABLES
+// CRM CONTACTS TABLES
 // ============================================
 
-// CRM Leads table - full lead management for student inquiries
-export const crmLeads = pgTable("crm_leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Personal Information
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone").notNull(),
-  mobile: text("mobile"),
-  city: text("city"),
-  
-  // Lead Source & Status
-  leadStatus: leadStatusEnum("lead_status").notNull().default("not_contacted"),
-  leadRating: leadRatingEnum("lead_rating").default("cold"),
-  leadCreationMethod: leadCreationMethodEnum("lead_creation_method").default("manually"),
-  country: text("country"),
-  nationality: text("nationality"),
-  
-  // Lead Location & Assignment
-  branch: text("branch"), // Melbourne, Sydney, etc.
-  assignedTo: varchar("assigned_to").references(() => users.id),
-  leadOwner: varchar("lead_owner").references(() => users.id),
-  
-  // Product Interest
-  courseName: text("course_name"),
-  courseUrl: text("course_url"),
-  interestedIn: text("interested_in"),
-  courseId: varchar("course_id").references(() => courses.id),
-  universityId: varchar("university_id").references(() => universities.id),
-  
-  // Visit Summary (website tracking)
-  firstVisit: timestamp("first_visit"),
-  visitorScore: integer("visitor_score"),
-  referrer: text("referrer"),
-  averageTimeSpent: integer("average_time_spent"), // in minutes
-  mostRecentVisit: timestamp("most_recent_visit"),
-  firstPageVisited: text("first_page_visited"),
-  numberOfChats: integer("number_of_chats").default(0),
-  daysVisited: integer("days_visited").default(0),
-  
-  // Additional Information
-  bestTimeToContact: text("best_time_to_contact"),
-  ieltsScore: text("ielts_score"),
-  preferredInstitution: text("preferred_institution"),
-  languageStream: text("language_stream"),
-  programDiscipline: text("program_discipline"),
-  scheduledAppointment: timestamp("scheduled_appointment"),
-  whereToStudy: text("where_to_study"),
-  programType: text("program_type"),
-  subjectToStudy: text("subject_to_study"),
-  
-  // Facebook Ads Details
-  fbAdAccount: text("fb_ad_account"),
-  fbLeadForm: text("fb_lead_form"),
-  fbAdAccountId: text("fb_ad_account_id"),
-  fbLeadFormId: text("fb_lead_form_id"),
-  fbAdCampaign: text("fb_ad_campaign"),
-  
-  // Record Information
-  workdriveFolderUrl: text("workdrive_folder_url"),
-  workdriveFolderId: text("workdrive_folder_id"),
-  notes: text("notes"),
-  
-  // Converted contact reference
-  convertedContactId: varchar("converted_contact_id"),
-  convertedAt: timestamp("converted_at"),
-  
-  // Created by tracking
-  createdByUserId: varchar("created_by_user_id").references(() => users.id),
-  
-  // Timestamps
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  lastActivityTime: timestamp("last_activity_time"),
-}, (table) => ({
-  leadStatusIdx: index("crm_leads_status_idx").on(table.leadStatus),
-  leadOwnerIdx: index("crm_leads_owner_idx").on(table.leadOwner),
-  assignedToIdx: index("crm_leads_assigned_idx").on(table.assignedTo),
-  branchIdx: index("crm_leads_branch_idx").on(table.branch),
-  emailIdx: index("crm_leads_email_idx").on(table.email),
-  createdAtIdx: index("crm_leads_created_at_idx").on(table.createdAt),
-  ratingIdx: index("crm_leads_rating_idx").on(table.leadRating),
-}));
-
-// Lead Status History for tracking status changes with timeline
-export const leadStatusHistory = pgTable("lead_status_history", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
-  fromStatus: leadStatusEnum("from_status"),
-  toStatus: leadStatusEnum("to_status").notNull(),
-  changedBy: varchar("changed_by").references(() => users.id),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  leadIdIdx: index("lead_status_history_lead_idx").on(table.leadId),
-  createdAtIdx: index("lead_status_history_created_idx").on(table.createdAt),
-}));
-
-// Note visibility enum for lead notes
+// Note visibility enum for contact notes
 export const noteVisibilityEnum = pgEnum("note_visibility", ["public", "private", "selected"]);
-
-// Lead Notes table - individual notes with @mentions and visibility controls
-export const leadNotes = pgTable("lead_notes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
-  title: text("title"),
-  content: text("content").notNull(),
-  mentions: text("mentions").array().default(sql`'{}'::text[]`), // Array of user IDs mentioned
-  visibility: noteVisibilityEnum("visibility").notNull().default("public"),
-  visibleTo: text("visible_to").array().default(sql`'{}'::text[]`), // Array of user IDs who can see (when visibility is 'selected')
-  createdById: varchar("created_by_id").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  leadIdIdx: index("lead_notes_lead_idx").on(table.leadId),
-  createdByIdx: index("lead_notes_created_by_idx").on(table.createdById),
-  createdAtIdx: index("lead_notes_created_at_idx").on(table.createdAt),
-}));
-
-// Lead History/Activity Log - tracks all changes to leads
-export const leadHistory = pgTable("lead_history", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  leadId: varchar("lead_id").notNull().references(() => crmLeads.id, { onDelete: "cascade" }),
-  action: varchar("action", { length: 50 }).notNull(), // 'created', 'updated', 'status_changed', 'assigned', 'note_added', etc.
-  fieldName: varchar("field_name", { length: 100 }), // The field that was changed
-  oldValue: text("old_value"), // Previous value (JSON stringified if complex)
-  newValue: text("new_value"), // New value (JSON stringified if complex)
-  description: text("description"), // Human-readable description of the change
-  changedByUserId: varchar("changed_by_user_id").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => ({
-  leadIdIdx: index("lead_history_lead_idx").on(table.leadId),
-  changedByIdx: index("lead_history_changed_by_idx").on(table.changedByUserId),
-  createdAtIdx: index("lead_history_created_at_idx").on(table.createdAt),
-  actionIdx: index("lead_history_action_idx").on(table.action),
-}));
 
 // CRM Contacts table - unified contact management for all contact types
 export const crmContacts = pgTable("crm_contacts", {
@@ -2925,9 +2750,6 @@ export const crmContacts = pgTable("crm_contacts", {
   linkedAccountId: varchar("linked_account_id"),
   linkedAccountName: text("linked_account_name"),
   
-  // Source lead reference (for migrated leads)
-  sourceLeadId: varchar("source_lead_id").references(() => crmLeads.id),
-  
   // Linked platform user (for contacts who have platform accounts)
   linkedUserId: varchar("linked_user_id").references(() => users.id),
   
@@ -2952,7 +2774,6 @@ export const crmContacts = pgTable("crm_contacts", {
   assignedToIdx: index("crm_contacts_assigned_idx").on(table.assignedTo),
   emailIdx: index("crm_contacts_email_idx").on(table.email),
   createdAtIdx: index("crm_contacts_created_at_idx").on(table.createdAt),
-  sourceLeadIdx: index("crm_contacts_source_lead_idx").on(table.sourceLeadId),
   regionIdx: index("crm_contacts_region_idx").on(table.regionId),
   branchIdx: index("crm_contacts_branch_idx").on(table.branchId),
   linkedUserIdx: index("crm_contacts_linked_user_idx").on(table.linkedUserId),
@@ -3350,17 +3171,6 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   sender: one(users, {
     fields: [messages.senderId],
     references: [users.id],
-  }),
-}));
-
-export const studentLeadsRelations = relations(studentLeads, ({ one }) => ({
-  course: one(courses, {
-    fields: [studentLeads.courseId],
-    references: [courses.id],
-  }),
-  university: one(universities, {
-    fields: [studentLeads.universityId],
-    references: [universities.id],
   }),
 }));
 
@@ -3815,11 +3625,6 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
-export const insertStudentLeadSchema = createInsertSchema(studentLeads).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertContactSubmissionSchema = createInsertSchema(contactSubmissions).omit({
   id: true,
   createdAt: true,
@@ -3916,9 +3721,6 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-
-export type StudentLead = typeof studentLeads.$inferSelect;
-export type InsertStudentLead = z.infer<typeof insertStudentLeadSchema>;
 
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
 export type InsertContactSubmission = z.infer<typeof insertContactSubmissionSchema>;
@@ -4725,73 +4527,8 @@ export interface WorkloadSummary {
 }
 
 // ============================================
-// CRM LEADS AND CONTACTS SCHEMAS AND TYPES
+// CRM CONTACTS SCHEMAS AND TYPES
 // ============================================
-
-// CRM Leads
-export const insertCrmLeadSchema = createInsertSchema(crmLeads).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastActivityTime: true,
-  convertedContactId: true,
-  convertedAt: true,
-});
-
-export const updateCrmLeadSchema = insertCrmLeadSchema.partial();
-
-export type CrmLead = typeof crmLeads.$inferSelect;
-export type InsertCrmLead = z.infer<typeof insertCrmLeadSchema>;
-export type UpdateCrmLead = z.infer<typeof updateCrmLeadSchema>;
-
-// Lead Status History
-export const insertLeadStatusHistorySchema = createInsertSchema(leadStatusHistory).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type LeadStatusHistory = typeof leadStatusHistory.$inferSelect;
-export type InsertLeadStatusHistory = z.infer<typeof insertLeadStatusHistorySchema>;
-
-// Lead Notes
-export const insertLeadNoteSchema = createInsertSchema(leadNotes).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type LeadNote = typeof leadNotes.$inferSelect;
-export type InsertLeadNote = z.infer<typeof insertLeadNoteSchema>;
-
-// Lead Note with author details for display
-export interface LeadNoteWithAuthor extends LeadNote {
-  author: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    profileImageUrl: string | null;
-  };
-}
-
-// Lead History
-export const insertLeadHistorySchema = createInsertSchema(leadHistory).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type LeadHistory = typeof leadHistory.$inferSelect;
-export type InsertLeadHistory = z.infer<typeof insertLeadHistorySchema>;
-
-// Lead History with author details for display
-export interface LeadHistoryWithAuthor extends LeadHistory {
-  changedBy: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    profileImageUrl: string | null;
-  } | null;
-}
 
 // CRM Contacts
 export const insertCrmContactSchema = createInsertSchema(crmContacts).omit({
@@ -4805,33 +4542,6 @@ export const updateCrmContactSchema = insertCrmContactSchema.partial();
 export type CrmContact = typeof crmContacts.$inferSelect;
 export type InsertCrmContact = z.infer<typeof insertCrmContactSchema>;
 export type UpdateCrmContact = z.infer<typeof updateCrmContactSchema>;
-
-// Lead with relations for display
-export interface CrmLeadWithRelations extends CrmLead {
-  assignedToUser?: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    profileImageUrl: string | null;
-  } | null;
-  ownerUser?: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    profileImageUrl: string | null;
-  } | null;
-  course?: {
-    id: string;
-    title: string;
-  } | null;
-  university?: {
-    id: string;
-    name: string;
-  } | null;
-  statusHistory?: LeadStatusHistory[];
-}
 
 // Contact with relations for display
 export interface CrmContactWithRelations extends CrmContact {
@@ -4865,7 +4575,6 @@ export interface CrmContactWithRelations extends CrmContact {
     id: string;
     name: string;
   } | null;
-  sourceLead?: CrmLead | null;
   statusHistory?: ContactStatusHistory[];
 }
 

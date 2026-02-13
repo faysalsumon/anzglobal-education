@@ -23,7 +23,6 @@ import {
   insertNotificationSchema,
   insertConversationSchema,
   insertMessageSchema,
-  insertStudentLeadSchema,
   insertContactSubmissionSchema,
   insertBlogSchema,
   insertContactInquirySchema,
@@ -55,8 +54,6 @@ import {
   applicationNotes,
   followUpReminders,
   adminTeamMembers,
-  crmLeads,
-  leadStatusHistory,
   crmContacts,
   contactStatusHistory,
   // CMS imports
@@ -3109,22 +3106,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public lead creation endpoint (no auth required) - also creates CRM lead for unified management
+  // Public lead creation endpoint (no auth required) - creates CRM contact for unified lead management
   // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/leads", async (req, res) => {
     try {
-      // Normalize and sanitize input BEFORE validation
-      const normalizedInput = {
+      const leadInputSchema = z.object({
+        firstName: z.string().min(1).max(100),
+        lastName: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        country: z.string().optional(),
+        visaStatus: z.string().optional(),
+        courseId: z.string().min(1),
+        universityId: z.string().min(1),
+      });
+
+      const leadData = leadInputSchema.parse({
         ...req.body,
         email: req.body.email?.trim().toLowerCase() || '',
         phone: req.body.phone?.trim() || '',
         firstName: req.body.firstName?.trim() || '',
         lastName: req.body.lastName?.trim() || '',
         country: req.body.country?.trim() || undefined,
-      };
-      
-      // Validate normalized input
-      const leadData = insertStudentLeadSchema.parse(normalizedInput);
+      });
       
       // Auto-assign region based on country if available
       let regionId: string | undefined;
@@ -3148,50 +3152,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Course does not belong to specified university" });
       }
       
-      // Create the legacy student lead (for backwards compatibility)
-      const lead = await storage.createLead(leadData);
+      const notes = `Course Inquiry via Course Page\n\nCourse: ${course.title}\nCountry: ${leadData.country || 'Not specified'}\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`;
       
-      // Create CRM contact for unified lead management (replaces legacy crmLeads)
-      try {
-        // Build notes with course inquiry context
-        const notes = `Course Inquiry via Course Page\n\nCourse: ${course.title}\nCountry: ${leadData.country || 'Not specified'}\nVisa Status: ${leadData.visaStatus?.replace('_', ' ') || 'Not specified'}`;
-        
-        // Create CRM contact entry for course inquiry
-        const [crmContact] = await db.insert(crmContacts).values({
-          firstName: leadData.firstName,
-          lastName: leadData.lastName,
-          email: leadData.email,
-          mobile: leadData.phone || undefined,
-          country: leadData.country || undefined,
-          contactType: "clients" as const,
-          clientStatus: "lead" as const,
-          entrySource: "website" as const,
-          leadRating: "warm" as const,
-          courseName: course.title,
-          courseId: course.id,
-          universityId: course.universityId || undefined,
-          courseUrl: `/courses/${course.id}`,
-          interestedIn: course.title,
-          notes,
-          referrer: req.headers["referer"] as string || undefined,
-          firstPageVisited: `/courses/${course.id}`,
-          firstVisit: new Date(),
-          regionId,
-        }).returning();
-        
-        // Create initial status history
-        await db.insert(contactStatusHistory).values({
-          contactId: crmContact.id,
-          fromStatus: null,
-          toStatus: "lead" as const,
-          notes: `Contact auto-created from course inquiry for ${course.title}`,
-        });
-        
-        console.log("CRM contact created from course inquiry:", crmContact.id);
-      } catch (crmError) {
-        // Log error but don't fail the lead submission
-        console.error("Error creating CRM contact from course inquiry:", crmError);
-      }
+      const [crmContact] = await db.insert(crmContacts).values({
+        firstName: leadData.firstName,
+        lastName: leadData.lastName,
+        email: leadData.email,
+        mobile: leadData.phone || undefined,
+        country: leadData.country || undefined,
+        contactType: "clients" as const,
+        clientStatus: "lead" as const,
+        entrySource: "website" as const,
+        leadRating: "warm" as const,
+        courseName: course.title,
+        courseId: course.id,
+        universityId: course.universityId || undefined,
+        courseUrl: `/courses/${course.id}`,
+        interestedIn: course.title,
+        notes,
+        referrer: req.headers["referer"] as string || undefined,
+        firstPageVisited: `/courses/${course.id}`,
+        firstVisit: new Date(),
+        regionId,
+      }).returning();
+      
+      await db.insert(contactStatusHistory).values({
+        contactId: crmContact.id,
+        fromStatus: null,
+        toStatus: "lead" as const,
+        notes: `Contact auto-created from course inquiry for ${course.title}`,
+      });
       
       // Create notifications for all admins and consultants
       const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
@@ -3199,31 +3189,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const notificationRecords = [];
       
-      // Notify admin users
       for (const admin of adminUsers) {
         notificationRecords.push({
           userId: admin.id,
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin#crm-leads',
-          metadata: { leadId: lead.id, courseId: course.id },
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
       
-      // Notify consultant team members
       for (const member of adminTeamMembersList) {
         notificationRecords.push({
           userId: member.userId,
           type: 'new_lead',
           title: 'New Student Inquiry',
           message: `${leadData.firstName} ${leadData.lastName} requested information about ${course.title}`,
-          link: '/admin#crm-leads',
-          metadata: { leadId: lead.id, courseId: course.id },
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id, courseId: course.id },
         });
       }
       
-      // Batch insert notifications
       if (notificationRecords.length > 0) {
         await db.insert(notifications).values(notificationRecords);
       }
@@ -3780,24 +3767,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Verify user is an admin (userType-based check only, no role filtering)
       const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
       
-      // Get all leads
-      const allLeads = await db.select().from(crmLeads);
+      const allContacts = await db.select().from(crmContacts)
+        .where(eq(crmContacts.contactType, 'clients'));
       
-      // Calculate new leads from last 7 days
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       
       const stats = {
-        total: allLeads.length,
-        new: allLeads.filter(l => l.createdAt && new Date(l.createdAt) > weekAgo).length,
-        contacted: allLeads.filter(l => l.leadStatus === 'contacted' || l.leadStatus === 'qualified').length,
-        converted: allLeads.filter(l => l.leadStatus === 'converted').length,
+        total: allContacts.length,
+        new: allContacts.filter(c => c.createdAt && new Date(c.createdAt) > weekAgo).length,
+        contacted: allContacts.filter(c => c.clientStatus === 'applicant').length,
+        converted: allContacts.filter(c => c.clientStatus === 'enrolled' || c.clientStatus === 'completed').length,
       };
       
       res.json(stats);
@@ -11463,98 +11448,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all inquiry leads (information requests from course pages)
-  app.get("/api/admin/leads", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'support_manager', 'support_staff']);
-      
-      if (!access) {
-        return res.status(403).json({ message: "Admin access required" });
-      }
-
-      // Get filter parameters from query
-      const filters: any = {};
-      if (req.query.status) filters.status = req.query.status;
-      if (req.query.courseId) filters.courseId = req.query.courseId;
-      if (req.query.universityId) filters.universityId = req.query.universityId;
-
-      const leads = await storage.getAllLeads(filters);
-
-      // Enrich leads with course and university information
-      const enrichedLeads = await Promise.all(
-        leads.map(async (lead) => {
-          const [course, university] = await Promise.all([
-            storage.getCourseById(lead.courseId),
-            storage.getUniversityById(lead.universityId),
-          ]);
-
-          return {
-            ...lead,
-            course: course ? {
-              id: course.id,
-              title: course.title,
-              level: course.level,
-              subject: course.subject,
-            } : null,
-            university: university ? {
-              id: university.id,
-              name: university.name,
-            } : null,
-          };
-        })
-      );
-
-      res.json(enrichedLeads);
-    } catch (error) {
-      console.error("Error fetching inquiry leads:", error);
-      res.status(500).json({ message: "Failed to fetch inquiry leads" });
-    }
-  });
-
-  // Update inquiry lead status and notes
-  app.patch("/api/admin/leads/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const access = await checkAdminAccess(userId, ['cto', 'support_manager']);
-      
-      if (!access) {
-        return res.status(403).json({ message: "Only super admins and support managers can update leads" });
-      }
-
-      const leadId = req.params.id;
-      const { status, notes } = req.body;
-
-      const updateData: any = {};
-      if (status) updateData.status = status;
-      if (notes !== undefined) updateData.notes = notes;
-
-      const updatedLead = await storage.updateLead(leadId, updateData);
-
-      // Fetch related data for response
-      const [course, university] = await Promise.all([
-        storage.getCourseById(updatedLead.courseId),
-        storage.getUniversityById(updatedLead.universityId),
-      ]);
-
-      res.json({
-        ...updatedLead,
-        course: course ? {
-          id: course.id,
-          title: course.title,
-          level: course.level,
-          subject: course.subject,
-        } : null,
-        university: university ? {
-          id: university.id,
-          name: university.name,
-        } : null,
-      });
-    } catch (error) {
-      console.error("Error updating inquiry lead:", error);
-      res.status(500).json({ message: "Failed to update inquiry lead" });
-    }
-  });
 
   // ============================================
   // Contact Submission Routes
@@ -14521,7 +14414,7 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
       // Create the inquiry
       const inquiry = await storage.createContactInquiry(fullInquiryData);
       
-      // Create CRM contact for unified lead management (replaces legacy crmLeads)
+      // Create CRM contact for unified lead management
       try {
         // Parse name for student inquiries
         let firstName = "";

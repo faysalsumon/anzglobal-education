@@ -23,7 +23,6 @@ const TAB_TO_ROUTE_MAP: Record<string, string> = {
   "overview": "/admin/dashboard",
   "my-tasks": "/admin/dashboard?tab=my-tasks",
   "team-workload": "/admin/dashboard?tab=team-workload",
-  "crm-leads": "/admin/dashboard?tab=crm-leads",
   "crm-contacts": "/admin/dashboard?tab=crm-contacts",
   "applications": "/admin/dashboard?tab=applications",
   "courses": "/admin/dashboard?tab=courses",

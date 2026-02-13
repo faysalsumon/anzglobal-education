@@ -105,7 +105,7 @@ export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess = false 
         {/* Leads */}
         <Card 
           className="relative overflow-hidden border-green-200 dark:border-green-900/30 hover-elevate active-elevate-2 transition-all duration-300 cursor-pointer"
-          onClick={() => onNavigate("crm-leads")}
+          onClick={() => onNavigate("crm-contacts")}
           data-testid="card-stat-leads"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20" />
@@ -193,7 +193,7 @@ export function AdminDashboardOverview({ onNavigate, hasFullAdminAccess = false 
             <Button 
               className="h-auto p-4 md:p-5 flex flex-col items-start gap-2.5 hover-elevate min-h-[90px]" 
               variant="outline"
-              onClick={() => onNavigate("crm-leads")}
+              onClick={() => onNavigate("crm-contacts")}
               data-testid="button-quick-leads"
             >
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">

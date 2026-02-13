@@ -45,9 +45,6 @@ import {
   type InsertReferral,
   type ReferralInvitation,
   type InsertReferralInvitation,
-  studentLeads,
-  type StudentLead,
-  type InsertStudentLead,
   contactSubmissions,
   type ContactSubmission,
   type InsertContactSubmission,
@@ -250,12 +247,6 @@ export interface IStorage {
   createEmployment(employment: InsertStudentEmployment): Promise<StudentEmployment>;
   updateEmployment(id: string, data: Partial<InsertStudentEmployment>): Promise<StudentEmployment>;
   deleteEmployment(id: string): Promise<void>;
-  
-  // Student lead operations
-  getAllLeads(filters?: { status?: string; courseId?: string; universityId?: string }): Promise<StudentLead[]>;
-  getLeadById(id: string): Promise<StudentLead | undefined>;
-  createLead(lead: InsertStudentLead): Promise<StudentLead>;
-  updateLead(id: string, data: Partial<InsertStudentLead>): Promise<StudentLead>;
   
   // Contact submission operations
   getAllContactSubmissions(filters?: { status?: string; category?: string; assignedTo?: string }): Promise<ContactSubmission[]>;
@@ -1392,53 +1383,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(studentEmployments).where(eq(studentEmployments.id, id));
   }
   
-  // Student lead operations
-  async getAllLeads(filters?: { status?: string; courseId?: string; universityId?: string }): Promise<StudentLead[]> {
-    let query = db.select().from(studentLeads);
-    
-    const conditions = [];
-    if (filters?.status) {
-      conditions.push(eq(studentLeads.status, filters.status));
-    }
-    if (filters?.courseId) {
-      conditions.push(eq(studentLeads.courseId, filters.courseId));
-    }
-    if (filters?.universityId) {
-      conditions.push(eq(studentLeads.universityId, filters.universityId));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-    
-    return await query.orderBy(desc(studentLeads.createdAt));
-  }
-
-  async getLeadById(id: string): Promise<StudentLead | undefined> {
-    const [lead] = await db
-      .select()
-      .from(studentLeads)
-      .where(eq(studentLeads.id, id));
-    return lead;
-  }
-
-  async createLead(leadData: InsertStudentLead): Promise<StudentLead> {
-    const [lead] = await db
-      .insert(studentLeads)
-      .values(leadData)
-      .returning();
-    return lead;
-  }
-
-  async updateLead(id: string, data: Partial<InsertStudentLead>): Promise<StudentLead> {
-    const [lead] = await db
-      .update(studentLeads)
-      .set(data)
-      .where(eq(studentLeads.id, id))
-      .returning();
-    return lead;
-  }
-
   // Contact submission operations
   async getAllContactSubmissions(filters?: { status?: string; category?: string; assignedTo?: string }): Promise<ContactSubmission[]> {
     let query = db.select().from(contactSubmissions);

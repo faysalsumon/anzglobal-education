@@ -66,7 +66,6 @@ const AuthCallback = lazy(() => import("@/pages/auth-callback"));
 const AdminPendingApproval = lazy(() => import("@/pages/admin-pending-approval"));
 const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
 const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
-const AdminLeadForm = lazy(() => import("@/pages/admin-lead-form"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
 const Developers = lazy(() => import("@/pages/developers"));
 
@@ -127,8 +126,6 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/admin/scraping/jobs/:jobId" component={ScrapingJobDetail} />
         <Route path="/admin/scraping/review/:jobId" component={ScrapingReviewDashboard} />
         <Route path="/admin/applications/:id" component={AdminApplicationDetail} />
-        <Route path="/admin/leads/new" component={AdminLeadForm} />
-        <Route path="/admin/leads/:id/edit" component={AdminLeadForm} />
         <Route path="/admin/contacts/new" component={AdminContactForm} />
         <Route path="/admin/contacts/:id/edit" component={AdminContactForm} />
         <Route path="/university/profile" component={UniversityProfile} />

@@ -64,7 +64,6 @@ import { AdminApplicationsKanban } from "@/components/admin-applications-kanban"
 import { MyTasksPanel } from "@/components/my-tasks-panel";
 import { TeamWorkloadPanel } from "@/components/team-workload-panel";
 import { UpcomingRemindersPanel } from "@/components/upcoming-reminders-panel";
-import { CrmLeadsPanel } from "@/components/crm-leads-panel";
 import { CrmContactsPanel } from "@/components/crm-contacts-panel";
 import { AdminCmsPanel } from "@/components/admin-cms-panel";
 import { AdminSeoPanel } from "@/components/admin-seo-panel";
@@ -474,14 +473,13 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
     const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
-    // Marketing Executive can access institutions tab along with full admins
     const marketingExecutiveTabs = ['institutions'];
     
-    // First check query parameters (for notification deep-linking like /admin?tab=crm-leads&leadId=xxx)
+    // First check query parameters (for notification deep-linking)
     const searchParams = new URLSearchParams(window.location.search);
     const tabFromQuery = searchParams.get('tab');
     
@@ -522,7 +520,6 @@ export default function AdminDashboard() {
     'users': 'Users',
     'institutions': 'Institutions',
     'courses': 'Courses',
-    'crm-leads': 'Leads',
     'crm-contacts': 'Contacts',
     'applications': 'Applications',
     'data-import': 'Data Import',
@@ -556,7 +553,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-leads', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -1996,13 +1993,6 @@ export default function AdminDashboard() {
         {activeTab === "team-workload" && hasFullAdminAccess && (
           <div className="space-y-4">
             <TeamWorkloadPanel />
-          </div>
-        )}
-
-        {/* CRM Leads Tab */}
-        {activeTab === "crm-leads" && (
-          <div className="space-y-4">
-            <CrmLeadsPanel />
           </div>
         )}
 
