@@ -281,6 +281,17 @@ export const clientStatusEnum = pgEnum('client_status', [
   'inactive',       // Dropped off or no longer engaged
 ]);
 
+// CRM Lead Stage enum - for tracking lead follow-up pipeline (applies when clientStatus = 'lead')
+export const leadStageEnum = pgEnum('lead_stage', [
+  'new',              // Just came in, hasn't been contacted
+  'contacted',        // Initial outreach made
+  'qualified',        // Confirmed as a genuine prospect
+  'counselling',      // In active discussion about courses/options
+  'ready_to_apply',   // All info gathered, ready to submit application
+  'converted',        // Application created, lead converted to applicant
+  'lost',             // Lead didn't convert
+]);
+
 // CRM Entry Source enum - how the contact entered the system
 export const entrySourceEnum = pgEnum('entry_source', [
   'website',        // Self-registered student
@@ -2682,6 +2693,7 @@ export const crmContacts = pgTable("crm_contacts", {
   
   // Client Status & Entry Source (primarily for 'clients' contact type)
   clientStatus: clientStatusEnum("client_status").default("lead"),
+  leadStage: leadStageEnum("lead_stage").default("new"),
   entrySource: entrySourceEnum("entry_source").default("consultant"),
   leadRating: leadRatingEnum("lead_rating").default("cold"),
   
@@ -2770,6 +2782,7 @@ export const crmContacts = pgTable("crm_contacts", {
 }, (table) => ({
   contactTypeIdx: index("crm_contacts_type_idx").on(table.contactType),
   clientStatusIdx: index("crm_contacts_client_status_idx").on(table.clientStatus),
+  leadStageIdx: index("crm_contacts_lead_stage_idx").on(table.leadStage),
   entrySourceIdx: index("crm_contacts_entry_source_idx").on(table.entrySource),
   contactOwnerIdx: index("crm_contacts_owner_idx").on(table.contactOwner),
   assignedToIdx: index("crm_contacts_assigned_idx").on(table.assignedTo),

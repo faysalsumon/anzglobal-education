@@ -3,6 +3,7 @@ import { db } from "./db";
 import { storage } from "./storage";
 import { 
   crmContacts, 
+  contactStatusHistory,
   users,
   courses,
   universities,
@@ -933,20 +934,60 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
       updateData.linkedUserId = linkedUserId;
     }
 
+    // Handle lead stage transitions with auto client status changes
+    const leadStageChanged = validated.leadStage && validated.leadStage !== existingContact.leadStage;
+    
+    if (leadStageChanged) {
+      // If moving to "converted", auto-set clientStatus to "applicant"
+      if (validated.leadStage === 'converted' && existingContact.clientStatus === 'lead') {
+        updateData.clientStatus = 'applicant';
+      }
+      // If moving to "lost", auto-set clientStatus to "inactive"
+      if (validated.leadStage === 'lost' && existingContact.clientStatus === 'lead') {
+        updateData.clientStatus = 'inactive';
+      }
+    }
+
+    // Track client status change in history
+    const clientStatusChanged = updateData.clientStatus && updateData.clientStatus !== existingContact.clientStatus;
+
     const [updatedContact] = await db
       .update(crmContacts)
       .set(updateData)
       .where(eq(crmContacts.id, id))
       .returning();
 
+    // Log status transition history
+    if (clientStatusChanged) {
+      await db.insert(contactStatusHistory).values({
+        contactId: id,
+        fromStatus: existingContact.clientStatus,
+        toStatus: updateData.clientStatus,
+        changedBy: userId,
+        notes: leadStageChanged 
+          ? `Lead stage changed to ${validated.leadStage}` 
+          : `Status manually updated`,
+      });
+    }
+
     // Log activity
+    const actionParts = [];
+    if (leadStageChanged) {
+      actionParts.push(`lead stage to ${validated.leadStage}`);
+    }
+    if (clientStatusChanged) {
+      actionParts.push(`status to ${updateData.clientStatus}`);
+    }
+    
     await logActivity({
       userId,
       entityType: "crm_contact" as any,
       entityId: id,
       entityName: `${updatedContact.firstName} ${updatedContact.lastName}`,
       action: "updated",
-      actionDescription: `Updated contact: ${updatedContact.firstName} ${updatedContact.lastName}`,
+      actionDescription: actionParts.length > 0
+        ? `Updated ${actionParts.join(' and ')} for ${updatedContact.firstName} ${updatedContact.lastName}`
+        : `Updated contact: ${updatedContact.firstName} ${updatedContact.lastName}`,
     });
 
     res.json(updatedContact);
@@ -1424,9 +1465,26 @@ router.post("/contacts/:id/applications", requireAdmin, async (req: any, res) =>
       addedBy: req.user?.claims?.sub || null,
     });
 
-    // Update contact status to 'applicant' if this is the first application
-    if (existingApplications.length === 0 && userId) {
-      await updateContactStatusOnApplication(userId, 'applicant');
+    // Update contact status to 'applicant' and lead stage to 'converted' if this is the first application
+    if (existingApplications.length === 0) {
+      // Set lead stage to converted
+      await db
+        .update(crmContacts)
+        .set({ 
+          leadStage: 'converted',
+          clientStatus: 'applicant',
+          updatedAt: new Date()
+        })
+        .where(eq(crmContacts.id, id));
+      
+      // Log the status transition
+      await db.insert(contactStatusHistory).values({
+        contactId: id,
+        fromStatus: contact.clientStatus,
+        toStatus: 'applicant',
+        changedBy: req.user?.claims?.sub || null,
+        notes: 'Lead converted via application creation',
+      });
     }
 
     console.log(`[CRM] Admin created application ${newApplication.id} for contact ${id} (course: ${courseId})`);

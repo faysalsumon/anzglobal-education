@@ -68,6 +68,7 @@ import { format } from "date-fns";
 
 type ContactType = 'none' | 'clients' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
+type LeadStage = 'new' | 'contacted' | 'qualified' | 'counselling' | 'ready_to_apply' | 'converted' | 'lost';
 type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
 type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
@@ -77,6 +78,7 @@ interface CrmContact {
   photo: string | null;
   contactType: ContactType;
   clientStatus: ClientStatus | null;
+  leadStage: LeadStage | null;
   entrySource: EntrySource | null;
   leadRating: LeadRating | null;
   firstName: string;
@@ -270,8 +272,29 @@ const leadRatingColors: Record<string, string> = {
   hot: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
+const leadStageLabels: Record<string, string> = {
+  new: "New",
+  contacted: "Contacted",
+  qualified: "Qualified",
+  counselling: "Counselling",
+  ready_to_apply: "Ready to Apply",
+  converted: "Converted",
+  lost: "Lost",
+};
+
+const leadStageColors: Record<string, string> = {
+  new: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400",
+  contacted: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
+  qualified: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+  counselling: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  ready_to_apply: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  converted: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  lost: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
+};
+
 const KANBAN_TYPES: ContactType[] = ['clients', 'external', 'internal', 'partner', 'providers_rep', 'others'];
 const KANBAN_CLIENT_STATUSES: ClientStatus[] = ['lead', 'applicant', 'enrolled', 'completed', 'inactive'];
+const LEAD_PIPELINE_STAGES: LeadStage[] = ['new', 'contacted', 'qualified', 'counselling', 'ready_to_apply', 'converted', 'lost'];
 
 export function CrmContactsPanel() {
   const { toast } = useToast();
@@ -286,7 +309,7 @@ export function CrmContactsPanel() {
   const [selectedContact, setSelectedContact] = useState<CrmContact | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [kanbanMode, setKanbanMode] = useState<'type' | 'status'>('status');
+  const [kanbanMode, setKanbanMode] = useState<'type' | 'status' | 'leadPipeline'>('status');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
@@ -406,21 +429,43 @@ export function CrmContactsPanel() {
     const contactId = active.id as string;
     const overId = over.id as string;
     
-    // Check if we're in status mode
-    if (kanbanMode === 'status') {
+    if (kanbanMode === 'leadPipeline') {
+      let newStage: LeadStage | undefined;
+      
+      if (overId.startsWith('leadstage-')) {
+        newStage = overId.replace('leadstage-', '') as LeadStage;
+      } else if (over.data.current?.sortable) {
+        const containerId = over.data.current.sortable.containerId as string;
+        if (containerId.startsWith('leadstage-')) {
+          newStage = containerId.replace('leadstage-', '') as LeadStage;
+        }
+      } else {
+        const targetContact = contactsData?.contacts?.find(c => c.id === overId);
+        if (targetContact?.leadStage) {
+          newStage = targetContact.leadStage as LeadStage;
+        }
+      }
+      
+      if (!newStage || !LEAD_PIPELINE_STAGES.includes(newStage)) return;
+      
+      const contact = contactsData?.contacts?.find(c => c.id === contactId);
+      if (contact && contact.leadStage !== newStage) {
+        updateMutation.mutate({ 
+          id: contactId, 
+          data: { leadStage: newStage } 
+        });
+      }
+    } else if (kanbanMode === 'status') {
       let newStatus: ClientStatus | undefined;
       
-      // Check if dropped directly on a status column
       if (overId.startsWith('status-')) {
         newStatus = overId.replace('status-', '') as ClientStatus;
       } else if (over.data.current?.sortable) {
-        // Dropped on another contact card - get the container ID
         const containerId = over.data.current.sortable.containerId as string;
         if (containerId.startsWith('status-')) {
           newStatus = containerId.replace('status-', '') as ClientStatus;
         }
       } else {
-        // Fallback: find which status column the target contact belongs to
         const targetContact = contactsData?.contacts?.find(c => c.id === overId);
         if (targetContact?.clientStatus) {
           newStatus = targetContact.clientStatus as ClientStatus;
@@ -437,7 +482,6 @@ export function CrmContactsPanel() {
         });
       }
     } else {
-      // Type mode
       let newType: ContactType | undefined;
       
       if (KANBAN_TYPES.includes(overId as ContactType)) {
@@ -445,7 +489,6 @@ export function CrmContactsPanel() {
       } else if (over.data.current?.sortable) {
         newType = over.data.current.sortable.containerId as ContactType;
       } else {
-        // Fallback: find which type column the target contact belongs to
         const targetContact = contactsData?.contacts?.find(c => c.id === overId);
         if (targetContact?.contactType) {
           newType = targetContact.contactType as ContactType;
@@ -483,6 +526,12 @@ export function CrmContactsPanel() {
   
   const getContactsByClientStatus = (status: ClientStatus) => {
     return contactsData?.contacts?.filter(contact => contact.clientStatus === status) || [];
+  };
+
+  const getContactsByLeadStage = (stage: LeadStage) => {
+    return contactsData?.contacts?.filter(contact => 
+      contact.clientStatus === 'lead' && contact.leadStage === stage
+    ) || [];
   };
 
   const uniqueCountries = Array.from(new Set(contactsData?.contacts?.map(c => c.country).filter(Boolean) || []));
@@ -526,13 +575,14 @@ export function CrmContactsPanel() {
             </Button>
           </div>
           {viewMode === 'kanban' && (
-            <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as 'type' | 'status')}>
-              <SelectTrigger className="w-[140px]" data-testid="select-kanban-mode">
+            <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as 'type' | 'status' | 'leadPipeline')}>
+              <SelectTrigger className="w-[160px]" data-testid="select-kanban-mode">
                 <SelectValue placeholder="Group by" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="status">By Status</SelectItem>
                 <SelectItem value="type">By Type</SelectItem>
+                <SelectItem value="leadPipeline">Lead Pipeline</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -684,7 +734,16 @@ export function CrmContactsPanel() {
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {kanbanMode === 'status' ? (
+            {kanbanMode === 'leadPipeline' ? (
+              LEAD_PIPELINE_STAGES.map((stage) => (
+                <LeadPipelineColumn
+                  key={stage}
+                  stage={stage}
+                  contacts={getContactsByLeadStage(stage)}
+                  onSelectContact={setSelectedContact}
+                />
+              ))
+            ) : kanbanMode === 'status' ? (
               KANBAN_CLIENT_STATUSES.map((status) => (
                 <KanbanStatusColumn
                   key={status}
@@ -739,6 +798,11 @@ export function CrmContactsPanel() {
                   {contact.clientStatus && (
                     <Badge variant="outline" className={clientStatusColors[contact.clientStatus]} data-testid={`badge-status-${contact.id}`}>
                       {clientStatusLabels[contact.clientStatus]}
+                    </Badge>
+                  )}
+                  {contact.clientStatus === 'lead' && contact.leadStage && (
+                    <Badge variant="outline" className={`text-xs ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
+                      {leadStageLabels[contact.leadStage]}
                     </Badge>
                   )}
                   <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
@@ -923,14 +987,68 @@ function KanbanStatusColumn({
   );
 }
 
+function LeadPipelineColumn({ 
+  stage, 
+  contacts, 
+  onSelectContact 
+}: { 
+  stage: LeadStage; 
+  contacts: CrmContact[]; 
+  onSelectContact: (contact: CrmContact) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `leadstage-${stage}`,
+  });
+
+  const contactIds = contacts.map(contact => contact.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-shrink-0 w-72 bg-muted/30 rounded-lg p-3 ${isOver ? 'ring-2 ring-primary' : ''}`}
+      data-testid={`kanban-column-leadstage-${stage}`}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={leadStageColors[stage]}>
+            {leadStageLabels[stage]}
+          </Badge>
+          <span className="text-sm text-muted-foreground">({contacts.length})</span>
+        </div>
+      </div>
+      <ScrollArea className="h-[calc(100vh-360px)]">
+        <SortableContext id={`leadstage-${stage}`} items={contactIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 pr-2">
+            {contacts.map((contact) => (
+              <DraggableContactCard
+                key={contact.id}
+                contact={contact}
+                onSelect={() => onSelectContact(contact)}
+                showLeadStage
+              />
+            ))}
+            {contacts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No leads in this stage
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </ScrollArea>
+    </div>
+  );
+}
+
 function DraggableContactCard({ 
   contact, 
   onSelect,
-  isDragOverlay = false
+  isDragOverlay = false,
+  showLeadStage = false,
 }: { 
   contact: CrmContact; 
   onSelect: () => void;
   isDragOverlay?: boolean;
+  showLeadStage?: boolean;
 }) {
   const {
     attributes,
@@ -996,15 +1114,33 @@ function DraggableContactCard({
             )}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
-            {contact.clientStatus && (
-              <Badge variant="outline" className={`text-xs ${clientStatusColors[contact.clientStatus]}`}>
-                {clientStatusLabels[contact.clientStatus]}
-              </Badge>
-            )}
-            {contact.leadRating && (
-              <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
-                {leadRatingLabels[contact.leadRating]}
-              </Badge>
+            {showLeadStage ? (
+              <>
+                {contact.leadRating && (
+                  <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
+                    {leadRatingLabels[contact.leadRating]}
+                  </Badge>
+                )}
+                {contact.courseName && (
+                  <Badge variant="outline" className="text-xs">
+                    <BookOpen className="h-3 w-3 mr-1" />
+                    <span className="truncate max-w-[100px]">{contact.courseName}</span>
+                  </Badge>
+                )}
+              </>
+            ) : (
+              <>
+                {contact.clientStatus && (
+                  <Badge variant="outline" className={`text-xs ${clientStatusColors[contact.clientStatus]}`}>
+                    {clientStatusLabels[contact.clientStatus]}
+                  </Badge>
+                )}
+                {contact.leadRating && (
+                  <Badge variant="secondary" className={`text-xs ${leadRatingColors[contact.leadRating]}`}>
+                    {leadRatingLabels[contact.leadRating]}
+                  </Badge>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1333,6 +1469,80 @@ function ContactFormDialog({
   );
 }
 
+const ACTIVE_LEAD_STAGES: LeadStage[] = ['new', 'contacted', 'qualified', 'counselling', 'ready_to_apply'];
+
+function LeadStageProgressBar({ 
+  currentStage, 
+  contactId,
+  onStageChange,
+  isUpdating
+}: { 
+  currentStage: LeadStage;
+  contactId: string;
+  onStageChange: (stage: LeadStage) => void;
+  isUpdating: boolean;
+}) {
+  const currentIndex = ACTIVE_LEAD_STAGES.indexOf(currentStage);
+  const isTerminal = currentStage === 'converted' || currentStage === 'lost';
+
+  return (
+    <Card data-testid="card-lead-pipeline">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className="text-lg">Lead Pipeline</CardTitle>
+          {isTerminal && (
+            <Badge variant="outline" className={leadStageColors[currentStage]}>
+              {leadStageLabels[currentStage]}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isTerminal ? (
+          <p className="text-sm text-muted-foreground">
+            This lead has been {currentStage === 'converted' ? 'converted to an applicant' : 'marked as lost'}.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-1">
+              {ACTIVE_LEAD_STAGES.map((stage, index) => {
+                const isActive = index <= currentIndex;
+                const isCurrent = stage === currentStage;
+                return (
+                  <div key={stage} className="flex-1 flex flex-col items-center gap-1">
+                    <button
+                      onClick={() => !isUpdating && onStageChange(stage)}
+                      disabled={isUpdating}
+                      className={`w-full h-2 rounded-full transition-colors ${
+                        isActive 
+                          ? 'bg-primary' 
+                          : 'bg-muted'
+                      } ${isUpdating ? 'opacity-50' : 'cursor-pointer'}`}
+                      data-testid={`button-stage-${stage}`}
+                    />
+                    <span className={`text-xs whitespace-nowrap ${
+                      isCurrent ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                    }`}>
+                      {leadStageLabels[stage]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              {currentStage === 'ready_to_apply' && (
+                <Badge variant="outline" className={leadStageColors['ready_to_apply']}>
+                  Ready for application
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 interface ContactDetailViewProps {
   contact: CrmContact;
   onBack: () => void;
@@ -1370,6 +1580,19 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
   const [applicationNotes, setApplicationNotes] = useState("");
 
   const [, navigate] = useLocation();
+
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CrmContact> }) => {
+      return apiRequest("PATCH", `/api/crm/contacts/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crm/contacts"] });
+      toast({ title: "Lead stage updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update lead stage", variant: "destructive" });
+    },
+  });
   
   const { data: institutionLinks = [], isLoading: isLoadingLinks } = useQuery<InstitutionLink[]>({
     queryKey: ["/api/crm/contacts", contact.id, "institutions"],
@@ -1515,6 +1738,17 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
         )}
         {contact.nationality && <Badge variant="secondary">{contact.nationality}</Badge>}
       </div>
+
+      {contact.clientStatus === 'lead' && contact.leadStage && (
+        <LeadStageProgressBar 
+          currentStage={contact.leadStage as LeadStage} 
+          contactId={contact.id}
+          onStageChange={(newStage) => {
+            updateStageMutation.mutate({ id: contact.id, data: { leadStage: newStage } });
+          }}
+          isUpdating={updateStageMutation.isPending}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
