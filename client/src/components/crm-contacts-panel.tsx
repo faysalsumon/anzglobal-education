@@ -302,6 +302,7 @@ export function CrmContactsPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [clientStatusFilter, setClientStatusFilter] = useState<string>("all");
+  const [leadStageFilter, setLeadStageFilter] = useState<string>("all");
   const [entrySourceFilter, setEntrySourceFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [nationalityFilter, setNationalityFilter] = useState<string>("all");
@@ -325,11 +326,12 @@ export function CrmContactsPanel() {
     contacts: CrmContact[];
     total: number;
   }>({
-    queryKey: ["/api/crm/contacts", typeFilter, clientStatusFilter, entrySourceFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
+    queryKey: ["/api/crm/contacts", typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (clientStatusFilter !== "all") params.append("clientStatus", clientStatusFilter);
+      if (leadStageFilter !== "all") params.append("leadStage", leadStageFilter);
       if (entrySourceFilter !== "all") params.append("entrySource", entrySourceFilter);
       if (searchQuery) params.append("search", searchQuery);
       if (countryFilter !== "all") params.append("country", countryFilter);
@@ -514,6 +516,7 @@ export function CrmContactsPanel() {
   const clearAllFilters = () => {
     setTypeFilter("all");
     setClientStatusFilter("all");
+    setLeadStageFilter("all");
     setEntrySourceFilter("all");
     setCountryFilter("all");
     setNationalityFilter("all");
@@ -521,7 +524,7 @@ export function CrmContactsPanel() {
     setSearchQuery("");
   };
 
-  const activeFiltersCount = [typeFilter, clientStatusFilter, entrySourceFilter, countryFilter, nationalityFilter, assignedFilter]
+  const activeFiltersCount = [typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, countryFilter, nationalityFilter, assignedFilter]
     .filter(f => f !== 'all').length;
   
   const getContactsByClientStatus = (status: ClientStatus) => {
@@ -604,7 +607,10 @@ export function CrmContactsPanel() {
             data-testid="input-search-contacts"
           />
         </div>
-        <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
+        <Select value={clientStatusFilter} onValueChange={(v) => {
+          setClientStatusFilter(v);
+          if (v !== 'lead') setLeadStageFilter("all");
+        }}>
           <SelectTrigger className="w-[160px]" data-testid="select-client-status-filter">
             <SelectValue placeholder="Client Status" />
           </SelectTrigger>
@@ -617,6 +623,23 @@ export function CrmContactsPanel() {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
+        {clientStatusFilter === 'lead' && (
+          <Select value={leadStageFilter} onValueChange={setLeadStageFilter}>
+            <SelectTrigger className="w-[180px]" data-testid="select-lead-stage-filter">
+              <SelectValue placeholder="All Stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Lead Stages</SelectItem>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="counselling">Counselling</SelectItem>
+              <SelectItem value="ready_to_apply">Ready to Apply</SelectItem>
+              <SelectItem value="converted">Converted</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
             <SelectValue placeholder="Contact Type" />
@@ -650,6 +673,32 @@ export function CrmContactsPanel() {
           </Button>
         )}
       </div>
+
+      {clientStatusFilter === 'lead' && (
+        <div className="flex items-center gap-2 flex-wrap" data-testid="lead-stage-chips">
+          <span className="text-sm text-muted-foreground mr-1">Pipeline:</span>
+          {(['new', 'contacted', 'qualified', 'counselling', 'ready_to_apply', 'converted', 'lost'] as LeadStage[]).map((stage) => {
+            const isActive = leadStageFilter === stage;
+            const stageCount = leadStageFilter === 'all' 
+              ? (contactsData?.contacts?.filter(c => c.leadStage === stage).length || 0)
+              : null;
+            return (
+              <Badge
+                key={stage}
+                variant={isActive ? "default" : "outline"}
+                className={`cursor-pointer ${isActive ? '' : leadStageColors[stage]}`}
+                onClick={() => setLeadStageFilter(isActive ? "all" : stage)}
+                data-testid={`chip-stage-${stage}`}
+              >
+                {leadStageLabels[stage]}
+                {stageCount !== null && (
+                  <span className="ml-1.5 text-xs opacity-70">{stageCount}</span>
+                )}
+              </Badge>
+            );
+          })}
+        </div>
+      )}
 
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
