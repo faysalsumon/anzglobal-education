@@ -745,129 +745,107 @@ export default function PublicCourseDetail() {
               </div>
             </div>
 
-            {/* Quick Stats Card - Compact & Responsive */}
+            {/* Hero CTA Card - Apply & Request Info */}
             <div className="lg:col-span-1 flex">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 flex-1">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Quick Facts
-                  </CardTitle>
+              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 bg-gradient-to-br from-primary/5 to-transparent flex-1" data-testid="hero-cta-card">
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      Ready to Start?
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Take the first step towards your future education
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                  {(course.subject || course.discipline) && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Discipline</p>
-                        <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject || course.discipline}</p>
-                      </div>
-                    </div>
+                  {existingApplication ? (
+                    <Button 
+                      asChild 
+                      className="w-full shadow-md shadow-green-500/20 bg-green-600" 
+                      data-testid="button-already-applied"
+                    >
+                      <Link href="/student/applications">
+                        <CheckCircle className="h-4 w-4 mr-1.5" />
+                        Applied for this course
+                      </Link>
+                    </Button>
+                  ) : isStudent ? (
+                    <Button 
+                      asChild 
+                      className="w-full shadow-md shadow-primary/20" 
+                      data-testid="button-apply-now"
+                    >
+                      <Link href={`/student/courses/${course.id}`}>
+                        <GraduationCap className="h-4 w-4 mr-1.5" />
+                        Apply Now
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button 
+                      asChild 
+                      className="w-full shadow-md shadow-primary/20" 
+                      data-testid="button-login-apply"
+                    >
+                      <a href="/auth">
+                        <LogIn className="h-4 w-4 mr-1.5" />
+                        Login to Apply
+                      </a>
+                    </Button>
                   )}
-                  {course.specialization && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <BookOpen className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Specialization</p>
-                        <p className="text-sm font-semibold truncate" data-testid="text-specialization">{course.specialization}</p>
-                      </div>
-                    </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground text-center">
+                      or request more details first
+                    </p>
+                    {course.university && (
+                      <LeadFormDialog
+                        courseId={course.id}
+                        universityId={course.universityId}
+                        courseName={course.title}
+                        universityName={course.university.name}
+                        buttonVariant="outline"
+                      />
+                    )}
+                  </div>
+
+                  {course.curriculumUrl && (
+                    <Button 
+                      asChild 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground" 
+                      size="sm"
+                      data-testid="button-visit-course"
+                    >
+                      <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
+                        <Globe className="h-4 w-4 mr-2" />
+                        Visit Official Course Page
+                      </a>
+                    </Button>
                   )}
-                  {course.fees && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-primary/10 rounded-md">
-                        <DollarSign className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Annual Tuition</p>
-                        <p className="text-sm font-bold truncate" data-testid="text-annual-tuition">{course.currency} {Number(course.fees).toLocaleString()}</p>
-                      </div>
-                    </div>
+
+                  {course.sourceUrl && (
+                    <Button 
+                      asChild 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground" 
+                      size="sm"
+                      data-testid="button-source-url"
+                    >
+                      <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View on Institution Website
+                      </a>
+                    </Button>
                   )}
-                  {course.duration && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-secondary/10 rounded-md">
-                        <Clock className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Duration</p>
-                        <p className="text-sm font-semibold" data-testid="text-duration">{course.duration}</p>
-                      </div>
+
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span>AI-Powered Application Assistance</span>
                     </div>
-                  )}
-                  {nextIntake && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-secondary/10 rounded-md">
-                        <Calendar className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Next Intake</p>
-                        <p className="text-sm font-semibold" data-testid="text-next-intake">
-                          {formatIntakeDate(nextIntake.startDate)}
-                          {nextIntake.status === "open" && (
-                            <Badge variant="default" className="ml-2 text-[10px]">Applications Open</Badge>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {nextIntake && nextIntake.status === "open" && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-accent/10 rounded-md">
-                        <Calendar className="h-3.5 w-3.5 text-accent" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Application Deadline</p>
-                        <p className="text-sm font-semibold" data-testid="text-application-deadline">{formatIntakeDate(nextIntake.applicationDeadline)}</p>
-                      </div>
-                    </div>
-                  )}
-                  {course.deliveryMode && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-secondary/10 rounded-md">
-                        <MonitorPlay className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Delivery Mode</p>
-                        <p className="text-sm font-semibold" data-testid="text-delivery-mode">
-                          {course.deliveryMode === "online" ? "Online Learning" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid (Online + On-Campus)"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {computedIntakes.length > 0 && (
-                    <div className="flex items-start gap-3" data-testid="available-intakes-section">
-                      <div className="p-1.5 bg-secondary/10 rounded-md mt-0.5">
-                        <Calendar className="h-3.5 w-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1" data-testid="available-intakes-label">Available Intakes</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {computedIntakes.map((intake, index) => {
-                            const statusColors = {
-                              open: { text: "text-[#10b981]", border: "border-[#10b981]/30", label: "Open" },
-                              upcoming: { text: "text-[#3455A5]", border: "border-[#3455A5]/30", label: "Upcoming" },
-                              closed: { text: "text-muted-foreground", border: "border-muted/30", label: "Closed" },
-                            };
-                            const color = statusColors[intake.status];
-                            return (
-                              <Badge 
-                                key={intake.templateId} 
-                                className={`text-xs px-2 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold`}
-                                data-testid={`badge-intake-${index}`}
-                              >
-                                {intake.displayLabel}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1606,113 +1584,128 @@ export default function PublicCourseDetail() {
 
           {/* Enhanced Sidebar - Sticky Container */}
           <div className="lg:sticky lg:top-28 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto scrollbar-hide">
-            {/* Action Buttons Card */}
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" data-testid="cta-card">
-              <CardHeader className="pb-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Ready to Start Your Journey?
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Take the first step towards your future education
-                  </p>
-                </div>
+            {/* Quick Facts Card - Sidebar */}
+            <Card className="border-primary/20" data-testid="sidebar-quick-facts">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Quick Facts
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Primary CTA - Apply */}
-                {existingApplication ? (
-                  <Button 
-                    asChild 
-                    className="w-full shadow-md shadow-green-500/20 bg-green-600" 
-                    size="sm"
-                    data-testid="button-already-applied"
-                  >
-                    <Link href="/student/applications">
-                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-                      Applied for this course
-                    </Link>
-                  </Button>
-                ) : isStudent ? (
-                  <Button 
-                    asChild 
-                    className="w-full shadow-md shadow-primary/20" 
-                    size="sm"
-                    data-testid="button-apply-now"
-                  >
-                    <Link href={`/student/courses/${course.id}`}>
-                      <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
-                      Apply Now
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button 
-                    asChild 
-                    className="w-full shadow-md shadow-primary/20" 
-                    size="sm"
-                    data-testid="button-login-apply"
-                  >
-                    <a href="/auth">
-                      <LogIn className="h-3.5 w-3.5 mr-1.5" />
-                      Login to Apply
-                    </a>
-                  </Button>
-                )}
-
-                {/* Secondary CTA - Request Information */}
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground text-center">
-                    or request more details first
-                  </p>
-                  {course.university && (
-                    <LeadFormDialog
-                      courseId={course.id}
-                      universityId={course.universityId}
-                      courseName={course.title}
-                      universityName={course.university.name}
-                      buttonVariant="outline"
-                    />
-                  )}
-                </div>
-
-                {/* Visit Course Link */}
-                {course.curriculumUrl && (
-                  <Button 
-                    asChild 
-                    variant="ghost" 
-                    className="w-full text-muted-foreground" 
-                    size="sm"
-                    data-testid="button-visit-course"
-                  >
-                    <a href={course.curriculumUrl} target="_blank" rel="noopener noreferrer">
-                      <Globe className="h-4 w-4 mr-2" />
-                      Visit Official Course Page
-                    </a>
-                  </Button>
-                )}
-
-                {/* Source URL Link */}
-                {course.sourceUrl && (
-                  <Button 
-                    asChild 
-                    variant="ghost" 
-                    className="w-full text-muted-foreground" 
-                    size="sm"
-                    data-testid="button-source-url"
-                  >
-                    <a href={course.sourceUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View on Institution Website
-                    </a>
-                  </Button>
-                )}
-
-                <div className="pt-3 border-t">
-                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    <span>AI-Powered Application Assistance</span>
+              <CardContent className="space-y-3">
+                {(course.subject || course.discipline) && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Discipline</p>
+                      <p className="text-sm font-semibold truncate" data-testid="text-discipline">{course.subject || course.discipline}</p>
+                    </div>
                   </div>
-                </div>
+                )}
+                {course.specialization && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Specialization</p>
+                      <p className="text-sm font-semibold truncate" data-testid="text-specialization">{course.specialization}</p>
+                    </div>
+                  </div>
+                )}
+                {course.fees && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-primary/10 rounded-md">
+                      <DollarSign className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Annual Tuition</p>
+                      <p className="text-sm font-bold truncate" data-testid="text-annual-tuition">{course.currency} {Number(course.fees).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                {course.duration && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-secondary/10 rounded-md">
+                      <Clock className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="text-sm font-semibold" data-testid="text-duration">{course.duration}</p>
+                    </div>
+                  </div>
+                )}
+                {nextIntake && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-secondary/10 rounded-md">
+                      <Calendar className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Next Intake</p>
+                      <p className="text-sm font-semibold" data-testid="text-next-intake">
+                        {formatIntakeDate(nextIntake.startDate)}
+                        {nextIntake.status === "open" && (
+                          <Badge variant="default" className="ml-2 text-[10px]">Applications Open</Badge>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {nextIntake && nextIntake.status === "open" && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-accent/10 rounded-md">
+                      <Calendar className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Application Deadline</p>
+                      <p className="text-sm font-semibold" data-testid="text-application-deadline">{formatIntakeDate(nextIntake.applicationDeadline)}</p>
+                    </div>
+                  </div>
+                )}
+                {course.deliveryMode && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-secondary/10 rounded-md">
+                      <MonitorPlay className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Delivery Mode</p>
+                      <p className="text-sm font-semibold" data-testid="text-delivery-mode">
+                        {course.deliveryMode === "online" ? "Online Learning" : course.deliveryMode === "on-campus" ? "On-Campus" : "Hybrid (Online + On-Campus)"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {computedIntakes.length > 0 && (
+                  <div className="flex items-start gap-3" data-testid="available-intakes-section">
+                    <div className="p-1.5 bg-secondary/10 rounded-md mt-0.5">
+                      <Calendar className="h-3.5 w-3.5 text-secondary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-1" data-testid="available-intakes-label">Available Intakes</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {computedIntakes.map((intake, index) => {
+                          const statusColors = {
+                            open: { text: "text-[#10b981]", border: "border-[#10b981]/30", label: "Open" },
+                            upcoming: { text: "text-[#3455A5]", border: "border-[#3455A5]/30", label: "Upcoming" },
+                            closed: { text: "text-muted-foreground", border: "border-muted/30", label: "Closed" },
+                          };
+                          const color = statusColors[intake.status];
+                          return (
+                            <Badge 
+                              key={intake.templateId} 
+                              className={`text-xs px-2 py-0.5 bg-background/80 border ${color.border} ${color.text} font-semibold`}
+                              data-testid={`badge-intake-${index}`}
+                            >
+                              {intake.displayLabel}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
