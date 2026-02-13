@@ -163,15 +163,6 @@ export default function PublicInstitutionDetail() {
     }
   };
 
-  const tagsByCategory = useMemo(() => {
-    const grouped: Record<string, InstitutionTag[]> = {};
-    institutionTags.forEach(tag => {
-      if (!grouped[tag.category]) grouped[tag.category] = [];
-      grouped[tag.category].push(tag);
-    });
-    return grouped;
-  }, [institutionTags]);
-
   const availableDisciplines = useMemo(() => {
     const disciplines = new Set<string>();
     institutionCourses.forEach(course => {
@@ -291,13 +282,12 @@ export default function PublicInstitutionDetail() {
   const visibleSections = useMemo(() => {
     const sections: string[] = ["about"];
     if (galleryImages.length > 0) sections.push("gallery");
-    if (institutionTags.length > 0) sections.push("features");
     if (scholarships.length > 0) sections.push("scholarships");
     if (campusLocations.length > 0) sections.push("campuses");
     if (featuredCourses.length > 0) sections.push("featured-courses");
     sections.push("courses");
     return sections;
-  }, [galleryImages.length, institutionTags.length, scholarships.length, campusLocations.length, featuredCourses.length]);
+  }, [galleryImages.length, scholarships.length, campusLocations.length, featuredCourses.length]);
 
   if (isLoading) {
     return (
@@ -590,36 +580,6 @@ export default function PublicInstitutionDetail() {
                           <ZoomIn className="h-4 w-4" />
                           <span>Click to enlarge</span>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ResponsiveSection>
-            )}
-
-            {/* Features Section - Tags by Category */}
-            {institutionTags.length > 0 && (
-              <ResponsiveSection
-                id="features"
-                icon={<Tag className="h-5 w-5 text-primary" />}
-                title="Institution Features"
-                defaultOpen={true}
-              >
-                <div className="space-y-4">
-                  {Object.entries(tagsByCategory).map(([category, tags]) => (
-                    <div key={category}>
-                      <p className="text-sm font-medium text-muted-foreground mb-2 capitalize">{category}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map(tag => (
-                          <Badge 
-                            key={tag.id} 
-                            variant="outline"
-                            style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: tag.color || '#666' }} />
-                            {tag.name}
-                          </Badge>
-                        ))}
                       </div>
                     </div>
                   ))}
