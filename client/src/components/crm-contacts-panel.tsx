@@ -59,7 +59,10 @@ import {
   GraduationCap,
   ExternalLink,
   FileText,
-  Clock
+  Clock,
+  BookOpen,
+  Star,
+  Link2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -107,6 +110,10 @@ interface CrmContact {
   interestedIn: string | null;
   courseId: string | null;
   universityId: string | null;
+  visaStatus: string | null;
+  referrer: string | null;
+  firstPageVisited: string | null;
+  firstVisit: string | null;
   createdByUserId: string | null;
   updatedByUserId: string | null;
   lastActivityTime: string | null;
@@ -1561,6 +1568,85 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             )}
           </CardContent>
         </Card>
+
+        {(contact.courseName || contact.entrySource || contact.leadRating || contact.visaStatus || contact.country) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Inquiry Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {contact.courseName && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Course Interested In</span>
+                  {contact.courseId ? (
+                    <a 
+                      href={`/courses/${contact.courseId}`}
+                      className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid="link-inquiry-course"
+                    >
+                      {contact.courseName}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-sm font-medium">{contact.courseName}</span>
+                  )}
+                </div>
+              )}
+              {contact.country && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Country</span>
+                  <span data-testid="text-inquiry-country">{contact.country}</span>
+                </div>
+              )}
+              {contact.visaStatus && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Visa Status</span>
+                  <span data-testid="text-inquiry-visa">{contact.visaStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                </div>
+              )}
+              {contact.entrySource && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Entry Source</span>
+                  <Badge variant="secondary" data-testid="badge-entry-source">
+                    {contact.entrySource.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Badge>
+                </div>
+              )}
+              {contact.leadRating && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Lead Rating</span>
+                  <Badge 
+                    variant={contact.leadRating === 'hot' ? 'destructive' : contact.leadRating === 'warm' ? 'default' : 'secondary'}
+                    data-testid="badge-lead-rating"
+                  >
+                    <Star className="h-3 w-3 mr-1" />
+                    {contact.leadRating.charAt(0).toUpperCase() + contact.leadRating.slice(1)}
+                  </Badge>
+                </div>
+              )}
+              {contact.referrer && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Referrer</span>
+                  <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-referrer">{contact.referrer}</span>
+                </div>
+              )}
+              {contact.firstPageVisited && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Page Visited</span>
+                  <span className="text-sm text-muted-foreground truncate max-w-[200px]" data-testid="text-first-page">{contact.firstPageVisited}</span>
+                </div>
+              )}
+              {contact.firstVisit && !isNaN(new Date(contact.firstVisit).getTime()) && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">First Visit</span>
+                  <span className="text-sm">{format(new Date(contact.firstVisit), "MMM d, yyyy 'at' h:mm a")}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

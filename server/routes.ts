@@ -3169,6 +3169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         universityId: course.universityId || undefined,
         courseUrl: `/courses/${course.id}`,
         interestedIn: course.title,
+        visaStatus: leadData.visaStatus || undefined,
         notes,
         referrer: req.headers["referer"] as string || undefined,
         firstPageVisited: `/courses/${course.id}`,

@@ -2733,6 +2733,7 @@ export const crmContacts = pgTable("crm_contacts", {
   whereToStudy: text("where_to_study"),
   programType: text("program_type"),
   subjectToStudy: text("subject_to_study"),
+  visaStatus: varchar("visa_status", { length: 100 }),
   
   // Facebook Ads Details (for tracking source)
   fbAdAccount: text("fb_ad_account"),
