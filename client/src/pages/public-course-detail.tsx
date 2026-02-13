@@ -525,6 +525,43 @@ export default function PublicCourseDetail() {
       <CourseSectionNav 
         visibleSections={visibleSections} 
         courseTitle={course.title}
+        ctaContent={
+          <>
+            {existingApplication ? (
+              <Button asChild variant="secondary" data-testid="sticky-nav-applied">
+                <Link href="/student/applications">
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Applied
+                </Link>
+              </Button>
+            ) : isStudent ? (
+              <Button asChild data-testid="sticky-nav-apply">
+                <Link href={`/student/courses/${course.id}`}>
+                  <GraduationCap className="h-4 w-4 mr-1" />
+                  Apply Now
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild data-testid="sticky-nav-login">
+                <a href="/auth">
+                  <LogIn className="h-4 w-4 mr-1" />
+                  Apply
+                </a>
+              </Button>
+            )}
+            {course.university && (
+              <LeadFormDialog
+                courseId={course.id}
+                universityId={course.universityId}
+                courseName={course.title}
+                universityName={course.university.name}
+                buttonVariant="ghost"
+                buttonClassName="whitespace-nowrap"
+                buttonLabel="Request Info"
+              />
+            )}
+          </>
+        }
       />
       {/* Modern AI-Style Hero Section */}
       <div id="course-hero" className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-b">

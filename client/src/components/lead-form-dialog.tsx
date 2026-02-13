@@ -83,6 +83,8 @@ interface LeadFormDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   buttonVariant?: "default" | "outline" | "secondary" | "ghost";
+  buttonClassName?: string;
+  buttonLabel?: string;
 }
 
 export function LeadFormDialog({
@@ -94,6 +96,8 @@ export function LeadFormDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   buttonVariant = "default",
+  buttonClassName,
+  buttonLabel,
 }: LeadFormDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -160,12 +164,12 @@ export function LeadFormDialog({
         <DialogTrigger asChild>
           <Button 
             size="sm" 
-            variant="outline" 
-            className="w-full" 
+            variant={buttonVariant} 
+            className={buttonClassName || "w-full"} 
             data-testid="button-request-info"
           >
             <Info className="h-3.5 w-3.5 mr-1.5" />
-            Request More Information
+            {buttonLabel || "Request More Information"}
           </Button>
         </DialogTrigger>
       )}

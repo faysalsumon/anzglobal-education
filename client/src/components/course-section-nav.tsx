@@ -33,28 +33,25 @@ const sections: SectionConfig[] = [
 interface CourseSectionNavProps {
   visibleSections: string[];
   courseTitle?: string;
+  ctaContent?: React.ReactNode;
 }
 
-export function CourseSectionNav({ visibleSections, courseTitle }: CourseSectionNavProps) {
+export function CourseSectionNav({ visibleSections, courseTitle, ctaContent }: CourseSectionNavProps) {
   const [activeSection, setActiveSection] = useState<string>("");
   const [isVisible, setIsVisible] = useState(false);
 
-  // Filter sections to only show ones that exist on the page
   const availableSections = sections.filter(section => 
     visibleSections.includes(section.id)
   );
 
-  // Detect scroll position and update active section
   const handleScroll = useCallback(() => {
     const heroElement = document.getElementById("course-hero");
     const heroBottom = heroElement?.getBoundingClientRect().bottom || 0;
     
-    // Show nav when hero is scrolled past
     setIsVisible(heroBottom < 80);
 
-    // Find active section
     let currentSection = "";
-    const offset = 150; // Account for sticky header height
+    const offset = 150;
 
     for (const section of availableSections) {
       const element = document.getElementById(section.id);
@@ -67,7 +64,6 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
       }
     }
 
-    // If no section is in view, find the closest one above
     if (!currentSection) {
       for (let i = availableSections.length - 1; i >= 0; i--) {
         const element = document.getElementById(availableSections[i].id);
@@ -86,14 +82,14 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Check initial state
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const headerOffset = 140; // Account for both headers
+      const headerOffset = 140;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -121,7 +117,6 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center h-12 gap-4">
-            {/* Course title (truncated) */}
             {courseTitle && (
               <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-border/40 flex-shrink-0 max-w-xs">
                 <GraduationCap className="h-4 w-4 text-primary flex-shrink-0" />
@@ -131,7 +126,6 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
               </div>
             )}
             
-            {/* Section navigation */}
             <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1">
               {availableSections.map((section) => (
                 <Button
@@ -150,6 +144,12 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
                 </Button>
               ))}
             </nav>
+
+            {ctaContent && (
+              <div className="flex items-center gap-2 flex-shrink-0 pl-4 border-l border-border/40" data-testid="nav-cta-buttons">
+                {ctaContent}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -178,7 +178,6 @@ export function CourseSectionNav({ visibleSections, courseTitle }: CourseSection
               {section.icon}
             </Button>
           ))}
-          {/* More button if there are more than 5 sections */}
           {availableSections.length > 5 && (
             <Button
               variant="ghost"
