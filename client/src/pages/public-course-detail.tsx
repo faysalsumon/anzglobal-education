@@ -745,25 +745,16 @@ export default function PublicCourseDetail() {
               </div>
             </div>
 
-            {/* Hero CTA Card - Apply & Request Info */}
+            {/* Hero CTA Card - Clean & Focused */}
             <div className="lg:col-span-1 flex">
-              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 bg-gradient-to-br from-primary/5 to-transparent flex-1" data-testid="hero-cta-card">
-                <CardHeader className="pb-3 pt-4 px-4">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      Ready to Start?
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      Take the first step towards your future education
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
+              <Card className="bg-background/60 backdrop-blur-sm border-primary/20 flex-1" data-testid="hero-cta-card">
+                <CardContent className="p-4 space-y-4">
+                  <p className="text-sm font-semibold text-foreground">Interested in this course?</p>
+
                   {existingApplication ? (
                     <Button 
                       asChild 
-                      className="w-full shadow-md shadow-green-500/20 bg-green-600" 
+                      className="w-full bg-green-600" 
                       data-testid="button-already-applied"
                     >
                       <Link href="/student/applications">
@@ -774,7 +765,7 @@ export default function PublicCourseDetail() {
                   ) : isStudent ? (
                     <Button 
                       asChild 
-                      className="w-full shadow-md shadow-primary/20" 
+                      className="w-full" 
                       data-testid="button-apply-now"
                     >
                       <Link href={`/student/courses/${course.id}`}>
@@ -785,7 +776,7 @@ export default function PublicCourseDetail() {
                   ) : (
                     <Button 
                       asChild 
-                      className="w-full shadow-md shadow-primary/20" 
+                      className="w-full" 
                       data-testid="button-login-apply"
                     >
                       <a href="/auth">
@@ -795,27 +786,18 @@ export default function PublicCourseDetail() {
                     </Button>
                   )}
 
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground text-center">
-                      or request more details first
-                    </p>
-                    {course.university && (
+                  {course.university && (
+                    <div className="pt-2 border-t">
+                      <p className="text-[11px] text-muted-foreground text-center mb-2">Not ready to apply?</p>
                       <LeadFormDialog
                         courseId={course.id}
                         universityId={course.universityId}
                         courseName={course.title}
                         universityName={course.university.name}
-                        buttonVariant="outline"
+                        buttonVariant="ghost"
                       />
-                    )}
-                  </div>
-
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      <span>AI-Powered Application Assistance</span>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
