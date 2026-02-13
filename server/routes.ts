@@ -3133,9 +3133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-assign region based on country if available
       let regionId: string | undefined;
       if (leadData.country) {
-        const regions = await db.select().from(adminRegions);
-        const matchingRegion = regions.find(r => 
-          r.countries?.some(c => c.toLowerCase() === leadData.country?.toLowerCase())
+        const allRegions = await db.select().from(regions);
+        const matchingRegion = allRegions.find(r => 
+          r.countries?.some((c: string) => c.toLowerCase() === leadData.country?.toLowerCase())
         );
         if (matchingRegion) {
           regionId = matchingRegion.id;
