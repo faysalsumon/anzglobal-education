@@ -566,6 +566,7 @@ router.get("/contacts", requireAdmin, async (req, res) => {
       country,
       nationality,
       unassigned,
+      branchId,
       limit = "50",
       offset = "0"
     } = req.query;
@@ -598,6 +599,9 @@ router.get("/contacts", requireAdmin, async (req, res) => {
     }
     if (nationality) {
       conditions.push(eq(crmContacts.nationality, nationality as string));
+    }
+    if (branchId) {
+      conditions.push(eq(crmContacts.branchId, branchId as string));
     }
     if (search) {
       conditions.push(

@@ -69,7 +69,7 @@ import { format } from "date-fns";
 type ContactType = 'none' | 'clients' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
 type LeadStage = 'new' | 'contacted' | 'qualified' | 'counselling' | 'ready_to_apply' | 'converted' | 'lost';
-type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
+type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'walk_in' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
 type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
@@ -246,6 +246,7 @@ const entrySourceLabels: Record<string, string> = {
   import: "Import",
   referral: "Referral",
   facebook_ads: "Facebook Ads",
+  walk_in: "Walk-In",
   other: "Other",
 };
 
@@ -257,6 +258,7 @@ const entrySourceColors: Record<string, string> = {
   import: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
   referral: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   facebook_ads: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  walk_in: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
@@ -304,6 +306,7 @@ export function CrmContactsPanel() {
   const [clientStatusFilter, setClientStatusFilter] = useState<string>("all");
   const [leadStageFilter, setLeadStageFilter] = useState<string>("all");
   const [entrySourceFilter, setEntrySourceFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [nationalityFilter, setNationalityFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
@@ -326,13 +329,14 @@ export function CrmContactsPanel() {
     contacts: CrmContact[];
     total: number;
   }>({
-    queryKey: ["/api/crm/contacts", typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
+    queryKey: ["/api/crm/contacts", typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, branchFilter, searchQuery, countryFilter, nationalityFilter, assignedFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (clientStatusFilter !== "all") params.append("clientStatus", clientStatusFilter);
       if (leadStageFilter !== "all") params.append("leadStage", leadStageFilter);
       if (entrySourceFilter !== "all") params.append("entrySource", entrySourceFilter);
+      if (branchFilter !== "all") params.append("branchId", branchFilter);
       if (searchQuery) params.append("search", searchQuery);
       if (countryFilter !== "all") params.append("country", countryFilter);
       if (nationalityFilter !== "all") params.append("nationality", nationalityFilter);
@@ -521,10 +525,22 @@ export function CrmContactsPanel() {
     setCountryFilter("all");
     setNationalityFilter("all");
     setAssignedFilter("all");
+    setBranchFilter("all");
     setSearchQuery("");
   };
 
-  const activeFiltersCount = [typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, countryFilter, nationalityFilter, assignedFilter]
+  const { data: branchesData } = useQuery<any[]>({
+    queryKey: ["/api/admin/branches"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/admin/branches", { headers });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.branches || data || [];
+    },
+  });
+
+  const activeFiltersCount = [typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, branchFilter, countryFilter, nationalityFilter, assignedFilter]
     .filter(f => f !== 'all').length;
   
   const getContactsByClientStatus = (status: ClientStatus) => {
@@ -719,6 +735,7 @@ export function CrmContactsPanel() {
                     <SelectItem value="import">Import</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
                     <SelectItem value="facebook_ads">Facebook Ads</SelectItem>
+                    <SelectItem value="walk_in">Walk-In</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -768,6 +785,24 @@ export function CrmContactsPanel() {
                   </SelectContent>
                 </Select>
               </div>
+              {branchesData && branchesData.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Branch</Label>
+                  <Select value={branchFilter} onValueChange={setBranchFilter}>
+                    <SelectTrigger data-testid="select-branch-filter">
+                      <SelectValue placeholder="All Branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Branches</SelectItem>
+                      {branchesData.map((branch: any) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </Card>
         </CollapsibleContent>
