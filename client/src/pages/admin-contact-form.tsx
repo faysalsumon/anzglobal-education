@@ -34,7 +34,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 type ContactType = 'clients' | 'external' | 'others' | 'partner' | 'providers_rep';
 type ClientStatus = 'lead' | 'applicant' | 'enrolled' | 'completed' | 'inactive';
-type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'other';
+type EntrySource = 'website' | 'consultant' | 'sub_agent' | 'affiliate' | 'import' | 'referral' | 'facebook_ads' | 'walk_in' | 'other';
 type LeadRating = 'cold' | 'warm' | 'hot';
 
 interface CrmContact {
@@ -68,6 +68,14 @@ interface CrmContact {
   contactOwner: string | null;
   assignedTo: string | null;
   sourceLeadId: string | null;
+  branchId: string | null;
+  referenceSource: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmTerm: string | null;
+  utmContent: string | null;
+  referrer: string | null;
   courseName: string | null;
   courseUrl: string | null;
   interestedIn: string | null;
@@ -117,6 +125,7 @@ const entrySourceOptions = [
   { value: 'import', label: 'Import' },
   { value: 'referral', label: 'Referral' },
   { value: 'facebook_ads', label: 'Facebook Ads' },
+  { value: 'walk_in', label: 'Walk-In' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -183,6 +192,16 @@ export default function AdminContactForm() {
       return response.json();
     },
     enabled: isEditing && roleNeedsInstitution(formData.contactType),
+  });
+
+  const { data: branches = [] } = useQuery<{ id: string; name: string; code: string; city?: string; country?: string }[]>({
+    queryKey: ["/api/admin/branches"],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const response = await fetch("/api/admin/branches", { credentials: 'include', headers });
+      if (!response.ok) return [];
+      return response.json();
+    },
   });
 
   const addInstitutionLinkMutation = useMutation({
@@ -779,6 +798,108 @@ export default function AdminContactForm() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="branchId">Branch Location</Label>
+                  <Select
+                    value={formData.branchId || "none"}
+                    onValueChange={(value: string) => setFormData({ ...formData, branchId: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger id="branchId" data-testid="select-branch">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Branch</SelectItem>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}{branch.city ? ` - ${branch.city}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="referenceSource">Reference Source</Label>
+                  <Input
+                    id="referenceSource"
+                    value={formData.referenceSource || ""}
+                    onChange={(e) => setFormData({ ...formData, referenceSource: e.target.value })}
+                    placeholder="e.g. QR Code - Dhaka Branch, Facebook Winter Campaign"
+                    data-testid="input-reference-source"
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Campaign Tracking (UTM)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="utmSource" className="text-xs text-muted-foreground">Source</Label>
+                    <Input
+                      id="utmSource"
+                      value={formData.utmSource || ""}
+                      onChange={(e) => setFormData({ ...formData, utmSource: e.target.value })}
+                      placeholder="e.g. google, facebook, qr_code"
+                      data-testid="input-utm-source"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="utmMedium" className="text-xs text-muted-foreground">Medium</Label>
+                    <Input
+                      id="utmMedium"
+                      value={formData.utmMedium || ""}
+                      onChange={(e) => setFormData({ ...formData, utmMedium: e.target.value })}
+                      placeholder="e.g. cpc, social, email, qr"
+                      data-testid="input-utm-medium"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="utmCampaign" className="text-xs text-muted-foreground">Campaign</Label>
+                    <Input
+                      id="utmCampaign"
+                      value={formData.utmCampaign || ""}
+                      onChange={(e) => setFormData({ ...formData, utmCampaign: e.target.value })}
+                      placeholder="e.g. winter_2026_intake"
+                      data-testid="input-utm-campaign"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="utmTerm" className="text-xs text-muted-foreground">Term (keyword)</Label>
+                    <Input
+                      id="utmTerm"
+                      value={formData.utmTerm || ""}
+                      onChange={(e) => setFormData({ ...formData, utmTerm: e.target.value })}
+                      placeholder="Paid search keyword"
+                      data-testid="input-utm-term"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="utmContent" className="text-xs text-muted-foreground">Content (ad variant)</Label>
+                    <Input
+                      id="utmContent"
+                      value={formData.utmContent || ""}
+                      onChange={(e) => setFormData({ ...formData, utmContent: e.target.value })}
+                      placeholder="Ad variant identifier"
+                      data-testid="input-utm-content"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="referrer" className="text-xs text-muted-foreground">Referrer URL</Label>
+                  <Input
+                    id="referrer"
+                    value={formData.referrer || ""}
+                    onChange={(e) => setFormData({ ...formData, referrer: e.target.value })}
+                    placeholder="Website that referred this contact"
+                    data-testid="input-referrer"
+                  />
                 </div>
               </div>
 

@@ -2748,6 +2748,14 @@ export const crmContacts = pgTable("crm_contacts", {
   subjectToStudy: text("subject_to_study"),
   visaStatus: varchar("visa_status", { length: 100 }),
   
+  // Reference Source Tracking (for understanding lead origin)
+  referenceSource: text("reference_source"), // Specific detail e.g. "QR Code - Dhaka Branch", "Facebook Winter Campaign"
+  utmSource: text("utm_source"),       // e.g. "google", "facebook", "qr_code"
+  utmMedium: text("utm_medium"),       // e.g. "cpc", "social", "email", "qr"
+  utmCampaign: text("utm_campaign"),   // e.g. "winter_2026_intake"
+  utmTerm: text("utm_term"),           // paid keyword
+  utmContent: text("utm_content"),     // ad variant identifier
+
   // Facebook Ads Details (for tracking source)
   fbAdAccount: text("fb_ad_account"),
   fbLeadForm: text("fb_lead_form"),
