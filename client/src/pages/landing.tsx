@@ -65,8 +65,9 @@ export default function Landing() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const openQuiz = () => window.dispatchEvent(new CustomEvent("open-course-quiz"));
-  const { region } = useRegion();
-  const regionQuery = region?.code ? { region: region.code } : {};
+  const { region, regionCode } = useRegion();
+  const effectiveRegionCode = region?.code || regionCode;
+  const regionQuery = effectiveRegionCode ? { region: effectiveRegionCode } : {};
 
   const { data: stats } = useQuery<PlatformStats>({
     queryKey: ["/api/platform/stats", regionQuery],
@@ -228,28 +229,33 @@ export default function Landing() {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
-  // Region-specific content
-  const isAU = region?.code === 'AU';
-  const isBD = region?.code === 'BD';
+  const isAU = effectiveRegionCode === 'AU';
+  const isBD = effectiveRegionCode === 'BD';
 
   const heroTypingWords = isAU
     ? ["Dream Course in Australia", "Perfect Australian University", "Future Career in Australia"]
-    : ["Dream Course", "Perfect University", "Future Career"];
+    : isBD
+      ? ["Dream Course Abroad", "Perfect University Worldwide", "Future in Australia, UK or Canada"]
+      : ["Dream Course", "Perfect University", "Future Career"];
 
   const heroSubtitle = isAU
     ? "Your gateway to world-class Australian education — search courses, compare universities, and apply with confidence."
-    : "We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.";
+    : isBD
+      ? "Bangladesh's most trusted study abroad platform — find courses in Australia, UK, Canada & more. Free expert counseling, visa guidance & scholarship support."
+      : "We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.";
 
   // SEO data
   const siteUrl = window.location.origin;
   const pageTitle = isAU
     ? "ANZ Global Education - Study in Australia | Top Australian Universities & Courses"
     : isBD
-      ? "ANZ Global Education - Study Abroad from Bangladesh | Universities & Courses Worldwide"
+      ? "ANZ Global Education Bangladesh - Study Abroad | Australia, UK, Canada Universities"
       : "ANZ Global Education - Connect Universities and Students Worldwide";
   const pageDescription = isAU
     ? "Discover top Australian universities and courses. AI-powered course matching, scholarships, and expert visa guidance for international students."
-    : "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
+    : isBD
+      ? "Bangladesh's trusted study abroad platform. Find courses in Australia, UK, Canada & more. Free counseling, 98% visa success rate, scholarship support for Bangladeshi students."
+      : "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (
@@ -334,37 +340,71 @@ export default function Landing() {
               </div>
 
               {/* Benefit badges */}
-              <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
-                <div className="flex items-center gap-2" data-testid="badge-hero-compare">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                    <Filter className="h-3.5 w-3.5 text-primary" />
+              {isBD ? (
+                <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
+                  <div className="flex items-center gap-2" data-testid="badge-hero-counseling">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                      <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground">Free Counseling</span>
+                      <p className="text-xs text-muted-foreground">Expert guidance at no cost</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-compare">Compare Side-by-Side</span>
-                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-compare-desc">Fees, scholarships & career paths</p>
+                  <div className="w-px h-8 bg-border hidden sm:block" />
+                  <div className="flex items-center gap-2" data-testid="badge-hero-visa">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
+                      <CheckCircle className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground">98% Visa Success</span>
+                      <p className="text-xs text-muted-foreground">Proven track record from BD</p>
+                    </div>
+                  </div>
+                  <div className="w-px h-8 bg-border hidden sm:block" />
+                  <div className="flex items-center gap-2" data-testid="badge-hero-scholarship">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                      <Award className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground">Scholarship Support</span>
+                      <p className="text-xs text-muted-foreground">Find funding opportunities</p>
+                    </div>
                   </div>
                 </div>
-                <div className="w-px h-8 bg-border hidden sm:block" />
-                <div className="flex items-center gap-2" data-testid="badge-hero-visa">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
-                    <CheckCircle className="h-3.5 w-3.5 text-accent" />
+              ) : (
+                <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm">
+                  <div className="flex items-center gap-2" data-testid="badge-hero-compare">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                      <Filter className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-compare">Compare Side-by-Side</span>
+                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-compare-desc">Fees, scholarships & career paths</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-visa">98% Visa Success</span>
-                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-visa-desc">Expert guidance at every step</p>
+                  <div className="w-px h-8 bg-border hidden sm:block" />
+                  <div className="flex items-center gap-2" data-testid="badge-hero-visa">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-accent/10">
+                      <CheckCircle className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-visa">98% Visa Success</span>
+                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-visa-desc">Expert guidance at every step</p>
+                    </div>
+                  </div>
+                  <div className="w-px h-8 bg-border hidden sm:block" />
+                  <div className="flex items-center gap-2" data-testid="badge-hero-free">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground" data-testid="text-hero-benefit-free">100% Free for Students</span>
+                      <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-free-desc">No hidden fees, ever</p>
+                    </div>
                   </div>
                 </div>
-                <div className="w-px h-8 bg-border hidden sm:block" />
-                <div className="flex items-center gap-2" data-testid="badge-hero-free">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-foreground" data-testid="text-hero-benefit-free">100% Free for Students</span>
-                    <p className="text-xs text-muted-foreground" data-testid="text-hero-benefit-free-desc">No hidden fees, ever</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Right: Search */}
@@ -388,6 +428,76 @@ export default function Landing() {
         </div>
       </section>
 
+      {isBD && (
+        <section className="py-16 md:py-24">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent mb-6 border border-accent/20">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm font-semibold">Top Destinations</span>
+              </div>
+              <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+                Study in the World's Best Education Destinations
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Thousands of Bangladeshi students choose these countries every year for world-class education and career opportunities
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
+              <Card className="hover-elevate group" data-testid="card-destination-australia">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-3">AU</div>
+                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Australia</h3>
+                  <p className="text-sm text-muted-foreground mb-3">World-ranked universities, post-study work rights & pathway to PR</p>
+                  <Badge variant="secondary">Most Popular</Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate group" data-testid="card-destination-uk">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-3">UK</div>
+                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">United Kingdom</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Prestigious institutions, 1-year Masters & Graduate Route visa</p>
+                  <Badge variant="outline">Coming Soon</Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate group" data-testid="card-destination-canada">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-3">CA</div>
+                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Canada</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Affordable education, work permits & immigration-friendly policies</p>
+                  <Badge variant="outline">Coming Soon</Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate group" data-testid="card-destination-malaysia">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-3">MY</div>
+                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Malaysia</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Budget-friendly quality education with cultural familiarity</p>
+                  <Badge variant="outline">Coming Soon</Badge>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="text-center mt-10">
+              <Button 
+                size="lg"
+                className="px-8 bg-accent text-white border-accent-border"
+                onClick={() => window.dispatchEvent(new CustomEvent("open-course-quiz"))}
+                data-testid="button-bd-find-course"
+              >
+                <Sparkles className="mr-2 h-5 w-5" />
+                Find My Perfect Course
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Featured Partners Section */}
       {featuredInstitutions.length > 0 && (
         <section className="py-16 md:py-24 relative overflow-hidden">
@@ -404,10 +514,12 @@ export default function Landing() {
                 <span className="text-sm font-semibold">Our Partners</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-                Featured Education Partners
+                {isBD ? "Our Partner Universities Abroad" : "Featured Education Partners"}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Trusted institutions offering world-class education to international students
+                {isBD 
+                  ? "Top-ranked universities in Australia, UK, Canada and more — ready to welcome Bangladeshi students"
+                  : "Trusted institutions offering world-class education to international students"}
               </p>
             </div>
             
@@ -497,10 +609,12 @@ export default function Landing() {
                 <span className="text-sm font-semibold">Popular Programs</span>
               </div>
               <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-                Featured Courses
+                {isBD ? "Popular Courses for Bangladeshi Students" : "Featured Courses"}
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Discover our most popular courses chosen by students worldwide
+                {isBD 
+                  ? "Courses most chosen by students from Bangladesh — with scholarship and visa-friendly options"
+                  : "Discover our most popular courses chosen by students worldwide"}
               </p>
             </div>
             
@@ -625,10 +739,12 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              For Students: Your Path to Success
+              {isBD ? "Your Study Abroad Journey Made Simple" : "For Students: Your Path to Success"}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Three simple steps to find your perfect course and start your international education journey
+              {isBD
+                ? "From choosing your course to getting your visa — we handle everything so you can focus on your future"
+                : "Three simple steps to find your perfect course and start your international education journey"}
             </p>
           </div>
           
@@ -749,11 +865,13 @@ export default function Landing() {
             <h2 className="mb-6 text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
               Your Journey to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary/80 to-accent">
-                Australia Starts Here
+                {isBD ? "Success Starts Here" : "Australia Starts Here"}
               </span>
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              See how we've helped thousands of students transform their dreams into reality
+              {isBD 
+                ? "Hear from Bangladeshi students who transformed their careers through international education"
+                : "See how we've helped thousands of students transform their dreams into reality"}
             </p>
           </div>
 
@@ -841,7 +959,9 @@ export default function Landing() {
             {/* CTA Section */}
             <div className="mt-12 text-center">
               <p className="text-muted-foreground mb-6 text-lg max-w-2xl mx-auto">
-                Ready to begin your Australian education adventure?
+                {isBD 
+                  ? "Ready to start your international education journey from Bangladesh?"
+                  : "Ready to begin your Australian education adventure?"}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/courses" data-testid="link-explore-courses-video">
@@ -867,10 +987,12 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              For Institutions: Expand Your Global Reach
+              {isBD ? "For Universities: Recruit from Bangladesh" : "For Institutions: Expand Your Global Reach"}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Connect with motivated students worldwide and streamline your admissions process
+              {isBD
+                ? "Connect with high-quality Bangladeshi students actively seeking international education"
+                : "Connect with motivated students worldwide and streamline your admissions process"}
             </p>
           </div>
           
@@ -999,8 +1121,14 @@ export default function Landing() {
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Why Choose ANZ Global Education?</h2>
-            <p className="text-lg text-muted-foreground">Connecting ambitious students with world-class institutions since 2017</p>
+            <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
+              {isBD ? "Why Bangladeshi Students Choose ANZ Global Education" : "Why Choose ANZ Global Education?"}
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              {isBD 
+                ? "Trusted by thousands of Bangladeshi students since 2017 — your reliable partner for studying abroad"
+                : "Connecting ambitious students with world-class institutions since 2017"}
+            </p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             <Card className="border-card-border hover-elevate">
@@ -1284,9 +1412,13 @@ export default function Landing() {
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
             
             <div className="relative z-10 text-center">
-              <h2 className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white">Ready to Get Started?</h2>
+              <h2 className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+                {isBD ? "Start Your Study Abroad Journey Today" : "Ready to Get Started?"}
+              </h2>
               <p className="mb-8 text-base sm:text-lg text-white/85 max-w-2xl mx-auto">
-                Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help
+                {isBD 
+                  ? "Get free expert counseling, scholarship guidance, and visa support — everything you need to study abroad from Bangladesh"
+                  : "Whether you're a student seeking your ideal course or an institution looking to connect with qualified candidates, we're here to help"}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                 <Button 

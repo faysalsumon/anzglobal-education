@@ -22,6 +22,7 @@ export interface PublicPathway {
 
 interface RegionContextValue {
   region: PublicRegion | null;
+  regionCode: string | null;
   pathway: PublicPathway | null;
   currency: string;
   locale: string;
@@ -94,9 +95,18 @@ function detectRegionFromDomain(): string | null {
   return null;
 }
 
+function getRegionFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const region = params.get("region");
+  return region ? region.toUpperCase() : null;
+}
+
 export function RegionProvider({ children }: { children: ReactNode }) {
   const [selectedRegionCode, setSelectedRegionCode] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
+      const urlRegion = getRegionFromUrl();
+      if (urlRegion) return urlRegion;
       const domainRegion = detectRegionFromDomain();
       if (domainRegion) return domainRegion;
       return localStorage.getItem(REGION_STORAGE_KEY);
@@ -129,6 +139,11 @@ export function RegionProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    const urlRegion = getRegionFromUrl();
+    if (urlRegion) {
+      setSelectedRegionCode(urlRegion);
+      return;
+    }
     const domainRegion = detectRegionFromDomain();
     if (domainRegion) {
       setSelectedRegionCode(domainRegion);
@@ -199,6 +214,7 @@ export function RegionProvider({ children }: { children: ReactNode }) {
 
   const contextValue: RegionContextValue = {
     region,
+    regionCode: selectedRegionCode,
     pathway,
     currency,
     locale,
