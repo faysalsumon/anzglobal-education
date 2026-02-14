@@ -861,7 +861,17 @@ router.post("/contacts", requireAdmin, async (req: any, res) => {
       return res.status(401).json({ message: "User ID not found" });
     }
 
-    const validated = insertCrmContactSchema.parse(req.body);
+    const body = { ...req.body };
+    for (const [key, value] of Object.entries(body)) {
+      if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(T|\s)/.test(value)) {
+        const parsed = new Date(value);
+        if (!isNaN(parsed.getTime())) {
+          body[key] = parsed;
+        }
+      }
+    }
+
+    const validated = insertCrmContactSchema.parse(body);
     
     // Check for duplicate email in CRM contacts
     if (validated.email) {
@@ -930,7 +940,17 @@ router.patch("/contacts/:id", requireAdmin, async (req: any, res) => {
       return res.status(401).json({ message: "User ID not found" });
     }
 
-    const validated = updateCrmContactSchema.parse(req.body);
+    const body = { ...req.body };
+    for (const [key, value] of Object.entries(body)) {
+      if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(T|\s)/.test(value)) {
+        const parsed = new Date(value);
+        if (!isNaN(parsed.getTime())) {
+          body[key] = parsed;
+        }
+      }
+    }
+
+    const validated = updateCrmContactSchema.parse(body);
 
     const [existingContact] = await db
       .select()
