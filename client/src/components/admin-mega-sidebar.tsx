@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import { isAdminFeatureVisible } from "@/lib/region-config";
 import {
   Users,
   Building2,
@@ -80,11 +82,18 @@ export function AdminMegaSidebar({
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const isOnProfilePage = location === "/admin/profile";
+
+  const { user } = useAuth();
+  const adminRegionCode = user?.regionCode || null;
+  const isGlobalScope = user?.defaultScope === 'global' || !adminRegionCode;
+
+  const canSeeFeature = (feature: Parameters<typeof isAdminFeatureVisible>[0]) =>
+    isAdminFeatureVisible(feature, adminRegionCode, isGlobalScope);
   
   // Fetch unread message count
   const { data: unreadData } = useQuery<{ unreadCount: number }>({
     queryKey: ["/api/conversations/unread-count"],
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 30000,
   });
   const unreadCount = unreadData?.unreadCount || 0;
 
@@ -109,12 +118,12 @@ export function AdminMegaSidebar({
       routes: [
         { icon: Building2, label: "Institutions", value: "institutions", show: hasFullAdminAccess || isMarketingExecutive },
         { icon: BookOpen, label: "Courses", value: "courses", show: true },
-        { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess },
-        { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess },
+        { icon: GraduationCap, label: "Qualification Types", value: "qualification-types", show: hasFullAdminAccess && canSeeFeature('qualificationTypes') },
+        { icon: FileCheck, label: "Entry Requirement Templates", value: "entry-requirement-templates", show: hasFullAdminAccess && canSeeFeature('entryRequirements') },
         { icon: Newspaper, label: "Blogs", value: "blogs", show: true },
         { icon: FileText, label: "Website Content", value: "website-content", show: true },
-        { icon: Search, label: "SEO Management", value: "seo-metadata", show: hasFullAdminAccess || isMarketingExecutive },
-        { icon: Tag, label: "Tag Manager", value: "tags", show: hasFullAdminAccess || isMarketingExecutive },
+        { icon: Search, label: "SEO Management", value: "seo-metadata", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('seoManagement') },
+        { icon: Tag, label: "Tag Manager", value: "tags", show: (hasFullAdminAccess || isMarketingExecutive) && canSeeFeature('tagManager') },
       ],
     },
     {
@@ -127,8 +136,8 @@ export function AdminMegaSidebar({
         { icon: Shield, label: "Role Management", value: "role-management", show: isCTO },
         { icon: UserCog, label: "Profiles", value: "profile-management", show: isCTO },
         { icon: UsersRound, label: "Team", value: "team", show: hasFullAdminAccess },
-        { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess },
-        { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess },
+        { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess && canSeeFeature('branches') },
+        { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess && canSeeFeature('regions') },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
       ],
     },
@@ -138,11 +147,11 @@ export function AdminMegaSidebar({
       icon: Wrench,
       color: "text-orange-600 bg-orange-50 dark:bg-orange-950 dark:text-orange-400",
       routes: [
-        { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess },
-        { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess },
+        { icon: Upload, label: "Data Import", value: "data-import", show: hasFullAdminAccess && canSeeFeature('dataImport') },
+        { icon: Globe, label: "Web Scraping", value: "web-scraping", show: hasFullAdminAccess && canSeeFeature('webScraping') },
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
-        { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO },
-        { icon: Key, label: "Partner API", value: "api-keys", show: hasFullAdminAccess || isCTO },
+        { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO && canSeeFeature('aiSettings') },
+        { icon: Key, label: "Partner API", value: "api-keys", show: (hasFullAdminAccess || isCTO) && canSeeFeature('partnerApi') },
       ],
     },
   ];
@@ -288,6 +297,21 @@ export function AdminMegaSidebar({
 
               {/* Separator before Messages and Profile */}
               <div className="w-8 h-px bg-border my-1" />
+
+              {adminRegionCode && !isGlobalScope && (
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <div className="w-12 flex items-center justify-center py-1" data-testid="badge-region-scope">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                        {adminRegionCode}
+                      </Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Region: {user?.regionName || adminRegionCode}
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
               {/* Messages Button */}
               <Tooltip delayDuration={0}>

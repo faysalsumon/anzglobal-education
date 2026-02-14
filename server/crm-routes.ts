@@ -14,12 +14,13 @@ import {
   applications,
   applicationCourses,
 } from "@shared/schema";
-import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql } from "drizzle-orm";
+import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
+import { buildRegionScopedFilter } from "./access-policy-service";
 
 // Configure multer for CRM photo uploads
 const crmUpload = multer({
@@ -566,6 +567,18 @@ router.get("/contacts", requireAdmin, async (req, res) => {
           ilike(crmContacts.mobile, `%${search}%`)
         )
       );
+    }
+
+    if (req.accessContext) {
+      const regionFilter = buildRegionScopedFilter(req.accessContext, {
+        regionIdColumn: crmContacts.regionId,
+        branchIdColumn: crmContacts.branchId,
+        assignedToColumn: crmContacts.assignedTo,
+        createdByColumn: crmContacts.createdByUserId,
+      });
+      if (regionFilter) {
+        conditions.push(regionFilter);
+      }
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -1173,6 +1186,16 @@ router.get("/team-members", requireAdmin, async (req: any, res) => {
           ilike(users.email, `%${search}%`)
         )
       );
+    }
+
+    if (req.accessContext) {
+      const regionFilter = buildRegionScopedFilter(req.accessContext, {
+        regionIdColumn: users.regionId,
+        branchIdColumn: users.branchId,
+      });
+      if (regionFilter) {
+        conditions.push(regionFilter);
+      }
     }
 
     const teamMembers = await db

@@ -6,6 +6,10 @@ import { useMemo } from "react";
 interface UserWithAdminRole extends User {
   adminRole?: string | null;
   roleName?: string | null;
+  regionName?: string | null;
+  regionCode?: string | null;
+  branchName?: string | null;
+  defaultScope?: string | null;
 }
 
 export function useAuth() {
@@ -101,5 +105,12 @@ export function useAuth() {
     isConsultant,
     isMarketingExecutive,
     hasFullAdminAccess,
+    regionId: user?.regionId || null,
+    regionName: user?.regionName || null,
+    regionCode: user?.regionCode || null,
+    branchId: user?.branchId || null,
+    branchName: user?.branchName || null,
+    defaultScope: user?.defaultScope || null,
+    isGlobalScope: user?.defaultScope === 'global' || isCTO,
   };
 }

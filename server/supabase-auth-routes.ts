@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from './supabase';
 import { storage } from './storage';
 import { db } from './db';
-import { users, roles, branches, studentProfiles, referrals } from '@shared/schema';
+import { users, roles, branches, regions, studentProfiles, referrals } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { sendWelcomeEmail, sendReferralRegistrationConfirmation } from './email-service';
@@ -490,11 +490,27 @@ router.get('/user', async (req: Request, res: Response) => {
       roleName = role?.displayName || role?.name || null;
     }
 
+    // Get region name if regionId exists
+    let regionName = null;
+    let regionCode = null;
+    if (platformUser.regionId) {
+      const [region] = await db.select().from(regions).where(eq(regions.id, platformUser.regionId)).limit(1);
+      regionName = region?.name || null;
+      regionCode = region?.code || null;
+    }
+
     // Get branch name if branchId exists
     let branchName = null;
     if (platformUser.branchId) {
       const [branch] = await db.select().from(branches).where(eq(branches.id, platformUser.branchId)).limit(1);
       branchName = branch?.name || null;
+    }
+
+    // Get role's default scope for region-based access control
+    let defaultScope = null;
+    if (platformUser.roleId) {
+      const [roleData] = await db.select({ defaultScope: roles.defaultScope }).from(roles).where(eq(roles.id, platformUser.roleId)).limit(1);
+      defaultScope = roleData?.defaultScope || null;
     }
 
     res.json({
@@ -507,8 +523,12 @@ router.get('/user', async (req: Request, res: Response) => {
       role: platformUser.role,
       roleId: platformUser.roleId,
       roleName: roleName,
+      regionId: platformUser.regionId,
+      regionName: regionName,
+      regionCode: regionCode,
       branchId: platformUser.branchId,
       branchName: branchName,
+      defaultScope: defaultScope,
       adminRole: adminRole,
       profileImageUrl: platformUser.profileImageUrl,
       isActive: platformUser.isActive,

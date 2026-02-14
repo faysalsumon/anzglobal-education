@@ -3789,15 +3789,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/crm/leads/stats - Get lead statistics for dashboard (admin only)
   app.get("/api/crm/leads/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.supabaseUser?.id || req.user?.claims?.sub;
       
       const adminAccess = await checkAdminAccess(userId);
       if (!adminAccess) {
         return res.status(403).json({ message: "Access denied" });
       }
+
+      const { getUserAccessContext, buildRegionScopedFilter } = await import("./access-policy-service");
+      const accessContext = await getUserAccessContext(userId);
+
+      let conditions: any[] = [eq(crmContacts.contactType, 'clients')];
+      if (accessContext) {
+        const regionFilter = buildRegionScopedFilter(accessContext, {
+          regionIdColumn: crmContacts.regionId,
+          branchIdColumn: crmContacts.branchId,
+          assignedToColumn: crmContacts.assignedTo,
+          createdByColumn: crmContacts.createdByUserId,
+        });
+        if (regionFilter) {
+          conditions.push(regionFilter);
+        }
+      }
       
       const allContacts = await db.select().from(crmContacts)
-        .where(eq(crmContacts.contactType, 'clients'));
+        .where(and(...conditions));
       
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -15561,7 +15577,8 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // Register CRM routes for leads and contacts management
   const crmRouter = await import('./crm-routes');
-  app.use('/api/crm', isAuthenticated, crmRouter.default);
+  const { injectAccessContext } = await import('./middleware/region-scope');
+  app.use('/api/crm', isAuthenticated, injectAccessContext, crmRouter.default);
   console.log('CRM routes registered for leads and contacts management');
 
   // Register Institution CRM routes for contacts, business terms, and documents

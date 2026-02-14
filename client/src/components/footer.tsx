@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import { useRegion } from "@/context/RegionContext";
+import { getRegionConfig } from "@/lib/region-config";
 
 const socialLinks = [
   {
@@ -35,38 +37,12 @@ const socialLinks = [
   },
 ];
 
-const footerNav = [
-  {
-    title: "Explore",
-    links: [
-      { label: "Courses", href: "/courses" },
-      { label: "Institutions", href: "/institutions" },
-      { label: "Study in Australia", href: "/study-in-australia" },
-      { label: "Blog", href: "/blog" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "Our Story", href: "/our-story" },
-      { label: "Student Reviews", href: "/student-reviews" },
-      { label: "Contact Us", href: "/contact" },
-      { label: "Partner with Us", href: "/partner-with-us" },
-      { label: "Affiliate Program", href: "/affiliate" },
-      { label: "Developers", href: "/developers" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Use", href: "/terms" },
-    ],
-  },
-];
-
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { region, regionCode } = useRegion();
+  const effectiveRegionCode = region?.code || regionCode;
+  const regionConfig = getRegionConfig(effectiveRegionCode);
+  const footerNav = regionConfig.footerSections;
 
   return (
     <footer className="border-t bg-card dark:bg-card" data-testid="footer">
@@ -81,7 +57,9 @@ export function Footer() {
               />
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs mb-6">
-              Connecting international students with world-class Australian education opportunities.
+              {effectiveRegionCode === 'BD'
+                ? "Helping Bangladeshi students achieve their dreams of studying abroad at world-class universities."
+                : "Connecting international students with world-class Australian education opportunities."}
             </p>
             <div className="flex items-center gap-3 flex-wrap">
               {socialLinks.map((social) => (

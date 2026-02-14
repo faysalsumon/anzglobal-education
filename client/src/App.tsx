@@ -68,6 +68,7 @@ const AcceptInvitation = lazy(() => import("@/pages/accept-invitation"));
 const ForcePasswordReset = lazy(() => import("@/pages/force-password-reset"));
 const AdminContactForm = lazy(() => import("@/pages/admin-contact-form"));
 const Developers = lazy(() => import("@/pages/developers"));
+const StudyAbroad = lazy(() => import("@/pages/study-abroad"));
 
 function PageLoader() {
   return (
@@ -99,6 +100,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
         <Route path="/contact" component={Contact} />
         <Route path="/partner-with-us" component={PartnerWithUs} />
         <Route path="/study-in-australia" component={StudyInAustralia} />
+        <Route path="/study-abroad" component={StudyAbroad} />
         <Route path="/our-story" component={OurStory} />
         <Route path="/student-reviews" component={StudentReviews} />
         <Route path="/courses/:id" component={PublicCourseDetail} />
@@ -159,7 +161,7 @@ function AppContent() {
   const [location] = useLocation();
   
   // Public routes that should not have padding even for authenticated users
-  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
+  const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
   
   // Standalone pages that have their own complete layout (no header/footer wrapping)
   const standalonePages = ['/reset-password', '/force-password-reset', '/accept-invitation', '/auth/accept-invite'];

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Home } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Home, Globe } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -19,6 +19,8 @@ import { queryClient } from "@/lib/queryClient";
 import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/utils";
 import type { StudentProfile } from "@shared/schema";
+import { useRegion } from "@/context/RegionContext";
+import { getRegionConfig } from "@/lib/region-config";
 
 interface PublicHeaderProps {
   onStudentLoginClick?: () => void;
@@ -74,13 +76,25 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
 
   const profileImageUrl = getProfileImageUrl();
 
-  const navItems = [
-    { title: "Home", href: "/", icon: Home },
-    { title: "Courses", href: "/courses", icon: BookOpen },
-    { title: "Institutions", href: "/institutions", icon: GraduationCap },
-    { title: "Blog", href: "/blog", icon: Users },
-    { title: "About", href: "/our-story", icon: Info },
-  ];
+  const { region, regionCode } = useRegion();
+  const effectiveRegionCode = region?.code || regionCode;
+  const regionConfig = getRegionConfig(effectiveRegionCode);
+
+  const iconMap: Record<string, any> = {
+    "/": Home,
+    "/courses": BookOpen,
+    "/institutions": GraduationCap,
+    "/blog": Users,
+    "/our-story": Info,
+    "/study-in-australia": Globe,
+    "/study-abroad": Globe,
+  };
+
+  const navItems = regionConfig.publicNavItems.map(item => ({
+    title: item.title,
+    href: item.href,
+    icon: iconMap[item.href] || Info,
+  }));
 
   const getUserInitials = () => {
     if (!user?.email) return "U";

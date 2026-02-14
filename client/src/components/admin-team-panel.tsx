@@ -19,6 +19,7 @@ import { UserPlus, Mail, RotateCcw, Trash2, Clock, CheckCircle, XCircle, AlertCi
 import { formatDistanceToNow, format } from "date-fns";
 import type { InvitationWithDetails, Role, Branch } from "@shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuth";
 
 const inviteFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -86,6 +87,8 @@ export function AdminTeamPanel() {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [creationMethod, setCreationMethod] = useState<"invite" | "create">("invite");
   const { toast } = useToast();
+  const { user } = useAuth();
+  const adminRegionId = user?.regionId || "";
 
   const inviteForm = useForm<InviteFormData>({
     resolver: zodResolver(inviteFormSchema),
@@ -93,7 +96,7 @@ export function AdminTeamPanel() {
       email: "",
       roleId: "",
       userType: "admin",
-      regionId: "",
+      regionId: adminRegionId,
       branchId: "",
       profileId: "",
       note: "",
@@ -109,7 +112,7 @@ export function AdminTeamPanel() {
       phone: "",
       roleId: "",
       userType: "admin",
-      regionId: "",
+      regionId: adminRegionId,
       branchId: "",
       profileId: "",
     },

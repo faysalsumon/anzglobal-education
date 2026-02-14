@@ -300,6 +300,48 @@ export function buildScopedFilter(
   return null;
 }
 
+export interface RegionScopedFilterOptions {
+  regionIdColumn?: any;
+  branchIdColumn?: any;
+  assignedToColumn?: any;
+  createdByColumn?: any;
+}
+
+export function buildRegionScopedFilter(
+  context: UserAccessContext,
+  options: RegionScopedFilterOptions
+): SQL | null {
+  if (context.defaultScope === 'global') {
+    return null;
+  }
+
+  if (context.defaultScope === 'region' && options.regionIdColumn && context.regionId) {
+    return eq(options.regionIdColumn, context.regionId);
+  }
+
+  if (context.defaultScope === 'branch') {
+    if (options.branchIdColumn && context.allowedBranchIds.length > 0) {
+      return inArray(options.branchIdColumn, context.allowedBranchIds);
+    }
+    if (options.regionIdColumn && context.regionId) {
+      return eq(options.regionIdColumn, context.regionId);
+    }
+  }
+
+  if (context.defaultScope === 'self') {
+    const conditions: SQL[] = [];
+    if (options.assignedToColumn) {
+      conditions.push(eq(options.assignedToColumn, context.userId));
+    }
+    if (options.createdByColumn) {
+      conditions.push(eq(options.createdByColumn, context.userId));
+    }
+    return conditions.length > 0 ? or(...conditions) ?? null : null;
+  }
+
+  return null;
+}
+
 export async function getAllProfiles(): Promise<Array<{
   id: string;
   name: string;
