@@ -44,7 +44,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(503).json({ error: 'Supabase is not configured' });
     }
 
-    const { email, password, firstName, lastName, userType } = req.body as SignUpBody;
+    const { email, password, firstName, lastName, userType, branchId, entrySource } = req.body as SignUpBody & { branchId?: string; entrySource?: string };
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -62,6 +62,8 @@ router.post('/signup', async (req: Request, res: Response) => {
           first_name: firstName,
           last_name: lastName,
           user_type: userType,
+          branch_id: branchId,
+          entry_source: entrySource,
         }
       }
     });
@@ -93,6 +95,8 @@ router.post('/signup', async (req: Request, res: Response) => {
             firstName: newUser.firstName,
             lastName: newUser.lastName,
             userType: newUser.userType,
+            entrySource: entrySource || null,
+            branchId: branchId || null,
           });
         }
       }
@@ -156,6 +160,8 @@ router.post('/signin', async (req: Request, res: Response) => {
           firstName: platformUser.firstName,
           lastName: platformUser.lastName,
           userType: platformUser.userType,
+          entrySource: metadata?.entry_source || null,
+          branchId: metadata?.branch_id || null,
         });
       }
     }
@@ -710,7 +716,7 @@ router.get('/oauth/:provider', async (req: Request, res: Response) => {
 // Sync user from Supabase to local database (called after email confirmation)
 router.post('/sync-user', async (req: Request, res: Response) => {
   try {
-    const { supabaseId, email, firstName, lastName, userType, emailVerified, profileImageUrl, referralCode } = req.body;
+    const { supabaseId, email, firstName, lastName, userType, emailVerified, profileImageUrl, referralCode, branchId, entrySource } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
@@ -834,6 +840,8 @@ router.post('/sync-user', async (req: Request, res: Response) => {
         lastName: newUser.lastName,
         userType: newUser.userType,
         profileImageUrl: newUser.profileImageUrl,
+        entrySource: entrySource || null,
+        branchId: branchId || null,
       });
     }
 

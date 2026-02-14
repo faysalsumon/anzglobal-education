@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import QRCode from "qrcode";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MapPin, Plus, Edit, Trash2, Phone, Building2, Search, Loader2, Globe } from "lucide-react";
+import { MapPin, Plus, Edit, Trash2, Phone, Building2, Search, Loader2, Globe, QrCode, Download, Printer, Copy } from "lucide-react";
 
 interface Region {
   id: string;
@@ -84,11 +85,25 @@ export function AdminBranchesPanel() {
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [qrBranch, setQrBranch] = useState<Branch | null>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const form = useForm<BranchFormData>({
     resolver: zodResolver(branchFormSchema),
     defaultValues: defaultFormValues,
   });
+
+  useEffect(() => {
+    if (qrBranch) {
+      const url = `${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}`;
+      QRCode.toDataURL(url, { width: 256, margin: 2 })
+        .then((dataUrl: string) => setQrDataUrl(dataUrl))
+        .catch(() => setQrDataUrl(null));
+    } else {
+      setQrDataUrl(null);
+    }
+  }, [qrBranch]);
 
   const { data: branches = [], isLoading } = useQuery<Branch[]>({
     queryKey: ["/api/admin/branches"],
@@ -312,6 +327,17 @@ export function AdminBranchesPanel() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setQrBranch(branch);
+                              setQrDialogOpen(true);
+                            }}
+                            data-testid={`button-qr-branch-${branch.id}`}
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -629,6 +655,109 @@ export function AdminBranchesPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={qrDialogOpen} onOpenChange={(open) => {
+        setQrDialogOpen(open);
+        if (!open) {
+          setQrBranch(null);
+        }
+      }}>
+        <DialogContent className="max-w-md" data-testid="dialog-qr-code">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              QR Code - {qrBranch?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {[qrBranch?.city, qrBranch?.state, qrBranch?.country].filter(Boolean).join(", ") || "Walk-in registration QR code"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt={`QR Code for ${qrBranch?.name}`}
+                width={256}
+                height={256}
+                className="rounded-md border"
+              />
+            ) : (
+              <div className="flex items-center justify-center" style={{ width: 256, height: 256 }}>
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground text-center break-all select-all px-4">
+              {qrBranch ? `${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}` : ""}
+            </p>
+          </div>
+
+          <DialogFooter className="flex flex-row flex-wrap justify-center gap-2 sm:justify-center">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (qrDataUrl && qrBranch) {
+                  const link = document.createElement("a");
+                  link.download = `qr-branch-${qrBranch.code}.png`;
+                  link.href = qrDataUrl;
+                  link.click();
+                }
+              }}
+              disabled={!qrDataUrl}
+              data-testid="button-download-qr"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download QR Code
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (qrDataUrl && qrBranch) {
+                  const printWindow = window.open("", "_blank");
+                  if (printWindow) {
+                    printWindow.document.write(`
+                      <html>
+                        <head><title>QR Code - ${qrBranch.name}</title></head>
+                        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;">
+                          <h2>${qrBranch.name}</h2>
+                          <p>${[qrBranch.city, qrBranch.state, qrBranch.country].filter(Boolean).join(", ")}</p>
+                          <img src="${qrDataUrl}" width="256" height="256" />
+                          <p style="font-size:12px;margin-top:16px;word-break:break-all;max-width:400px;text-align:center;">
+                            ${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}
+                          </p>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                  }
+                }
+              }}
+              disabled={!qrDataUrl}
+              data-testid="button-print-qr"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print QR Code
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (qrBranch) {
+                  const url = `${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}`;
+                  navigator.clipboard.writeText(url).then(() => {
+                    toast({ title: "Link copied to clipboard" });
+                  });
+                }
+              }}
+              data-testid="button-copy-qr-link"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

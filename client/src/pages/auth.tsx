@@ -63,16 +63,20 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [redirectingToAdmin, setRedirectingToAdmin] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [walkInBranchId, setWalkInBranchId] = useState("");
+  const [walkInSource, setWalkInSource] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signIn, signUp, resetPassword, resendVerification, signInWithOAuth, isConfigured } = useSupabaseAuth();
   const { user, isAuthenticated, isAuthResolved } = useAuth();
 
-  // Read mode and referral code from URL query params
+  // Read mode, referral code, and walk-in branch context from URL query params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const urlReferralCode = urlParams.get('ref');
+    const urlSource = urlParams.get('source');
+    const urlBranchId = urlParams.get('branch_id');
     
     if (mode === 'signup') {
       setIsSignup(true);
@@ -80,14 +84,29 @@ export default function AuthPage() {
       setIsSignup(false);
     }
     
+    // Walk-in branch context from QR code scan
+    if (urlSource === 'walk_in' && urlBranchId) {
+      localStorage.setItem('walk_in_branch_id', urlBranchId);
+      localStorage.setItem('walk_in_source', 'walk_in');
+      setWalkInBranchId(urlBranchId);
+      setWalkInSource('walk_in');
+      setIsSignup(true);
+      setUserType("student");
+    } else {
+      const storedBranchId = localStorage.getItem('walk_in_branch_id');
+      const storedSource = localStorage.getItem('walk_in_source');
+      if (storedBranchId && storedSource) {
+        setWalkInBranchId(storedBranchId);
+        setWalkInSource(storedSource);
+      }
+    }
+    
     // Store referral code in localStorage and set the state for use during signup
     if (urlReferralCode) {
       localStorage.setItem('referral_code', urlReferralCode);
       setReferralCode(urlReferralCode);
-      // Auto-set to signup mode when coming from a referral link
       setIsSignup(true);
     } else {
-      // Check if there's a referral code in localStorage from a previous visit
       const storedCode = localStorage.getItem('referral_code');
       if (storedCode) {
         setReferralCode(storedCode);
@@ -246,6 +265,8 @@ export default function AuthPage() {
           lastName,
           userType: userType || "student",
           referralCode: referralCode || undefined,
+          branchId: walkInBranchId || undefined,
+          entrySource: walkInSource || undefined,
         });
 
         if (error) {
@@ -292,6 +313,9 @@ export default function AuthPage() {
             });
           }
         } else {
+          // Clear walk-in context after successful signup
+          localStorage.removeItem('walk_in_branch_id');
+          localStorage.removeItem('walk_in_source');
           toast({
             title: "Check Your Email",
             description: "We've sent you a verification link. Please check your email to complete signup.",

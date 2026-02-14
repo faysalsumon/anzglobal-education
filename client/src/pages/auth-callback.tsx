@@ -140,6 +140,8 @@ export default function AuthCallback() {
           emailVerified: !!supabaseUser.email_confirmed_at,
           profileImageUrl,
           referralCode: storedReferralCode || undefined,
+          branchId: supabaseUser.user_metadata?.branch_id || localStorage.getItem('walk_in_branch_id') || undefined,
+          entrySource: supabaseUser.user_metadata?.entry_source || (localStorage.getItem('walk_in_branch_id') ? 'walk_in' : undefined),
         }) as { approvalStatus?: string | null };
         return { ...response, userType };
       } catch (err) {

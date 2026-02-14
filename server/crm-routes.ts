@@ -156,6 +156,8 @@ export async function createCrmContactForUser(user: {
   addressLine2?: string | null;
   photo?: string | null;
   profileImageUrl?: string | null;
+  entrySource?: string | null;
+  branchId?: string | null;
 }): Promise<{ success: boolean; contactId?: string; error?: string }> {
   try {
     const contactType = mapUserTypeToContactType(user.userType);
@@ -204,6 +206,9 @@ export async function createCrmContactForUser(user: {
       return { success: true, contactId: existingContact.id };
     }
 
+    // Determine entry source - use provided or default to 'website'
+    const resolvedEntrySource = user.entrySource || 'website';
+
     // Create new contact from user
     const [newContact] = await db.insert(crmContacts).values({
       firstName: firstName,
@@ -219,10 +224,46 @@ export async function createCrmContactForUser(user: {
       unitNo: user.addressLine2,
       contactType: contactType as any,
       clientStatus: contactType === 'clients' ? 'lead' : null,
-      entrySource: 'website',
+      entrySource: resolvedEntrySource as any,
+      branchId: user.branchId || null,
       linkedUserId: user.id,
       photo: user.photo || user.profileImageUrl,
     }).returning();
+
+    if (resolvedEntrySource === 'walk_in' && user.branchId) {
+      console.log(`[CRM Sync] Walk-in lead created for branch ${user.branchId}, contact ${newContact.id}`);
+      // Auto-assign to branch manager
+      try {
+        const branchManager = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.branchId, user.branchId),
+              eq(users.isActive, true),
+              or(
+                eq(users.userType, 'admin'),
+                eq(users.userType, 'platform_admin')
+              )
+            )
+          )
+          .orderBy(sql`CASE WHEN ${users.roleId} IN (
+            SELECT id FROM roles WHERE name ILIKE '%branch%manager%' OR name ILIKE '%manager%'
+          ) THEN 0 ELSE 1 END`)
+          .limit(1)
+          .then(rows => rows[0]);
+
+        if (branchManager) {
+          await db
+            .update(crmContacts)
+            .set({ assignedTo: branchManager.id, updatedAt: new Date() })
+            .where(eq(crmContacts.id, newContact.id));
+          console.log(`[CRM Sync] Walk-in contact ${newContact.id} auto-assigned to branch manager ${branchManager.id}`);
+        }
+      } catch (assignError) {
+        console.error(`[CRM Sync] Failed to auto-assign walk-in contact to branch manager:`, assignError);
+      }
+    }
 
     return { success: true, contactId: newContact.id };
   } catch (error: any) {
