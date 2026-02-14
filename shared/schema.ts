@@ -301,6 +301,7 @@ export const entrySourceEnum = pgEnum('entry_source', [
   'import',         // Bulk CSV import
   'referral',       // Referred by another contact
   'facebook_ads',   // Facebook advertising
+  'walk_in',        // Walk-in at physical branch (via QR code scan)
   'other',          // Other sources
 ]);
 
