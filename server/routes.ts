@@ -7,6 +7,7 @@ import { storage } from "./storage";
 import { wsClients, broadcastDocumentEvent } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
+import { getRegionContext } from "./middleware/region-detection";
 import {
   insertUniversitySchema,
   insertCourseSchema,
@@ -1656,9 +1657,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allInstitutions = await storage.getAllUniversities();
       // Only include published, approved, active, and publicly visible institutions in filter metadata
-      const approvedInstitutions = allInstitutions.filter(i => 
+      let approvedInstitutions = allInstitutions.filter(i => 
         i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive && i.visibility !== 'private'
       );
+
+      // Region-based country filtering for filter metadata
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+      if (regionCode === 'AU') {
+        approvedInstitutions = approvedInstitutions.filter(i => i.country === 'Australia');
+      }
 
       // Extract unique values for each filter category
       const countries = Array.from(new Set(approvedInstitutions.map(i => i.country).filter(Boolean)));
@@ -1825,6 +1833,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         i.publishStatus === 'published' && i.approvalStatus === 'approved' && i.isActive && 
         (shouldIncludePrivate || i.visibility !== 'private')
       );
+
+      // Region-based country filtering: AU region shows only Australian institutions
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+      if (regionCode === 'AU') {
+        institutions = institutions.filter(i => i.country === 'Australia');
+      }
 
       // Search filter (name, description, disciplines)
       if (search && typeof search === 'string') {
@@ -2647,6 +2662,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isUserAuthenticated = !!(req as any).supabaseUser;
       const shouldIncludePrivate = includePrivate === 'true' && isUserAuthenticated;
       
+      // Region-based country filtering: AU region shows only courses from Australian institutions
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+
       // Filter to only show published and approved courses from published, approved, and publicly visible institutions
       let courses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
@@ -2662,6 +2681,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                (shouldIncludePrivate || university?.visibility !== 'private');
         
         if (!courseIsPublic || !institutionIsPublic) return false;
+
+        // Region filter: AU shows only Australian institution courses
+        if (regionCode === 'AU' && university?.country !== 'Australia') return false;
         
         // Apply tag filter if provided
         if (courseIdsWithTags !== null && !courseIdsWithTags.has(course.id)) {
@@ -7521,13 +7543,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allInstitutions = await storage.getAllUniversities();
       const allCourses = await storage.getAllCourses();
       
-      const approvedInstitutions = allInstitutions.filter(i => i.approvalStatus === 'approved' && i.isActive);
+      // Region-based country filtering for stats
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+
+      let approvedInstitutions = allInstitutions.filter(i => i.approvalStatus === 'approved' && i.isActive);
+      if (regionCode === 'AU') {
+        approvedInstitutions = approvedInstitutions.filter(i => i.country === 'Australia');
+      }
+
+      const approvedInstitutionIds = new Set(approvedInstitutions.map(i => i.id));
       const approvedCourses = allCourses.filter(c => {
-        const institution = allInstitutions.find(i => i.id === c.universityId);
         return c.approvalStatus === 'approved' && 
                c.isActive && 
-               institution?.approvalStatus === 'approved' && 
-               institution?.isActive;
+               approvedInstitutionIds.has(c.universityId);
       });
       
       res.json({
@@ -17438,6 +17467,10 @@ Sitemap: ${baseUrl}/sitemap.xml
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 12, 20);
       
+      // Region-based filtering for featured content
+      const regionContext = getRegionContext(req);
+      const regionCode = (req.query.region as string)?.toUpperCase() || regionContext.region?.code;
+
       // Find the "featured" tag
       const [featuredTag] = await db.select().from(tags).where(eq(tags.slug, 'featured')).limit(1);
       
@@ -17457,16 +17490,21 @@ Sitemap: ${baseUrl}/sitemap.xml
       let featuredInstitutions: any[] = [];
       const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
       if (instIds.length > 0) {
+        const conditions = [
+          inArray(universities.id, instIds),
+          eq(universities.approvalStatus, 'approved'),
+          eq(universities.publishStatus, 'published'),
+          eq(universities.visibility, 'public'),
+          eq(universities.isActive, true),
+        ];
+        // AU region: only Australian institutions
+        if (regionCode === 'AU') {
+          conditions.push(eq(universities.country, 'Australia'));
+        }
         const rawInstitutions = await db
           .select()
           .from(universities)
-          .where(and(
-            inArray(universities.id, instIds),
-            eq(universities.approvalStatus, 'approved'),
-            eq(universities.publishStatus, 'published'),
-            eq(universities.visibility, 'public'),
-            eq(universities.isActive, true)
-          ))
+          .where(and(...conditions))
           .limit(limit);
         
         // Extract city/state from first campus address if available
@@ -17514,16 +17552,20 @@ Sitemap: ${baseUrl}/sitemap.xml
         // Fetch universities that are approved, published, and public
         let universityMap: Record<string, { name: string; logo: string | null }> = {};
         if (universityIds.length > 0) {
+          const uniConditions = [
+            inArray(universities.id, universityIds),
+            eq(universities.approvalStatus, 'approved'),
+            eq(universities.publishStatus, 'published'),
+            eq(universities.visibility, 'public'),
+            eq(universities.isActive, true),
+          ];
+          if (regionCode === 'AU') {
+            uniConditions.push(eq(universities.country, 'Australia'));
+          }
           const validUniversities = await db
             .select()
             .from(universities)
-            .where(and(
-              inArray(universities.id, universityIds),
-              eq(universities.approvalStatus, 'approved'),
-              eq(universities.publishStatus, 'published'),
-              eq(universities.visibility, 'public'),
-              eq(universities.isActive, true)
-            ));
+            .where(and(...uniConditions));
           
           universityMap = validUniversities.reduce((acc, uni) => {
             acc[uni.id] = { name: uni.name, logo: uni.logo };

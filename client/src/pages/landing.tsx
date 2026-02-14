@@ -13,6 +13,7 @@ import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
 import { NaturalLanguageSearch } from "@/components/natural-language-search";
 import { DisciplineCards } from "@/components/discipline-cards";
+import { useRegion } from "@/context/RegionContext";
 
 
 interface PlatformStats {
@@ -64,17 +65,19 @@ export default function Landing() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const openQuiz = () => window.dispatchEvent(new CustomEvent("open-course-quiz"));
+  const { region } = useRegion();
+  const regionQuery = region?.code ? { region: region.code } : {};
 
   const { data: stats } = useQuery<PlatformStats>({
-    queryKey: ["/api/platform/stats"],
+    queryKey: ["/api/platform/stats", regionQuery],
   });
 
   const { data: courses = [] } = useQuery<CourseWithUniversity[]>({
-    queryKey: ["/api/courses"],
+    queryKey: ["/api/courses", regionQuery],
   });
 
   const { data: institutions = [] } = useQuery<University[]>({
-    queryKey: ["/api/institutions"],
+    queryKey: ["/api/institutions", regionQuery],
   });
 
   // Fetch latest blog posts
@@ -91,7 +94,7 @@ export default function Landing() {
 
   // Fetch featured institutions and courses (12 institutions for 4x3 grid)
   const { data: featuredData } = useQuery<FeaturedData>({
-    queryKey: ["/api/public/featured"],
+    queryKey: ["/api/public/featured", regionQuery],
   });
 
   const featuredInstitutions = featuredData?.institutions || [];
@@ -225,10 +228,28 @@ export default function Landing() {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  // Region-specific content
+  const isAU = region?.code === 'AU';
+  const isBD = region?.code === 'BD';
+
+  const heroTypingWords = isAU
+    ? ["Dream Course in Australia", "Perfect Australian University", "Future Career in Australia"]
+    : ["Dream Course", "Perfect University", "Future Career"];
+
+  const heroSubtitle = isAU
+    ? "Your gateway to world-class Australian education — search courses, compare universities, and apply with confidence."
+    : "We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.";
+
   // SEO data
   const siteUrl = window.location.origin;
-  const pageTitle = "ANZ Global Education - Connect Universities and Students Worldwide";
-  const pageDescription = "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
+  const pageTitle = isAU
+    ? "ANZ Global Education - Study in Australia | Top Australian Universities & Courses"
+    : isBD
+      ? "ANZ Global Education - Study Abroad from Bangladesh | Universities & Courses Worldwide"
+      : "ANZ Global Education - Connect Universities and Students Worldwide";
+  const pageDescription = isAU
+    ? "Discover top Australian universities and courses. AI-powered course matching, scholarships, and expert visa guidance for international students."
+    : "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
   const ogImage = `${siteUrl}/og-image.png`;
 
   return (
@@ -289,13 +310,13 @@ export default function Landing() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
                 Find Your{" "}
                 <TypingText 
-                  words={["Dream Course", "Perfect University", "Future Career"]}
+                  words={heroTypingWords}
                   className="text-primary"
                 />
               </h1>
 
               <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
-                We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.
+                {heroSubtitle}
               </p>
 
               {/* Primary CTA */}

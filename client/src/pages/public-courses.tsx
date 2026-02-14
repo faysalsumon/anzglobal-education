@@ -56,6 +56,7 @@ import { InstitutionLogo } from "@/components/institution-logo";
 import { getCountryByName, getFlagUrl } from "@/lib/countries";
 import { Slider } from "@/components/ui/slider";
 import { TagMarquee } from "@/components/ui/tag-marquee";
+import { useRegion } from "@/context/RegionContext";
 
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
@@ -232,9 +233,11 @@ export default function PublicCourses() {
 
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
+  const { region } = useRegion();
+  const regionQuery = region?.code ? { region: region.code } : {};
   
   const { data: courses = [], isLoading } = useQuery<CourseWithDetails[]>({
-    queryKey: ["/api/courses"],
+    queryKey: ["/api/courses", regionQuery],
   });
 
   const { data: subDisciplines = [] } = useQuery<SubDiscipline[]>({

@@ -60,6 +60,7 @@ import { ListPagination } from "@/components/list-pagination";
 import { ScholarshipMarquee } from "@/components/ui/scholarship-marquee";
 import { getCountryCode, getFlagUrl } from "@/lib/country-flags";
 import type { Favorite, SubDiscipline } from "@shared/schema";
+import { useRegion } from "@/context/RegionContext";
 
 type CampusAddress = {
   name?: string;
@@ -156,6 +157,9 @@ export default function PublicInstitutions() {
   
   const { user, isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
+  const { region } = useRegion();
+  const regionParam = region?.code ? `region=${region.code}` : '';
+  const regionQuery = region?.code ? { region: region.code } : {};
 
   const {
     filters,
@@ -236,7 +240,7 @@ export default function PublicInstitutions() {
 
   // Fetch filter metadata
   const { data: filterMetadata } = useQuery<FilterMetadata>({
-    queryKey: ["/api/institutions/filter-metadata"],
+    queryKey: ["/api/institutions/filter-metadata", regionQuery],
   });
 
   // Fetch sub-disciplines when a discipline is selected
@@ -247,9 +251,12 @@ export default function PublicInstitutions() {
 
   // Build pagination params
   const paginationParams = `page=${currentPage}&pageSize=${pageSize}`;
-  const fullQueryString = queryParamsString 
+  const baseQueryString = queryParamsString 
     ? `${queryParamsString}&${paginationParams}` 
     : paginationParams;
+  const fullQueryString = regionParam
+    ? `${baseQueryString}&${regionParam}`
+    : baseQueryString;
 
   // Fetch institutions with filters and pagination
   const { data: institutionsData, isLoading } = useQuery<{
