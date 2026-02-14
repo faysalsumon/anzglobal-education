@@ -21,6 +21,17 @@ declare global {
 const REGION_COOKIE_NAME = "anz_region";
 const PATHWAY_COOKIE_NAME = "anz_pathway";
 const LOCALE_COOKIE_NAME = "anz_locale";
+const GEO_REDIRECT_OPTOUT_COOKIE = "anz_no_geo_redirect";
+
+const DOMAIN_MAP: Record<string, string> = {
+  "AU": "anzglobal.com.au",
+  "BD": "anzglobal.com.bd",
+};
+
+const COUNTRY_TO_DOMAIN: Record<string, string> = {
+  "AU": "AU",
+  "BD": "BD",
+};
 
 const TLD_PATTERNS: Record<string, string> = {
   ".com.au": "AU",
@@ -37,6 +48,56 @@ const TLD_PATTERNS: Record<string, string> = {
   ".com.np": "NP",
   ".com": "AU",
 };
+
+const PRODUCTION_DOMAINS: Record<string, string> = {
+  "anzglobal.com.au": "AU",
+  "anzglobal.com.bd": "BD",
+};
+
+export function geoRedirectMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (req.path.startsWith("/api/") || req.path.startsWith("/assets/") || req.path.startsWith("/favicon")) {
+      return next();
+    }
+
+    const cookies = req.cookies as Record<string, string> | undefined;
+    if (cookies?.[GEO_REDIRECT_OPTOUT_COOKIE]) {
+      return next();
+    }
+
+    const hostname = (req.hostname || req.headers.host?.split(":")[0] || "").toLowerCase();
+
+    const currentDomainRegion = PRODUCTION_DOMAINS[hostname];
+    if (!currentDomainRegion) {
+      return next();
+    }
+
+    const visitorCountry = (req.headers["cf-ipcountry"] as string || "").toUpperCase();
+    if (!visitorCountry || visitorCountry === "XX" || visitorCountry === "T1") {
+      return next();
+    }
+
+    const targetDomainRegion = COUNTRY_TO_DOMAIN[visitorCountry];
+    if (!targetDomainRegion || targetDomainRegion === currentDomainRegion) {
+      return next();
+    }
+
+    const targetDomain = DOMAIN_MAP[targetDomainRegion];
+    if (!targetDomain) {
+      return next();
+    }
+
+    const redirectUrl = `https://${targetDomain}${req.originalUrl}`;
+    return res.redirect(302, redirectUrl);
+  } catch (error) {
+    console.error("Geo-redirect middleware error:", error);
+    next();
+  }
+}
 
 function extractRegionFromDomain(hostname: string): string | null {
   const host = hostname.toLowerCase();

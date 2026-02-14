@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializePineconeIndex } from "./knowledge-base";
-import { regionDetectionMiddleware } from "./middleware/region-detection";
+import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
 import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
@@ -32,6 +32,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+app.use(geoRedirectMiddleware);
 app.use(regionDetectionMiddleware);
 
 // Add Supabase auth middleware to process JWT tokens
