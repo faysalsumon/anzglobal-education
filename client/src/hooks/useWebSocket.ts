@@ -7,31 +7,56 @@ type WebSocketMessage = {
   [key: string]: any;
 };
 
-export function useWebSocket() {
-  const { user } = useAuth();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const reconnectAttemptsRef = useRef(0);
+type Listener = (event: 'connection' | 'message' | 'auth') => void;
 
-  const connect = useCallback(async () => {
-    if (!user) return;
+class WebSocketManager {
+  private ws: WebSocket | null = null;
+  private _isConnected = false;
+  private _isAuthenticated = false;
+  private _lastMessage: WebSocketMessage | null = null;
+  private listeners: Set<Listener> = new Set();
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectAttempts = 0;
+  private currentUserId: string | null = null;
+  private connecting = false;
+
+  get isConnected() { return this._isConnected; }
+  get isAuthenticated() { return this._isAuthenticated; }
+  get lastMessage() { return this._lastMessage; }
+
+  subscribe(listener: Listener) {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+
+  private notify(event: 'connection' | 'message' | 'auth') {
+    this.listeners.forEach(l => l(event));
+  }
+
+  async connect(userId: string) {
+    if (this.currentUserId === userId && (this.ws?.readyState === WebSocket.OPEN || this.ws?.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    if (this.connecting) return;
+    this.connecting = true;
+
+    this.cleanupConnection();
+    this.currentUserId = userId;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
 
     try {
       const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+      this.ws = ws;
 
       ws.onopen = async () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        reconnectAttemptsRef.current = 0;
-        
-        // Send Supabase auth token as first message
+        this._isConnected = true;
+        this.reconnectAttempts = 0;
+        this.connecting = false;
+        this.notify('connection');
+
         try {
           if (supabase) {
             const { data: { session } } = await supabase.auth.getSession();
@@ -50,74 +75,124 @@ export function useWebSocket() {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          
-          // Handle auth success/failure
+
           if (message.type === 'auth_success') {
-            setIsAuthenticated(true);
+            this._isAuthenticated = true;
             console.log('WebSocket authenticated successfully');
+            this.notify('auth');
           } else if (message.type === 'auth_failed') {
-            setIsAuthenticated(false);
+            this._isAuthenticated = false;
             console.error('WebSocket authentication failed:', message.message);
+            this.notify('auth');
           }
-          
-          setLastMessage(message);
+
+          this._lastMessage = message;
+          this.notify('message');
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error);
         }
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.onerror = () => {
+        this.connecting = false;
       };
 
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
-        setIsAuthenticated(false);
+        this._isConnected = false;
+        this._isAuthenticated = false;
+        this.connecting = false;
+        this.notify('connection');
 
-        // Attempt to reconnect with exponential backoff
-        if (reconnectAttemptsRef.current < 5) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current++;
-            connect();
+        if (this.currentUserId && this.reconnectAttempts < 5) {
+          const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+          this.reconnectTimeout = setTimeout(() => {
+            this.reconnectAttempts++;
+            if (this.currentUserId) {
+              this.connect(this.currentUserId);
+            }
           }, delay);
         }
       };
     } catch (error) {
+      this.connecting = false;
       console.error('Failed to create WebSocket connection:', error);
+    }
+  }
+
+  private cleanupConnection() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    if (this.ws) {
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      this.ws.onopen = null;
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close();
+      }
+      this.ws = null;
+    }
+  }
+
+  disconnect() {
+    this.cleanupConnection();
+    this.currentUserId = null;
+    this._isConnected = false;
+    this._isAuthenticated = false;
+    this.reconnectAttempts = 0;
+    this.notify('connection');
+  }
+
+  send(message: WebSocketMessage) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN && this._isAuthenticated) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+}
+
+const wsManager = new WebSocketManager();
+
+export function useWebSocket() {
+  const { user } = useAuth();
+  const userIdRef = useRef<string | null>(null);
+  const [isConnected, setIsConnected] = useState(wsManager.isConnected);
+  const [isAuthenticated, setIsAuthenticated] = useState(wsManager.isAuthenticated);
+  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(wsManager.lastMessage);
+
+  useEffect(() => {
+    const unsub = wsManager.subscribe((event) => {
+      if (event === 'connection') {
+        setIsConnected(wsManager.isConnected);
+        setIsAuthenticated(wsManager.isAuthenticated);
+      } else if (event === 'auth') {
+        setIsAuthenticated(wsManager.isAuthenticated);
+      } else if (event === 'message') {
+        setLastMessage(wsManager.lastMessage);
+      }
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const userId = (user as any)?.claims?.sub || (user as any)?.id;
+    if (userId && userId !== userIdRef.current) {
+      userIdRef.current = userId;
+      wsManager.connect(userId);
+    } else if (!userId && userIdRef.current) {
+      userIdRef.current = null;
+      wsManager.disconnect();
     }
   }, [user]);
 
   const sendMessage = useCallback((message: WebSocketMessage) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && isAuthenticated) {
-      wsRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn('WebSocket is not connected or not authenticated');
-    }
-  }, [isAuthenticated]);
-
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    setIsConnected(false);
-    setIsAuthenticated(false);
+    wsManager.send(message);
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      connect();
-    }
-
-    return () => {
-      disconnect();
-    };
-  }, [user, connect, disconnect]);
+  const disconnect = useCallback(() => {
+    wsManager.disconnect();
+  }, []);
 
   return {
     isConnected,
