@@ -32,7 +32,6 @@ import {
   MapPin,
   LayoutDashboard,
   UserCircle,
-  MessageCircle,
   Tag,
   UserCog,
   Bot,
@@ -90,13 +89,6 @@ export function AdminMegaSidebar({
   const canSeeFeature = (feature: Parameters<typeof isAdminFeatureVisible>[0]) =>
     isAdminFeatureVisible(feature, adminRegionCode, isGlobalScope);
   
-  // Fetch unread message count
-  const { data: unreadData } = useQuery<{ unreadCount: number }>({
-    queryKey: ["/api/conversations/unread-count"],
-    refetchInterval: 30000,
-  });
-  const unreadCount = unreadData?.unreadCount || 0;
-
   const navConfig: NavDomain[] = [
     {
       id: "crm",
@@ -313,33 +305,7 @@ export function AdminMegaSidebar({
                 </Tooltip>
               )}
 
-              {/* Messages Button */}
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={activeTab === "messages" ? "secondary" : "ghost"}
-                    size="icon"
-                    className="w-12 h-12 rounded-xl transition-all relative"
-                    data-testid="button-sidebar-messages"
-                    onClick={() => onTabChange("messages")}
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 text-xs"
-                      >
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  Messages {unreadCount > 0 && `(${unreadCount} unread)`}
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Profile Button - After Messages */}
+              {/* Profile Button */}
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button

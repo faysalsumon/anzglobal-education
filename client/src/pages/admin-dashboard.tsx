@@ -75,7 +75,6 @@ import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
-import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { InstitutionEditor } from "@/components/institution-editor";
 import { CourseEditor } from "@/components/course-editor";
 import { AdminTagsPanel } from "@/components/admin-tags-panel";
@@ -3339,10 +3338,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Messages Tab */}
-        {activeTab === "messages" && (
-          <AdminMessagesTab />
-        )}
 
         {/* Partner API Keys Tab - Platform Admin/CTO Only */}
         {activeTab === "api-keys" && hasFullAdminAccess && (

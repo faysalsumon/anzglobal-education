@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Home } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
+import { FloatingChatBar } from "@/components/floating-chat-bar";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AdminLayoutProps {
@@ -104,6 +105,8 @@ export function AdminLayout({
           {children}
         </main>
       </div>
+
+      <FloatingChatBar />
     </div>
   );
 }
