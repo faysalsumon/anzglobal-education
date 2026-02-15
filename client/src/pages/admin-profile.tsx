@@ -16,9 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
-import { Loader2, Upload, Check, Shield, Eye, EyeOff, Home, Menu, X, MessageCircle, LogOut } from "lucide-react";
+import { Loader2, Upload, Check, Shield, Eye, EyeOff, Home, Menu, X, LogOut } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { Badge } from "@/components/ui/badge";
 
 interface AdminUser {
   id: string;
@@ -41,6 +42,9 @@ interface AdminUser {
   emergencyEmail: string | null;
   emergencyRelationship: string | null;
   profileImageUrl: string | null;
+  availabilityStatus: string | null;
+  customStatusText: string | null;
+  lastStatusUpdate: string | null;
   userType: string;
   role: string | null;
   roleId: string | null;
@@ -94,6 +98,26 @@ const emergencyContactFormSchema = z.object({
 });
 
 type EmergencyContactFormValues = z.infer<typeof emergencyContactFormSchema>;
+
+const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
+  available: { color: 'bg-green-500', label: 'Available' },
+  away: { color: 'bg-yellow-500', label: 'Away' },
+  busy: { color: 'bg-red-500', label: 'Busy' },
+  do_not_disturb: { color: 'bg-red-600', label: 'Do Not Disturb' },
+  invisible: { color: 'bg-gray-400', label: 'Invisible' },
+};
+
+function getStatusLabel(status: string): string {
+  return STATUS_CONFIG[status]?.label || 'Available';
+}
+
+function StatusDot({ status, size = 'sm' }: { status: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = { sm: 'h-2.5 w-2.5', md: 'h-3 w-3', lg: 'h-3.5 w-3.5' };
+  const color = STATUS_CONFIG[status]?.color || STATUS_CONFIG.available.color;
+  return (
+    <span className={`${sizeClasses[size]} ${color} rounded-full inline-block flex-shrink-0`} />
+  );
+}
 
 export default function AdminProfile() {
   const { toast } = useToast();
@@ -318,6 +342,37 @@ export default function AdminProfile() {
     },
   });
 
+  // Status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async (data: { availabilityStatus?: string; customStatusText?: string }) => {
+      return await apiRequest("PUT", "/api/admin/status", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/messaging/team"] });
+      toast({
+        title: "Status updated",
+        description: "Your availability status has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const [customStatusInput, setCustomStatusInput] = useState("");
+
+  useEffect(() => {
+    if (profile?.customStatusText) {
+      setCustomStatusInput(profile.customStatusText);
+    }
+  }, [profile?.customStatusText]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -504,21 +559,6 @@ export default function AdminProfile() {
             {/* Platform-wide Notifications, Messages, Profile, and Logout */}
             <div className="flex items-center gap-2">
               <NotificationBell />
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Link href="/admin/dashboard#messages">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="relative"
-                      data-testid="button-messages"
-                    >
-                      <MessageCircle className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>Messages</TooltipContent>
-              </Tooltip>
               
               {/* Profile Avatar */}
               <Tooltip delayDuration={0}>
@@ -577,6 +617,133 @@ export default function AdminProfile() {
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
+            {/* Availability Status Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Availability Status</CardTitle>
+                <CardDescription>
+                  Let your team know your current availability
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Current Status Display */}
+                <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
+                  <StatusDot status={profile?.availabilityStatus || 'available'} size="lg" />
+                  <div>
+                    <p className="font-medium text-sm" data-testid="text-current-status">
+                      {getStatusLabel(profile?.availabilityStatus || 'available')}
+                    </p>
+                    {profile?.customStatusText && (
+                      <p className="text-xs text-muted-foreground" data-testid="text-custom-status">
+                        {profile.customStatusText}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Default Status Options */}
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Default</p>
+                  {([
+                    { value: 'available', label: 'Available', description: 'You are online and available to chat.' },
+                    { value: 'away', label: 'Away', description: 'Let others know you are on a break. You will still receive notifications.' },
+                    { value: 'busy', label: 'Busy', description: 'You will not receive any notification sounds.' },
+                    { value: 'invisible', label: 'Invisible', description: 'Your status will appear as offline, but you will receive notifications.' },
+                    { value: 'do_not_disturb', label: 'Do Not Disturb', description: "You won't receive any notifications." },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.value}
+                      className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors hover-elevate ${
+                        (profile?.availabilityStatus || 'available') === option.value 
+                          ? 'bg-muted' 
+                          : ''
+                      }`}
+                      onClick={() => updateStatusMutation.mutate({ availabilityStatus: option.value })}
+                      disabled={updateStatusMutation.isPending}
+                      data-testid={`button-status-${option.value}`}
+                    >
+                      <StatusDot status={option.value} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.description}</p>
+                      </div>
+                      {(profile?.availabilityStatus || 'available') === option.value && (
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Status */}
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-sm font-medium text-muted-foreground">Custom Status</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., In Client Meeting, At Branch..."
+                      value={customStatusInput}
+                      onChange={(e) => setCustomStatusInput(e.target.value)}
+                      maxLength={100}
+                      className="flex-1"
+                      data-testid="input-custom-status"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        updateStatusMutation.mutate({ customStatusText: customStatusInput });
+                      }}
+                      disabled={updateStatusMutation.isPending || customStatusInput === (profile?.customStatusText || '')}
+                      data-testid="button-save-custom-status"
+                    >
+                      {updateStatusMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  {/* Preset Custom Statuses */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      'In Client Meeting',
+                      'At Branch',
+                      'Campus Visit',
+                      'On Leave',
+                      'Working Remotely',
+                      'Available for Collaboration',
+                    ].map((preset) => (
+                      <Badge
+                        key={preset}
+                        variant="outline"
+                        className="cursor-pointer text-xs"
+                        onClick={() => {
+                          setCustomStatusInput(preset);
+                          updateStatusMutation.mutate({ customStatusText: preset });
+                        }}
+                        data-testid={`badge-preset-status-${preset.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {preset}
+                      </Badge>
+                    ))}
+                  </div>
+                  {profile?.customStatusText && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => {
+                        setCustomStatusInput('');
+                        updateStatusMutation.mutate({ customStatusText: '' });
+                      }}
+                      disabled={updateStatusMutation.isPending}
+                      data-testid="button-clear-custom-status"
+                    >
+                      Clear custom status
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Profile Photo Card */}
             <Card>
           <CardHeader>

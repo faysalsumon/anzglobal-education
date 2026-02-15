@@ -19,6 +19,15 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Team member availability status
+export const availabilityStatusEnum = pgEnum('availability_status', [
+  'available',
+  'away',
+  'busy',
+  'do_not_disturb',
+  'invisible',
+]);
+
 // Discipline enum for course categorization
 export const disciplineEnum = pgEnum('discipline', [
   'Accounting, Business & Finance',
@@ -507,6 +516,9 @@ export const users = pgTable("users", {
   profileId: varchar("profile_id"), // References profiles table for CRUD permission bundles
   regionId: varchar("region_id"), // Assigned region for staff (used with branchId for hierarchy)
   branchId: varchar("branch_id"), // Assigned branch/office location for staff
+  availabilityStatus: availabilityStatusEnum("availability_status").default("available"),
+  customStatusText: varchar("custom_status_text", { length: 100 }),
+  lastStatusUpdate: timestamp("last_status_update"),
   isActive: boolean("is_active").default(true),
   lastLogin: timestamp("last_login"),
   requiresPasswordReset: boolean("requires_password_reset").default(false), // Force password change on first login

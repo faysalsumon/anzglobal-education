@@ -287,7 +287,7 @@ export function AdminMegaSidebar({
                 );
               })}
 
-              {/* Separator before Messages and Profile */}
+              {/* Separator before Profile */}
               <div className="w-8 h-px bg-border my-1" />
 
               {adminRegionCode && !isGlobalScope && (
@@ -305,14 +305,14 @@ export function AdminMegaSidebar({
                 </Tooltip>
               )}
 
-              {/* Profile Button */}
+              {/* Profile Button with Status Dot */}
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      "w-12 h-12 rounded-xl transition-all",
+                      "w-12 h-12 rounded-xl transition-all relative",
                       isOnProfilePage && "text-primary bg-primary/10 ring-2 ring-primary/30"
                     )}
                     data-testid="button-admin-profile"
@@ -320,11 +320,22 @@ export function AdminMegaSidebar({
                   >
                     <Link href="/admin/profile">
                       <UserCircle className="h-5 w-5" />
+                      <span
+                        className={cn(
+                          "absolute bottom-2 right-2 h-2.5 w-2.5 rounded-full border-2 border-background",
+                          user?.availabilityStatus === 'away' && 'bg-yellow-500',
+                          user?.availabilityStatus === 'busy' && 'bg-red-500',
+                          user?.availabilityStatus === 'do_not_disturb' && 'bg-red-600',
+                          user?.availabilityStatus === 'invisible' && 'bg-gray-400',
+                          (!user?.availabilityStatus || user?.availabilityStatus === 'available') && 'bg-green-500'
+                        )}
+                        data-testid="status-dot-sidebar"
+                      />
                     </Link>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  My Profile
+                  My Profile {user?.customStatusText ? `- ${user.customStatusText}` : ''}
                 </TooltipContent>
               </Tooltip>
             </div>

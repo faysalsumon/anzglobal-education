@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
-import { wsClients, broadcastDocumentEvent } from "./websocket-clients";
+import { wsClients, broadcastDocumentEvent, broadcastToUsers } from "./websocket-clients";
 import { db } from "./db";
 import { isAuthenticated, getAuthenticatedUserId, checkInstitutionAccess } from "./supabase-middleware";
 import { getRegionContext } from "./middleware/region-detection";
@@ -3687,6 +3687,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating admin profile:", error);
       res.status(400).json({ message: error.message || "Failed to update admin profile" });
+    }
+  });
+
+  // GET /api/admin/status - Get current user's availability status
+  app.get("/api/admin/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json({
+        availabilityStatus: user.availabilityStatus || 'available',
+        customStatusText: user.customStatusText || null,
+        lastStatusUpdate: user.lastStatusUpdate || null,
+      });
+    } catch (error) {
+      console.error("Error fetching status:", error);
+      res.status(500).json({ message: "Failed to fetch status" });
+    }
+  });
+
+  // PUT /api/admin/status - Update current user's availability status
+  app.put("/api/admin/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const { availabilityStatus, customStatusText } = req.body;
+
+      const validStatuses = ['available', 'away', 'busy', 'do_not_disturb', 'invisible'];
+      if (availabilityStatus && !validStatuses.includes(availabilityStatus)) {
+        return res.status(400).json({ message: "Invalid availability status" });
+      }
+
+      const updates: any = { lastStatusUpdate: new Date() };
+      if (availabilityStatus !== undefined) {
+        updates.availabilityStatus = availabilityStatus;
+      }
+      if (customStatusText !== undefined) {
+        updates.customStatusText = customStatusText || null;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updates);
+
+      // Broadcast status change to all connected admin users via WebSocket
+      const allConnectedUserIds = Array.from(wsClients.keys());
+      const statusUpdate = {
+        type: 'status_change',
+        userId,
+        availabilityStatus: updatedUser.availabilityStatus || 'available',
+        customStatusText: updatedUser.customStatusText || null,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+      };
+      broadcastToUsers(allConnectedUserIds, statusUpdate);
+
+      res.json({
+        availabilityStatus: updatedUser.availabilityStatus || 'available',
+        customStatusText: updatedUser.customStatusText || null,
+        lastStatusUpdate: updatedUser.lastStatusUpdate,
+      });
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      res.status(400).json({ message: error.message || "Failed to update status" });
+    }
+  });
+
+  // GET /api/admin/team-status - Get all team members' availability statuses
+  app.get("/api/admin/team-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+      if (!['admin', 'platform_admin'].includes(currentUser.userType)) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const teamStatuses = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+          availabilityStatus: users.availabilityStatus,
+          customStatusText: users.customStatusText,
+          lastStatusUpdate: users.lastStatusUpdate,
+        })
+        .from(users)
+        .where(
+          and(
+            or(
+              eq(users.userType, 'admin'),
+              eq(users.userType, 'platform_admin')
+            ),
+            eq(users.isActive, true)
+          )
+        );
+
+      res.json(teamStatuses);
+    } catch (error) {
+      console.error("Error fetching team statuses:", error);
+      res.status(500).json({ message: "Failed to fetch team statuses" });
     }
   });
 
@@ -16435,6 +16540,8 @@ Sitemap: ${baseUrl}/sitemap.xml
           profileImageUrl: users.profileImageUrl,
           isActive: users.isActive,
           roleName: roles.name,
+          availabilityStatus: users.availabilityStatus,
+          customStatusText: users.customStatusText,
         })
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
@@ -16470,6 +16577,8 @@ Sitemap: ${baseUrl}/sitemap.xml
           profileImageUrl: adminUser.profileImageUrl,
           isActive: adminUser.isActive,
           role: displayRole,
+          availabilityStatus: adminUser.availabilityStatus || 'available',
+          customStatusText: adminUser.customStatusText || null,
         };
       });
       

@@ -59,7 +59,22 @@ type AdminTeamMember = {
   role: string | null;
   profileImageUrl: string | null;
   isActive: boolean;
+  availabilityStatus: string | null;
+  customStatusText: string | null;
 };
+
+const STATUS_COLORS: Record<string, string> = {
+  available: 'bg-green-500',
+  away: 'bg-yellow-500',
+  busy: 'bg-red-500',
+  do_not_disturb: 'bg-red-600',
+  invisible: 'bg-gray-400',
+};
+
+function ChatStatusDot({ status, className = '' }: { status: string | null; className?: string }) {
+  const color = STATUS_COLORS[status || 'available'] || STATUS_COLORS.available;
+  return <span className={`h-2.5 w-2.5 rounded-full inline-block flex-shrink-0 ${color} ${className}`} />;
+}
 
 type ChatWindow = {
   conversationId: string;
@@ -143,6 +158,10 @@ export function FloatingChatBar() {
             queryKey: ["/api/conversations", convId, "messages"],
           });
         }
+      }
+      if (lastMessage.type === "status_update" || lastMessage.type === "status_change") {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/messaging/team"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       }
     }
   }, [lastMessage]);
@@ -342,18 +361,21 @@ export function FloatingChatBar() {
                         onClick={() => openChatWindow(conv)}
                         data-testid={`panel-conversation-${conv.id}`}
                       >
-                        <Avatar className="h-8 w-8">
-                          {conv.otherParticipant?.profileImageUrl && (
-                            <AvatarImage src={conv.otherParticipant.profileImageUrl} />
-                          )}
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {getInitials(
-                              conv.otherParticipant?.firstName,
-                              conv.otherParticipant?.lastName,
-                              conv.otherParticipant?.email
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            {conv.otherParticipant?.profileImageUrl && (
+                              <AvatarImage src={conv.otherParticipant.profileImageUrl} />
                             )}
-                          </AvatarFallback>
-                        </Avatar>
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {getInitials(
+                                conv.otherParticipant?.firstName,
+                                conv.otherParticipant?.lastName,
+                                conv.otherParticipant?.email
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${STATUS_COLORS[conv.otherParticipant?.availabilityStatus || 'available'] || STATUS_COLORS.available}`} />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
                             <span
@@ -394,19 +416,27 @@ export function FloatingChatBar() {
                         onClick={() => openChatWindow(undefined, member)}
                         data-testid={`panel-member-${member.id}`}
                       >
-                        <Avatar className="h-8 w-8">
-                          {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} />}
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {getInitials(member.firstName, member.lastName, member.email)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            {member.profileImageUrl && <AvatarImage src={member.profileImageUrl} />}
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {getInitials(member.firstName, member.lastName, member.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${STATUS_COLORS[member.availabilityStatus || 'available'] || STATUS_COLORS.available}`} />
+                        </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-medium truncate block">
                             {member.firstName} {member.lastName}
                           </span>
-                          <Badge variant="secondary" className="text-xs">
-                            {formatRole(member.role)}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-xs">
+                              {formatRole(member.role)}
+                            </Badge>
+                            {member.customStatusText && (
+                              <span className="text-xs text-muted-foreground truncate">{member.customStatusText}</span>
+                            )}
+                          </div>
                         </div>
                         <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
                       </div>
