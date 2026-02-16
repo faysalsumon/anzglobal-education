@@ -41,7 +41,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Student Profile / Universal Smart Application Form**: Accordion-based profile with 10 sections, dynamic completion badges, progress bar, conditional fields, and field-level verification with change history and admin approval.
 - **Public Pages**: Landing page, course/institution detail pages, and lead generation forms.
 - **Dashboards**: CTO, Student, University, and Platform Admin dashboards with consistent UI/UX.
-- **Communication**: Facebook-style notifications and WhatsApp-style real-time chat.
+- **Communication**: Facebook-style notifications, WhatsApp-style real-time chat with file sharing (images, documents, drag-and-drop), and Zoho Cliq-style team availability status system.
 - **Document & Data Management**: Student document management, enterprise CSV bulk import, and AI data extraction.
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval.
 - **AI Course Thumbnail Generation**: Automatic thumbnail creation using OpenAI DALL-E 3 with async processing.

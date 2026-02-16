@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +22,13 @@ import {
   Plus,
   ChevronUp,
   ChevronDown,
+  Paperclip,
+  FileText,
+  FileSpreadsheet,
+  File,
+  Download,
+  Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 
 type Message = {
@@ -29,6 +37,10 @@ type Message = {
   senderId: string;
   content: string;
   isRead: boolean;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
   createdAt: Date;
 };
 
@@ -45,6 +57,8 @@ type Conversation = {
     userType: string;
     role?: string;
     profileImageUrl?: string;
+    availabilityStatus?: string | null;
+    customStatusText?: string | null;
   } | null;
   unreadCount: number;
   lastMessage: Message | null;
@@ -511,6 +525,74 @@ export function FloatingChatBar() {
   );
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileIcon(fileType: string | null) {
+  if (!fileType) return File;
+  if (fileType.startsWith('image/')) return ImageIcon;
+  if (fileType === 'application/pdf') return FileText;
+  if (fileType.includes('spreadsheet') || fileType.includes('excel') || fileType.includes('csv')) return FileSpreadsheet;
+  if (fileType.includes('word') || fileType.includes('document')) return FileText;
+  return File;
+}
+
+function isImageType(fileType: string | null): boolean {
+  return !!fileType && fileType.startsWith('image/');
+}
+
+function FileMessageContent({ msg, isMine }: { msg: Message; isMine: boolean }) {
+  if (!msg.fileUrl) return null;
+
+  if (isImageType(msg.fileType)) {
+    return (
+      <div className="mt-1">
+        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-file-${msg.id}`}>
+          <img
+            src={msg.fileUrl}
+            alt={msg.fileName || 'Image'}
+            className="max-w-full max-h-48 rounded-md object-cover cursor-pointer"
+            loading="lazy"
+            data-testid={`img-file-${msg.id}`}
+          />
+        </a>
+        {msg.fileName && (
+          <p className={`text-xs mt-1 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+            {msg.fileName} {msg.fileSize ? `(${formatFileSize(msg.fileSize)})` : ''}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const IconComponent = getFileIcon(msg.fileType);
+  return (
+    <a
+      href={msg.fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex items-center gap-2 mt-1 p-2 rounded-md border ${
+        isMine ? 'border-primary-foreground/20 hover:bg-primary-foreground/10' : 'border-border hover:bg-muted/80'
+      } transition-colors`}
+      data-testid={`link-file-${msg.id}`}
+    >
+      <IconComponent className={`h-8 w-8 shrink-0 ${isMine ? 'text-primary-foreground/80' : 'text-muted-foreground'}`} />
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-medium truncate ${isMine ? 'text-primary-foreground' : ''}`}>
+          {msg.fileName || 'File'}
+        </p>
+        <p className={`text-xs ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+          {msg.fileSize ? formatFileSize(msg.fileSize) : ''}
+        </p>
+      </div>
+      <Download className={`h-4 w-4 shrink-0 ${isMine ? 'text-primary-foreground/80' : 'text-muted-foreground'}`} />
+    </a>
+  );
+}
+
 function MiniChatWindow({
   chatWindow,
   currentUserId,
@@ -536,8 +618,13 @@ function MiniChatWindow({
   formatRole: (r?: string | null) => string;
   lastMessage: any;
 }) {
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: messages } = useQuery<Message[]>({
     queryKey: ["/api/conversations", chatWindow.conversationId, "messages"],
@@ -553,6 +640,69 @@ function MiniChatWindow({
       queryClient.invalidateQueries({ queryKey: ["/api/conversations/unread-count"] });
     },
   });
+
+  const allowedTypes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain', 'text/csv',
+  ];
+
+  const handleFileUpload = useCallback(async (file: globalThis.File) => {
+    if (!file) return;
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({ title: "File too large", description: "Maximum file size is 10 MB.", variant: "destructive" });
+      return;
+    }
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: "Unsupported file type", description: "Supported: images, PDF, DOC, XLS, TXT, CSV.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await apiRequest("POST", `/api/conversations/${chatWindow.conversationId}/upload`, formData);
+      const newMsg = await response.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", chatWindow.conversationId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      toast({ title: "File sent", description: file.name });
+    } catch (err: any) {
+      console.error("File upload failed:", err);
+      toast({ title: "Upload failed", description: err?.message || "Could not send the file. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [chatWindow.conversationId, toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, [handleFileUpload]);
 
   useEffect(() => {
     if (!chatWindow.isMinimized) {
@@ -642,69 +792,114 @@ function MiniChatWindow({
 
       {!chatWindow.isMinimized && (
         <>
-          <ScrollArea className="flex-1 p-3">
-            <div className="space-y-3">
-              {messages && messages.length > 0 ? (
-                messages.map((msg) => {
-                  const isMine = msg.senderId === currentUserId;
-                  const senderName = isMine
-                    ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "You"
-                    : chatWindow.recipientName;
-                  const senderInitials = isMine
-                    ? getInitials(user?.firstName, user?.lastName, user?.email)
-                    : getInitials(
-                        chatWindow.recipientName.split(" ")[0],
-                        chatWindow.recipientName.split(" ")[1]
-                      );
-                  const senderImage = isMine ? user?.profileImageUrl : chatWindow.recipientImage;
+          <div
+            ref={dropZoneRef}
+            className={`flex-1 relative ${isDragging ? '' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {isDragging && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-md m-1" data-testid="drop-zone-overlay">
+                <div className="flex flex-col items-center gap-1">
+                  <Paperclip className="h-8 w-8 text-primary" />
+                  <p className="text-sm font-medium text-primary">Drop file here</p>
+                </div>
+              </div>
+            )}
+            <ScrollArea className="h-full p-3">
+              <div className="space-y-3">
+                {messages && messages.length > 0 ? (
+                  messages.map((msg) => {
+                    const isMine = msg.senderId === currentUserId;
+                    const senderName = isMine
+                      ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "You"
+                      : chatWindow.recipientName;
+                    const senderInitials = isMine
+                      ? getInitials(user?.firstName, user?.lastName, user?.email)
+                      : getInitials(
+                          chatWindow.recipientName.split(" ")[0],
+                          chatWindow.recipientName.split(" ")[1]
+                        );
+                    const senderImage = isMine ? user?.profileImageUrl : chatWindow.recipientImage;
 
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}
-                      data-testid={`message-${msg.id}`}
-                    >
-                      <Avatar className="h-6 w-6 shrink-0">
-                        {senderImage && <AvatarImage src={senderImage} />}
-                        <AvatarFallback
-                          className={`text-xs ${isMine ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20"}`}
-                        >
-                          {senderInitials}
-                        </AvatarFallback>
-                      </Avatar>
+                    return (
                       <div
-                        className={`flex flex-col max-w-[75%] ${isMine ? "items-end" : "items-start"}`}
+                        key={msg.id}
+                        className={`flex gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                        data-testid={`message-${msg.id}`}
                       >
+                        <Avatar className="h-6 w-6 shrink-0">
+                          {senderImage && <AvatarImage src={senderImage} />}
+                          <AvatarFallback
+                            className={`text-xs ${isMine ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20"}`}
+                          >
+                            {senderInitials}
+                          </AvatarFallback>
+                        </Avatar>
                         <div
-                          className={`flex items-center gap-1 mb-0.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                          className={`flex flex-col max-w-[75%] ${isMine ? "items-end" : "items-start"}`}
                         >
-                          <span className="text-xs font-medium">{senderName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <div
-                          className={`rounded-lg px-3 py-1.5 ${
-                            isMine ? "bg-primary text-primary-foreground" : "bg-muted"
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <div
+                            className={`flex items-center gap-1 mb-0.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}
+                          >
+                            <span className="text-xs font-medium">{senderName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <div
+                            className={`rounded-lg px-3 py-1.5 ${
+                              isMine ? "bg-primary text-primary-foreground" : "bg-muted"
+                            }`}
+                          >
+                            {!msg.fileUrl && (
+                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            )}
+                            {msg.fileUrl && (
+                              <FileMessageContent msg={msg} isMine={isMine} />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <MessageCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-xs text-muted-foreground">No messages yet. Say hello!</p>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <MessageCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground">No messages yet. Say hello!</p>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+          </div>
 
-          <div className="p-2 border-t flex items-center gap-2">
+          <div className="p-2 border-t flex items-center gap-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
+              }}
+              data-testid={`input-file-${chatWindow.conversationId}`}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              data-testid={`button-attach-${chatWindow.conversationId}`}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </Button>
             <Input
               ref={inputRef}
               value={messageInput}
@@ -717,12 +912,13 @@ function MiniChatWindow({
               }}
               placeholder="Type a message..."
               className="flex-1"
+              disabled={isUploading}
               data-testid={`input-message-${chatWindow.conversationId}`}
             />
             <Button
               size="icon"
               onClick={onSend}
-              disabled={!messageInput.trim()}
+              disabled={!messageInput.trim() || isUploading}
               data-testid={`button-send-${chatWindow.conversationId}`}
             >
               <Send className="h-4 w-4" />

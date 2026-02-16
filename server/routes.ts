@@ -12136,6 +12136,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Upload a file attachment for chat messages
+  app.post("/api/conversations/:id/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const conversationId = req.params.id;
+
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      if (
+        conversation[0].participant1Id !== userId &&
+        conversation[0].participant2Id !== userId
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.file;
+      const ext = file.originalname.split('.').pop()?.toLowerCase() || '';
+      const uniqueName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+      const storagePath = `.private/chat-files/${conversationId}/${uniqueName}`;
+
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const uploadResult = await storageClient.uploadFromBytes(storagePath, file.buffer);
+      if (!uploadResult.ok) {
+        console.error("Object storage upload failed:", uploadResult.error);
+        return res.status(500).json({ message: "File upload failed" });
+      }
+
+      const fileUrl = `/api/chat-files/${conversationId}/${uniqueName}`;
+
+      const recipientId = conversation[0].participant1Id === userId
+        ? conversation[0].participant2Id
+        : conversation[0].participant1Id;
+
+      const content = req.body.content?.trim() || `Shared a file: ${file.originalname}`;
+
+      const newMessage = await db.insert(messages).values({
+        conversationId,
+        senderId: userId,
+        content,
+        isRead: false,
+        fileUrl,
+        fileName: file.originalname,
+        fileSize: file.size,
+        fileType: file.mimetype,
+      }).returning();
+
+      await db.update(conversations)
+        .set({ lastMessageAt: new Date() })
+        .where(eq(conversations.id, conversationId));
+
+      const senderUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const senderName = senderUser[0] ? getUserDisplayName(senderUser[0]) : 'Someone';
+
+      await db.insert(notifications).values({
+        userId: recipientId,
+        type: 'new_message',
+        title: `${senderName} shared a file`,
+        message: file.originalname,
+        link: '/admin/dashboard',
+        metadata: { conversationId, messageId: newMessage[0].id, senderId: userId },
+      });
+
+      const recipientSocket = wsClients.get(recipientId);
+      if (recipientSocket && recipientSocket.readyState === WebSocket.OPEN) {
+        recipientSocket.send(JSON.stringify({
+          type: 'new_message',
+          message: newMessage[0],
+          conversationId,
+        }));
+      }
+
+      res.json(newMessage[0]);
+    } catch (error: any) {
+      console.error("Error uploading chat file:", error);
+      res.status(500).json({ message: error.message || "File upload failed" });
+    }
+  });
+
+  // Serve chat file attachments from private object storage
+  app.get("/api/chat-files/:conversationId/:filename", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const { conversationId, filename } = req.params;
+
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (
+        conversation.length === 0 ||
+        (conversation[0].participant1Id !== userId &&
+          conversation[0].participant2Id !== userId)
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const storagePath = `.private/chat-files/${conversationId}/${filename}`;
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const result = await storageClient.downloadAsBytes(storagePath);
+
+      if (!result.ok || !result.value) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'gif': 'image/gif', 'webp': 'image/webp',
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt': 'text/plain', 'csv': 'text/csv',
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.send(Buffer.from(result.value));
+    } catch (error) {
+      console.error("Error serving chat file:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
   // Mark message as read
   app.patch("/api/messages/:id/read", isAuthenticated, async (req, res) => {
     try {

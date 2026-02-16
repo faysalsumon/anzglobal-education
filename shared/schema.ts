@@ -2645,6 +2645,10 @@ export const messages = pgTable("messages", {
   senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   isRead: boolean("is_read").default(false),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("conversation_idx").on(table.conversationId),
