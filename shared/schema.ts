@@ -718,6 +718,7 @@ export const universities = pgTable("universities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  slug: varchar("slug", { length: 255 }).unique(),
   description: text("description"),
   logo: text("logo"),
   website: text("website"),
@@ -977,6 +978,7 @@ export const courses = pgTable("courses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   universityId: varchar("university_id").notNull().references(() => universities.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  slug: varchar("slug", { length: 255 }).unique(),
   description: text("description"),
   subject: text("subject").notNull(),
   discipline: disciplineEnum("discipline"), // Main discipline category for filtering
