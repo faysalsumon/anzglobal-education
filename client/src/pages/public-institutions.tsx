@@ -85,6 +85,7 @@ type University = {
   id: string;
   name: string;
   description: string;
+  slug: string | null;
   logo: string;
   website: string;
   location: string;
@@ -1128,7 +1129,7 @@ export default function PublicInstitutions() {
                           testId={`img-logo-${institution.id}`}
                         />
                         <div className="flex-1 min-w-0">
-                          <Link href={`/institutions/${institution.id}`}>
+                          <Link href={`/institutions/${institution.slug || institution.id}`}>
                             <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer mb-1 flex items-center gap-2 flex-wrap" data-testid={`text-name-${institution.id}`}>
                               {institution.name}
                               {(() => {
@@ -1302,7 +1303,7 @@ export default function PublicInstitutions() {
                               className="w-full sm:w-auto"
                               data-testid={`button-view-${institution.id}`}
                             >
-                              <Link href={`/institutions/${institution.id}`}>
+                              <Link href={`/institutions/${institution.slug || institution.id}`}>
                                 View Details
                               </Link>
                             </Button>

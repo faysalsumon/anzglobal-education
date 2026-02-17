@@ -1668,7 +1668,7 @@ export default function PublicCourses() {
                       className={`hover-elevate shadow-md transition-all duration-300 cursor-pointer ${
                         isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
                       }`}
-                      onClick={() => navigate(`/courses/${course.id}`)}
+                      onClick={() => navigate(`/courses/${course.slug || course.id}`)}
                       data-testid={`course-card-${course.id}`}
                     >
                       <CardContent className="p-4">
@@ -1728,7 +1728,7 @@ export default function PublicCourses() {
                           
                           <div className="flex-1 min-w-0">
                             {/* Course Title */}
-                            <Link href={`/courses/${course.id}`}>
+                            <Link href={`/courses/${course.slug || course.id}`}>
                               <h3 className="font-bold text-lg hover:text-primary transition-colors cursor-pointer line-clamp-2 mb-1" data-testid={`text-title-${course.id}`}>
                                 {course.title}
                               </h3>

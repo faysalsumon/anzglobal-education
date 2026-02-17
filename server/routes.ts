@@ -2353,7 +2353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single institution by ID - only show if published, approved and active
   app.get("/api/institutions/:id", async (req, res) => {
     try {
-      const institution = await storage.getUniversityById(req.params.id);
+      const institution = await storage.getUniversityByIdOrSlug(req.params.id);
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
       }
@@ -2830,7 +2830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id", async (req, res) => {
     try {
-      const course = await storage.getCourseById(req.params.id);
+      const course = await storage.getCourseByIdOrSlug(req.params.id);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
@@ -17938,17 +17938,15 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Get institution courses with pricing tier info and scholarship data (for public institution detail page)
   app.get("/api/public/institutions/:id/courses", async (req, res) => {
     try {
-      const institutionId = req.params.id;
-      
-      // Get all published courses for this institution
-      const allCourses = await storage.getAllCourses();
-      const institution = await storage.getUniversityById(institutionId);
+      const institution = await storage.getUniversityByIdOrSlug(req.params.id);
       
       if (!institution) {
         return res.status(404).json({ message: "Institution not found" });
       }
       
-      // Filter to published, approved, active courses for this institution
+      const institutionId = institution.id;
+      const allCourses = await storage.getAllCourses();
+      
       const institutionCourses = allCourses.filter(course => 
         course.universityId === institutionId &&
         course.publishStatus === 'published' &&

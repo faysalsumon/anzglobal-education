@@ -3,21 +3,21 @@ import { universities, courses } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 export function generateSlug(text: string): string {
-  return text
+  const slug = text
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_]+/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 200);
+    .replace(/^-+|-+$/g, '');
+  return slug.substring(0, 245) || 'untitled';
 }
 
 export function generateCourseSlug(courseTitle: string, institutionName?: string): string {
   const titleSlug = generateSlug(courseTitle);
   if (institutionName) {
     const instSlug = generateSlug(institutionName);
-    return `${titleSlug}-${instSlug}`.substring(0, 250);
+    return `${titleSlug}-${instSlug}`.substring(0, 245);
   }
   return titleSlug;
 }

@@ -47,6 +47,7 @@ interface FeaturedInstitution {
   logoUrl: string | null;
   country: string | null;
   description: string | null;
+  slug: string | null;
   city: string | null;
   state: string | null;
 }
@@ -527,7 +528,7 @@ export default function Landing() {
               {featuredInstitutions.slice(0, 12).map((institution) => (
                 <Link 
                   key={institution.id} 
-                  href={`/institutions/${institution.id}`}
+                  href={`/institutions/${institution.slug || institution.id}`}
                   data-testid={`link-featured-institution-${institution.id}`}
                   className="group text-center"
                 >

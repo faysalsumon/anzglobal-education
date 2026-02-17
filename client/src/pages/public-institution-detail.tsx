@@ -311,7 +311,7 @@ export default function PublicInstitutionDetail() {
   }
 
   const siteUrl = window.location.origin;
-  const institutionUrl = `${siteUrl}/institutions/${institutionId}`;
+  const institutionUrl = `${siteUrl}/institutions/${institution.slug || institutionId}`;
   const metaTitle = `${institution.name} - ${institution.country || 'International University'} | ANZ Global Education`;
   const metaDescription = institution.smallDescription || institution.description?.substring(0, 160) || 
     `Discover ${institution.name}, a ${institution.providerType || 'leading institution'} in ${institution.country || 'international education'}.`;
@@ -650,7 +650,7 @@ export default function PublicInstitutionDetail() {
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="grid-featured-courses">
                   {featuredCourses.map(course => (
-                    <Link key={course.id} href={`/courses/${course.id}`} data-testid={`link-featured-course-${course.id}`}>
+                    <Link key={course.id} href={`/courses/${course.slug || course.id}`} data-testid={`link-featured-course-${course.id}`}>
                       <Card className="h-full hover-elevate cursor-pointer overflow-hidden border-accent/30 bg-gradient-to-br from-accent/5 to-transparent" data-testid={`featured-course-card-${course.id}`}>
                         <CardContent className="p-4">
                           <div className="flex items-start gap-2 mb-2">
@@ -739,7 +739,7 @@ export default function PublicInstitutionDetail() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {displayedCourses.map(course => (
-                      <Link key={course.id} href={`/courses/${course.id}`} data-testid={`link-course-${course.id}`}>
+                      <Link key={course.id} href={`/courses/${course.slug || course.id}`} data-testid={`link-course-${course.id}`}>
                         <Card className="h-full hover-elevate cursor-pointer group" data-testid={`course-card-${course.id}`}>
                           {/* Thumbnail Area */}
                           <div className="relative h-40 bg-gradient-to-br from-secondary/5 to-secondary/10">

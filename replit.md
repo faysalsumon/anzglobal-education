@@ -46,7 +46,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **AI Web Scraping**: Automated course data extraction with human-in-the-loop approval.
 - **AI Course Thumbnail Generation**: Automatic thumbnail creation using OpenAI DALL-E 3 with async processing.
 - **Activity Logging**: CRM-style audit trail.
-- **Content & SEO**: Course pages with scholarship info, markdown blog, and dynamic SEO.
+- **Content & SEO**: Course pages with scholarship info, markdown blog, dynamic SEO, and SEO-friendly slug URLs for institutions and courses.
 - **AI-Driven SEO Management**: Comprehensive SEO infrastructure including BreadcrumbList JSON-LD, `seo_metadata` table with AI generation and approval, and admin SEO panel.
 - **Workflows**: Institution/Course approval and an 11-stage student application workflow.
 - **Draft/Publish Workflow**: Collaborative content creation for institutions and courses.

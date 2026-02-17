@@ -170,6 +170,7 @@ interface Role {
 interface Institution {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
   country: string;
   contactEmail: string | null;
@@ -209,6 +210,7 @@ interface Institution {
 
 interface Course {
   id: string;
+  slug: string | null;
   universityId: string;
   title: string;
   description: string | null;
@@ -2654,7 +2656,7 @@ export default function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.open(`/institutions/${institution.id}`, '_blank')}
+                                onClick={() => window.open(`/institutions/${institution.slug || institution.id}`, '_blank')}
                                 title="View public page"
                                 data-testid={`button-view-institution-${institution.id}`}
                               >
@@ -3195,7 +3197,7 @@ export default function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.open(`/courses/${course.id}`, '_blank')}
+                                onClick={() => window.open(`/courses/${course.slug || course.id}`, '_blank')}
                                 title="View public page"
                                 data-testid={`button-view-course-${course.id}`}
                               >
