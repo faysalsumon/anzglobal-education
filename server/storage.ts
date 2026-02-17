@@ -150,6 +150,8 @@ export interface IStorage {
 
   // University operations
   getUniversityById(id: string): Promise<University | undefined>;
+  getUniversityBySlug(slug: string): Promise<University | undefined>;
+  getUniversityByIdOrSlug(idOrSlug: string): Promise<University | undefined>;
   getUniversityByUserId(userId: string): Promise<University | undefined>;
   getAllUniversities(): Promise<University[]>;
   createUniversity(university: InsertUniversity): Promise<University>;
@@ -158,6 +160,8 @@ export interface IStorage {
   
   // Course operations
   getCourseById(id: string): Promise<CourseWithUniversity | undefined>;
+  getCourseBySlug(slug: string): Promise<CourseWithUniversity | undefined>;
+  getCourseByIdOrSlug(idOrSlug: string): Promise<CourseWithUniversity | undefined>;
   getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]>;
   getAllCourses(): Promise<CourseWithUniversity[]>;
   createCourse(course: InsertCourse): Promise<Course>;
@@ -561,6 +565,22 @@ export class DatabaseStorage implements IStorage {
     return university;
   }
 
+  async getUniversityBySlug(slug: string): Promise<University | undefined> {
+    const [university] = await db
+      .select()
+      .from(universities)
+      .where(eq(universities.slug, slug));
+    return university;
+  }
+
+  async getUniversityByIdOrSlug(idOrSlug: string): Promise<University | undefined> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    if (isUuid) {
+      return this.getUniversityById(idOrSlug);
+    }
+    return this.getUniversityBySlug(idOrSlug);
+  }
+
   async getUniversityByUserId(userId: string): Promise<University | undefined> {
     const [university] = await db
       .select()
@@ -574,6 +594,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUniversity(universityData: InsertUniversity): Promise<University> {
+    if (!universityData.slug && universityData.name) {
+      const { generateUniqueUniversitySlug } = await import("./slug-utils");
+      universityData.slug = await generateUniqueUniversitySlug(universityData.name);
+    }
     const [university] = await db
       .insert(universities)
       .values(universityData)
@@ -582,16 +606,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUniversity(id: string, data: Partial<University>): Promise<University> {
-    // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
-    // Also ensure null values are explicitly passed through for clearing timestamps
     const processedData = { ...data } as Record<string, any>;
     if (processedData.publishedAt !== undefined) {
       if (processedData.publishedAt === null) {
-        // Keep null as-is to clear the timestamp
         processedData.publishedAt = null;
       } else if (typeof processedData.publishedAt === 'string') {
         processedData.publishedAt = new Date(processedData.publishedAt);
       }
+    }
+    if (processedData.name && !processedData.slug) {
+      const { generateUniqueUniversitySlug } = await import("./slug-utils");
+      processedData.slug = await generateUniqueUniversitySlug(processedData.name, id);
     }
     
     const [university] = await db
@@ -624,6 +649,30 @@ export class DatabaseStorage implements IStorage {
     return { ...course, university };
   }
 
+  async getCourseBySlug(slug: string): Promise<CourseWithUniversity | undefined> {
+    const rows = await db
+      .select({
+        course: courses,
+        university: universities,
+      })
+      .from(courses)
+      .leftJoin(universities, eq(courses.universityId, universities.id))
+      .where(eq(courses.slug, slug));
+    
+    if (rows.length === 0) return undefined;
+    
+    const { course, university } = rows[0];
+    return { ...course, university };
+  }
+
+  async getCourseByIdOrSlug(idOrSlug: string): Promise<CourseWithUniversity | undefined> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+    if (isUuid) {
+      return this.getCourseById(idOrSlug);
+    }
+    return this.getCourseBySlug(idOrSlug);
+  }
+
   async getCoursesByUniversityId(universityId: string): Promise<CourseWithUniversity[]> {
     const rows = await db
       .select({
@@ -650,6 +699,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCourse(courseData: InsertCourse): Promise<Course> {
+    if (!courseData.slug && courseData.title) {
+      const { generateUniqueCourseSlug } = await import("./slug-utils");
+      let institutionName: string | undefined;
+      if (courseData.universityId) {
+        const uni = await this.getUniversityById(courseData.universityId);
+        institutionName = uni?.name;
+      }
+      courseData.slug = await generateUniqueCourseSlug(courseData.title, institutionName);
+    }
     const [course] = await db
       .insert(courses)
       .values(courseData)
@@ -658,14 +716,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCourse(id: string, data: Partial<Course>): Promise<Course> {
-    // Convert publishedAt string to Date object if provided (Drizzle expects Date for timestamp columns)
     const processedData = { ...data } as Record<string, any>;
     if (processedData.publishedAt && typeof processedData.publishedAt === 'string') {
       processedData.publishedAt = new Date(processedData.publishedAt);
     }
-    // Set updatedAt if not already provided
     if (!processedData.updatedAt) {
       processedData.updatedAt = new Date();
+    }
+    if (processedData.title && !processedData.slug) {
+      const { generateUniqueCourseSlug } = await import("./slug-utils");
+      const existingCourse = await this.getCourseById(id);
+      const uni = existingCourse ? await this.getUniversityById(existingCourse.universityId) : undefined;
+      processedData.slug = await generateUniqueCourseSlug(processedData.title, uni?.name, id);
     }
     const [course] = await db
       .update(courses)
