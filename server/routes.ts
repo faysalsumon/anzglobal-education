@@ -166,7 +166,7 @@ import {
   notifyDocumentRequested,
   notifyDocumentUploadedToAdmin,
 } from "./notifications";
-import { sendContactInquiryEmails, sendProfileCompletionReminder } from "./email-service";
+import { sendContactInquiryEmails, sendProfileCompletionReminder, sendNewLeadAdminNotification, sendTaskAssignedEmail, sendTaskDueReminderEmail, sendTaskCompletedEmail, sendLeadAssignedEmail, sendApplicationAssignedEmail, sendDocumentUploadedAdminEmail } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
 import express from "express";
 import { doubleCsrfProtection, csrfTokenEndpoint } from "./middleware/csrf";
@@ -3238,6 +3238,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (notificationRecords.length > 0) {
         await db.insert(notifications).values(notificationRecords);
       }
+
+      // Send admin email notification for new lead
+      const university = await storage.getUniversityById(leadData.universityId);
+      const leadRegionContext = getRegionContext(req);
+      sendNewLeadAdminNotification({
+        firstName: leadData.firstName,
+        lastName: leadData.lastName,
+        email: leadData.email,
+        phone: leadData.phone,
+        courseTitle: course.title,
+        universityName: university?.name || 'Unknown Institution',
+        country: leadData.country,
+        regionCode: leadRegionContext.region?.code || undefined,
+        entrySource: 'website',
+        contactId: crmContact.id,
+      }).catch(err => console.error('[Email] Failed to send new lead admin notification:', err));
       
       res.status(201).json({ message: "Thank you! We'll be in touch soon." });
     } catch (error: any) {
@@ -6542,6 +6558,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             documentName: document.title,
             applicationId: req.params.applicationId,
           });
+
+          // Send email to assigned consultant
+          const consultantUser = await storage.getUser(application.assignedConsultantId);
+          if (consultantUser?.email) {
+            sendDocumentUploadedAdminEmail({
+              recipientEmail: consultantUser.email,
+              recipientName: getUserDisplayName(consultantUser),
+              studentName: `${profile.firstName} ${profile.lastName}`,
+              documentName: document.title,
+              applicationId: req.params.applicationId,
+            }).catch(err => console.error('[Email] Failed to send document uploaded email:', err));
+          }
         }
       }
 
@@ -14787,6 +14815,7 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
       }
       
       // Send email notifications (don't wait for them to complete)
+      const regionContext = getRegionContext(req);
       sendContactInquiryEmails({
         id: inquiry.id,
         inquiryType: inquiry.inquiryType,
@@ -14806,6 +14835,7 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
         visaStatus: inquiry.visaStatus || undefined,
         website: inquiry.website || undefined,
         partnershipType: inquiry.partnershipType || undefined,
+        regionCode: regionContext.region?.code || undefined,
       }).catch(error => {
         // Log error but don't fail the inquiry submission
         console.error("Error sending email notifications:", error);
@@ -16136,6 +16166,20 @@ Sitemap: ${baseUrl}/sitemap.xml
         entityId: task.id,
         entityName: task.title,
       });
+
+      // Send email notification to assigned team member
+      if (task.assignedToId && task.assignedToId !== userId) {
+        const assignee = await storage.getUser(task.assignedToId);
+        if (assignee?.email) {
+          sendTaskAssignedEmail({
+            recipientEmail: assignee.email,
+            recipientName: getUserDisplayName(assignee),
+            taskTitle: task.title,
+            assignedByName,
+            dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+          }).catch(err => console.error('[Email] Failed to send task assigned email:', err));
+        }
+      }
       
       res.json(task);
     } catch (error: any) {
@@ -16177,6 +16221,21 @@ Sitemap: ${baseUrl}/sitemap.xml
         oldData: existingTask,
         newData: task,
       });
+
+      // Send email if task was reassigned to a different person
+      if (task.assignedToId && task.assignedToId !== existingTask.assignedToId && task.assignedToId !== userId) {
+        const assignee = await storage.getUser(task.assignedToId);
+        const updater = await storage.getUser(userId);
+        if (assignee?.email) {
+          sendTaskAssignedEmail({
+            recipientEmail: assignee.email,
+            recipientName: getUserDisplayName(assignee),
+            taskTitle: task.title,
+            assignedByName: getUserDisplayName(updater || { email: 'Admin' }),
+            dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+          }).catch(err => console.error('[Email] Failed to send task reassigned email:', err));
+        }
+      }
       
       res.json(task);
     } catch (error: any) {
@@ -16211,6 +16270,20 @@ Sitemap: ${baseUrl}/sitemap.xml
         oldStatus: existingTask.status,
         newStatus: 'completed',
       });
+
+      // Notify task creator that it was completed
+      if (existingTask.createdById && existingTask.createdById !== userId) {
+        const creator = await storage.getUser(existingTask.createdById);
+        const completer = await storage.getUser(userId);
+        if (creator?.email) {
+          sendTaskCompletedEmail({
+            recipientEmail: creator.email,
+            recipientName: getUserDisplayName(creator),
+            taskTitle: task.title,
+            completedByName: getUserDisplayName(completer || { email: 'Team Member' }),
+          }).catch(err => console.error('[Email] Failed to send task completed email:', err));
+        }
+      }
       
       res.json(task);
     } catch (error: any) {

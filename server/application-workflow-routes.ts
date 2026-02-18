@@ -18,7 +18,7 @@ import {
 import { eq, and, or, desc, inArray, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { logActivity } from "./activity-logger";
-import { sendStageTransitionNotification, sendDocumentRequestNotification } from "./email-service";
+import { sendStageTransitionNotification, sendDocumentRequestNotification, sendApplicationAssignedEmail } from "./email-service";
 import { notifyApplicationAssigned, notifyApplicationStageChange, notifyDocumentRequested } from "./notifications";
 import { getUserAccessContext, checkCrudPermission } from "./access-policy-service";
 
@@ -664,6 +664,18 @@ export function registerApplicationWorkflowRoutes(app: Express) {
             applicationId: appId,
             assignedByName,
           });
+
+          // Send email notification to the assigned consultant
+          if (consultant.email) {
+            sendApplicationAssignedEmail({
+              recipientEmail: consultant.email,
+              recipientName: `${consultant.firstName || ''} ${consultant.lastName || ''}`.trim() || 'Team Member',
+              studentName,
+              courseName,
+              assignedByName,
+              applicationId: appId,
+            }).catch(err => console.error('[Email] Failed to send application assigned email:', err));
+          }
         } catch (notifyError) {
           console.error("Error sending assignment notification:", notifyError);
         }
@@ -931,6 +943,24 @@ export function registerApplicationWorkflowRoutes(app: Express) {
             applicationId,
             assignedByName: assignerName,
           });
+
+          // Send email notification to the assigned consultant
+          const [assignedConsultant] = await db
+            .select({ email: users.email, firstName: users.firstName, lastName: users.lastName })
+            .from(users)
+            .where(eq(users.id, validatedData.assignedConsultantId))
+            .limit(1);
+          if (assignedConsultant?.email) {
+            sendApplicationAssignedEmail({
+              recipientEmail: assignedConsultant.email,
+              recipientName: `${assignedConsultant.firstName || ''} ${assignedConsultant.lastName || ''}`.trim() || 'Team Member',
+              studentName,
+              courseName,
+              assignedByName: assignerName,
+              applicationId,
+            }).catch(err => console.error('[Email] Failed to send application assigned email:', err));
+          }
+
           console.log(`[Notification] Sent assignment notification for application ${applicationId} to consultant ${validatedData.assignedConsultantId}`);
         } catch (notifyError) {
           console.error("[Notification] Error sending assignment notification:", notifyError);

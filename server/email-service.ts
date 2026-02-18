@@ -10,7 +10,20 @@ const resend = apiKey ? new Resend(apiKey) : null;
 
 // Email configuration
 const FROM_EMAIL = 'ANZ Global Education <noreply@anzglobal.com.au>';
-const ADMIN_EMAIL = 'admin@anzglobal.com.au';
+const ADMIN_EMAIL_AU = 'info@anzglobal.com.au';
+const ADMIN_EMAIL_BD = 'info@anzglobal.com.bd';
+
+/**
+ * Get the region-aware admin notification email address.
+ * Routes to info@anzglobal.com.bd for Bangladesh region,
+ * defaults to info@anzglobal.com.au for Australia and all other regions.
+ */
+export function getRegionAdminEmail(regionCode?: string | null): string {
+  if (regionCode?.toUpperCase() === 'BD') {
+    return ADMIN_EMAIL_BD;
+  }
+  return ADMIN_EMAIL_AU;
+}
 
 function getEmailBaseUrl(): string {
   if (process.env.SITE_URL) {
@@ -398,20 +411,21 @@ export async function sendContactInquiryConfirmation(data: ContactInquiryEmailDa
 }
 
 // Send notification email to admin
-export async function sendAdminNotification(data: ContactInquiryEmailData & { id: string }): Promise<void> {
+export async function sendAdminNotification(data: ContactInquiryEmailData & { id: string; regionCode?: string }): Promise<void> {
   if (!resend) {
     console.log('Resend not configured - skipping admin notification email');
     return;
   }
   
   try {
+    const adminEmail = getRegionAdminEmail(data.regionCode);
     const subject = data.inquiryType === 'student'
       ? `New Student Inquiry - ${data.studentName} (${data.country || 'Unknown Country'})`
       : `New Institution Inquiry - ${data.institutionName}`;
     
     const result = await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: adminEmail,
       subject: subject,
       html: getAdminNotificationEmailHtml(data),
     });
@@ -424,11 +438,412 @@ export async function sendAdminNotification(data: ContactInquiryEmailData & { id
 }
 
 // Combined function to send both emails
-export async function sendContactInquiryEmails(data: ContactInquiryEmailData & { id: string }): Promise<void> {
+export async function sendContactInquiryEmails(data: ContactInquiryEmailData & { id: string; regionCode?: string }): Promise<void> {
   await Promise.all([
     sendContactInquiryConfirmation(data),
     sendAdminNotification(data),
   ]);
+}
+
+// ============================================
+// ADMIN NOTIFICATION: NEW USER SIGN-UP
+// ============================================
+
+interface NewSignupAdminNotificationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  userType: string;
+  regionCode?: string;
+  entrySource?: string;
+}
+
+function getNewSignupAdminEmailHtml(data: NewSignupAdminNotificationData): string {
+  const baseUrl = getEmailBaseUrl();
+  const userTypeLabel = data.userType === 'institution_admin' ? 'Institution Admin' : 
+    data.userType === 'platform_admin' ? 'Platform Admin' : 'Student';
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">New ${userTypeLabel} Registration</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      A new ${userTypeLabel.toLowerCase()} has registered on ANZ Global Education.
+    </p>
+    
+    ${emailInfoBox('Registration Details', `
+      <table cellpadding="5" cellspacing="0" style="width: 100%;">
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Name:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.firstName} ${data.lastName}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Email:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">
+            <a href="mailto:${data.email}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${data.email}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Account Type:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${userTypeLabel}</td>
+        </tr>
+        ${data.entrySource ? `
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Source:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.entrySource}</td>
+        </tr>
+        ` : ''}
+      </table>
+    `)}
+    
+    ${emailButton(`${baseUrl}/admin/dashboard`, 'View in Dashboard')}
+  `;
+
+  return emailShell(baseUrl, 'New Registration', `A new ${userTypeLabel.toLowerCase()} has joined`, bodyContent);
+}
+
+export async function sendNewSignupAdminNotification(data: NewSignupAdminNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping new signup admin notification');
+    return;
+  }
+
+  try {
+    const adminEmail = getRegionAdminEmail(data.regionCode);
+    const userTypeLabel = data.userType === 'institution_admin' ? 'Institution' : 
+      data.userType === 'platform_admin' ? 'Admin' : 'Student';
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `New ${userTypeLabel} Registration: ${data.firstName} ${data.lastName}`,
+      html: getNewSignupAdminEmailHtml(data),
+    });
+
+    console.log(`New signup admin notification sent to ${adminEmail} for ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending new signup admin notification:', error.message);
+  }
+}
+
+// ============================================
+// ADMIN NOTIFICATION: NEW STUDENT LEAD
+// ============================================
+
+interface NewLeadAdminNotificationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  courseTitle: string;
+  universityName: string;
+  country?: string;
+  regionCode?: string;
+  entrySource?: string;
+  contactId?: string;
+}
+
+function getNewLeadAdminEmailHtml(data: NewLeadAdminNotificationData): string {
+  const baseUrl = getEmailBaseUrl();
+
+  const bodyContent = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">New Student Inquiry</h2>
+    
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      A new student has expressed interest in a course on ANZ Global Education.
+    </p>
+    
+    ${emailInfoBox('Lead Details', `
+      <table cellpadding="5" cellspacing="0" style="width: 100%;">
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Name:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.firstName} ${data.lastName}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Email:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">
+            <a href="mailto:${data.email}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">${data.email}</a>
+          </td>
+        </tr>
+        ${data.phone ? `
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Phone:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.phone}</td>
+        </tr>
+        ` : ''}
+        ${data.country ? `
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Country:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.country}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Course:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.courseTitle}</td>
+        </tr>
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Institution:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.universityName}</td>
+        </tr>
+        ${data.entrySource ? `
+        <tr>
+          <td style="color: ${EMAIL_COLORS.textSecondary}; font-size: 14px; padding: 5px 0;"><strong>Source:</strong></td>
+          <td style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; padding: 5px 0;">${data.entrySource}</td>
+        </tr>
+        ` : ''}
+      </table>
+    `)}
+    
+    ${emailWarningBox('<strong>Action Required:</strong> Please follow up with this lead within 24-48 hours.')}
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${baseUrl}/admin#crm-contacts" style="display: inline-block; background-color: ${EMAIL_COLORS.primary}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; font-family: ${EMAIL_FONT};">View in CRM</a>
+      <a href="mailto:${data.email}" style="display: inline-block; background-color: ${EMAIL_COLORS.accent}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; margin-left: 12px; font-family: ${EMAIL_FONT};">Reply to Lead</a>
+    </div>
+  `;
+
+  return emailShell(baseUrl, 'New Student Inquiry', 'Action Required', bodyContent);
+}
+
+export async function sendNewLeadAdminNotification(data: NewLeadAdminNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping new lead admin notification');
+    return;
+  }
+
+  try {
+    const adminEmail = getRegionAdminEmail(data.regionCode);
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `New Student Inquiry: ${data.firstName} ${data.lastName} - ${data.courseTitle}`,
+      html: getNewLeadAdminEmailHtml(data),
+    });
+
+    console.log(`New lead admin notification sent to ${adminEmail} for ${data.email}`);
+  } catch (error: any) {
+    console.error('Error sending new lead admin notification:', error.message);
+  }
+}
+
+// ============================================
+// TEAM MEMBER EMAIL NOTIFICATIONS
+// ============================================
+
+interface TeamMemberEmailNotificationData {
+  recipientEmail: string;
+  recipientName: string;
+  subject: string;
+  title: string;
+  subtitle?: string;
+  bodyHtml: string;
+}
+
+export async function sendTeamMemberNotificationEmail(data: TeamMemberEmailNotificationData): Promise<void> {
+  if (!resend) {
+    console.log('Resend not configured - skipping team member notification email');
+    return;
+  }
+
+  try {
+    const baseUrl = getEmailBaseUrl();
+    const html = emailShell(baseUrl, data.title, data.subtitle, data.bodyHtml);
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.recipientEmail,
+      subject: data.subject,
+      html,
+    });
+
+    console.log(`Team member notification email sent to ${data.recipientEmail}: ${data.subject}`);
+  } catch (error: any) {
+    console.error(`Error sending team member notification email to ${data.recipientEmail}:`, error.message);
+  }
+}
+
+export async function sendTaskAssignedEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  taskTitle: string;
+  assignedByName: string;
+  dueDate?: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  const dueMessage = params.dueDate ? `<p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; margin: 5px 0;"><strong>Due Date:</strong> ${params.dueDate}</p>` : '';
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">New Task Assigned</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, <strong>${params.assignedByName}</strong> has assigned you a new task.
+    </p>
+    ${emailInfoBox('Task Details', `
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 16px; font-weight: bold; margin: 0 0 5px 0;">${params.taskTitle}</p>
+      ${dueMessage}
+    `)}
+    ${emailButton(`${baseUrl}/admin#tasks`, 'View Task')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Task Assigned: ${params.taskTitle}`,
+    title: 'Task Assignment',
+    subtitle: 'You have a new task',
+    bodyHtml,
+  });
+}
+
+export async function sendTaskDueReminderEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  taskTitle: string;
+  dueDate: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Task Due Soon</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, your task is due soon.
+    </p>
+    ${emailWarningBox(`<strong>${params.taskTitle}</strong> is due on <strong>${params.dueDate}</strong>. Please complete it before the deadline.`)}
+    ${emailButton(`${baseUrl}/admin#tasks`, 'View Task')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Task Due Soon: ${params.taskTitle}`,
+    title: 'Task Reminder',
+    subtitle: 'Upcoming deadline',
+    bodyHtml,
+  });
+}
+
+export async function sendTaskCompletedEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  taskTitle: string;
+  completedByName: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Task Completed</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, <strong>${params.completedByName}</strong> has completed a task.
+    </p>
+    <div style="background-color: ${EMAIL_COLORS.successBg}; border-left: 4px solid ${EMAIL_COLORS.success}; padding: 20px; margin: 24px 0; border-radius: 0 6px 6px 0;">
+      <p style="color: ${EMAIL_COLORS.success}; font-size: 16px; margin: 0; font-family: ${EMAIL_FONT};">
+        <strong>${params.taskTitle}</strong> has been marked as completed.
+      </p>
+    </div>
+    ${emailButton(`${baseUrl}/admin#tasks`, 'View Tasks')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Task Completed: ${params.taskTitle}`,
+    title: 'Task Update',
+    subtitle: 'A task has been completed',
+    bodyHtml,
+  });
+}
+
+export async function sendLeadAssignedEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  leadName: string;
+  assignedByName: string;
+  courseName?: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Lead Assigned to You</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, <strong>${params.assignedByName}</strong> has assigned you a new lead.
+    </p>
+    ${emailInfoBox('Lead Details', `
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0 0 5px 0;"><strong>Contact:</strong> ${params.leadName}</p>
+      ${params.courseName ? `<p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0;"><strong>Interested In:</strong> ${params.courseName}</p>` : ''}
+    `)}
+    ${emailWarningBox('<strong>Action Required:</strong> Please follow up with this lead as soon as possible.')}
+    ${emailButton(`${baseUrl}/admin#crm-contacts`, 'View in CRM')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Lead Assigned: ${params.leadName}`,
+    title: 'Lead Assignment',
+    subtitle: 'New lead assigned to you',
+    bodyHtml,
+  });
+}
+
+export async function sendApplicationAssignedEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  studentName: string;
+  courseName: string;
+  assignedByName: string;
+  applicationId: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Application Assigned to You</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, <strong>${params.assignedByName}</strong> has assigned you a student application.
+    </p>
+    ${emailInfoBox('Application Details', `
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0 0 5px 0;"><strong>Student:</strong> ${params.studentName}</p>
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0;"><strong>Course:</strong> ${params.courseName}</p>
+    `)}
+    ${emailButton(`${baseUrl}/admin/applications/${params.applicationId}`, 'View Application')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Application Assigned: ${params.studentName} - ${params.courseName}`,
+    title: 'Application Assignment',
+    subtitle: 'New application assigned to you',
+    bodyHtml,
+  });
+}
+
+export async function sendDocumentUploadedAdminEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  studentName: string;
+  documentName: string;
+  applicationId: string;
+}): Promise<void> {
+  const baseUrl = getEmailBaseUrl();
+  
+  const bodyHtml = `
+    <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Document Uploaded</h2>
+    <p style="color: ${EMAIL_COLORS.textBody}; font-size: 16px; line-height: 1.6; font-family: ${EMAIL_FONT};">
+      Hi ${params.recipientName}, <strong>${params.studentName}</strong> has uploaded a new document.
+    </p>
+    ${emailInfoBox('Document Details', `
+      <p style="color: ${EMAIL_COLORS.textDark}; font-size: 14px; margin: 0;"><strong>Document:</strong> ${params.documentName}</p>
+    `)}
+    ${emailButton(`${baseUrl}/admin/applications/${params.applicationId}`, 'Review Document')}
+  `;
+
+  await sendTeamMemberNotificationEmail({
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    subject: `Document Uploaded: ${params.documentName} by ${params.studentName}`,
+    title: 'Document Upload',
+    subtitle: 'A student uploaded a document',
+    bodyHtml,
+  });
 }
 
 // ============================================
@@ -838,7 +1253,7 @@ function formatRole(role: string): string {
 }
 
 // Send notification to existing admins when new admin signup needs approval
-export async function sendNewAdminPendingNotification(data: AdminApprovalNotificationData): Promise<void> {
+export async function sendNewAdminPendingNotification(data: AdminApprovalNotificationData & { regionCode?: string }): Promise<void> {
   if (!resend) {
     console.log('Resend not configured - skipping new admin pending notification');
     return;
@@ -846,6 +1261,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
 
   try {
     const baseUrl = getEmailBaseUrl();
+    const adminEmail = getRegionAdminEmail(data.regionCode);
 
     const bodyContent = `
       <h2 style="color: ${EMAIL_COLORS.textDark}; margin: 0 0 20px 0; font-family: ${EMAIL_FONT};">Action Required: Review New Admin</h2>
@@ -870,7 +1286,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
 
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
+      to: adminEmail,
       subject: `New Admin Signup Pending: ${data.firstName} ${data.lastName}`,
       html,
     });

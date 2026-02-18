@@ -5,7 +5,8 @@ import { db } from './db';
 import { users, roles, branches, regions, studentProfiles, referrals } from '@shared/schema';
 import type { User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { sendWelcomeEmail, sendReferralRegistrationConfirmation } from './email-service';
+import { sendWelcomeEmail, sendReferralRegistrationConfirmation, sendNewSignupAdminNotification } from './email-service';
+import { getRegionContext } from './middleware/region-detection';
 import crypto from 'crypto';
 import { createCrmContactForUser } from './crm-routes';
 
@@ -852,6 +853,17 @@ router.post('/sync-user', async (req: Request, res: Response) => {
       firstName: firstName || 'there',
       userType: welcomeUserType,
     }).catch(err => console.error('[Email] Failed to send welcome email:', err));
+
+    // Send admin notification about new sign-up
+    const regionContext = getRegionContext(req);
+    sendNewSignupAdminNotification({
+      firstName: firstName || 'Unknown',
+      lastName: lastName || '',
+      email,
+      userType: safeUserType,
+      regionCode: regionContext.region?.code || undefined,
+      entrySource: entrySource || undefined,
+    }).catch(err => console.error('[Email] Failed to send new signup admin notification:', err));
 
     // ALWAYS create student profile for new student users
     if (safeUserType === 'student' && newUser) {
