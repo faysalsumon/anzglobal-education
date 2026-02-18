@@ -83,6 +83,7 @@ import { AdminQualificationTypesPanel } from "@/components/admin-qualification-t
 import { AdminCourseLevelRequirementsPanel } from "@/components/admin-course-level-requirements";
 import { ListPagination } from "@/components/list-pagination";
 import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
+import { AdminNotificationSettingsPanel } from "@/components/admin-notification-settings-panel";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -474,8 +475,8 @@ export default function AdminDashboard() {
   
   // Initialize activeTab from hash OR query parameters (for notification deep-linking)
   const getInitialTab = () => {
-    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
-    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team'];
+    const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'notification-settings'];
+    const fullAdminOnlyTabs = ['team-workload', 'users', 'data-import', 'web-scraping', 'activity-logs', 'team', 'notification-settings'];
     const ctoOnlyTabs = ['ai-settings'];
     const superAdminOnlyTabs = ['role-management', 'profile-management'];
     const marketingExecutiveTabs = ['institutions'];
@@ -537,6 +538,7 @@ export default function AdminDashboard() {
     'role-management': 'Role Management',
     'profile-management': 'Permission Profiles',
     'messages': 'Messages',
+    'notification-settings': 'Notification Settings',
   };
   
   const getCurrentBreadcrumbName = () => tabDisplayNames[activeTab] || 'Dashboard';
@@ -554,7 +556,7 @@ export default function AdminDashboard() {
     const searchParams = new URLSearchParams(searchString);
     const tabFromQuery = searchParams.get('tab');
     if (tabFromQuery && tabFromQuery !== activeTab) {
-      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings'];
+      const validTabs = ['overview', 'my-tasks', 'team-workload', 'users', 'institutions', 'courses', 'crm-contacts', 'applications', 'data-import', 'web-scraping', 'activity-logs', 'team', 'blogs', 'website-content', 'regions', 'branches', 'affiliates', 'role-management', 'profile-management', 'messages', 'ai-settings', 'notification-settings'];
       if (validTabs.includes(tabFromQuery)) {
         setActiveTab(tabFromQuery);
       }
@@ -3344,6 +3346,11 @@ export default function AdminDashboard() {
         {/* Partner API Keys Tab - Platform Admin/CTO Only */}
         {activeTab === "api-keys" && hasFullAdminAccess && (
           <AdminApiKeysPanel />
+        )}
+
+        {/* Notification Settings Tab */}
+        {activeTab === "notification-settings" && hasFullAdminAccess && (
+          <AdminNotificationSettingsPanel />
         )}
 
               </div>

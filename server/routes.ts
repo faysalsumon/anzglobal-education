@@ -106,6 +106,11 @@ import {
   studentLanguageScores,
   studentEmployments,
   documents,
+  globalNotificationDefaults,
+  userNotificationOverrides,
+  emailTemplates,
+  NOTIFICATION_TYPES,
+  NOTIFICATION_ROLES,
 } from "@shared/schema";
 import { eq, and, or, desc, not, inArray, sql as dsql, isNull, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -20947,6 +20952,338 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ============================================
   // END PROFILE COMPLETION REMINDER API ENDPOINTS
+  // ============================================
+
+  // ============================================
+  // NOTIFICATION SETTINGS & EMAIL TEMPLATES API
+  // ============================================
+
+  // Seed default email templates if none exist
+  async function seedDefaultEmailTemplates() {
+    const existing = await db.select().from(emailTemplates);
+    if (existing.length > 0) return;
+
+    const defaults = [
+      { notificationType: 'new_signup', label: 'New User Sign-up', description: 'Sent to admins when a new user registers', subjectTemplate: 'New User Registration: {{userName}}', bodyTemplate: 'A new user has registered on ANZ Global Education.\n\nName: {{userName}}\nEmail: {{userEmail}}\nRegion: {{regionCode}}', availableVariables: ['userName', 'userEmail', 'regionCode', 'signupDate'] },
+      { notificationType: 'new_lead', label: 'New Student Lead', description: 'Sent to admins when a new student lead is captured', subjectTemplate: 'New Student Lead: {{leadName}}', bodyTemplate: 'A new student lead has been captured.\n\nName: {{leadName}}\nEmail: {{leadEmail}}\nPhone: {{leadPhone}}\nSource: {{source}}', availableVariables: ['leadName', 'leadEmail', 'leadPhone', 'source', 'regionCode'] },
+      { notificationType: 'contact_inquiry', label: 'Contact Inquiry', description: 'Sent to admins when someone submits a contact form', subjectTemplate: 'New Contact Inquiry from {{contactName}}', bodyTemplate: 'A new contact inquiry has been received.\n\nName: {{contactName}}\nEmail: {{contactEmail}}\nSubject: {{subject}}\nMessage: {{message}}', availableVariables: ['contactName', 'contactEmail', 'subject', 'message', 'regionCode'] },
+      { notificationType: 'task_assigned', label: 'Task Assigned', description: 'Sent to team member when a task is assigned to them', subjectTemplate: 'New Task Assigned: {{taskTitle}}', bodyTemplate: 'You have been assigned a new task.\n\nTask: {{taskTitle}}\nPriority: {{priority}}\nDue Date: {{dueDate}}\nAssigned by: {{assignedBy}}', availableVariables: ['taskTitle', 'priority', 'dueDate', 'assignedBy', 'taskDescription'] },
+      { notificationType: 'task_completed', label: 'Task Completed', description: 'Sent when a team member completes a task', subjectTemplate: 'Task Completed: {{taskTitle}}', bodyTemplate: 'A task has been marked as completed.\n\nTask: {{taskTitle}}\nCompleted by: {{completedBy}}\nCompletion Date: {{completionDate}}', availableVariables: ['taskTitle', 'completedBy', 'completionDate'] },
+      { notificationType: 'task_due_reminder', label: 'Task Due Reminder', description: 'Reminder sent before a task is due', subjectTemplate: 'Task Due Soon: {{taskTitle}}', bodyTemplate: 'Reminder: A task is due soon.\n\nTask: {{taskTitle}}\nDue Date: {{dueDate}}\nPriority: {{priority}}', availableVariables: ['taskTitle', 'dueDate', 'priority'] },
+      { notificationType: 'application_assigned', label: 'Application Assigned', description: 'Sent when an application is assigned to a team member', subjectTemplate: 'Application Assigned: {{studentName}}', bodyTemplate: 'An application has been assigned to you.\n\nStudent: {{studentName}}\nApplication ID: {{applicationId}}\nAssigned by: {{assignedBy}}', availableVariables: ['studentName', 'applicationId', 'assignedBy', 'courseName'] },
+      { notificationType: 'application_stage_change', label: 'Application Stage Change', description: 'Sent when application moves to a new stage', subjectTemplate: 'Application Stage Update: {{studentName}} - {{newStage}}', bodyTemplate: 'An application has moved to a new stage.\n\nStudent: {{studentName}}\nPrevious Stage: {{previousStage}}\nNew Stage: {{newStage}}', availableVariables: ['studentName', 'applicationId', 'previousStage', 'newStage'] },
+      { notificationType: 'document_uploaded', label: 'Document Uploaded', description: 'Sent when a student uploads a document', subjectTemplate: 'New Document Uploaded: {{documentName}}', bodyTemplate: 'A student has uploaded a new document.\n\nStudent: {{studentName}}\nDocument: {{documentName}}\nType: {{documentType}}', availableVariables: ['studentName', 'documentName', 'documentType'] },
+      { notificationType: 'document_verified', label: 'Document Verified', description: 'Sent when a document is verified by admin', subjectTemplate: 'Document Verified: {{documentName}}', bodyTemplate: 'Your document has been verified.\n\nDocument: {{documentName}}\nVerified by: {{verifiedBy}}', availableVariables: ['studentName', 'documentName', 'verifiedBy'] },
+      { notificationType: 'document_rejected', label: 'Document Rejected', description: 'Sent when a document is rejected by admin', subjectTemplate: 'Document Requires Attention: {{documentName}}', bodyTemplate: 'Your document requires attention.\n\nDocument: {{documentName}}\nReason: {{rejectionReason}}', availableVariables: ['studentName', 'documentName', 'rejectionReason'] },
+      { notificationType: 'document_requested', label: 'Document Requested', description: 'Sent when admin requests a document from student', subjectTemplate: 'Document Required: {{documentName}}', bodyTemplate: 'A document has been requested.\n\nDocument: {{documentName}}\nRequested by: {{requestedBy}}\nDeadline: {{deadline}}', availableVariables: ['studentName', 'documentName', 'requestedBy', 'deadline'] },
+      { notificationType: 'admin_pending', label: 'Admin Pending Approval', description: 'Sent when a new admin registration needs approval', subjectTemplate: 'Admin Approval Required: {{adminName}}', bodyTemplate: 'A new admin registration requires approval.\n\nName: {{adminName}}\nEmail: {{adminEmail}}\nRole: {{requestedRole}}', availableVariables: ['adminName', 'adminEmail', 'requestedRole', 'regionCode'] },
+      { notificationType: 'institution_approved', label: 'Institution Approved', description: 'Sent when an institution is approved', subjectTemplate: 'Institution Approved: {{institutionName}}', bodyTemplate: 'An institution has been approved.\n\nInstitution: {{institutionName}}\nApproved by: {{approvedBy}}', availableVariables: ['institutionName', 'approvedBy'] },
+      { notificationType: 'institution_rejected', label: 'Institution Rejected', description: 'Sent when an institution is rejected', subjectTemplate: 'Institution Not Approved: {{institutionName}}', bodyTemplate: 'An institution was not approved.\n\nInstitution: {{institutionName}}\nReason: {{rejectionReason}}', availableVariables: ['institutionName', 'rejectionReason'] },
+      { notificationType: 'course_approved', label: 'Course Approved', description: 'Sent when a course is approved', subjectTemplate: 'Course Approved: {{courseName}}', bodyTemplate: 'A course has been approved.\n\nCourse: {{courseName}}\nInstitution: {{institutionName}}\nApproved by: {{approvedBy}}', availableVariables: ['courseName', 'institutionName', 'approvedBy'] },
+      { notificationType: 'course_rejected', label: 'Course Rejected', description: 'Sent when a course is rejected', subjectTemplate: 'Course Not Approved: {{courseName}}', bodyTemplate: 'A course was not approved.\n\nCourse: {{courseName}}\nInstitution: {{institutionName}}\nReason: {{rejectionReason}}', availableVariables: ['courseName', 'institutionName', 'rejectionReason'] },
+      { notificationType: 'general', label: 'General Notification', description: 'General purpose notification template', subjectTemplate: '{{subject}}', bodyTemplate: '{{body}}', availableVariables: ['subject', 'body', 'recipientName'] },
+    ];
+
+    for (const tmpl of defaults) {
+      await db.insert(emailTemplates).values({
+        notificationType: tmpl.notificationType,
+        label: tmpl.label,
+        description: tmpl.description,
+        subjectTemplate: tmpl.subjectTemplate,
+        bodyTemplate: tmpl.bodyTemplate,
+        availableVariables: tmpl.availableVariables,
+        isCustom: false,
+      }).onConflictDoNothing();
+    }
+    console.log('Seeded default email templates');
+  }
+
+  seedDefaultEmailTemplates().catch(err => console.error('Error seeding email templates:', err));
+
+  // GET /api/admin/notification-settings/defaults - Get all global notification defaults
+  app.get("/api/admin/notification-settings/defaults", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const defaults = await db.select().from(globalNotificationDefaults);
+      res.json(defaults);
+    } catch (error: any) {
+      console.error("Error fetching notification defaults:", error);
+      res.status(500).json({ message: "Failed to fetch notification defaults" });
+    }
+  });
+
+  // PUT /api/admin/notification-settings/defaults - Upsert global notification defaults
+  app.put("/api/admin/notification-settings/defaults", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const schema = z.object({
+        settings: z.array(z.object({
+          notificationType: z.string(),
+          role: z.string(),
+          emailEnabled: z.boolean(),
+          inAppEnabled: z.boolean(),
+        })),
+      });
+
+      const { settings } = schema.parse(req.body);
+
+      for (const setting of settings) {
+        const existing = await db.select().from(globalNotificationDefaults)
+          .where(and(
+            eq(globalNotificationDefaults.notificationType, setting.notificationType),
+            eq(globalNotificationDefaults.role, setting.role),
+          ));
+
+        if (existing.length > 0) {
+          await db.update(globalNotificationDefaults)
+            .set({
+              emailEnabled: setting.emailEnabled,
+              inAppEnabled: setting.inAppEnabled,
+              updatedAt: new Date(),
+            })
+            .where(eq(globalNotificationDefaults.id, existing[0].id));
+        } else {
+          await db.insert(globalNotificationDefaults).values({
+            notificationType: setting.notificationType,
+            role: setting.role,
+            emailEnabled: setting.emailEnabled,
+            inAppEnabled: setting.inAppEnabled,
+          });
+        }
+      }
+
+      res.json({ message: "Notification defaults updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating notification defaults:", error);
+      res.status(500).json({ message: "Failed to update notification defaults" });
+    }
+  });
+
+  // GET /api/admin/notification-settings/overrides - Get user-specific notification overrides
+  app.get("/api/admin/notification-settings/overrides", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const targetUserId = req.query.userId as string | undefined;
+      const query = targetUserId
+        ? db.select().from(userNotificationOverrides).where(eq(userNotificationOverrides.userId, targetUserId))
+        : db.select().from(userNotificationOverrides);
+
+      const overrides = await query;
+      res.json(overrides);
+    } catch (error: any) {
+      console.error("Error fetching notification overrides:", error);
+      res.status(500).json({ message: "Failed to fetch notification overrides" });
+    }
+  });
+
+  // PUT /api/admin/notification-settings/overrides - Upsert user notification overrides
+  app.put("/api/admin/notification-settings/overrides", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const schema = z.object({
+        targetUserId: z.string(),
+        overrides: z.array(z.object({
+          notificationType: z.string(),
+          emailEnabled: z.boolean().nullable(),
+          inAppEnabled: z.boolean().nullable(),
+        })),
+      });
+
+      const { targetUserId, overrides } = schema.parse(req.body);
+
+      for (const override of overrides) {
+        const existing = await db.select().from(userNotificationOverrides)
+          .where(and(
+            eq(userNotificationOverrides.userId, targetUserId),
+            eq(userNotificationOverrides.notificationType, override.notificationType),
+          ));
+
+        if (existing.length > 0) {
+          await db.update(userNotificationOverrides)
+            .set({
+              emailEnabled: override.emailEnabled,
+              inAppEnabled: override.inAppEnabled,
+              updatedAt: new Date(),
+            })
+            .where(eq(userNotificationOverrides.id, existing[0].id));
+        } else {
+          await db.insert(userNotificationOverrides).values({
+            userId: targetUserId,
+            notificationType: override.notificationType,
+            emailEnabled: override.emailEnabled,
+            inAppEnabled: override.inAppEnabled,
+          });
+        }
+      }
+
+      res.json({ message: "Notification overrides updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating notification overrides:", error);
+      res.status(500).json({ message: "Failed to update notification overrides" });
+    }
+  });
+
+  // DELETE /api/admin/notification-settings/overrides/:userId - Remove all overrides for a user
+  app.delete("/api/admin/notification-settings/overrides/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      await db.delete(userNotificationOverrides)
+        .where(eq(userNotificationOverrides.userId, req.params.userId));
+
+      res.json({ message: "User notification overrides removed" });
+    } catch (error: any) {
+      console.error("Error deleting notification overrides:", error);
+      res.status(500).json({ message: "Failed to delete notification overrides" });
+    }
+  });
+
+  // GET /api/admin/email-templates - Get all email templates
+  app.get("/api/admin/email-templates", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const templates = await db.select().from(emailTemplates);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching email templates:", error);
+      res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
+  // PUT /api/admin/email-templates/:id - Update an email template
+  app.put("/api/admin/email-templates/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const schema = z.object({
+        subjectTemplate: z.string().min(1),
+        bodyTemplate: z.string().min(1),
+      });
+
+      const data = schema.parse(req.body);
+
+      const updated = await db.update(emailTemplates)
+        .set({
+          subjectTemplate: data.subjectTemplate,
+          bodyTemplate: data.bodyTemplate,
+          isCustom: true,
+          updatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(emailTemplates.id, req.params.id))
+        .returning();
+
+      if (updated.length === 0) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      res.json(updated[0]);
+    } catch (error: any) {
+      console.error("Error updating email template:", error);
+      res.status(500).json({ message: "Failed to update email template" });
+    }
+  });
+
+  // POST /api/admin/email-templates/:id/reset - Reset a template to default
+  app.post("/api/admin/email-templates/:id/reset", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const template = await db.select().from(emailTemplates).where(eq(emailTemplates.id, req.params.id));
+      if (template.length === 0) return res.status(404).json({ message: "Template not found" });
+
+      await db.delete(emailTemplates).where(eq(emailTemplates.id, req.params.id));
+
+      await seedDefaultEmailTemplates();
+
+      const refreshed = await db.select().from(emailTemplates)
+        .where(eq(emailTemplates.notificationType, template[0].notificationType));
+
+      res.json(refreshed[0] || { message: "Template reset" });
+    } catch (error: any) {
+      console.error("Error resetting email template:", error);
+      res.status(500).json({ message: "Failed to reset email template" });
+    }
+  });
+
+  // GET /api/admin/email-templates/preview/:id - Preview a template with sample data
+  app.get("/api/admin/email-templates/preview/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const template = await db.select().from(emailTemplates).where(eq(emailTemplates.id, req.params.id));
+      if (template.length === 0) return res.status(404).json({ message: "Template not found" });
+
+      const tmpl = template[0];
+      const vars = (tmpl.availableVariables as string[]) || [];
+      const sampleData: Record<string, string> = {};
+      vars.forEach(v => { sampleData[v] = `[Sample ${v}]`; });
+
+      let subject = tmpl.subjectTemplate;
+      let body = tmpl.bodyTemplate;
+      for (const [key, value] of Object.entries(sampleData)) {
+        subject = subject.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+        body = body.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+      }
+
+      res.json({ subject, body, sampleData });
+    } catch (error: any) {
+      console.error("Error previewing email template:", error);
+      res.status(500).json({ message: "Failed to preview template" });
+    }
+  });
+
+  // GET /api/admin/notification-settings/meta - Get notification types and roles constants
+  app.get("/api/admin/notification-settings/meta", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const isAdmin = await checkIsAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      res.json({
+        notificationTypes: NOTIFICATION_TYPES,
+        notificationRoles: NOTIFICATION_ROLES,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch metadata" });
+    }
+  });
+
+  // ============================================
+  // END NOTIFICATION SETTINGS API ENDPOINTS
   // ============================================
 
   // Start scraping worker only if Redis is available

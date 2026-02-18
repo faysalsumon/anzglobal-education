@@ -1,4 +1,7 @@
 import { Resend } from 'resend';
+import { db } from './db';
+import { globalNotificationDefaults, userNotificationOverrides, emailTemplates } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Initialize Resend with API key
 const apiKey = process.env.RESEND_API_KEY;
@@ -23,6 +26,76 @@ export function getRegionAdminEmail(regionCode?: string | null): string {
     return ADMIN_EMAIL_BD;
   }
   return ADMIN_EMAIL_AU;
+}
+
+/**
+ * Check if an email notification should be sent based on global defaults and user overrides.
+ * Returns true if the notification should be sent via email.
+ */
+export async function shouldSendEmailNotification(
+  notificationType: string,
+  role?: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    if (userId) {
+      const overrides = await db.select().from(userNotificationOverrides)
+        .where(and(
+          eq(userNotificationOverrides.userId, userId),
+          eq(userNotificationOverrides.notificationType, notificationType),
+        ));
+      if (overrides.length > 0 && overrides[0].emailEnabled !== null) {
+        return overrides[0].emailEnabled;
+      }
+    }
+
+    if (role) {
+      const defaults = await db.select().from(globalNotificationDefaults)
+        .where(and(
+          eq(globalNotificationDefaults.notificationType, notificationType),
+          eq(globalNotificationDefaults.role, role),
+        ));
+      if (defaults.length > 0) {
+        return defaults[0].emailEnabled;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking email notification preference:', error);
+    return true;
+  }
+}
+
+/**
+ * Get a custom email template for a notification type, if one exists.
+ * Returns the template with variables substituted, or null if no custom template.
+ */
+export async function getCustomEmailTemplate(
+  notificationType: string,
+  variables: Record<string, string>
+): Promise<{ subject: string; body: string } | null> {
+  try {
+    const templates = await db.select().from(emailTemplates)
+      .where(eq(emailTemplates.notificationType, notificationType));
+
+    if (templates.length === 0) return null;
+
+    const tmpl = templates[0];
+    let subject = tmpl.subjectTemplate;
+    let body = tmpl.bodyTemplate;
+
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      subject = subject.replace(regex, value);
+      body = body.replace(regex, value);
+    }
+
+    return { subject, body };
+  } catch (error) {
+    console.error('Error fetching custom email template:', error);
+    return null;
+  }
 }
 
 function getEmailBaseUrl(): string {
@@ -418,15 +491,28 @@ export async function sendAdminNotification(data: ContactInquiryEmailData & { id
   }
   
   try {
+    const shouldSend = await shouldSendEmailNotification('contact_inquiry', 'all_admins');
+    if (!shouldSend) {
+      console.log('Contact inquiry admin notification suppressed by preferences');
+      return;
+    }
     const adminEmail = getRegionAdminEmail(data.regionCode);
-    const subject = data.inquiryType === 'student'
+    const defaultSubject = data.inquiryType === 'student'
       ? `New Student Inquiry - ${data.studentName} (${data.country || 'Unknown Country'})`
       : `New Institution Inquiry - ${data.institutionName}`;
+
+    const customTemplate = await getCustomEmailTemplate('contact_inquiry', {
+      contactName: data.studentName || data.institutionName || '',
+      contactEmail: data.email,
+      subject: defaultSubject,
+      message: '',
+      regionCode: data.regionCode || 'AU',
+    });
     
     const result = await resend.emails.send({
       from: FROM_EMAIL,
       to: adminEmail,
-      subject: subject,
+      subject: customTemplate?.subject || defaultSubject,
       html: getAdminNotificationEmailHtml(data),
     });
     
@@ -508,14 +594,27 @@ export async function sendNewSignupAdminNotification(data: NewSignupAdminNotific
   }
 
   try {
+    const shouldSend = await shouldSendEmailNotification('new_signup', 'all_admins');
+    if (!shouldSend) {
+      console.log('New signup admin notification suppressed by preferences');
+      return;
+    }
+
     const adminEmail = getRegionAdminEmail(data.regionCode);
     const userTypeLabel = data.userType === 'institution_admin' ? 'Institution' : 
       data.userType === 'platform_admin' ? 'Admin' : 'Student';
 
+    const customTemplate = await getCustomEmailTemplate('new_signup', {
+      userName: `${data.firstName} ${data.lastName}`,
+      userEmail: data.email,
+      regionCode: data.regionCode || 'AU',
+      signupDate: new Date().toLocaleDateString(),
+    });
+
     await resend.emails.send({
       from: FROM_EMAIL,
       to: adminEmail,
-      subject: `New ${userTypeLabel} Registration: ${data.firstName} ${data.lastName}`,
+      subject: customTemplate?.subject || `New ${userTypeLabel} Registration: ${data.firstName} ${data.lastName}`,
       html: getNewSignupAdminEmailHtml(data),
     });
 
@@ -611,12 +710,26 @@ export async function sendNewLeadAdminNotification(data: NewLeadAdminNotificatio
   }
 
   try {
+    const shouldSend = await shouldSendEmailNotification('new_lead', 'all_admins');
+    if (!shouldSend) {
+      console.log('New lead admin notification suppressed by preferences');
+      return;
+    }
+
     const adminEmail = getRegionAdminEmail(data.regionCode);
+
+    const customTemplate = await getCustomEmailTemplate('new_lead', {
+      leadName: `${data.firstName} ${data.lastName}`,
+      leadEmail: data.email,
+      leadPhone: data.phone || '',
+      source: data.entrySource || '',
+      regionCode: data.regionCode || 'AU',
+    });
 
     await resend.emails.send({
       from: FROM_EMAIL,
       to: adminEmail,
-      subject: `New Student Inquiry: ${data.firstName} ${data.lastName} - ${data.courseTitle}`,
+      subject: customTemplate?.subject || `New Student Inquiry: ${data.firstName} ${data.lastName} - ${data.courseTitle}`,
       html: getNewLeadAdminEmailHtml(data),
     });
 
@@ -668,7 +781,13 @@ export async function sendTaskAssignedEmail(params: {
   taskTitle: string;
   assignedByName: string;
   dueDate?: string;
+  recipientUserId?: string;
 }): Promise<void> {
+  const shouldSend = await shouldSendEmailNotification('task_assigned', undefined, params.recipientUserId);
+  if (!shouldSend) {
+    console.log('Task assigned notification suppressed by preferences');
+    return;
+  }
   const baseUrl = getEmailBaseUrl();
   const dueMessage = params.dueDate ? `<p style="color: ${EMAIL_COLORS.textBody}; font-size: 14px; margin: 5px 0;"><strong>Due Date:</strong> ${params.dueDate}</p>` : '';
   
@@ -684,10 +803,18 @@ export async function sendTaskAssignedEmail(params: {
     ${emailButton(`${baseUrl}/admin#tasks`, 'View Task')}
   `;
 
+  const customTemplate = await getCustomEmailTemplate('task_assigned', {
+    taskTitle: params.taskTitle,
+    priority: '',
+    dueDate: params.dueDate || '',
+    assignedBy: params.assignedByName,
+    taskDescription: '',
+  });
+
   await sendTeamMemberNotificationEmail({
     recipientEmail: params.recipientEmail,
     recipientName: params.recipientName,
-    subject: `Task Assigned: ${params.taskTitle}`,
+    subject: customTemplate?.subject || `Task Assigned: ${params.taskTitle}`,
     title: 'Task Assignment',
     subtitle: 'You have a new task',
     bodyHtml,
@@ -1260,6 +1387,11 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
   }
 
   try {
+    const shouldSend = await shouldSendEmailNotification('admin_pending', 'all_admins');
+    if (!shouldSend) {
+      console.log('Admin pending notification suppressed by preferences');
+      return;
+    }
     const baseUrl = getEmailBaseUrl();
     const adminEmail = getRegionAdminEmail(data.regionCode);
 

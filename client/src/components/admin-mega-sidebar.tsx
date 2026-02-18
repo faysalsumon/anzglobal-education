@@ -39,6 +39,7 @@ import {
   FileCheck,
   Search,
   Key,
+  Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -144,6 +145,7 @@ export function AdminMegaSidebar({
         { icon: Activity, label: "Activity Logs", value: "activity-logs", show: hasFullAdminAccess },
         { icon: Bot, label: "AI Settings", value: "ai-settings", show: isCTO && canSeeFeature('aiSettings') },
         { icon: Key, label: "Partner API", value: "api-keys", show: (hasFullAdminAccess || isCTO) && canSeeFeature('partnerApi') },
+        { icon: Bell, label: "Notifications", value: "notification-settings", show: hasFullAdminAccess },
       ],
     },
   ];

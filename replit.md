@@ -53,6 +53,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Application Management Module**: Enhanced CRM-style application management with dual-view modes and bulk actions.
 - **Maps & Location**: Google Maps integration for campus locations and map-based search.
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content.
+- **Notification Settings Management**: Admin UI for managing global notification defaults (role-based), per-user notification overrides, and customizable email templates with variable placeholder support. Integrated preference checking in email-service.ts (shouldSendEmailNotification, getCustomEmailTemplate). Tables: global_notification_defaults, user_notification_overrides, email_templates.
 
 ### Security Implementations
 - **CSRF Protection**: Double-submit CSRF token pattern.
