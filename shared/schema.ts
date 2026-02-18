@@ -5071,3 +5071,89 @@ export const PROFILE_SECTIONS = [
 export type ProfileSection = typeof PROFILE_SECTIONS[number];
 
 export type VerificationStatus = 'unverified' | 'pending_verification' | 'verified' | 'needs_reverification';
+
+// ============================================
+// NOTIFICATION & EMAIL MANAGEMENT SYSTEM
+// ============================================
+
+export const NOTIFICATION_TYPES = [
+  'new_signup',
+  'new_lead',
+  'contact_inquiry',
+  'task_assigned',
+  'task_completed',
+  'task_due_reminder',
+  'application_assigned',
+  'application_stage_change',
+  'document_uploaded',
+  'document_verified',
+  'document_rejected',
+  'document_requested',
+  'admin_pending',
+  'institution_approved',
+  'institution_rejected',
+  'course_approved',
+  'course_rejected',
+  'general',
+] as const;
+
+export type NotificationType = typeof NOTIFICATION_TYPES[number];
+
+export const NOTIFICATION_ROLES = [
+  'cto',
+  'support_manager',
+  'education_consultant',
+  'marketing_officer',
+  'accounts_officer',
+  'hr_officer',
+  'it_support',
+  'branch_manager',
+  'all_admins',
+] as const;
+
+export type NotificationRole = typeof NOTIFICATION_ROLES[number];
+
+export const globalNotificationDefaults = pgTable("global_notification_defaults", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  notificationType: varchar("notification_type", { length: 50 }).notNull(),
+  role: varchar("role", { length: 50 }).notNull(),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+  inAppEnabled: boolean("in_app_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("gnd_type_role_idx").on(table.notificationType, table.role),
+]);
+
+export const userNotificationOverrides = pgTable("user_notification_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  notificationType: varchar("notification_type", { length: 50 }).notNull(),
+  emailEnabled: boolean("email_enabled"),
+  inAppEnabled: boolean("in_app_enabled"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("uno_user_type_idx").on(table.userId, table.notificationType),
+]);
+
+export const emailTemplates = pgTable("email_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  notificationType: varchar("notification_type", { length: 50 }).notNull().unique(),
+  label: text("label").notNull(),
+  description: text("description"),
+  subjectTemplate: text("subject_template").notNull(),
+  bodyTemplate: text("body_template").notNull(),
+  availableVariables: jsonb("available_variables").$type<string[]>().default([]),
+  isCustom: boolean("is_custom").notNull().default(false),
+  updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type GlobalNotificationDefault = typeof globalNotificationDefaults.$inferSelect;
+export type InsertGlobalNotificationDefault = typeof globalNotificationDefaults.$inferInsert;
+
+export type UserNotificationOverride = typeof userNotificationOverrides.$inferSelect;
+export type InsertUserNotificationOverride = typeof userNotificationOverrides.$inferInsert;
+
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
