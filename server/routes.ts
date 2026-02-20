@@ -3270,6 +3270,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/public/quiz-leads", async (req, res) => {
+    try {
+      const quizLeadSchema = z.object({
+        firstName: z.string().min(1).max(100),
+        lastName: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().min(6),
+        discipline: z.string().optional(),
+        level: z.string().optional(),
+        country: z.string().optional(),
+        budgetMin: z.number().optional(),
+        budgetMax: z.number().optional(),
+        regionCode: z.string().optional(),
+      });
+
+      const data = quizLeadSchema.parse({
+        ...req.body,
+        email: req.body.email?.trim().toLowerCase() || '',
+        phone: req.body.phone?.trim() || '',
+        firstName: req.body.firstName?.trim() || '',
+        lastName: req.body.lastName?.trim() || '',
+      });
+
+      let regionId: string | undefined;
+      if (data.regionCode) {
+        const allRegions = await db.select().from(regions);
+        const matchingRegion = allRegions.find(r =>
+          r.code?.toLowerCase() === data.regionCode?.toLowerCase()
+        );
+        if (matchingRegion) regionId = matchingRegion.id;
+      }
+
+      const budgetNote = data.budgetMin || data.budgetMax
+        ? `Budget: $${(data.budgetMin || 0).toLocaleString()} - $${(data.budgetMax || 0).toLocaleString()} AUD/year`
+        : '';
+      const notes = [
+        `Course Match Quiz Lead`,
+        data.discipline ? `Discipline: ${data.discipline}` : '',
+        data.level ? `Level: ${data.level}` : '',
+        data.country ? `Destination: ${data.country}` : '',
+        budgetNote,
+      ].filter(Boolean).join('\n');
+
+      const [crmContact] = await db.insert(crmContacts).values({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        mobile: data.phone || undefined,
+        contactType: "clients" as const,
+        clientStatus: "lead" as const,
+        leadStage: "new" as const,
+        entrySource: "website" as const,
+        leadRating: "warm" as const,
+        programDiscipline: data.discipline || undefined,
+        programType: data.level || undefined,
+        whereToStudy: data.country || undefined,
+        nationality: data.regionCode === "BD" ? "Bangladesh" : undefined,
+        notes,
+        referrer: req.headers["referer"] as string || undefined,
+        firstPageVisited: "/",
+        firstVisit: new Date(),
+        regionId,
+        referenceSource: "Course Match Quiz",
+        utmSource: "website",
+        utmMedium: "quiz",
+      }).returning();
+
+      await db.insert(contactStatusHistory).values({
+        contactId: crmContact.id,
+        fromStatus: null,
+        toStatus: "lead" as const,
+        notes: `Contact auto-created from Course Match Quiz${data.discipline ? ` - ${data.discipline}` : ''}`,
+      });
+
+      const adminUsers = await db.select().from(users).where(eq(users.userType, 'admin'));
+      const adminTeamMembersList = await storage.getAllAdminTeamMembers();
+
+      const notificationRecords = [];
+      for (const admin of adminUsers) {
+        notificationRecords.push({
+          userId: admin.id,
+          type: 'new_lead',
+          title: 'New Quiz Lead',
+          message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id },
+        });
+      }
+      for (const member of adminTeamMembersList) {
+        notificationRecords.push({
+          userId: member.userId,
+          type: 'new_lead',
+          title: 'New Quiz Lead',
+          message: `${data.firstName} ${data.lastName} completed Course Match Quiz${data.discipline ? ` - interested in ${data.discipline}` : ''}`,
+          link: '/admin#crm-contacts',
+          metadata: { contactId: crmContact.id },
+        });
+      }
+      if (notificationRecords.length > 0) {
+        await db.insert(notifications).values(notificationRecords);
+      }
+
+      const quizRegionContext = getRegionContext(req);
+      sendNewLeadAdminNotification({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        courseTitle: data.discipline ? `${data.discipline} (${data.level || 'Any Level'})` : 'Course Match Quiz',
+        universityName: 'Any Institution',
+        country: data.country,
+        regionCode: quizRegionContext.region?.code || data.regionCode || undefined,
+        entrySource: 'website',
+        contactId: crmContact.id,
+      }).catch(err => console.error('[Email] Failed to send quiz lead admin notification:', err));
+
+      res.status(201).json({ message: "Thank you! Our team will contact you shortly." });
+    } catch (error: any) {
+      console.error("Error creating quiz lead:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Please check your information and try again" });
+      }
+      res.status(500).json({ message: "Unable to submit your request. Please try again later." });
+    }
+  });
+
   app.get("/api/university/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
