@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Helmet } from "react-helmet";
@@ -21,6 +21,7 @@ import {
   getNextIntake,
   MONTH_NAMES,
 } from "@shared/intake-utils";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
@@ -66,6 +67,16 @@ export default function PublicCourseDetail() {
     queryKey: [`/api/courses/${courseId}`],
     enabled: !!courseId,
   });
+
+  useEffect(() => {
+    if (course) {
+      trackViewContent(
+        course.title,
+        "Course",
+        String(course.id)
+      );
+    }
+  }, [course?.id]);
 
   // Fetch structured English requirements
   const { data: englishRequirements = [] } = useQuery<EnglishRequirement[]>({

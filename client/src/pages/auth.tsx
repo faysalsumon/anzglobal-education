@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { trackCompleteRegistration } from "@/lib/meta-pixel";
 import { ChevronLeft, Mail, Building2, GraduationCap, X, ExternalLink, Loader2, AlertCircle, RefreshCw, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import authImage from "@assets/stock_images/happy_diverse_intern_25e20ae6.jpg";
@@ -316,6 +317,7 @@ export default function AuthPage() {
           // Clear walk-in context after successful signup
           localStorage.removeItem('walk_in_branch_id');
           localStorage.removeItem('walk_in_source');
+          trackCompleteRegistration("registered");
           toast({
             title: "Check Your Email",
             description: "We've sent you a verification link. Please check your email to complete signup.",

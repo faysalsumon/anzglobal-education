@@ -54,6 +54,7 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Maps & Location**: Google Maps integration for campus locations and map-based search.
 - **Level 2 Content Blocks CMS**: Admin-facing CMS for static website content.
 - **Notification Settings Management**: Admin UI for managing global notification defaults (role-based), per-user notification overrides, and customizable email templates with variable placeholder support. Integrated preference checking in email-service.ts (shouldSendEmailNotification, getCustomEmailTemplate). Tables: global_notification_defaults, user_notification_overrides, email_templates.
+- **Meta Pixel Marketing Analytics**: Region-aware Meta (Facebook) Pixel integration. Pixel IDs stored as secrets (`FACEBOOK_PIXEL_ID_BD`, `FACEBOOK_PIXEL_ID_AU`), served via `/api/public/meta-pixel?region=XX`. Core library at `client/src/lib/meta-pixel.ts`, hook at `client/src/hooks/useMetaPixel.ts`. Tracks: PageView (all route changes), Search (course search with 1s debounce), Lead (contact forms, lead dialogs), CompleteRegistration (signup), ViewContent (course/institution detail pages), Contact (contact form). Initialized globally in AppContent.
 
 ### Security Implementations
 - **CSRF Protection**: Double-submit CSRF token pattern.

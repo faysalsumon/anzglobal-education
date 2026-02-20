@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { trackLead } from "@/lib/meta-pixel";
 import {
   Dialog,
   DialogContent,
@@ -138,6 +139,7 @@ export function LeadFormDialog({
       return response.json();
     },
     onSuccess: (data: any) => {
+      trackLead("Course Lead", "Course Inquiry");
       toast({
         title: "Request Submitted",
         description: data.message || "We'll be in touch soon!",

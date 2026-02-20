@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { trackSearch } from "@/lib/meta-pixel";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -525,6 +526,15 @@ export default function PublicCourses() {
     if (minFees !== null || maxFees !== null) count++;
     return count;
   }, [searchTerm, subject, discipline, subDiscipline, framework, level, country, campusState, campusCity, feeCurrency, minFees, maxFees]);
+
+  useEffect(() => {
+    if (searchTerm && searchTerm.length >= 3) {
+      const timer = setTimeout(() => {
+        trackSearch(searchTerm, "Courses");
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm]);
 
   // Toggle collapsible section
   const toggleSection = (section: string, open?: boolean) => {

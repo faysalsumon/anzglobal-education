@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { trackLead, trackContact } from "@/lib/meta-pixel";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import {
   Building2,
@@ -391,6 +392,8 @@ export default function Contact() {
     },
     onSuccess: () => {
       setIsSubmitted(true);
+      trackLead(contactType === "student" ? "Student Inquiry" : "Institution Inquiry", contactType || undefined);
+      trackContact();
       if (contactType === "student") {
         studentForm.reset();
       } else {

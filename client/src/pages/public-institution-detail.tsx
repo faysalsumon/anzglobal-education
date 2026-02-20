@@ -34,6 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Favorite } from "@shared/schema";
+import { trackViewContent } from "@/lib/meta-pixel";
 
 const COURSE_LEVELS = [
   'VCE (11-12)', 'Certificate II', 'Certificate III', 'Certificate IV',
@@ -99,6 +100,12 @@ export default function PublicInstitutionDetail() {
     queryKey: [`/api/institutions/${institutionId}`],
     enabled: !!institutionId,
   });
+
+  useEffect(() => {
+    if (institution) {
+      trackViewContent(institution.name, "Institution", String(institution.id));
+    }
+  }, [institution?.id]);
 
   // Use enhanced API that includes pricing tier and scholarship data
   const { data: institutionCourses = [], isLoading: coursesLoading } = useQuery<EnhancedCourse[]>({

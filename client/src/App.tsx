@@ -12,6 +12,7 @@ import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
 import { RegionProvider } from "@/context/RegionContext";
 import { SupabaseAuthProvider } from "@/lib/supabase-auth";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Landing = lazy(() => import("@/pages/landing"));
@@ -159,6 +160,7 @@ function Router({ user, isAuthenticated, isLoading }: RouterProps) {
 function AppContent() {
   const { user, isAuthenticated, isLoading, isAuthResolved } = useAuth();
   const [location] = useLocation();
+  useMetaPixel();
   
   // Public routes that should not have padding even for authenticated users
   const publicRoutes = ['/', '/courses', '/institutions', '/blog', '/contact', '/compare-courses', '/partner-with-us', '/study-in-australia', '/study-abroad', '/our-story', '/student-reviews', '/auth', '/auth/callback', '/admin/login', '/admin/forgot-password', '/institution/login'];
