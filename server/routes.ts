@@ -3146,6 +3146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         visaStatus: z.string().optional(),
         courseId: z.string().min(1),
         universityId: z.string().min(1),
+        regionCode: z.string().optional(),
       });
 
       const leadData = leadInputSchema.parse({
@@ -3247,6 +3248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send admin email notification for new lead
       const university = await storage.getUniversityById(leadData.universityId);
       const leadRegionContext = getRegionContext(req);
+      const leadDetectedRegion = leadRegionContext.detectedFromDomain ? leadRegionContext.region?.code : null;
       sendNewLeadAdminNotification({
         firstName: leadData.firstName,
         lastName: leadData.lastName,
@@ -3255,7 +3257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courseTitle: course.title,
         universityName: university?.name || 'Unknown Institution',
         country: leadData.country,
-        regionCode: leadRegionContext.region?.code || undefined,
+        regionCode: leadData.regionCode || leadDetectedRegion || undefined,
         entrySource: 'website',
         contactId: crmContact.id,
       }).catch(err => console.error('[Email] Failed to send new lead admin notification:', err));
@@ -3373,6 +3375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const quizRegionContext = getRegionContext(req);
+      const quizDetectedRegion = quizRegionContext.detectedFromDomain ? quizRegionContext.region?.code : null;
       sendNewLeadAdminNotification({
         firstName: data.firstName,
         lastName: data.lastName,
@@ -3381,7 +3384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courseTitle: data.discipline ? `${data.discipline} (${data.level || 'Any Level'})` : 'Course Match Quiz',
         universityName: 'Any Institution',
         country: data.country,
-        regionCode: quizRegionContext.region?.code || data.regionCode || undefined,
+        regionCode: data.regionCode || quizDetectedRegion || undefined,
         entrySource: 'website',
         contactId: crmContact.id,
       }).catch(err => console.error('[Email] Failed to send quiz lead admin notification:', err));

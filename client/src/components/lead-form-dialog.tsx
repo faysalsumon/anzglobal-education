@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { trackLead } from "@/lib/meta-pixel";
+import { useRegion } from "@/context/RegionContext";
 import {
   Dialog,
   DialogContent,
@@ -102,6 +103,7 @@ export function LeadFormDialog({
 }: LeadFormDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
+  const { regionCode } = useRegion();
   
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange || setInternalOpen;
@@ -135,6 +137,7 @@ export function LeadFormDialog({
         ...data,
         courseId,
         universityId,
+        regionCode: regionCode || undefined,
       });
       return response.json();
     },
