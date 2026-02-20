@@ -599,17 +599,15 @@ export function registerRegionRoutes(router: Router) {
   });
 
   router.get("/api/public/meta-pixel", (req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.set("Pragma", "no-cache");
     const regionCode = (req.query.region as string || "").toUpperCase();
     const pixelMap: Record<string, string | undefined> = {
       BD: process.env.FACEBOOK_PIXEL_ID_BD,
       AU: process.env.FACEBOOK_PIXEL_ID_AU,
     };
-    const pixelId = pixelMap[regionCode];
-    if (pixelId) {
-      res.json({ pixelId, region: regionCode });
-    } else {
-      res.json({ pixelId: null, region: regionCode });
-    }
+    const pixelId = pixelMap[regionCode] || null;
+    res.json({ pixelId, region: regionCode });
   });
 
   console.log("Region management routes registered");

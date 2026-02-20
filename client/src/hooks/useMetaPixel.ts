@@ -23,16 +23,23 @@ export function useMetaPixel() {
   useEffect(() => {
     if (!regionCode) return;
 
-    fetch(`/api/public/meta-pixel?region=${regionCode}`)
+    fetch(`/api/public/meta-pixel?region=${regionCode}`, {
+      cache: "no-store",
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.pixelId) {
+          console.log(`[Meta Pixel] Initializing for region ${regionCode}`);
           initMetaPixel(data.pixelId);
           pixelLoaded.current = true;
           trackPageView();
+        } else {
+          console.log(`[Meta Pixel] No pixel configured for region ${regionCode}`);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("[Meta Pixel] Failed to fetch pixel config:", err);
+      });
   }, [regionCode]);
 
   useEffect(() => {
