@@ -112,6 +112,22 @@ function getEmailBaseUrl(): string {
   return 'https://anzglobal.com.au';
 }
 
+const REGION_DOMAINS: Record<string, string> = {
+  BD: 'anzglobal.com.bd',
+  AU: 'anzglobal.com.au',
+};
+
+function getRegionDomain(regionCode?: string): string {
+  if (regionCode && REGION_DOMAINS[regionCode.toUpperCase()]) {
+    return REGION_DOMAINS[regionCode.toUpperCase()];
+  }
+  return 'anzglobal.com.au';
+}
+
+function getRegionWebsiteUrl(regionCode?: string): string {
+  return `https://www.${getRegionDomain(regionCode)}`;
+}
+
 const EMAIL_COLORS = {
   primary: '#3465A5',
   primaryDark: '#2a5084',
@@ -136,15 +152,17 @@ const EMAIL_FONT = "'Nunito', 'Open Sans', -apple-system, BlinkMacSystemFont, 'S
 function emailHeader(baseUrl: string, title: string, subtitle?: string): string {
   return `
     <tr>
-      <td style="background: linear-gradient(135deg, ${EMAIL_COLORS.primary} 0%, ${EMAIL_COLORS.primaryDark} 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+      <td style="background: linear-gradient(135deg, #3465A5 0%, #1d3f6f 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
         <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: ${EMAIL_FONT};">${title}</h1>
-        ${subtitle ? `<p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">${subtitle}</p>` : ''}
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">${title}</h1>
+        ${subtitle ? `<p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 600; font-family: ${EMAIL_FONT};">${subtitle}</p>` : ''}
       </td>
     </tr>`;
 }
 
-function emailFooter(baseUrl: string): string {
+function emailFooter(baseUrl: string, regionCode?: string): string {
+  const domain = getRegionDomain(regionCode);
+  const websiteUrl = `https://www.${domain}`;
   return `
     <tr>
       <td style="background-color: ${EMAIL_COLORS.footerBg}; padding: 30px 40px; border-radius: 0 0 12px 12px; text-align: center;">
@@ -152,7 +170,7 @@ function emailFooter(baseUrl: string): string {
           ANZ Global Education | Your Gateway to Global Education
         </p>
         <p style="color: ${EMAIL_COLORS.textLight}; font-size: 12px; margin: 0;">
-          <a href="${baseUrl}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">www.anzglobal.com.au</a>
+          <a href="${websiteUrl}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">www.${domain}</a>
         </p>
       </td>
     </tr>`;
@@ -181,7 +199,7 @@ function emailWarningBox(content: string): string {
     </div>`;
 }
 
-function emailShell(baseUrl: string, title: string, subtitle: string | undefined, bodyContent: string): string {
+function emailShell(baseUrl: string, title: string, subtitle: string | undefined, bodyContent: string, regionCode?: string): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -200,7 +218,7 @@ function emailShell(baseUrl: string, title: string, subtitle: string | undefined
               ${bodyContent}
             </td>
           </tr>
-          ${emailFooter(baseUrl)}
+          ${emailFooter(baseUrl, regionCode)}
         </table>
       </td>
     </tr>
@@ -223,6 +241,7 @@ interface ContactInquiryEmailData {
   visaStatus?: string;
   website?: string;
   partnershipType?: string;
+  regionCode?: string;
 }
 
 function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
@@ -314,7 +333,7 @@ function getUserConfirmationEmailHtml(data: ContactInquiryEmailData): string {
     ${emailButton(baseUrl, 'Visit Our Website')}
   `;
 
-  return emailShell(baseUrl, 'ANZ Global Education', 'Your Gateway to Global Education', bodyContent);
+  return emailShell(baseUrl, 'ANZ Global Education', 'Your Gateway to Global Education', bodyContent, data.regionCode);
 }
 
 function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: string }): string {
@@ -335,10 +354,10 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
           <td align="center">
             <table cellpadding="0" cellspacing="0" width="600" style="background-color: ${EMAIL_COLORS.card}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
               <tr>
-                <td style="background-color: ${EMAIL_COLORS.primary}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                <td style="background: linear-gradient(135deg, #3465A5 0%, #1d3f6f 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
                   <img src="${baseUrl}/logo.png" alt="ANZ Global Education" style="width: 80px; height: auto; margin-bottom: 16px;" />
-                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-family: ${EMAIL_FONT};">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
-                  <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">Inquiry ID: ${data.id}</p>
+                  <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; font-family: ${EMAIL_FONT};">New ${isStudent ? 'Student' : 'Institution'} Inquiry</h1>
+                  <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 600;">Inquiry ID: ${data.id}</p>
                 </td>
               </tr>
               
@@ -442,8 +461,11 @@ function getAdminNotificationEmailHtml(data: ContactInquiryEmailData & { id: str
               
               <tr>
                 <td style="background-color: ${EMAIL_COLORS.footerBg}; padding: 20px; border-radius: 0 0 12px 12px; text-align: center;">
+                  <p style="color: ${EMAIL_COLORS.textSecondary}; font-size: 13px; margin: 0 0 8px 0; font-family: ${EMAIL_FONT};">
+                    ANZ Global Education | Your Gateway to Global Education
+                  </p>
                   <p style="color: ${EMAIL_COLORS.textLight}; font-size: 12px; margin: 0; font-family: ${EMAIL_FONT};">
-                    This is an automated notification from ANZ Global Education Contact System
+                    <a href="https://www.${getRegionDomain(data.regionCode)}" style="color: ${EMAIL_COLORS.primary}; text-decoration: none;">www.${getRegionDomain(data.regionCode)}</a>
                   </p>
                 </td>
               </tr>
@@ -584,7 +606,7 @@ function getNewSignupAdminEmailHtml(data: NewSignupAdminNotificationData): strin
     ${emailButton(`${baseUrl}/admin/dashboard`, 'View in Dashboard')}
   `;
 
-  return emailShell(baseUrl, 'New Registration', `A new ${userTypeLabel.toLowerCase()} has joined`, bodyContent);
+  return emailShell(baseUrl, 'New Registration', `A new ${userTypeLabel.toLowerCase()} has joined`, bodyContent, data.regionCode);
 }
 
 export async function sendNewSignupAdminNotification(data: NewSignupAdminNotificationData): Promise<void> {
@@ -700,7 +722,7 @@ function getNewLeadAdminEmailHtml(data: NewLeadAdminNotificationData): string {
     </div>
   `;
 
-  return emailShell(baseUrl, 'New Student Inquiry', 'Action Required', bodyContent);
+  return emailShell(baseUrl, 'New Student Inquiry', 'Action Required', bodyContent, data.regionCode);
 }
 
 export async function sendNewLeadAdminNotification(data: NewLeadAdminNotificationData): Promise<void> {
@@ -1414,7 +1436,7 @@ export async function sendNewAdminPendingNotification(data: AdminApprovalNotific
       ${emailButton(`${baseUrl}/admin/dashboard#users`, 'Review in Dashboard')}
     `;
 
-    const html = emailShell(baseUrl, 'New Admin Signup', 'Pending Approval', bodyContent);
+    const html = emailShell(baseUrl, 'New Admin Signup', 'Pending Approval', bodyContent, data.regionCode);
 
     await resend.emails.send({
       from: FROM_EMAIL,
