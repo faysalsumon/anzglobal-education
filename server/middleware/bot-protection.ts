@@ -125,6 +125,7 @@ const EXCLUDED_PATHS = [
   '.eot',
   '/api/partner/', // Partner API is for external bots - has its own authentication
   '/api/health', // Health check endpoint for monitoring
+  '/api/public/meta-pixel', // Meta Pixel config endpoint - must be accessible for Facebook validation
 ];
 
 function isExcludedPath(path: string): boolean {

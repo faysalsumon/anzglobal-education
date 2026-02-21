@@ -9,7 +9,15 @@ let pixelInitialized = false;
 let currentPixelId: string | null = null;
 
 export function initMetaPixel(pixelId: string): void {
-  if (pixelInitialized && currentPixelId === pixelId) return;
+  if (!pixelId) {
+    console.warn("[Meta Pixel] No pixel ID provided, skipping initialization");
+    return;
+  }
+
+  if (pixelInitialized && currentPixelId === pixelId) {
+    console.log(`[Meta Pixel] Already initialized with pixel ID ${pixelId}`);
+    return;
+  }
 
   if (!window.fbq) {
     const n = (window.fbq = function (...args: any[]) {
@@ -21,20 +29,50 @@ export function initMetaPixel(pixelId: string): void {
     } as any);
     if (!window._fbq) window._fbq = n as any;
     (n as any).push = n;
-    (n as any).loaded = true;
+    (n as any).loaded = !0;
     (n as any).version = "2.0";
     (n as any).queue = [];
 
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = "https://connect.facebook.net/en_US/fbevents.js";
-    const firstScript = document.getElementsByTagName("script")[0];
-    if (firstScript?.parentNode) {
-      firstScript.parentNode.insertBefore(script, firstScript);
+    const existingScript = document.querySelector(
+      'script[src*="connect.facebook.net"]'
+    );
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = "https://connect.facebook.net/en_US/fbevents.js";
+
+      script.onload = () => {
+        console.log("[Meta Pixel] fbevents.js script loaded successfully");
+      };
+      script.onerror = () => {
+        console.error("[Meta Pixel] Failed to load fbevents.js - may be blocked by ad blocker");
+      };
+
+      document.head.appendChild(script);
+      console.log("[Meta Pixel] Injected fbevents.js script into document head");
     }
   }
 
+  const existingNoscript = document.querySelector(
+    'noscript[data-meta-pixel]'
+  );
+  if (!existingNoscript && document.body) {
+    const noscript = document.createElement("noscript");
+    noscript.setAttribute("data-meta-pixel", "true");
+    const img = document.createElement("img");
+    img.height = 1;
+    img.width = 1;
+    img.style.display = "none";
+    img.src = `https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`;
+    img.alt = "";
+    noscript.appendChild(img);
+    document.body.appendChild(noscript);
+  }
+
   window.fbq("init", pixelId);
+  window.fbq("track", "PageView");
+  console.log(`[Meta Pixel] Initialized with pixel ID: ${pixelId}, PageView fired`);
+
   pixelInitialized = true;
   currentPixelId = pixelId;
 }

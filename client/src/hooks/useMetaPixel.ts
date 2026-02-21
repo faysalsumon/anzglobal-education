@@ -26,10 +26,17 @@ export function useMetaPixel() {
     fetch(`/api/public/meta-pixel?region=${regionCode}`, {
       cache: "no-store",
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          console.warn(`[Meta Pixel] API returned ${res.status} for region ${regionCode}`);
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         if (data.pixelId) {
-          console.log(`[Meta Pixel] Initializing for region ${regionCode}`);
+          console.log(`[Meta Pixel] Initializing for region ${regionCode}, pixelId: ${data.pixelId.substring(0, 4)}...`);
           initMetaPixel(data.pixelId);
           pixelLoaded.current = true;
           trackPageView();
