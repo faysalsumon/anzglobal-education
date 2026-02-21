@@ -143,6 +143,13 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
   if (isExcludedPath(req.path)) {
     return next();
   }
+
+  if (process.env.NODE_ENV === 'development') {
+    const clientIP = req.ip || getClientIP(req);
+    if (clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === '::ffff:127.0.0.1') {
+      return next();
+    }
+  }
   
   const userAgent = req.headers['user-agent'] || '';
   const clientIP = req.ip || getClientIP(req);
