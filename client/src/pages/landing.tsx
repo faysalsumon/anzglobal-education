@@ -248,10 +248,10 @@ export default function Landing() {
   // SEO data
   const siteUrl = window.location.origin;
   const pageTitle = isAU
-    ? "ANZ Global Education - Study in Australia | Top Australian Universities & Courses"
+    ? "ANZ Global Education - Study Abroad | Top Australian Universities & Courses"
     : isBD
-      ? "ANZ Global Education Bangladesh - Study Abroad | Australia, UK, Canada Universities"
-      : "ANZ Global Education - Connect Universities and Students Worldwide";
+      ? "ANZ Global Education - Study Abroad | Australia, UK, Canada Universities"
+      : "ANZ Global Education - Study Abroad | Connect Universities and Students Worldwide";
   const pageDescription = isAU
     ? "Discover top Australian universities and courses. AI-powered course matching, scholarships, and expert visa guidance for international students."
     : isBD
@@ -275,7 +275,7 @@ export default function Landing() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:image" content={ogImage} />
-        <meta property="og:site_name" content="ANZ Global Education" />
+        <meta property="og:site_name" content="ANZ Global Education - Study Abroad" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -289,7 +289,8 @@ export default function Landing() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "ANZ Global Education",
+            "name": "ANZ Global Education - Study Abroad",
+            "alternateName": "ANZ Global Education",
             "url": siteUrl,
             "logo": `${siteUrl}/logo.png`,
             "description": pageDescription,
@@ -311,7 +312,7 @@ export default function Landing() {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary mb-6 border border-primary/20">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span className="text-xs font-semibold uppercase tracking-wide">AI-Powered Course Discovery</span>
+                <span className="text-xs font-semibold uppercase tracking-wide" data-testid="text-app-name">ANZ Global Education - Study Abroad</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-4 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]">
@@ -322,8 +323,11 @@ export default function Landing() {
                 />
               </h1>
 
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-2 leading-relaxed">
                 {heroSubtitle}
+              </p>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8" data-testid="text-app-purpose">
+                ANZ Global Education - Study Abroad helps international students discover courses, compare universities, and apply to study abroad. We provide AI-powered course matching, expert counseling, visa guidance, and scholarship support to make your study abroad journey simple and successful. <Link href="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>
               </p>
 
               {/* Primary CTA */}
