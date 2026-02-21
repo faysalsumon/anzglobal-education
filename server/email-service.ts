@@ -1639,7 +1639,7 @@ export async function sendPasswordChangedEmail(data: { email: string; firstName?
   }
 
   try {
-    console.log(`[Email] Attempting to send password changed notification to ${data.email}`);
+    console.log(`[Email] Attempting to send password changed notification`);
     
     const result = await resend.emails.send({
       from: FROM_EMAIL,
@@ -1653,7 +1653,7 @@ export async function sendPasswordChangedEmail(data: { email: string; firstName?
       return false;
     }
 
-    console.log(`Password changed email sent to ${data.email}, ID: ${result.data?.id}`);
+    console.log(`[Email] Password changed email sent, ID: ${result.data?.id}`);
     return true;
   } catch (error: any) {
     console.error('Error sending password changed email:', error.message);

@@ -627,14 +627,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return next();
     }
     
-    // Debug logging for CSRF issues
-    if (fullPath.includes('upload-profile-photo')) {
-      console.log(`[CSRF-PRE] Request to ${fullPath}`);
-      console.log(`[CSRF-PRE] X-CSRF-Token header: ${req.headers['x-csrf-token'] ? 'present' : 'MISSING'}`);
-      console.log(`[CSRF-PRE] csrf cookie: ${(req as any).cookies?.csrf ? 'present' : 'MISSING'}`);
-      console.log(`[CSRF-PRE] supabaseUser: ${(req as any).supabaseUser?.email || 'NONE'}`);
-      console.log(`[CSRF-PRE] Authorization header: ${req.headers.authorization ? 'present' : 'MISSING'}`);
-    }
     
     return doubleCsrfProtection(req, res, next);
   });
@@ -15668,7 +15660,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         const message = JSON.parse(data.toString());
         
         if (message.type === 'auth' && message.token) {
-          console.log('[WS] Received auth message with token');
+          console.log('[WS] Received auth message');
           
           // Import supabaseAdmin dynamically to avoid circular deps
           const { supabaseAdmin } = await import('./supabase');

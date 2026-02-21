@@ -20,11 +20,6 @@ const csrfConfig = doubleCsrf({
           ? `anon:${(req as any).cookies["csrf-session"]}`
           : `fallback:${(req as any).cookies?.["csrf"] || req.ip || "anonymous"}`;
     
-    // Debug logging for CSRF issues
-    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
-      console.log(`[CSRF-DEBUG] Session identifier for ${req.method} ${req.path}: ${sessionId}`);
-      console.log(`[CSRF-DEBUG] supabaseUser present: ${!!supabaseUser}, email: ${supabaseUser?.email || "none"}`);
-    }
     
     return sessionId;
   },
@@ -117,14 +112,7 @@ export async function csrfTokenEndpoint(req: Request, res: Response) {
     (req as any).cookies["csrf-session"] = anonId;
   }
   
-  // Debug logging for token generation
-  const debugSessionId = supabaseUser?.email 
-    ? `supabase:${supabaseUser.email}`
-    : anonId 
-      ? `anon:${anonId}`
-      : `fallback:${(req as any).cookies?.["csrf"] || req.ip || "anonymous"}`;
-  console.log(`[CSRF-DEBUG] Generating token for session: ${debugSessionId}`);
-  console.log(`[CSRF-DEBUG] supabaseUser present: ${!!supabaseUser}, email: ${supabaseUser?.email || "none"}`);
+  
   
   const csrfToken = csrfConfig.generateCsrfToken(req, res);
   res.json({ csrfToken });

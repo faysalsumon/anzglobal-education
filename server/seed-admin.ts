@@ -15,7 +15,7 @@ async function getRoleIdByName(roleName: string): Promise<string | null> {
 
 async function seedCTO() {
   const email = "faysalbahar@anzglobal.com.au";
-  const password = "AdminPass123!";
+  const password = process.env.SEED_ADMIN_PASSWORD || "Change_Me_123!";
   
   try {
     // Check if user already exists
@@ -77,7 +77,6 @@ async function seedCTO() {
     
     console.log("✅ CTO created successfully!");
     console.log("Email:", email);
-    console.log("Password:", password);
     console.log("User ID:", newUser.id);
     console.log("Role ID:", newUser.roleId);
     

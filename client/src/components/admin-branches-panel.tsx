@@ -716,20 +716,34 @@ export function AdminBranchesPanel() {
                 if (qrDataUrl && qrBranch) {
                   const printWindow = window.open("", "_blank");
                   if (printWindow) {
-                    printWindow.document.write(`
-                      <html>
-                        <head><title>QR Code - ${qrBranch.name}</title></head>
-                        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;">
-                          <h2>${qrBranch.name}</h2>
-                          <p>${[qrBranch.city, qrBranch.state, qrBranch.country].filter(Boolean).join(", ")}</p>
-                          <img src="${qrDataUrl}" width="256" height="256" />
-                          <p style="font-size:12px;margin-top:16px;word-break:break-all;max-width:400px;text-align:center;">
-                            ${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}
-                          </p>
-                        </body>
-                      </html>
-                    `);
-                    printWindow.document.close();
+                    const doc = printWindow.document;
+                    doc.open();
+                    const html = doc.createElement('html');
+                    const head = doc.createElement('head');
+                    const title = doc.createElement('title');
+                    title.textContent = `QR Code - ${qrBranch.name}`;
+                    head.appendChild(title);
+                    html.appendChild(head);
+                    const body = doc.createElement('body');
+                    body.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;';
+                    const h2 = doc.createElement('h2');
+                    h2.textContent = qrBranch.name;
+                    body.appendChild(h2);
+                    const locationP = doc.createElement('p');
+                    locationP.textContent = [qrBranch.city, qrBranch.state, qrBranch.country].filter(Boolean).join(", ");
+                    body.appendChild(locationP);
+                    const img = doc.createElement('img');
+                    img.src = qrDataUrl;
+                    img.width = 256;
+                    img.height = 256;
+                    body.appendChild(img);
+                    const urlP = doc.createElement('p');
+                    urlP.style.cssText = 'font-size:12px;margin-top:16px;word-break:break-all;max-width:400px;text-align:center;';
+                    urlP.textContent = `${window.location.origin}/auth?mode=signup&source=walk_in&branch_id=${qrBranch.id}`;
+                    body.appendChild(urlP);
+                    html.appendChild(body);
+                    doc.documentElement.replaceWith(html);
+                    doc.close();
                     printWindow.print();
                   }
                 }

@@ -1379,7 +1379,7 @@ router.post('/force-password-reset', async (req: any, res: Response) => {
         .where(eq(users.id, dbUser.id));
     }
 
-    console.log(`[Force Password Reset] Password updated for ${authUser.email}`);
+    console.log(`[Force Password Reset] Password updated for user`);
 
     res.json({ message: 'Password updated successfully' });
   } catch (err) {

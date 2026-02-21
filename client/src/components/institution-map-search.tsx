@@ -89,35 +89,17 @@ export function InstitutionMapSearch({
         background: white;
       `;
       img.onerror = () => {
-        container.innerHTML = `
-          <div style="
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-            color: #FF5000;
-            background: white;
-          ">${campus.institutionName.charAt(0).toUpperCase()}</div>
-        `;
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:#FF5000;background:white;';
+        fallbackDiv.textContent = campus.institutionName.charAt(0).toUpperCase();
+        container.replaceChildren(fallbackDiv);
       };
       container.appendChild(img);
     } else {
-      container.innerHTML = `
-        <div style="
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-          font-size: 14px;
-          color: #FF5000;
-          background: white;
-        ">${campus.institutionName.charAt(0).toUpperCase()}</div>
-      `;
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:#FF5000;background:white;';
+      fallbackDiv.textContent = campus.institutionName.charAt(0).toUpperCase();
+      container.appendChild(fallbackDiv);
     }
 
     return container;

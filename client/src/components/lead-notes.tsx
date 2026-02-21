@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -564,7 +565,7 @@ function NoteItem({ note, currentUserId, onEdit, onDelete }: NoteItemProps) {
             
             <div 
               className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-              dangerouslySetInnerHTML={{ __html: note.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
             />
           </div>
           

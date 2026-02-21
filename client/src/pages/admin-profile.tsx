@@ -764,7 +764,10 @@ export default function AdminProfile() {
                       onError={(e) => {
                         const container = e.currentTarget.parentElement;
                         if (container) {
-                          container.innerHTML = `<div class="h-24 w-24 flex items-center justify-center text-2xl font-semibold">${getInitials()}</div>`;
+                          const fallback = document.createElement('div');
+                          fallback.className = 'h-24 w-24 flex items-center justify-center text-2xl font-semibold';
+                          fallback.textContent = getInitials();
+                          container.replaceChildren(fallback);
                         }
                       }}
                     />

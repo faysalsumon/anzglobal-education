@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 async function seedGlenInstitute() {
   const email = "bikash@gmail.com";
-  const password = "Bikash123";
+  const password = process.env.SEED_INSTITUTION_PASSWORD || "Change_Me_123!";
   
   try {
     // Check if user already exists
@@ -42,7 +42,6 @@ async function seedGlenInstitute() {
       userId = newUser.id;
       console.log("✅ University admin user created successfully!");
       console.log("Email:", email);
-      console.log("Password:", password);
       console.log("User ID:", userId);
     }
     
@@ -106,7 +105,6 @@ Situated in Melbourne, a city known for its thriving hospitality and business se
     console.log("\n=== Glen Institute Setup Complete ===");
     console.log("Login at: /admin/login");
     console.log("Email:", email);
-    console.log("Password:", password);
     
   } catch (error) {
     console.error("Error creating Glen Institute:", error);

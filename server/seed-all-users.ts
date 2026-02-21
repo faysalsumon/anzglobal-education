@@ -21,7 +21,7 @@ async function seedAllUsers() {
   const usersList = [
     {
       email: "faysalbahar@anzglobal.com.au",
-      password: "AdminPass123!",
+      password: process.env.SEED_ADMIN_PASSWORD || "Change_Me_123!",
       firstName: "Faysal",
       lastName: "Bahar",
       userType: "platform_admin" as const,  // Highest level admin
@@ -30,7 +30,7 @@ async function seedAllUsers() {
     },
     {
       email: "jannat@anzglobal.com.au",
-      password: "Jannat123!",
+      password: process.env.SEED_CONSULTANT_PASSWORD || "Change_Me_123!",
       firstName: "Jannat",
       lastName: "Admin",
       userType: "admin" as const,
@@ -39,7 +39,7 @@ async function seedAllUsers() {
     },
     {
       email: "evan@anzglobal.com.au",
-      password: "Evan123",
+      password: process.env.SEED_CONSULTANT_PASSWORD || "Change_Me_123!",
       firstName: "Evan",
       lastName: "Consultant",
       userType: "admin" as const,
@@ -48,7 +48,7 @@ async function seedAllUsers() {
     },
     {
       email: "asad@gmail.com",
-      password: "Asad123",
+      password: process.env.SEED_STUDENT_PASSWORD || "Change_Me_123!",
       firstName: "Asad",
       lastName: "Student",
       userType: "student" as const,

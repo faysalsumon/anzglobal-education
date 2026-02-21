@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -633,7 +634,7 @@ function NoteItem({
           </div>
           <div 
             className="text-sm prose prose-sm dark:prose-invert max-w-none [&_.mention]:bg-primary/15 [&_.mention]:text-primary [&_.mention]:rounded [&_.mention]:px-1.5 [&_.mention]:py-0.5 [&_.mention]:font-medium"
-            dangerouslySetInnerHTML={{ __html: note.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
           />
         </div>
         <div className="flex gap-1">
