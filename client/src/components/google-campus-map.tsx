@@ -43,6 +43,45 @@ export function GoogleCampusMap({
       key: apiKey,
     });
 
+    const createFallbackInitial = (name: string) => {
+      const div = document.createElement("div");
+      div.style.cssText = `
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        color: #FF5000;
+        background: white;
+      `;
+      div.textContent = name.charAt(0).toUpperCase();
+      return div;
+    };
+
+    const createInfoWindowContent = (instName: string, campusName: string, address: string) => {
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "padding: 12px; min-width: 200px;";
+
+      const h3 = document.createElement("h3");
+      h3.style.cssText = "margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;";
+      h3.textContent = instName;
+
+      const pName = document.createElement("p");
+      pName.style.cssText = "margin: 0 0 8px 0; font-size: 13px; font-weight: 500; color: #666;";
+      pName.textContent = campusName;
+
+      const pAddr = document.createElement("p");
+      pAddr.style.cssText = "margin: 0; font-size: 13px; color: #666; line-height: 1.5;";
+      pAddr.textContent = address;
+
+      wrapper.appendChild(h3);
+      wrapper.appendChild(pName);
+      wrapper.appendChild(pAddr);
+      return wrapper;
+    };
+
     // Create styled marker element with logo
     const createMarkerElement = (isSelected: boolean = false) => {
       const container = document.createElement("div");
@@ -74,35 +113,12 @@ export function GoogleCampusMap({
           background: white;
         `;
         img.onerror = () => {
-          container.innerHTML = `
-            <div style="
-              width: 100%;
-              height: 100%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: bold;
-              font-size: 12px;
-              color: #FF5000;
-              background: white;
-            ">${institutionName.charAt(0).toUpperCase()}</div>
-          `;
+          container.removeChild(img);
+          container.appendChild(createFallbackInitial(institutionName));
         };
         container.appendChild(img);
       } else {
-        container.innerHTML = `
-          <div style="
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: #FF5000;
-            background: white;
-          ">${institutionName.charAt(0).toUpperCase()}</div>
-        `;
+        container.appendChild(createFallbackInitial(institutionName));
       }
 
       return container;
@@ -186,17 +202,7 @@ export function GoogleCampusMap({
 
             // Create info window
             const infoWindow = new google.maps.InfoWindow({
-              content: `
-                <div style="padding: 12px; min-width: 200px;">
-                  <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">
-                    ${institutionName}
-                  </h3>
-                  <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 500; color: #666;">${campus.name}</p>
-                  <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.5;">
-                    ${addressString}
-                  </p>
-                </div>
-              `,
+              content: createInfoWindowContent(institutionName, campus.name, addressString),
             });
 
             // Add click listener
@@ -278,19 +284,20 @@ export function GoogleCampusMap({
         `;
         container.appendChild(img);
       } else {
-        container.innerHTML = `
-          <div style="
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: #FF5000;
-            background: white;
-          ">${institutionName.charAt(0).toUpperCase()}</div>
+        const fallback = document.createElement("div");
+        fallback.style.cssText = `
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 12px;
+          color: #FF5000;
+          background: white;
         `;
+        fallback.textContent = institutionName.charAt(0).toUpperCase();
+        container.appendChild(fallback);
       }
 
       return container;
