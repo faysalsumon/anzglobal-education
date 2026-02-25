@@ -699,6 +699,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Serve institution logos from Replit Object Storage (permanent, survives restarts)
+  app.get("/api/public-storage/public/institution-logos/:filename", async (req, res) => {
+    try {
+      const filename = req.params.filename;
+
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      if (!allowedExtensions.includes(ext)) {
+        return res.status(400).json({ message: "Invalid file type" });
+      }
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const filePath = `public/institution-logos/${filename}`;
+      const result = await storageClient.downloadAsBytes(filePath);
+
+      if (!result.ok || !result.value) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+      };
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days — logos change rarely
+      res.setHeader('Content-Type', mimeTypes[ext] || 'image/png');
+      res.send(Buffer.from(result.value));
+    } catch (error) {
+      console.error("Error serving institution logo:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
+  // Serve institution gallery images from Replit Object Storage
+  app.get("/api/public-storage/public/institution-gallery/:filename", async (req, res) => {
+    try {
+      const filename = req.params.filename;
+
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      if (!allowedExtensions.includes(ext)) {
+        return res.status(400).json({ message: "Invalid file type" });
+      }
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const filePath = `public/institution-gallery/${filename}`;
+      const result = await storageClient.downloadAsBytes(filePath);
+
+      if (!result.ok || !result.value) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+      };
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+      res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
+      res.send(Buffer.from(result.value));
+    } catch (error) {
+      console.error("Error serving institution gallery image:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
   // Get current authenticated user
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {
@@ -1496,14 +1574,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .png()
         .toBuffer();
 
-      // Save to public directory
+      // Upload to Replit Object Storage (persists across restarts and deployments)
       const universityId = universityAccess?.university.id || 'admin-upload';
       const filename = `college-logo-${universityId}-${Date.now()}.png`;
-      const localPath = path.join(process.cwd(), 'public', 'institutions');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-      
-      const logoPath = `/institutions/${filename}`;
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+      const { Client: LogoStorageClient } = await import("@replit/object-storage");
+      const logoStorageClient = new LogoStorageClient();
+      const objectPath = `public/institution-logos/${filename}`;
+      const uploadResult = await logoStorageClient.uploadFromBytes(objectPath, resizedBuffer);
+      if (!uploadResult.ok) {
+        throw new Error(`Object storage upload failed: ${uploadResult.error}`);
+      }
+
+      const logoPath = `/api/public-storage/public/institution-logos/${filename}`;
 
       // If university user, update their university profile immediately
       // If admin user, just return the path (they'll use it in their form)
@@ -1545,14 +1631,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .jpeg({ quality: 85 })
         .toBuffer();
 
-      // Save to public directory
+      // Upload to Replit Object Storage (persists across restarts and deployments)
       const universityId = universityAccess?.university.id || adminAccess ? 'admin-upload' : userId;
       const filename = `gallery-${universityId}-${Date.now()}.jpg`;
-      const localPath = path.join(process.cwd(), 'public', 'institutions');
-      await fs.mkdir(localPath, { recursive: true });
-      await fs.writeFile(path.join(localPath, filename), resizedBuffer);
-      
-      const imagePath = `/institutions/${filename}`;
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+      const { Client: GalleryStorageClient } = await import("@replit/object-storage");
+      const galleryStorageClient = new GalleryStorageClient();
+      const galleryObjectPath = `public/institution-gallery/${filename}`;
+      const galleryUploadResult = await galleryStorageClient.uploadFromBytes(galleryObjectPath, resizedBuffer);
+      if (!galleryUploadResult.ok) {
+        throw new Error(`Object storage upload failed: ${galleryUploadResult.error}`);
+      }
+
+      const imagePath = `/api/public-storage/public/institution-gallery/${filename}`;
 
       res.json({ imagePath });
     } catch (error) {
