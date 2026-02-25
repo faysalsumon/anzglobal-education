@@ -2,7 +2,6 @@ import { ReactNode, useState, useEffect } from "react";
 import { ChatWidget } from "@/components/chat-widget";
 import { PublicMobileNav } from "@/components/public-mobile-nav";
 import { CourseMatchQuiz } from "@/components/course-match-quiz";
-import { Footer } from "@/components/footer";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -32,7 +31,6 @@ export function PublicLayout({ children, onStudentLoginClick, onMatchClick }: Pu
       <main className="flex-1 pb-16 md:pb-0">
         {children}
       </main>
-      <Footer />
       <ChatWidget />
       <PublicMobileNav onMatchClick={handleMatchClick} />
       <CourseMatchQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
