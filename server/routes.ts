@@ -15115,6 +15115,23 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
   // SEO ROUTES
   // ========================================
 
+  // Sitemap index - top-level entry point for Google Search Console submission
+  app.get("/sitemap_index.xml", (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const today = new Date().toISOString().split('T')[0];
+
+    const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${baseUrl}/sitemap.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+</sitemapindex>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemapIndex);
+  });
+
   // Generate dynamic sitemap.xml with all published blogs, courses, and institutions
   app.get("/sitemap.xml", async (req, res) => {
     try {
@@ -15133,34 +15150,58 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
 
       const blogs = blogResult.blogs;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const today = new Date().toISOString().split('T')[0];
 
       // Build XML sitemap
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${baseUrl}/</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>${baseUrl}/blog</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>${baseUrl}/courses</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>${baseUrl}/institutions</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>${baseUrl}/contact</loc>
+    <loc>${baseUrl}/blog</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/about</loc>
+    <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/privacy</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/terms</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 ${blogs.map((blog) => `  <url>
     <loc>${baseUrl}/blog/${blog.slug}</loc>
@@ -15169,12 +15210,14 @@ ${blogs.map((blog) => `  <url>
     <priority>0.8</priority>
   </url>`).join('\n')}
 ${activeCourses.map((course) => `  <url>
-    <loc>${baseUrl}/courses/${course.id}</loc>
+    <loc>${baseUrl}/courses/${course.slug || course.id}</loc>
+    <lastmod>${course.updatedAt ? new Date(course.updatedAt).toISOString().split('T')[0] : today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`).join('\n')}
 ${universities.map((uni) => `  <url>
-    <loc>${baseUrl}/institutions/${uni.id}</loc>
+    <loc>${baseUrl}/institutions/${uni.slug || uni.id}</loc>
+    <lastmod>${uni.updatedAt ? new Date(uni.updatedAt).toISOString().split('T')[0] : today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`).join('\n')}
@@ -15236,7 +15279,8 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-# Sitemap location (environment-aware)
+# Sitemap locations
+Sitemap: ${baseUrl}/sitemap_index.xml
 Sitemap: ${baseUrl}/sitemap.xml
 `;
 

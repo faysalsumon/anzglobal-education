@@ -104,6 +104,31 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
+const SEARCH_ENGINE_BOTS = [
+  'Googlebot',
+  'Google-InspectionTool',
+  'Storebot-Google',
+  'GoogleOther',
+  'Google-Read-Aloud',
+  'Google-CloudVertexBot',
+  'bingbot',
+  'msnbot',
+  'DuckDuckBot',
+  'Baiduspider',
+  'YandexBot',
+  'Applebot',
+  'facebookexternalhit',
+  'LinkedInBot',
+  'Twitterbot',
+  'Slackbot',
+  'WhatsApp',
+];
+
+function isSearchEngineBot(userAgent: string): boolean {
+  const ua = userAgent.toLowerCase();
+  return SEARCH_ENGINE_BOTS.some(bot => ua.includes(bot.toLowerCase()));
+}
+
 const EXCLUDED_PATHS = [
   '/assets/',
   '/favicon',
@@ -123,6 +148,9 @@ const EXCLUDED_PATHS = [
   '.woff2',
   '.ttf',
   '.eot',
+  '/sitemap.xml',
+  '/sitemap_index.xml',
+  '/robots.txt',
   '/api/partner/', // Partner API is for external bots - has its own authentication
   '/api/health', // Health check endpoint for monitoring
   '/api/public/meta-pixel', // Meta Pixel config endpoint - must be accessible for Facebook validation
@@ -154,6 +182,12 @@ export function botProtectionMiddleware(req: Request, res: Response, next: NextF
   const userAgent = req.headers['user-agent'] || '';
   const clientIP = req.ip || getClientIP(req);
   const isApiRequest = req.path.startsWith('/api/');
+
+  // Always allow legitimate search engine and social crawlers through
+  if (isSearchEngineBot(userAgent)) {
+    console.log(`[Bot Protection] Allowed search engine bot: ${userAgent.substring(0, 100)} from ${clientIP}`);
+    return next();
+  }
   
   if (isAIBot(userAgent)) {
     console.log(`[Bot Protection] Blocked AI bot: ${userAgent.substring(0, 100)} from ${clientIP}`);
