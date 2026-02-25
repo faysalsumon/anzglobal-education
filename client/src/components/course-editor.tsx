@@ -488,6 +488,26 @@ const TAG_CATEGORY_LABELS: Record<string, { label: string; description: string; 
   audience: { label: 'Audience', description: 'Target students', icon: Users },
 };
 
+const COUNTRY_CURRENCY_MAP: Record<string, string> = {
+  'australia': 'AUD',
+  'new zealand': 'NZD',
+  'united kingdom': 'GBP',
+  'uk': 'GBP',
+  'england': 'GBP',
+  'scotland': 'GBP',
+  'wales': 'GBP',
+  'united states': 'USD',
+  'united states of america': 'USD',
+  'usa': 'USD',
+  'us': 'USD',
+  'canada': 'CAD',
+};
+
+function getCurrencyForCountry(country: string): string {
+  if (!country) return 'AUD';
+  return COUNTRY_CURRENCY_MAP[country.toLowerCase().trim()] || 'AUD';
+}
+
 interface CourseEditorProps {
   course?: Course | null;
   institutions: Institution[];
@@ -1023,7 +1043,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       fees: course?.fees || ("" as any),
       applicationFees: course?.applicationFees || ("" as any),
       costOfLiving: course?.costOfLiving || ("" as any),
-      currency: course?.currency || "AUD",
+      currency: course?.currency || getCurrencyForCountry(initialInstitutionCountry),
       location: course?.location || "",
       country: course?.country || "",
       startDate: course?.startDate || "",
@@ -1053,7 +1073,9 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const lastAutoAppliedRef = useRef<{ institutionId?: string; country?: string }>({});
   // Track if user has manually changed the framework
   const [frameworkManuallySet, setFrameworkManuallySet] = useState(false);
-  
+  // Track if user has manually changed the currency
+  const [currencyManuallySet, setCurrencyManuallySet] = useState(false);
+
   // Auto-update framework when institution or its country changes (only for new courses)
   useEffect(() => {
     const currentInstitutionId = selectedInstitution?.id;
@@ -1084,6 +1106,27 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       lastAutoAppliedRef.current = { institutionId: currentInstitutionId, country: institutionCountry };
     }
   }, [selectedInstitution?.id, institutionCountry, course?.id, frameworkManuallySet, form]);
+
+  // Auto-update currency when institution changes (for both new and existing courses when switching institution)
+  useEffect(() => {
+    const currentInstitutionId = selectedInstitution?.id;
+    if (!currentInstitutionId || !institutionCountry) return;
+
+    const hasInstitutionChanged = currentInstitutionId !== lastAutoAppliedRef.current.institutionId;
+
+    // Reset currencyManuallySet when institution changes so new institution gets correct currency
+    if (hasInstitutionChanged) {
+      setCurrencyManuallySet(false);
+    }
+
+    // Don't override if user has manually picked a currency for this institution
+    if (currencyManuallySet) return;
+
+    // Auto-set currency based on institution's country
+    if (hasInstitutionChanged || !form.getValues('currency')) {
+      form.setValue("currency", getCurrencyForCountry(institutionCountry));
+    }
+  }, [selectedInstitution?.id, institutionCountry, currencyManuallySet, form]);
   const templateQueryUrl = currentCourseLevel && institutionCountry 
     ? `/api/course-level-requirements?courseLevel=${encodeURIComponent(currentCourseLevel)}&institutionCountry=${encodeURIComponent(institutionCountry)}`
     : null;
@@ -2239,17 +2282,25 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Currency</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select
+                              onValueChange={(val) => {
+                                field.onChange(val);
+                                setCurrencyManuallySet(true);
+                              }}
+                              value={field.value}
+                            >
                               <FormControl>
                                 <SelectTrigger data-testid="select-course-currency">
                                   <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="AUD">AUD</SelectItem>
-                                <SelectItem value="USD">USD</SelectItem>
-                                <SelectItem value="GBP">GBP</SelectItem>
-                                <SelectItem value="EUR">EUR</SelectItem>
+                                <SelectItem value="AUD">AUD — A$ Australian Dollar</SelectItem>
+                                <SelectItem value="NZD">NZD — NZ$ New Zealand Dollar</SelectItem>
+                                <SelectItem value="GBP">GBP — £ British Pound</SelectItem>
+                                <SelectItem value="USD">USD — $ US Dollar</SelectItem>
+                                <SelectItem value="CAD">CAD — C$ Canadian Dollar</SelectItem>
+                                <SelectItem value="EUR">EUR — € Euro</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
