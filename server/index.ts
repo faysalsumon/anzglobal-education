@@ -1,7 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
+import fs from "fs";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { injectPageMeta } from "./meta-injector";
 import { initializePineconeIndex } from "./knowledge-base";
 import { regionDetectionMiddleware, geoRedirectMiddleware } from "./middleware/region-detection";
 import { csrfErrorHandler } from "./middleware/csrf";
@@ -123,7 +126,20 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // In production: serve static files first, then inject page-specific meta
+    // into index.html before sending it to crawlers/browsers
+    const distPath = path.resolve(import.meta.dirname, "public");
+    app.use(express.static(distPath));
+    app.use("*", async (req: Request, res: Response) => {
+      try {
+        const indexPath = path.resolve(distPath, "index.html");
+        const html = await fs.promises.readFile(indexPath, "utf-8");
+        const injected = await injectPageMeta(req.originalUrl, html);
+        res.set("Content-Type", "text/html").send(injected);
+      } catch {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      }
+    });
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
