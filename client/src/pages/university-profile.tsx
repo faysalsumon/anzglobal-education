@@ -36,6 +36,9 @@ function UniversityProfileContent() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoDisplayError, setLogoDisplayError] = useState(false);
   useEffect(() => { setLogoDisplayError(false); }, [logoPreview]);
+  useEffect(() => {
+    return () => { if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview); };
+  }, [logoPreview]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasScholarship, setHasScholarship] = useState<boolean>(false);
@@ -286,6 +289,10 @@ function UniversityProfileContent() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    const blobUrl = URL.createObjectURL(file);
+    setLogoPreview(blobUrl);
+
     const formData = new FormData();
     formData.append("logo", file);
 
@@ -294,8 +301,7 @@ function UniversityProfileContent() {
 
       const data = await response.json();
       form.setValue("logo", data.logoPath);
-      setLogoPreview(data.logoPath);
-      
+
       toast({
         title: "Logo uploaded",
         description: "Your institution logo has been uploaded successfully.",

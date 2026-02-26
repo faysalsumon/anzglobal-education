@@ -156,6 +156,9 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
   const [logoDisplayError, setLogoDisplayError] = useState(false);
   useEffect(() => { setLogoDisplayError(false); }, [logoPreview]);
+  useEffect(() => {
+    return () => { if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview); };
+  }, [logoPreview]);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -408,6 +411,10 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    const blobUrl = URL.createObjectURL(file);
+    setLogoPreview(blobUrl);
+
     const formData = new FormData();
     formData.append("logo", file);
     if (institution?.id) {
@@ -418,7 +425,6 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
       const response = await apiRequest("POST", "/api/university/upload-logo", formData);
       const data = await response.json();
       form.setValue("logo", data.logoPath);
-      setLogoPreview(data.logoPath);
       toast({ title: "Logo uploaded", description: "Institution logo has been uploaded successfully." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
