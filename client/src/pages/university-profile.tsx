@@ -34,6 +34,8 @@ function UniversityProfileContent() {
   const { toast } = useToast();
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoDisplayError, setLogoDisplayError] = useState(false);
+  useEffect(() => { setLogoDisplayError(false); }, [logoPreview]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasScholarship, setHasScholarship] = useState<boolean>(false);
@@ -341,14 +343,16 @@ function UniversityProfileContent() {
             <CardContent>
               <div className="flex items-center gap-4">
                 <div className="w-40 h-40 rounded-full border border-border bg-muted flex items-center justify-center overflow-hidden">
-                  {(logoPreview || university?.logo) ? (
+                  {(logoPreview || university?.logo) && !logoDisplayError ? (
                     <img
                       src={logoPreview || university?.logo || ""}
                       alt="Institution logo"
                       className="w-full h-full object-cover"
                       data-testid="img-logo-preview"
-                      onError={() => setLogoPreview(null)}
+                      onError={() => setLogoDisplayError(true)}
                     />
+                  ) : (logoPreview || university?.logo) && logoDisplayError ? (
+                    <ImageIcon className="w-10 h-10 text-muted-foreground" />
                   ) : (
                     <Upload className="w-10 h-10 text-muted-foreground" />
                   )}

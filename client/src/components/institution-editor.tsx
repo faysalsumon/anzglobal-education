@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye, History, Users, Clock, Edit, Plus, Trash2, User, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Upload, Save, FileText, Globe, Tag, X, Check, ChevronDown, Sparkles, Loader2, Lock, Eye, History, Users, Clock, Edit, Plus, Trash2, User, AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
@@ -154,6 +154,8 @@ interface ActivityLogItem {
 export function InstitutionEditor({ institution, onBack, userId }: InstitutionEditorProps) {
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(institution?.logo || null);
+  const [logoDisplayError, setLogoDisplayError] = useState(false);
+  useEffect(() => { setLogoDisplayError(false); }, [logoPreview]);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -1145,14 +1147,16 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                   <CardContent className="space-y-4">
                     <div className="flex flex-col items-center gap-4">
                       <div className="w-24 h-24 rounded-full border border-border bg-muted flex items-center justify-center overflow-hidden">
-                        {logoPreview ? (
+                        {logoPreview && !logoDisplayError ? (
                           <img
                             src={logoPreview}
                             alt="Institution logo"
                             className="w-full h-full object-cover"
                             data-testid="img-institution-logo-preview"
-                            onError={() => setLogoPreview(null)}
+                            onError={() => setLogoDisplayError(true)}
                           />
+                        ) : logoPreview && logoDisplayError ? (
+                          <ImageIcon className="w-8 h-8 text-muted-foreground" />
                         ) : (
                           <Upload className="w-8 h-8 text-muted-foreground" />
                         )}
