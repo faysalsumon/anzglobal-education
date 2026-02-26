@@ -1574,22 +1574,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .png()
         .toBuffer();
 
-      // Upload to Replit Object Storage (persists across restarts and deployments)
       const universityId = universityAccess?.university.id || 'admin-upload';
       const filename = `college-logo-${universityId}-${Date.now()}.png`;
 
-      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-        return res.status(503).json({ message: "Object storage not configured" });
-      }
-      const { Client: LogoStorageClient } = await import("@replit/object-storage");
-      const logoStorageClient = new LogoStorageClient();
-      const objectPath = `public/institution-logos/${filename}`;
-      const uploadResult = await logoStorageClient.uploadFromBytes(objectPath, resizedBuffer);
-      if (!uploadResult.ok) {
-        throw new Error(`Object storage upload failed: ${uploadResult.error}`);
+      // Primary: write to local static directory — served directly by Vite/Express
+      // without any API proxy, making logos reliable even during server restarts.
+      const staticDir = process.env.NODE_ENV === 'production'
+        ? path.join(process.cwd(), 'dist', 'public', 'institutions')
+        : path.join(process.cwd(), 'client', 'public', 'institutions');
+      await fs.mkdir(staticDir, { recursive: true });
+      await fs.writeFile(path.join(staticDir, filename), resizedBuffer);
+
+      // Secondary: upload to Replit Object Storage as a persistent backup
+      // (best-effort — do not fail the whole request if object storage is unavailable)
+      if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        try {
+          const { Client: LogoStorageClient } = await import("@replit/object-storage");
+          const logoStorageClient = new LogoStorageClient();
+          const objectPath = `public/institution-logos/${filename}`;
+          const uploadResult = await logoStorageClient.uploadFromBytes(objectPath, resizedBuffer);
+          if (!uploadResult.ok) {
+            console.warn(`[Logo Upload] Object storage backup failed: ${uploadResult.error}`);
+          }
+        } catch (storageErr) {
+          console.warn('[Logo Upload] Object storage backup error (non-fatal):', storageErr);
+        }
       }
 
-      const logoPath = `/api/public-storage/public/institution-logos/${filename}`;
+      // Use static path — same format as all existing institution logos
+      const logoPath = `/institutions/${filename}`;
 
       // If university user, update their university profile immediately
       if (universityAccess) {

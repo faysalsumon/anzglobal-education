@@ -24,7 +24,8 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Database**: PostgreSQL (Neon, Drizzle ORM).
 - **Job Queue**: BullMQ with Redis.
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
-- **Object Storage**: Replit Object Storage.
+- **Object Storage**: Replit Object Storage (used as backup for logo uploads; primary storage is `client/public/institutions/` static files).
+- **Server Stability**: `process.exit(1)` intercepted and SIGHUP signal handled in `server/index.ts` to prevent Replit environment signals from crashing the dev server.
 - **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions.
 - **CRM System**: Unified contact management with client status lifecycle, lead rating, Kanban view, and public form integration.
 - **Multi-Course Applications**: Support for multiple courses per application with auto-generated IDs.

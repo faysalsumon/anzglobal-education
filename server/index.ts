@@ -11,6 +11,42 @@ import { csrfErrorHandler } from "./middleware/csrf";
 import { supabaseAuthMiddleware } from "./supabase-middleware";
 import { botProtectionMiddleware, securityHeadersMiddleware, protectedPathsMiddleware } from "./middleware/bot-protection";
 
+// Intercept process.exit(1) before Vite's error logger can use it to crash the dev server.
+// Vite's custom logger in server/vite.ts calls process.exit(1) on ANY Vite error, which
+// kills the whole Node process silently. We log the error instead and keep running.
+const _originalExit = process.exit.bind(process);
+(process as any).exit = (code?: number) => {
+  if (code === 1) {
+    console.error('[Server] process.exit(1) intercepted — logging instead of crashing (likely a Vite compilation error)');
+    console.error(new Error('[Server] Exit stack trace:').stack);
+    return;
+  }
+  _originalExit(code as never);
+};
+
+// Catch unhandled promise rejections (e.g. from async Pinecone rebuild) without crashing
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] Unhandled promise rejection:', reason);
+});
+
+// Catch any uncaught synchronous exceptions without crashing the server
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught exception:', err);
+});
+
+// Log OS-level signals so we know what is killing the process
+process.on('SIGTERM', () => {
+  console.error('[Server] Received SIGTERM — process will exit');
+  _originalExit(0);
+});
+process.on('SIGINT', () => {
+  console.error('[Server] Received SIGINT — process will exit');
+  _originalExit(0);
+});
+process.on('SIGHUP', () => {
+  console.error('[Server] Received SIGHUP');
+});
+
 const app = express();
 
 // Trust proxy for accurate client IP detection behind reverse proxy
