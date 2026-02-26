@@ -292,9 +292,111 @@ export default function Landing() {
             "name": "ANZ Global Education - Study Abroad",
             "alternateName": "ANZ Global Education",
             "url": siteUrl,
-            "logo": `${siteUrl}/logo.png`,
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${siteUrl}/logo.png`,
+              "width": 300,
+              "height": 80
+            },
             "description": pageDescription,
-            "sameAs": []
+            "foundingDate": "2020",
+            "areaServed": isAU ? "Australia" : isBD ? ["Australia", "United Kingdom", "Canada", "New Zealand", "USA"] : "Worldwide",
+            "address": isBD ? {
+              "@type": "PostalAddress",
+              "streetAddress": "4th Floor, Plot-01 Rd 10",
+              "addressLocality": "Dhaka",
+              "postalCode": "1213",
+              "addressCountry": "BD"
+            } : isAU ? {
+              "@type": "PostalAddress",
+              "addressCountry": "AU"
+            } : undefined,
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer support",
+              "availableLanguage": isBD ? ["English", "Bengali"] : ["English"],
+              "areaServed": isAU ? "AU" : isBD ? "BD" : "Worldwide"
+            },
+            "sameAs": [
+              "https://www.facebook.com/anzglobal",
+              "https://www.instagram.com/anzglobal",
+              "https://www.linkedin.com/company/anzglobal",
+              "https://www.youtube.com/channel/UCzaqG5ugCxIQsVu2IAdA-mQ",
+              "https://x.com/anz_global"
+            ]
+          })}
+        </script>
+
+        {/* JSON-LD WebSite Schema with SearchAction (enables Google Sitelinks Search Box) */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "ANZ Global Education - Study Abroad",
+            "url": siteUrl,
+            "description": pageDescription,
+            "inLanguage": "en",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": `${siteUrl}/courses?search={search_term_string}`
+              },
+              "query-input": "required name=search_term_string"
+            }
+          })}
+        </script>
+
+        {/* JSON-LD SiteNavigationElement (signals key pages to Google for sitelinks) */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": "Site Navigation",
+            "itemListElement": [
+              {
+                "@type": "SiteNavigationElement",
+                "position": 1,
+                "name": "Find Courses",
+                "description": isAU ? "Browse thousands of Australian university courses" : "Browse courses in Australia, UK, Canada and more",
+                "url": `${siteUrl}/courses`
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 2,
+                "name": isAU ? "Study in Australia" : "Study Abroad",
+                "description": isAU ? "Your complete guide to studying in Australia" : "Your complete guide to studying abroad",
+                "url": isAU ? `${siteUrl}/study-in-australia` : `${siteUrl}/courses`
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 3,
+                "name": "Universities & Institutions",
+                "description": "Explore our partner universities and institutions",
+                "url": `${siteUrl}/institutions`
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 4,
+                "name": "Compare Courses",
+                "description": "Side-by-side comparison of courses and programs",
+                "url": `${siteUrl}/compare-courses`
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 5,
+                "name": "Blog & News",
+                "description": "Study abroad tips, visa guides, and education news",
+                "url": `${siteUrl}/blog`
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 6,
+                "name": "Partner With Us",
+                "description": "Universities and agents: join the ANZ Global Education network",
+                "url": `${siteUrl}/partner-with-us`
+              }
+            ]
           })}
         </script>
       </Helmet>
