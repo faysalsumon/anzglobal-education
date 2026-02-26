@@ -24,10 +24,9 @@ import { UniversityLayout } from "@/components/university-layout";
 const formSchema = insertUniversitySchema;
 
 const PROVIDER_TYPES = [
-  "Institution",
-  "TAFE",
   "University",
-  "College",
+  "Institution",
+  "Tafe",
   "School",
 ];
 
@@ -289,15 +288,7 @@ function UniversityProfileContent() {
     formData.append("logo", file);
 
     try {
-      const response = await fetch("/api/university/upload-logo", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload logo");
-      }
+      const response = await apiRequest("POST", "/api/university/upload-logo", formData);
 
       const data = await response.json();
       form.setValue("logo", data.logoPath);
@@ -349,16 +340,19 @@ function UniversityProfileContent() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                {(logoPreview || university?.logo) && (
-                  <div className="w-40 h-40 rounded-full border border-[#F0F0F0] bg-white flex items-center justify-center overflow-hidden">
+                <div className="w-40 h-40 rounded-full border border-border bg-muted flex items-center justify-center overflow-hidden">
+                  {(logoPreview || university?.logo) ? (
                     <img
                       src={logoPreview || university?.logo || ""}
                       alt="Institution logo"
                       className="w-full h-full object-cover"
                       data-testid="img-logo-preview"
+                      onError={() => setLogoPreview(null)}
                     />
-                  </div>
-                )}
+                  ) : (
+                    <Upload className="w-10 h-10 text-muted-foreground" />
+                  )}
+                </div>
                 <div className="flex-1">
                   <input
                     ref={fileInputRef}

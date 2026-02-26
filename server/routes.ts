@@ -1592,12 +1592,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const logoPath = `/api/public-storage/public/institution-logos/${filename}`;
 
       // If university user, update their university profile immediately
-      // If admin user, just return the path (they'll use it in their form)
       if (universityAccess) {
         await storage.updateUniversity(universityAccess.university.id, {
           ...universityAccess.university,
           logo: logoPath,
         });
+      }
+
+      // If admin user uploaded with an explicit institutionId, save the logo immediately to DB
+      // This prevents logo being lost if the admin navigates away before clicking Save
+      if (adminAccess && req.body?.institutionId) {
+        const targetInstitution = await storage.getUniversityById(req.body.institutionId);
+        if (targetInstitution) {
+          await storage.updateUniversity(req.body.institutionId, {
+            ...targetInstitution,
+            logo: logoPath,
+          });
+        }
       }
 
       res.json({ logoPath });

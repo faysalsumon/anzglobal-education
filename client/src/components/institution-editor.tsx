@@ -75,7 +75,7 @@ const institutionSchema = z.object({
   cricosProviderCode: z.string().optional(), // CRICOS Provider Code for international students
 });
 
-const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"];
+const PROVIDER_TYPES = ["University", "Institution", "Tafe", "School"];
 
 interface Institution {
   id: string;
@@ -408,6 +408,9 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
 
     const formData = new FormData();
     formData.append("logo", file);
+    if (institution?.id) {
+      formData.append("institutionId", institution.id);
+    }
 
     try {
       const response = await apiRequest("POST", "/api/university/upload-logo", formData);
@@ -1141,16 +1144,19 @@ export function InstitutionEditor({ institution, onBack, userId }: InstitutionEd
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex flex-col items-center gap-4">
-                      {logoPreview && (
-                        <div className="w-24 h-24 rounded-full border border-border bg-background flex items-center justify-center overflow-hidden">
+                      <div className="w-24 h-24 rounded-full border border-border bg-muted flex items-center justify-center overflow-hidden">
+                        {logoPreview ? (
                           <img
                             src={logoPreview}
                             alt="Institution logo"
                             className="w-full h-full object-cover"
                             data-testid="img-institution-logo-preview"
+                            onError={() => setLogoPreview(null)}
                           />
-                        </div>
-                      )}
+                        ) : (
+                          <Upload className="w-8 h-8 text-muted-foreground" />
+                        )}
+                      </div>
                       <input
                         ref={logoFileInputRef}
                         type="file"
