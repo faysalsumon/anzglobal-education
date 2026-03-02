@@ -88,7 +88,7 @@ interface FilterOptions {
 type StepType = "country" | "discipline" | "level" | "budget" | "results_contact";
 
 const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "results_contact"];
-const AU_STEPS: StepType[] = ["discipline", "level", "country", "budget"];
+const AU_STEPS: StepType[] = ["discipline", "level", "budget"];
 
 const STEP_CONFIG: Record<StepType, { title: string; subtitle: string; icon: LucideIcon }> = {
   country: { title: "Where do you want to study?", subtitle: "Pick your dream study destination", icon: Globe },
@@ -141,7 +141,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
       setAnimating(false);
       setSelectedDiscipline("");
       setSelectedLevel("");
-      setSelectedCountry("");
+      setSelectedCountry(isBD ? "" : "Australia");
       setBudgetRange([5000, 60000]);
       setContactFirstName("");
       setContactLastName("");

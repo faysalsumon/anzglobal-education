@@ -234,8 +234,9 @@ export default function PublicCourses() {
 
   const { isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
-  const { region } = useRegion();
+  const { region, regionCode } = useRegion();
   const regionQuery = region?.code ? { region: region.code } : {};
+  const isAU = regionCode?.toUpperCase() === 'AU';
   
   const { data: courses = [], isLoading } = useQuery<CourseWithDetails[]>({
     queryKey: ["/api/courses", regionQuery],
@@ -519,7 +520,7 @@ export default function PublicCourses() {
     if (subDiscipline) count++;
     if (framework) count++;
     if (level) count++;
-    if (country) count++;
+    if (country && !isAU) count++;
     if (campusState) count++;
     if (campusCity) count++;
     if (feeCurrency) count++;
@@ -549,7 +550,7 @@ export default function PublicCourses() {
     setSubDiscipline("");
     setFramework("");
     setLevel("");
-    setCountry("");
+    setCountry(isAU ? 'Australia' : '');
     setCampusState("");
     setCampusCity("");
     setFeeCurrency("");
@@ -623,13 +624,20 @@ export default function PublicCourses() {
     }
   }, [discipline, subDiscipline]);
 
+  // For AU site, auto-set country to Australia so state/city filters activate immediately
+  useEffect(() => {
+    if (isAU && !country) {
+      setCountry('Australia');
+    }
+  }, [isAU]);
+
   // Clear state and city when country changes (cascading filters)
   useEffect(() => {
-    if (!country && (campusState || campusCity)) {
+    if (!country && !isAU && (campusState || campusCity)) {
       setCampusState('');
       setCampusCity('');
     }
-  }, [country, campusState, campusCity]);
+  }, [country, campusState, campusCity, isAU]);
 
   // Clear city when state changes (cascading filters)
   useEffect(() => {
@@ -1017,27 +1025,29 @@ export default function PublicCourses() {
                           <ChevronDown className={`h-4 w-4 transition-transform ${openSections.location ? 'rotate-180' : ''}`} />
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 space-y-2">
-                          <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
-                            <SelectTrigger data-testid="select-country-mobile">
-                              <SelectValue placeholder="All Countries" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => {
-                                const countryData = getCountryByName(ctry);
-                                const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
-                                return (
-                                  <SelectItem key={ctry} value={ctry}>
-                                    <div className="flex items-center gap-2">
-                                      {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
-                                      {ctry}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                          {country && availableFilters.states.length > 0 && (
+                          {!isAU && (
+                            <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
+                              <SelectTrigger data-testid="select-country-mobile">
+                                <SelectValue placeholder="All Countries" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Countries</SelectItem>
+                                {availableFilters.countries.map((ctry) => {
+                                  const countryData = getCountryByName(ctry);
+                                  const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
+                                  return (
+                                    <SelectItem key={ctry} value={ctry}>
+                                      <div className="flex items-center gap-2">
+                                        {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
+                                        {ctry}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {(country || isAU) && availableFilters.states.length > 0 && (
                             <Select value={campusState || "all"} onValueChange={(val) => { setCampusState(val === "all" ? "" : val); if (val === "all") setCampusCity(""); }}>
                               <SelectTrigger data-testid="select-state-mobile">
                                 <SelectValue placeholder="All States" />
@@ -1377,27 +1387,29 @@ export default function PublicCourses() {
                           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.location ? 'rotate-180' : ''}`} />
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
-                          <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
-                            <SelectTrigger data-testid="select-country" className="h-9">
-                              <SelectValue placeholder="All Countries" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Countries</SelectItem>
-                              {availableFilters.countries.map((ctry) => {
-                                const countryData = getCountryByName(ctry);
-                                const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
-                                return (
-                                  <SelectItem key={ctry} value={ctry}>
-                                    <div className="flex items-center gap-2">
-                                      {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
-                                      {ctry}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                          {country && availableFilters.states.length > 0 && (
+                          {!isAU && (
+                            <Select value={country || "all"} onValueChange={(val) => { setCountry(val === "all" ? "" : val); if (val === "all") { setCampusState(""); setCampusCity(""); } }}>
+                              <SelectTrigger data-testid="select-country" className="h-9">
+                                <SelectValue placeholder="All Countries" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Countries</SelectItem>
+                                {availableFilters.countries.map((ctry) => {
+                                  const countryData = getCountryByName(ctry);
+                                  const flagUrl = countryData ? getFlagUrl(countryData.code) : null;
+                                  return (
+                                    <SelectItem key={ctry} value={ctry}>
+                                      <div className="flex items-center gap-2">
+                                        {flagUrl && <img src={flagUrl} alt={`${ctry} flag`} loading="lazy" width={20} height={15} className="w-5 h-auto rounded-sm" />}
+                                        {ctry}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {(country || isAU) && availableFilters.states.length > 0 && (
                             <Select value={campusState || "all"} onValueChange={(val) => { setCampusState(val === "all" ? "" : val); if (val === "all") setCampusCity(""); }}>
                               <SelectTrigger data-testid="select-state" className="h-9">
                                 <SelectValue placeholder="All States" />

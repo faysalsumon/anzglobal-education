@@ -158,7 +158,7 @@ export default function PublicInstitutions() {
   
   const { user, isAuthenticated, isStudent } = useAuth();
   const { toast } = useToast();
-  const { region } = useRegion();
+  const { region, regionCode } = useRegion();
   const regionParam = region?.code ? `region=${region.code}` : '';
   const regionQuery = region?.code ? { region: region.code } : {};
 
@@ -514,8 +514,9 @@ export default function PublicInstitutions() {
       )}
 
       {/* Location Filter - Cascading Country → State → City */}
-      {filterMetadata && filterMetadata.countries.length > 0 && (() => {
-        const selectedCountry = filters.countries[0] || "";
+      {filterMetadata && (() => {
+        const isAU = regionCode?.toUpperCase() === 'AU';
+        const selectedCountry = filters.countries[0] || (isAU ? 'Australia' : '');
         const selectedState = filters.states[0] || "";
         const selectedCity = filters.cities[0] || "";
         
@@ -557,14 +558,14 @@ export default function PublicInstitutions() {
               <div className="flex items-center gap-2 font-medium text-sm">
                 <Globe className="h-4 w-4 text-primary" />
                 Location
-                {(selectedCountry || selectedState || selectedCity) && (
+                {((!isAU && selectedCountry) || selectedState || selectedCity) && (
                   <span className="h-2 w-2 rounded-full bg-primary" />
                 )}
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openSections.country ? 'rotate-180' : ''}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 pb-3 px-1 space-y-2">
-              <Select value={selectedCountry || "all"} onValueChange={handleCountryChange}>
+              {!isAU && <Select value={selectedCountry || "all"} onValueChange={handleCountryChange}>
                 <SelectTrigger data-testid="select-country" className="h-9">
                   <SelectValue placeholder="All Countries" />
                 </SelectTrigger>
@@ -630,7 +631,7 @@ export default function PublicInstitutions() {
                     );
                   })}
                 </SelectContent>
-              </Select>
+              </Select>}
               {selectedCountry && availableStates.length > 0 && (
                 <Select value={selectedState || "all"} onValueChange={handleStateChange}>
                   <SelectTrigger data-testid="select-state" className="h-9">
