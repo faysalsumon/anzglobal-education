@@ -2387,7 +2387,7 @@ export default function AdminDashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Delete ${selectedInstitutions.size} selected institution(s)?`)) {
+                        if (confirm(`Deactivate ${selectedInstitutions.size} selected institution(s)? They will be hidden from the public site but can be restored via the Active/Inactive toggle.`)) {
                           bulkDeleteInstitutionsMutation.mutate(Array.from(selectedInstitutions));
                         }
                       }}
@@ -2395,7 +2395,7 @@ export default function AdminDashboard() {
                       data-testid="button-bulk-delete-institutions"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Delete Selected
+                      Deactivate Selected
                     </Button>
                     <Button
                       variant="outline"
@@ -2837,7 +2837,7 @@ export default function AdminDashboard() {
                       variant="destructive"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Delete ${selectedCourses.size} selected course(s)?`)) {
+                        if (confirm(`Deactivate ${selectedCourses.size} selected course(s)? They will be hidden from the public site but can be restored via the Active/Inactive toggle.`)) {
                           bulkDeleteCoursesMutation.mutate(Array.from(selectedCourses));
                         }
                       }}
@@ -2845,7 +2845,7 @@ export default function AdminDashboard() {
                       data-testid="button-bulk-delete-courses"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Delete Selected
+                      Deactivate Selected
                     </Button>
                     <Button
                       variant="outline"

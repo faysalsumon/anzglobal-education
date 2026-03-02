@@ -10199,13 +10199,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "institutionIds must be a non-empty array" });
       }
 
-      // Delete institutions
-      await db.delete(universities).where(
-        or(...institutionIds.map(id => eq(universities.id, id)))
-      );
+      // Soft-delete: deactivate institutions instead of permanently removing them.
+      // This preserves all data and allows recovery via the Active/Inactive toggle.
+      await db.update(universities)
+        .set({ isActive: false, publishStatus: 'draft' })
+        .where(or(...institutionIds.map(id => eq(universities.id, id))));
 
       res.json({ 
-        message: `Successfully deleted ${institutionIds.length} institution(s)`,
+        message: `Successfully deactivated ${institutionIds.length} institution(s)`,
         count: institutionIds.length 
       });
     } catch (error) {
@@ -10355,13 +10356,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "courseIds must be a non-empty array" });
       }
 
-      // Delete courses
-      await db.delete(courses).where(
-        or(...courseIds.map(id => eq(courses.id, id)))
-      );
+      // Soft-delete: deactivate courses instead of permanently removing them.
+      // This preserves all data and allows recovery via the Active/Inactive toggle.
+      await db.update(courses)
+        .set({ isActive: false, publishStatus: 'draft' })
+        .where(or(...courseIds.map(id => eq(courses.id, id))));
 
       res.json({ 
-        message: `Successfully deleted ${courseIds.length} course(s)`,
+        message: `Successfully deactivated ${courseIds.length} course(s)`,
         count: courseIds.length 
       });
     } catch (error) {

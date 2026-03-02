@@ -77,6 +77,17 @@ app.use(regionDetectionMiddleware);
 // Add Supabase auth middleware to process JWT tokens
 app.use(supabaseAuthMiddleware);
 
+// Prevent Cloudflare and other CDNs from caching API responses.
+// Without this, Cloudflare serves stale JSON (old course names, missing courses, etc.)
+// because it treats API responses like static assets and caches them aggressively.
+// Static file routes (/institutions/, /thumbnails/, etc.) are unaffected.
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 const SENSITIVE_FIELDS = [
   "password", "token", "secret", "apiKey", "api_key", "accessToken", "access_token",
   "refreshToken", "refresh_token", "authorization", "cookie", "session",

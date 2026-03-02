@@ -26,6 +26,8 @@ The platform adheres to ANZ Global Education's brand identity, utilizing a speci
 - **Web Scraping**: Playwright, Cheerio, robots-parser.
 - **Object Storage**: Replit Object Storage is the persistent backup for ALL logo uploads. Static files in `public/institutions/` (project root) serve logos instantly; when a logo is missing (e.g. after redeployment), the `/institutions/:filename` route falls back to Object Storage automatically. `downloadAsBytes` returns an array of chunks — always use `Buffer.concat(chunks.map(...))` NOT `Buffer.from(chunks)`. Production upload path is `public/institutions/` (persistent), dev is `client/public/institutions/`.
 - **Server Stability**: `process.exit(1)` intercepted and SIGHUP signal handled in `server/index.ts` to prevent Replit environment signals from crashing the dev server.
+- **Cloudflare Cache Prevention**: All `/api/*` routes return `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` headers (set in `server/index.ts` middleware). This prevents Cloudflare from caching API JSON responses, ensuring course names, listings, and all data changes appear immediately on the production site without requiring a cache purge.
+- **Soft-Delete for Bulk Actions**: Bulk "deactivate" for institutions and courses sets `isActive: false` + `publishStatus: 'draft'` instead of hard-deleting rows. Data is fully recoverable via the existing Active/Inactive toggle in the admin panel.
 - **Authorization**: Scalable Role-Based Access Control (RBAC) with hierarchical permissions.
 - **CRM System**: Unified contact management with client status lifecycle, lead rating, Kanban view, and public form integration.
 - **Multi-Course Applications**: Support for multiple courses per application with auto-generated IDs.
