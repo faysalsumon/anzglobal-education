@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { verifyTurnstileToken } from "./turnstile";
 import { parse as parseCookie } from "cookie";
 import { unsign as unsignCookie } from "cookie-signature";
 import { storage } from "./storage";
@@ -3286,6 +3287,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/leads", async (req, res) => {
     try {
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
       const leadInputSchema = z.object({
         firstName: z.string().min(1).max(100),
         lastName: z.string().min(1).max(100),
@@ -3423,6 +3429,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/public/quiz-leads", async (req, res) => {
     try {
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
       const quizLeadSchema = z.object({
         firstName: z.string().min(1).max(100),
         lastName: z.string().min(1).max(100),
@@ -11925,6 +11936,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TODO: Add rate limiting to prevent spam/abuse
   app.post("/api/public/contact", async (req, res) => {
     try {
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
       // Normalize and sanitize input BEFORE validation
       const normalizedInput = {
         ...req.body,
@@ -15014,6 +15030,11 @@ Return JSON format: {"metaTitle": "...", "metaDescription": "...", "focusKeyword
     console.log("Request body:", JSON.stringify(req.body, null, 2));
     
     try {
+      const turnstile = await verifyTurnstileToken(req.body.turnstileToken, req.ip);
+      if (!turnstile.success) {
+        return res.status(400).json({ message: turnstile.error || "CAPTCHA verification failed." });
+      }
+
       // Parse and validate the request body
       const inquiryData = insertContactInquirySchema.parse(req.body);
       

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import {
   GraduationCap, BookOpen, Globe, DollarSign, ArrowRight, ArrowLeft, X, Sparkles, Check,
   Briefcase, TreePine, FlaskConical, Palette, Monitor, BookOpenCheck, Cog, Mountain,
@@ -128,6 +129,9 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({});
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
 
   const { data: filterOptions, isLoading: filtersLoading } = useQuery<FilterOptions>({
     queryKey: ["/api/courses/filter-options"],
@@ -247,6 +251,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         budgetMin: budgetRange[0],
         budgetMax: budgetRange[1],
         regionCode: "BD",
+        turnstileToken: turnstileToken || undefined,
       });
       setLeadSubmitted(true);
     } catch {
@@ -612,6 +617,12 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
           {contactErrors.submit && (
             <p className="text-sm text-destructive text-center">{contactErrors.submit}</p>
           )}
+
+          <TurnstileWidget
+            onSuccess={handleTurnstileSuccess}
+            onExpire={handleTurnstileExpire}
+            className="flex justify-center"
+          />
 
           <Button
             className="w-full"

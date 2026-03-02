@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { trackLead } from "@/lib/meta-pixel";
 import { useRegion } from "@/context/RegionContext";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import {
   Dialog,
   DialogContent,
@@ -120,6 +121,10 @@ export function LeadFormDialog({
     },
   });
 
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
+
   // Watch country field to conditionally show visa status
   const selectedCountry = form.watch("country");
   const isAustralia = selectedCountry === "Australia";
@@ -138,6 +143,7 @@ export function LeadFormDialog({
         courseId,
         universityId,
         regionCode: regionCode || undefined,
+        turnstileToken: turnstileToken || undefined,
       });
       return response.json();
     },
@@ -148,6 +154,7 @@ export function LeadFormDialog({
         description: data.message || "We'll be in touch soon!",
       });
       form.reset();
+      setTurnstileToken("");
       setOpen(false);
     },
     onError: (error: any) => {
@@ -311,6 +318,12 @@ export function LeadFormDialog({
                 )}
               />
             )}
+
+            <TurnstileWidget
+              onSuccess={handleTurnstileSuccess}
+              onExpire={handleTurnstileExpire}
+              className="flex justify-center"
+            />
 
             <div className="flex gap-3 pt-2">
               <Button

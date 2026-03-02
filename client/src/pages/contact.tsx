@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -70,6 +70,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 // Student contact form schema
 const studentContactSchema = z.object({
@@ -352,6 +353,9 @@ function OfficeFinder() {
 export default function Contact() {
   const [contactType, setContactType] = useState<"student" | "institution" | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
   const { toast } = useToast();
 
   // Student form
@@ -387,7 +391,10 @@ export default function Contact() {
 
   const submitContactMutation = useMutation({
     mutationFn: async (data: ContactData) => {
-      const res = await apiRequest("POST", "/api/contact/inquiry", data);
+      const res = await apiRequest("POST", "/api/contact/inquiry", {
+        ...data,
+        turnstileToken: turnstileToken || undefined,
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -771,6 +778,12 @@ export default function Contact() {
                           )}
                         />
 
+                        <TurnstileWidget
+                          onSuccess={handleTurnstileSuccess}
+                          onExpire={handleTurnstileExpire}
+                          className="flex justify-start"
+                        />
+
                         <Button
                           type="submit"
                           className="w-full sm:w-auto"
@@ -932,6 +945,12 @@ export default function Contact() {
                               <FormMessage />
                             </FormItem>
                           )}
+                        />
+
+                        <TurnstileWidget
+                          onSuccess={handleTurnstileSuccess}
+                          onExpire={handleTurnstileExpire}
+                          className="flex justify-start"
                         />
 
                         <Button
