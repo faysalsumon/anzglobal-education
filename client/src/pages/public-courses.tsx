@@ -59,6 +59,18 @@ import { Slider } from "@/components/ui/slider";
 import { TagMarquee } from "@/components/ui/tag-marquee";
 import { useRegion } from "@/context/RegionContext";
 
+// Normalize Australian state names to abbreviations (mirrors backend logic)
+const normalizeAustralianState = (state: string): string => {
+  const s = state.trim();
+  const map: Record<string, string> = {
+    'Victoria': 'VIC', 'New South Wales': 'NSW', 'Queensland': 'QLD',
+    'South Australia': 'SA', 'Western Australia': 'WA',
+    'Tasmania': 'TAS', 'Northern Territory': 'NT',
+    'Australian Capital Territory': 'ACT',
+  };
+  return map[s] || s;
+};
+
 // Utility function to normalize city names for consistent matching
 const normalizeCity = (city: string): string => {
   return city
@@ -459,20 +471,23 @@ export default function PublicCourses() {
         const campusAddresses = (institution as any).campusAddresses as Array<{ country?: string; state?: string; city?: string }>;
         if (Array.isArray(campusAddresses)) {
           campusAddresses.forEach((campus) => {
-            const campusCountry = campus.country || course.country;
+            const campusCountry = (campus.country || course.country || "").trim();
             if (campusCountry && campus.state) {
+              const normalizedState = campusCountry === 'Australia'
+                ? normalizeAustralianState(campus.state)
+                : campus.state.trim();
               if (!statesByCountry[campusCountry]) {
                 statesByCountry[campusCountry] = new Set();
               }
-              statesByCountry[campusCountry].add(campus.state);
-              
-              // Track cities by state key (country:state)
-              const stateKey = `${campusCountry}:${campus.state}`;
+              statesByCountry[campusCountry].add(normalizedState);
+
+              // Track cities by state key (country:normalizedState)
+              const stateKey = `${campusCountry}:${normalizedState}`;
               if (campus.city) {
                 if (!citiesByState[stateKey]) {
                   citiesByState[stateKey] = new Set();
                 }
-                citiesByState[stateKey].add(campus.city);
+                citiesByState[stateKey].add(campus.city.trim());
               }
             }
           });
