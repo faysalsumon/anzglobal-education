@@ -637,6 +637,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/admins', express.static(path.join(process.cwd(), 'public', 'admins')));
   app.use('/contacts', express.static(path.join(process.cwd(), 'public', 'contacts')));
   app.use('/testimonials', express.static(path.join(process.cwd(), 'public', 'testimonials')));
+
+  // Object Storage fallback for institution logos — when the local static file is missing
+  // (e.g. after a redeployment that wiped the runtime filesystem), serve from Object Storage
+  // where every logo upload is backed up. This keeps ALL existing /institutions/... URLs working
+  // permanently without any DB or URL format changes.
+  app.get('/institutions/:filename', async (req: any, res: any, next: any) => {
+    try {
+      const filename = req.params.filename;
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) return next();
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return next();
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) return next();
+
+      const { Client: LogoClient } = await import("@replit/object-storage");
+      const logoClient = new LogoClient();
+      const objectPath = `public/institution-logos/${filename}`;
+      const result = await logoClient.downloadAsBytes(objectPath);
+
+      if (result.ok && result.value) {
+        // downloadAsBytes returns an array of chunks — concat them into one buffer
+        const logoBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
+        if (logoBuffer.length > 100) {
+          const contentTypeMap: Record<string, string> = {
+            png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+            gif: 'image/gif', webp: 'image/webp',
+          };
+          res.set('Content-Type', contentTypeMap[ext] || 'image/png');
+          res.set('Cache-Control', 'public, max-age=604800');
+          return res.send(logoBuffer);
+        }
+      }
+      return next();
+    } catch {
+      return next();
+    }
+  });
   
   // Serve attached assets (stock images, generated images, etc.)
   app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
@@ -677,7 +714,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "File not found" });
       }
       
-      const fileBuffer = result.value;
+      // downloadAsBytes returns an array of chunks — concat them into one buffer
+      const fileBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
       
       // Set content type based on extension
       const mimeTypes: Record<string, string> = {
@@ -692,7 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set cache headers for thumbnails (cache for 1 day)
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.setHeader('Content-Type', contentType);
-      res.send(Buffer.from(fileBuffer));
+      res.send(fileBuffer);
     } catch (error) {
       console.error("Error serving public storage file:", error);
       res.status(500).json({ message: "Failed to serve file" });
@@ -731,7 +769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days — logos change rarely
       res.setHeader('Content-Type', mimeTypes[ext] || 'image/png');
-      res.send(Buffer.from(result.value));
+      res.send(Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))));
     } catch (error) {
       console.error("Error serving institution logo:", error);
       res.status(500).json({ message: "Failed to serve file" });
@@ -770,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
       res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
-      res.send(Buffer.from(result.value));
+      res.send(Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))));
     } catch (error) {
       console.error("Error serving institution gallery image:", error);
       res.status(500).json({ message: "Failed to serve file" });
@@ -1577,10 +1615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const universityId = universityAccess?.university.id || 'admin-upload';
       const filename = `college-logo-${universityId}-${Date.now()}.png`;
 
-      // Primary: write to local static directory — served directly by Vite/Express
-      // without any API proxy, making logos reliable even during server restarts.
+      // Primary: write to local static directory — served directly by Vite/Express.
+      // Production uses public/institutions/ (project root, persistent across restarts).
+      // Dev uses client/public/institutions/ (served by Vite's dev server).
       const staticDir = process.env.NODE_ENV === 'production'
-        ? path.join(process.cwd(), 'dist', 'public', 'institutions')
+        ? path.join(process.cwd(), 'public', 'institutions')
         : path.join(process.cwd(), 'client', 'public', 'institutions');
       await fs.mkdir(staticDir, { recursive: true });
       await fs.writeFile(path.join(staticDir, filename), resizedBuffer);
@@ -6871,12 +6910,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { Client } = await import("@replit/object-storage");
         const storageClient = new Client();
         
-        const { ok, value: fileBuffer } = await storageClient.downloadAsBytes(filePath);
+        const { ok, value: fileChunks } = await storageClient.downloadAsBytes(filePath);
         
-        if (!ok || !fileBuffer) {
+        if (!ok || !fileChunks) {
           return res.status(404).json({ message: "File not found in storage" });
         }
         
+        // downloadAsBytes returns an array of chunks — concat them into one buffer
+        const fileBuffer = Buffer.concat((fileChunks as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
+
         // Determine content type from file extension
         const ext = pathModule.extname(document.fileName || filePath).toLowerCase();
         const mimeTypes: Record<string, string> = {
@@ -6894,7 +6936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', `inline; filename="${document.fileName || document.title || 'document'}"`);
-        res.send(Buffer.from(fileBuffer));
+        res.send(fileBuffer);
       } else {
         // Local file path
         try {

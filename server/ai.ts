@@ -613,7 +613,8 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
         await fs.unlink(tempFilePath).catch(() => {});
 
         const verifyResult = await storageClient.downloadAsBytes(objectPath);
-        if (result.ok && verifyResult.value && verifyResult.value.length > 100) {
+        const verifyBuffer = verifyResult.value ? Buffer.concat((verifyResult.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c))) : null;
+        if (result.ok && verifyBuffer && verifyBuffer.length > 100) {
           const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
           console.log(`[Thumbnail AI] Thumbnail saved to Object Storage: ${publicUrl} (${(optimizedSize / 1024).toFixed(0)}KB)`);
           return publicUrl;
