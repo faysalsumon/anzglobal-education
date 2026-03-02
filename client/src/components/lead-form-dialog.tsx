@@ -33,10 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { CountrySelect } from "@/components/ui/country-select";
 import { Info } from "lucide-react";
 
-// Expanded visa status options for Australian immigration
 const VISA_STATUS_OPTIONS = [
   { value: 'no_visa', label: 'No Visa' },
   { value: 'student_visa_500', label: 'Student Visa (Subclass 500)' },
@@ -62,20 +60,31 @@ const leadFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required").max(100),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(1, "Phone number is required"),
-  country: z.string().min(1, "Please select your country"),
   visaStatus: z.string().optional(),
-}).refine((data) => {
-  // Visa status is required only when country is Australia
-  if (data.country === "Australia" && (!data.visaStatus || data.visaStatus.length === 0)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Please select your visa status",
-  path: ["visaStatus"],
 });
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
+
+function getCountryFromRegion(regionCode: string | null): string {
+  const code = regionCode?.toUpperCase();
+  if (code === "AU") return "Australia";
+  if (code === "BD") return "Bangladesh";
+  return "";
+}
+
+function getPhonePrefix(regionCode: string | null): string {
+  const code = regionCode?.toUpperCase();
+  if (code === "AU") return "+61 ";
+  if (code === "BD") return "+880 ";
+  return "";
+}
+
+function getPhonePlaceholder(regionCode: string | null): string {
+  const code = regionCode?.toUpperCase();
+  if (code === "AU") return "+61 400 000 000";
+  if (code === "BD") return "+880 1XXXXXXXXX";
+  return "+XX ...";
+}
 
 interface LeadFormDialogProps {
   courseId: string;
@@ -105,9 +114,13 @@ export function LeadFormDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
   const { regionCode } = useRegion();
-  
+
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange || setInternalOpen;
+
+  const isAU = regionCode?.toUpperCase() === "AU";
+  const phonePrefix = getPhonePrefix(regionCode);
+  const phonePlaceholder = getPhonePlaceholder(regionCode);
 
   const form = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
@@ -115,8 +128,7 @@ export function LeadFormDialog({
       firstName: "",
       lastName: "",
       email: "",
-      phone: "",
-      country: "",
+      phone: phonePrefix,
       visaStatus: "",
     },
   });
@@ -125,21 +137,21 @@ export function LeadFormDialog({
   const handleTurnstileSuccess = useCallback((token: string) => setTurnstileToken(token), []);
   const handleTurnstileExpire = useCallback(() => setTurnstileToken(""), []);
 
-  // Watch country field to conditionally show visa status
-  const selectedCountry = form.watch("country");
-  const isAustralia = selectedCountry === "Australia";
-
-  // Clear visa status when country changes away from Australia
+  // Pre-populate phone prefix when dialog opens
   useEffect(() => {
-    if (!isAustralia) {
-      form.setValue("visaStatus", "");
+    if (open) {
+      const currentPhone = form.getValues("phone");
+      if (!currentPhone || currentPhone.trim() === "") {
+        form.setValue("phone", phonePrefix);
+      }
     }
-  }, [isAustralia, form]);
+  }, [open, phonePrefix, form]);
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: LeadFormValues) => {
       const response = await apiRequest("POST", "/api/public/leads", {
         ...data,
+        country: getCountryFromRegion(regionCode),
         courseId,
         universityId,
         regionCode: regionCode || undefined,
@@ -153,7 +165,13 @@ export function LeadFormDialog({
         title: "Request Submitted",
         description: data.message || "We'll be in touch soon!",
       });
-      form.reset();
+      form.reset({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: phonePrefix,
+        visaStatus: "",
+      });
       setTurnstileToken("");
       setOpen(false);
     },
@@ -174,10 +192,10 @@ export function LeadFormDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && (
         <DialogTrigger asChild>
-          <Button 
-            size="sm" 
-            variant={buttonVariant} 
-            className={buttonClassName || "w-full"} 
+          <Button
+            size="sm"
+            variant={buttonVariant}
+            className={buttonClassName || "w-full"}
             data-testid="button-request-info"
           >
             <Info className="h-3.5 w-3.5 mr-1.5" />
@@ -260,7 +278,7 @@ export function LeadFormDialog({
                   <FormControl>
                     <Input
                       type="tel"
-                      placeholder="+61 400 000 000"
+                      placeholder={phonePlaceholder}
                       {...field}
                       data-testid="input-phone"
                     />
@@ -270,26 +288,7 @@ export function LeadFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="country"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country *</FormLabel>
-                  <FormControl>
-                    <CountrySelect
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Select your country"
-                      data-testid="select-country"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {isAustralia && (
+            {isAU && (
               <FormField
                 control={form.control}
                 name="visaStatus"
