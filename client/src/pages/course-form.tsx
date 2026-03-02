@@ -259,7 +259,9 @@ export default function CourseForm() {
         title: isEditing ? "Course updated" : "Course created",
         description: `Your course has been ${isEditing ? "updated" : "created"} successfully.`,
       });
-      navigate("/university/courses");
+      if (!isEditing) {
+        navigate("/university/courses");
+      }
     },
     onError: (error: Error) => {
       toast({

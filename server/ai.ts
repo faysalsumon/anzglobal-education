@@ -559,18 +559,13 @@ export interface ThumbnailResult {
   error?: string;
 }
 
-// Helper function to upload base64 image to object storage and get a public URL
+// Helper function to save thumbnail: tries Object Storage first, falls back to static file
 async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: string): Promise<string | null> {
   try {
-    // Check if object storage is configured
-    if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
-      console.warn("[Thumbnail AI] Object storage not configured, returning base64 URL");
-      return null;
-    }
-    
-    const { Client } = await import("@replit/object-storage");
-    const storageClient = new Client();
-    
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const os = await import('os');
+
     // Extract the base64 content and mime type - trim whitespace and handle multi-line
     const cleanedDataUrl = base64DataUrl.trim().replace(/\s+/g, '');
     const matches = cleanedDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
@@ -578,65 +573,69 @@ async function uploadBase64ToObjectStorage(base64DataUrl: string, fileName: stri
       console.warn("[Thumbnail AI] Invalid base64 data URL format");
       return null;
     }
-    
-    const [, imageType, base64Data] = matches;
+
+    const [, , base64Data] = matches;
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     if (buffer.length < 100) {
       console.error(`[Thumbnail AI] Buffer too small (${buffer.length} bytes), likely invalid base64 data`);
       return null;
     }
-    
-    // Optimize image: resize to max 800px width and convert to WebP for smaller file size
+
+    // Optimize image: resize to max 800px width and convert to WebP
     const sharp = (await import('sharp')).default;
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const os = await import('os');
-    
+
     const originalSize = buffer.length;
     console.log(`[Thumbnail AI] Original image size: ${(originalSize / 1024).toFixed(1)} KB`);
-    
-    // Resize and convert to WebP with 80% quality for optimal balance of size and quality
+
     const optimizedBuffer = await sharp(buffer)
-      .resize(800, null, { 
-        withoutEnlargement: true,  // Don't upscale small images
-        fit: 'inside'
-      })
+      .resize(800, null, { withoutEnlargement: true, fit: 'inside' })
       .webp({ quality: 80 })
       .toBuffer();
-    
+
     const optimizedSize = optimizedBuffer.length;
     const savings = ((1 - optimizedSize / originalSize) * 100).toFixed(1);
     console.log(`[Thumbnail AI] Image optimized: ${(originalSize / 1024).toFixed(0)}KB → ${(optimizedSize / 1024).toFixed(0)}KB (${savings}% smaller)`);
-    
-    // Use .webp extension for optimized images
+
     const fullFileName = `${fileName}.webp`;
-    const objectPath = `public/thumbnails/${fullFileName}`;
-    
-    // Write to temp file first, then upload (uploadFromBytes has issues)
-    const tempDir = os.tmpdir();
-    const tempFilePath = path.join(tempDir, fullFileName);
-    
-    await fs.writeFile(tempFilePath, optimizedBuffer);
-    
-    const result = await storageClient.uploadFromFilename(objectPath, tempFilePath);
-    
-    // Clean up temp file
-    await fs.unlink(tempFilePath).catch(() => {});
-    
-    // Verify upload was successful
-    const verifyResult = await storageClient.downloadAsBytes(objectPath);
-    
-    if (result.ok && verifyResult.value && verifyResult.value.length > 100) {
-      const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
-      console.log(`[Thumbnail AI] Thumbnail saved: ${publicUrl} (${(optimizedSize / 1024).toFixed(0)}KB)`);
-      return publicUrl;
+
+    // Try Object Storage if configured
+    if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+      try {
+        const { Client } = await import("@replit/object-storage");
+        const storageClient = new Client();
+        const objectPath = `public/thumbnails/${fullFileName}`;
+
+        const tempDir = os.tmpdir();
+        const tempFilePath = path.join(tempDir, fullFileName);
+        await fs.writeFile(tempFilePath, optimizedBuffer);
+        const result = await storageClient.uploadFromFilename(objectPath, tempFilePath);
+        await fs.unlink(tempFilePath).catch(() => {});
+
+        const verifyResult = await storageClient.downloadAsBytes(objectPath);
+        if (result.ok && verifyResult.value && verifyResult.value.length > 100) {
+          const publicUrl = `/api/public-storage/public/thumbnails/${fullFileName}`;
+          console.log(`[Thumbnail AI] Thumbnail saved to Object Storage: ${publicUrl} (${(optimizedSize / 1024).toFixed(0)}KB)`);
+          return publicUrl;
+        }
+        console.warn("[Thumbnail AI] Object Storage upload verification failed, falling back to static file");
+      } catch (storageError: any) {
+        console.warn("[Thumbnail AI] Object Storage upload failed, falling back to static file:", storageError?.message);
+      }
     } else {
-      console.warn("[Thumbnail AI] Failed to upload to object storage");
-      return null;
+      console.warn("[Thumbnail AI] Object Storage not configured, saving as static file");
     }
+
+    // Fallback: save as static file in client/public/thumbnails/ (fast, clean URLs, SEO-friendly)
+    const publicDir = path.join(process.cwd(), 'client', 'public', 'thumbnails');
+    await fs.mkdir(publicDir, { recursive: true });
+    const staticFilePath = path.join(publicDir, fullFileName);
+    await fs.writeFile(staticFilePath, optimizedBuffer);
+    const staticUrl = `/thumbnails/${fullFileName}`;
+    console.log(`[Thumbnail AI] Thumbnail saved as static file: ${staticUrl} (${(optimizedSize / 1024).toFixed(0)}KB)`);
+    return staticUrl;
   } catch (error: any) {
-    console.error("[Thumbnail AI] Error uploading to object storage:", error?.message);
+    console.error("[Thumbnail AI] Error saving thumbnail:", error?.message);
     return null;
   }
 }
@@ -1103,12 +1102,11 @@ High quality stock photo style. No text, no watermarks, no logos, no artificial 
       
       const uploadedUrl = await uploadBase64ToObjectStorage(imageUrl, fileName);
       if (uploadedUrl) {
-        console.log(`[Thumbnail AI] Successfully generated and uploaded thumbnail for: ${courseTitle}`);
+        console.log(`[Thumbnail AI] Successfully saved thumbnail for: ${courseTitle}`);
         return { success: true, url: uploadedUrl };
       } else {
-        // Fall back to returning the base64 URL if upload fails
-        console.log(`[Thumbnail AI] Upload failed, returning base64 URL for: ${courseTitle}`);
-        return { success: true, url: imageUrl };
+        console.error(`[Thumbnail AI] Failed to save thumbnail for: ${courseTitle}`);
+        return { success: false, error: "Failed to save thumbnail image" };
       }
     }
     

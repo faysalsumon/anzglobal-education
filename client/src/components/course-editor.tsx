@@ -1297,7 +1297,6 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
       }
       queryClient.invalidateQueries({ queryKey: ["/api/super-admin/courses"] });
       toast({ title: "Success", description: "Course updated successfully" });
-      onBack();
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -1582,6 +1581,7 @@ export function CourseEditor({ course, institutions, onBack, userId }: CourseEdi
   const handleSubmit = async (data: z.infer<typeof courseSchema>, publishStatus: 'draft' | 'published' = 'draft') => {
     const transformedData: any = {
       ...data,
+      thumbnailUrl,
       campusLocations: selectedCampusIds,
       intakes: data.intakes ? data.intakes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       pathways: data.pathways ? data.pathways.split(',').map(s => s.trim()).filter(Boolean) : undefined,
