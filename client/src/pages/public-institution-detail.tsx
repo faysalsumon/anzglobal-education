@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Favorite } from "@shared/schema";
-import { trackViewContent } from "@/lib/meta-pixel";
+import { trackViewContent, trackCustomEvent } from "@/lib/meta-pixel";
 
 const COURSE_LEVELS = [
   'VCE (11-12)', 'Certificate II', 'Certificate III', 'Certificate IV',
@@ -103,7 +103,19 @@ export default function PublicInstitutionDetail() {
 
   useEffect(() => {
     if (institution) {
-      trackViewContent(institution.name, "Institution", String(institution.id));
+      const firstCampus = (institution.campusAddresses as any[])?.[0];
+      trackViewContent(institution.name, institution.providerType || "Institution", String(institution.id), {
+        city: firstCampus?.city || (institution as any).city || "",
+        region: firstCampus?.state || "",
+        country_code: "AU",
+        content_type: "education_institution",
+      });
+      trackCustomEvent("ViewEducationInstitution", {
+        institution_name: institution.name,
+        institution_type: institution.providerType || "Institution",
+        city: firstCampus?.city || "",
+        region: firstCampus?.state || "",
+      });
     }
   }, [institution?.id]);
 

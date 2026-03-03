@@ -97,6 +97,8 @@ interface LeadFormDialogProps {
   buttonVariant?: "default" | "outline" | "secondary" | "ghost";
   buttonClassName?: string;
   buttonLabel?: string;
+  courseValue?: number;
+  courseCurrency?: string;
 }
 
 export function LeadFormDialog({
@@ -110,6 +112,8 @@ export function LeadFormDialog({
   buttonVariant = "default",
   buttonClassName,
   buttonLabel,
+  courseValue,
+  courseCurrency = "AUD",
 }: LeadFormDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
@@ -160,7 +164,7 @@ export function LeadFormDialog({
       return response.json();
     },
     onSuccess: (data: any) => {
-      trackLead("Course Lead", "Course Inquiry");
+      trackLead("Course Lead", "Course Inquiry", courseValue, courseCurrency);
       toast({
         title: "Request Submitted",
         description: data.message || "We'll be in touch soon!",

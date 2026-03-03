@@ -21,7 +21,7 @@ import {
   getNextIntake,
   MONTH_NAMES,
 } from "@shared/intake-utils";
-import { trackViewContent } from "@/lib/meta-pixel";
+import { trackViewContent, trackInitiateApplication } from "@/lib/meta-pixel";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 import { CampusLocationMapDialog } from "@/components/campus-location-map-dialog";
 import { CampusMapTabs } from "@/components/campus-map-tabs";
@@ -70,11 +70,13 @@ export default function PublicCourseDetail() {
 
   useEffect(() => {
     if (course) {
-      trackViewContent(
-        course.title,
-        "Course",
-        String(course.id)
-      );
+      trackViewContent(course.title, (course as any).discipline || "Course", String(course.id), {
+        content_type: "course",
+        currency: course.currency || "AUD",
+        ...(course.fees ? { value: Number(course.fees) } : {}),
+        education_level: course.level || "",
+        institution_name: course.university?.name || "",
+      });
     }
   }, [course?.id]);
 
@@ -546,7 +548,7 @@ export default function PublicCourseDetail() {
                 </Link>
               </Button>
             ) : isStudent ? (
-              <Button asChild data-testid="sticky-nav-apply">
+              <Button asChild data-testid="sticky-nav-apply" onClick={() => trackInitiateApplication(course.title, String(course.id), course.fees ? Number(course.fees) : undefined, course.currency || "AUD")}>
                 <Link href={`/student/courses/${course.id}`}>
                   <GraduationCap className="h-4 w-4 mr-1" />
                   Apply Now
@@ -569,6 +571,8 @@ export default function PublicCourseDetail() {
                 buttonVariant="ghost"
                 buttonClassName="whitespace-nowrap"
                 buttonLabel="Request Info"
+                courseValue={course.fees ? Number(course.fees) : undefined}
+                courseCurrency={course.currency || "AUD"}
               />
             )}
           </>
@@ -815,6 +819,7 @@ export default function PublicCourseDetail() {
                       asChild 
                       className="w-full" 
                       data-testid="button-apply-now"
+                      onClick={() => trackInitiateApplication(course.title, String(course.id), course.fees ? Number(course.fees) : undefined, course.currency || "AUD")}
                     >
                       <Link href={`/student/courses/${course.id}`}>
                         <GraduationCap className="h-4 w-4 mr-1.5" />
@@ -843,6 +848,8 @@ export default function PublicCourseDetail() {
                         courseName={course.title}
                         universityName={course.university.name}
                         buttonVariant="ghost"
+                        courseValue={course.fees ? Number(course.fees) : undefined}
+                        courseCurrency={course.currency || "AUD"}
                       />
                     </div>
                   )}
@@ -1950,6 +1957,7 @@ export default function PublicCourseDetail() {
               className="flex-[2]"
               asChild
               data-testid="mobile-button-apply"
+              onClick={() => trackInitiateApplication(course.title, String(course.id), course.fees ? Number(course.fees) : undefined, course.currency || "AUD")}
             >
               <Link href={`/student/applications/new?courseId=${courseId}`}>
                 <ArrowUpRight className="h-4 w-4 mr-1.5" />
@@ -1989,6 +1997,8 @@ export default function PublicCourseDetail() {
                 trigger={false}
                 open={mobileLeadFormOpen}
                 onOpenChange={setMobileLeadFormOpen}
+                courseValue={course.fees ? Number(course.fees) : undefined}
+                courseCurrency={course.currency || "AUD"}
               />
             </>
           )}

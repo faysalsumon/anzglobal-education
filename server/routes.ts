@@ -3404,6 +3404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const university = await storage.getUniversityById(leadData.universityId);
       const leadRegionContext = getRegionContext(req);
       const leadDetectedRegion = leadRegionContext.detectedFromDomain ? leadRegionContext.region?.code : null;
+      const resolvedRegionCode = leadData.regionCode || leadDetectedRegion || undefined;
       sendNewLeadAdminNotification({
         firstName: leadData.firstName,
         lastName: leadData.lastName,
@@ -3412,11 +3413,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courseTitle: course.title,
         universityName: university?.name || 'Unknown Institution',
         country: leadData.country,
-        regionCode: leadData.regionCode || leadDetectedRegion || undefined,
+        regionCode: resolvedRegionCode,
         entrySource: 'website',
         contactId: crmContact.id,
       }).catch(err => console.error('[Email] Failed to send new lead admin notification:', err));
-      
+
+      // Fire Meta Conversions API (server-side) — non-blocking, best-effort
+      import('./meta-capi').then(({ sendCapiLeadEvent }) => {
+        sendCapiLeadEvent({
+          email: leadData.email,
+          phone: leadData.phone,
+          firstName: leadData.firstName,
+          lastName: leadData.lastName,
+          regionCode: resolvedRegionCode,
+          contentName: course.title,
+          value: course.fees ? Number(course.fees) : undefined,
+          currency: course.currency || "AUD",
+          eventSourceUrl: req.headers["referer"] as string || undefined,
+          clientIp: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip,
+          clientUserAgent: req.headers["user-agent"] as string || undefined,
+        });
+      }).catch(err => console.warn('[Meta CAPI] Import failed:', err));
+
       res.status(201).json({ message: "Thank you! We'll be in touch soon." });
     } catch (error: any) {
       console.error("Error creating lead:", error);

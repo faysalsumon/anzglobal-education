@@ -113,10 +113,16 @@ export function trackSearch(searchString: string, contentCategory?: string): voi
   });
 }
 
-export function trackLead(contentName?: string, contentCategory?: string): void {
+export function trackLead(
+  contentName?: string,
+  contentCategory?: string,
+  value?: number,
+  currency = "AUD"
+): void {
   trackEvent("Lead", {
     ...(contentName && { content_name: contentName }),
     ...(contentCategory && { content_category: contentCategory }),
+    ...(value && value > 0 ? { value, currency } : {}),
   });
 }
 
@@ -129,12 +135,14 @@ export function trackCompleteRegistration(status?: string): void {
 export function trackViewContent(
   contentName: string,
   contentCategory?: string,
-  contentId?: string
+  contentId?: string,
+  extraParams?: Record<string, any>
 ): void {
   trackEvent("ViewContent", {
     content_name: contentName,
     ...(contentCategory && { content_category: contentCategory }),
     ...(contentId && { content_ids: [contentId], content_type: "product" }),
+    ...extraParams,
   });
 }
 
@@ -144,10 +152,13 @@ export function trackContact(): void {
 
 export function trackInitiateApplication(
   contentName?: string,
-  contentId?: string
+  contentId?: string,
+  value?: number,
+  currency = "AUD"
 ): void {
   trackEvent("InitiateCheckout", {
     ...(contentName && { content_name: contentName }),
-    ...(contentId && { content_ids: [contentId], content_type: "product" }),
+    ...(contentId && { content_ids: [contentId], content_type: "course" }),
+    ...(value && value > 0 ? { value, currency } : {}),
   });
 }
