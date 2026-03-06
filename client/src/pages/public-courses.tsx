@@ -1987,17 +1987,15 @@ export default function PublicCourses() {
           className="fixed bottom-14 md:bottom-0 left-0 right-0 bg-primary text-primary-foreground shadow-lg border-t z-50"
           data-testid="comparison-bar"
         >
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <GitCompare className="h-5 w-5" />
-                  <span className="font-semibold">
-                    {comparisons.length} {comparisons.length === 1 ? 'course' : 'courses'} selected
-                  </span>
-                </div>
-                <span className="text-sm opacity-90">
-                  {comparisons.length < 2 ? 'Select at least 2 courses to compare' : `Select up to ${4 - comparisons.length} more`}
+          <div className="container mx-auto px-3 py-2 md:px-4 md:py-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
+              <div className="flex items-center gap-2">
+                <GitCompare className="h-4 w-4 shrink-0" />
+                <span className="font-semibold text-sm">
+                  {comparisons.length} {comparisons.length === 1 ? 'course' : 'courses'} selected
+                </span>
+                <span className="text-xs opacity-80">
+                  {comparisons.length < 2 ? '· Select at least 2 to compare' : `· Select up to ${4 - comparisons.length} more`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -2005,10 +2003,10 @@ export default function PublicCourses() {
                   variant="outline"
                   size="sm"
                   onClick={() => clearAllComparisonsMutation.mutate()}
-                  className="bg-transparent text-primary-foreground hover:bg-primary-foreground/10 border-primary-foreground/30"
+                  className="bg-transparent text-primary-foreground hover:bg-primary-foreground/10 border-primary-foreground/30 flex-1 md:flex-none"
                   data-testid="button-clear-comparisons"
                 >
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-3 w-3" />
                   Clear All
                 </Button>
                 <Button
@@ -2016,9 +2014,10 @@ export default function PublicCourses() {
                   size="sm"
                   onClick={handleCompare}
                   disabled={comparisons.length < 2}
+                  className="flex-1 md:flex-none"
                   data-testid="button-compare-courses"
                 >
-                  <GitCompare className="mr-2 h-4 w-4" />
+                  <GitCompare className="mr-1 h-3 w-3" />
                   Compare Courses
                 </Button>
               </div>
