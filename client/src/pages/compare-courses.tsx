@@ -461,7 +461,7 @@ export default function CompareCourses() {
               {/* Sticky Course Headers */}
               <thead>
                 <tr className="bg-muted/50">
-                  <th className="sticky left-0 z-10 bg-muted/50 p-3 text-left font-semibold border-r">
+                  <th className="sticky left-0 z-10 bg-muted p-3 text-left font-semibold border-r">
                     <span className="text-muted-foreground text-sm">Attribute</span>
                   </th>
                   {courses.map((course, index) => (
@@ -537,7 +537,7 @@ export default function CompareCourses() {
                           colSpan={courses.length + 1} 
                           className="px-3 py-1.5 font-semibold text-xs"
                         >
-                          <div className="flex items-center gap-1.5 text-primary">
+                          <div className="flex items-center gap-1.5 text-foreground">
                             {category.icon}
                             {category.label}
                           </div>
@@ -550,7 +550,7 @@ export default function CompareCourses() {
                           key={attr.key} 
                           className={`${attrIndex % 2 === 0 ? 'bg-background' : 'bg-muted/10'} hover:bg-muted/20 transition-colors`}
                         >
-                          <td className="sticky left-0 z-10 px-3 py-2 border-r font-semibold text-xs bg-muted/50">
+                          <td className="sticky left-0 z-10 px-3 py-2 border-r font-semibold text-xs bg-muted">
                             <div className="flex items-center gap-1.5">
                               <span className="text-muted-foreground">{attr.icon}</span>
                               <span className="truncate">{attr.label}</span>
@@ -573,7 +573,7 @@ export default function CompareCourses() {
                 
                 {/* Action Buttons Row */}
                 <tr className="bg-muted/30">
-                  <td className="sticky left-0 z-10 px-3 py-2 border-r bg-muted/30 font-medium text-xs">
+                  <td className="sticky left-0 z-10 px-3 py-2 border-r bg-muted font-medium text-xs">
                     <div className="flex items-center gap-1.5">
                       <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Actions</span>
