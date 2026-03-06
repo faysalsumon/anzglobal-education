@@ -532,14 +532,14 @@ export default function CompareCourses() {
                   return (
                     <React.Fragment key={category.key}>
                       {/* Category Header Row */}
-                      <tr className="bg-muted/30">
-                        <td className="sticky left-0 z-10 bg-muted px-3 py-1.5 font-semibold text-xs border-r">
-                          <div className="flex items-center gap-1.5 text-foreground">
+                      <tr className="bg-primary/5">
+                        <td className="sticky left-0 z-10 bg-primary/10 px-3 py-1.5 font-semibold text-xs border-r border-primary/20">
+                          <div className="flex items-center gap-1.5 text-primary">
                             {category.icon}
                             {category.label}
                           </div>
                         </td>
-                        <td colSpan={courses.length} className="bg-muted/30 px-3 py-1.5" />
+                        <td colSpan={courses.length} className="bg-primary/5 px-3 py-1.5" />
                       </tr>
                       
                       {/* Attribute Rows */}
