@@ -426,11 +426,8 @@ export default function Landing() {
                 />
               </h1>
 
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-2 leading-relaxed">
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
                 {heroSubtitle}
-              </p>
-              <p className="text-sm text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8" data-testid="text-app-purpose">
-                ANZ Global Education - Study Abroad helps international students discover courses, compare universities, and apply to study abroad. We provide AI-powered course matching, expert counseling, visa guidance, and scholarship support to make your study abroad journey simple and successful.
               </p>
 
               {/* Primary CTA */}
