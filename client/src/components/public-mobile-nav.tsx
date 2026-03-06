@@ -290,15 +290,13 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             </span>
           </Link>
 
-          {/* Match - Center highlighted tab */}
+          {/* Match */}
           <button
             onClick={handleMatchClick}
-            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1 -mt-3"
+            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1"
             data-testid="tab-match"
           >
-            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent shadow-lg shadow-accent/30">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
+            <Sparkles className="h-5 w-5 text-accent" />
             <span className="text-[10px] font-semibold text-accent">
               Match
             </span>
