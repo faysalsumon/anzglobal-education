@@ -18,6 +18,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import type { LucideIcon } from "lucide-react";
 
 interface NavRoute {
@@ -204,8 +205,15 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
         )}
         data-testid="student-sidebar"
       >
-        {/* Icon Rail - No header, starts directly with navigation */}
+        {/* Icon Rail */}
         <div className="w-16 bg-card border-r border-border flex flex-col h-full">
+          {/* Logo header — desktop only, h-14 aligns with main content header */}
+          <div className="hidden lg:flex h-14 flex-shrink-0 items-center justify-center border-b border-border">
+            <Link href="/" aria-label="Go to homepage" data-testid="link-sidebar-logo">
+              <img src={logoUrl} alt="ANZ Global Education" className="h-8 w-8 object-contain" />
+            </Link>
+          </div>
+
           {/* Navigation Icons */}
           <div className="flex-1 overflow-y-auto flex flex-col">
             <div className="flex flex-col items-center py-2 gap-1 flex-1">
