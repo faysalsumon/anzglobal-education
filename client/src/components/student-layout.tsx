@@ -40,6 +40,7 @@ const getBreadcrumbTitle = (pathname: string): string => {
   const routes: Record<string, string> = {
     "/student/dashboard": "Dashboard",
     "/student/profile": "Smart Form",
+    "/student/preferences": "About Me & Preferences",
     "/student/account": "My Account",
     "/student/courses": "Browse Courses",
     "/student/applications": "My Applications",

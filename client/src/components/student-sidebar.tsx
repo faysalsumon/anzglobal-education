@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   Link2,
   Settings,
+  Target,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -98,6 +99,7 @@ export function StudentSidebar({ className, isMobileMenuOpen, onMobileMenuClose 
       color: "text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400",
       routes: [
         { icon: User, label: "Smart Form", path: "/student/profile" },
+        { icon: Target, label: "About Me & Preferences", path: "/student/preferences" },
         { icon: Settings, label: "My Account", path: "/student/account" },
       ],
     },

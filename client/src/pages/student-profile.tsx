@@ -29,7 +29,6 @@ import { COUNTRIES, NATIONALITIES_SORTED, getFlagUrl, getCountryByName, getCount
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete, AddressComponents } from "@/components/ui/address-autocomplete";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { FormDescription } from "@/components/ui/form";
 import { Target } from "lucide-react";
 import { SectionDocumentUpload } from "@/components/section-document-upload";
@@ -93,74 +92,6 @@ const VISA_TYPES = [
   { value: "citizen", label: "Australian Citizen" },
   { value: "other", label: "Other" },
 ];
-
-const DISCIPLINES = [
-  "Accounting, Business & Finance",
-  "Agriculture & Forestry",
-  "Applied Sciences & Professions",
-  "Arts, Design & Architecture",
-  "Computer Science & IT",
-  "Education & Training",
-  "Engineering & Technology",
-  "Environmental Studies & Earth Sciences",
-  "Hospitality, Leisure & Sports",
-  "Humanities",
-  "Journalism & Media",
-  "Law",
-  "Medicine & Health",
-  "Short Courses",
-  "Trade",
-];
-
-const COURSE_LEVELS = [
-  "Certificate I",
-  "Certificate II",
-  "Certificate III",
-  "Certificate IV",
-  "Diploma",
-  "Advanced Diploma",
-  "Associate Degree",
-  "Bachelor Degree",
-  "Bachelor Honours Degree",
-  "Graduate Certificate",
-  "Graduate Diploma",
-  "Master Degree (Coursework)",
-  "Master Degree (Research)",
-  "Doctoral Degree",
-];
-
-const STUDY_MODES = [
-  { value: "full_time", label: "Full-time" },
-  { value: "part_time", label: "Part-time" },
-  { value: "online", label: "Online" },
-  { value: "weekday", label: "Weekday Classes" },
-  { value: "weekend", label: "Weekend Classes" },
-  { value: "evening", label: "Evening Classes" },
-];
-
-const INTAKE_MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-const preferencesSchema = z.object({
-  preferredDiscipline: z.string().optional().nullable(),
-  preferredCourseLevel: z.string().optional().nullable(),
-  preferredStudyMode: z.string().optional().nullable(),
-  preferredIntakes: z.array(z.string()).optional().default([]),
-  budgetMin: z.number().optional().nullable(),
-  budgetMax: z.number().optional().nullable(),
-  prPathwayInterest: z.boolean().optional().default(false),
-  destinationCountry: z.string().optional().nullable(),
-});
-
-const bioSchema = z.object({
-  bio: z.string().optional(),
-  careerGoals: z.string().optional(),
-  educationLevel: z.string().optional(),
-  fieldOfStudy: z.string().optional(),
-  previousEducation: z.string().optional(),
-});
 
 const emergencyContactSchema = z.object({
   emergencyContactName: z.string().optional().nullable(),
@@ -447,14 +378,28 @@ interface ProfileCompletionResult {
     sop: boolean;
     bio: boolean;
   };
+  partialSections: {
+    personalInfo: boolean;
+    passport: boolean;
+    education: boolean;
+    languageTest: boolean;
+    preferences: boolean;
+    employment: boolean;
+    funding: boolean;
+    emergency: boolean;
+    sop: boolean;
+    bio: boolean;
+  };
 }
 
 function CompletionBadge({ 
   isComplete, 
+  isPartial = false,
   isOptional = false,
   isRecommended = false 
 }: { 
   isComplete: boolean; 
+  isPartial?: boolean;
   isOptional?: boolean;
   isRecommended?: boolean;
 }) {
@@ -462,6 +407,13 @@ function CompletionBadge({
     return (
       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200" data-testid="badge-complete">
         Complete
+      </Badge>
+    );
+  }
+  if (isPartial) {
+    return (
+      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200" data-testid="badge-partial">
+        Partially Complete
       </Badge>
     );
   }
@@ -552,7 +504,7 @@ function VerificationBadge({ status, verifierName, verifierProfileImage }: Verif
   return null;
 }
 
-const VALID_SECTIONS = ["personal", "passport", "education", "language", "preferences", "employment", "funding", "emergency", "sop", "bio"];
+const VALID_SECTIONS = ["personal", "passport", "education", "language", "employment", "funding", "emergency", "sop"];
 
 function StudentProfileContent() {
   const { toast } = useToast();
@@ -573,8 +525,6 @@ function StudentProfileContent() {
     setParams({ section: last || null });
   };
 
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiField, setAiField] = useState<"bio" | "careerGoals" | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -651,17 +601,6 @@ function StudentProfileContent() {
       passportIssuedDate: "",
       passportExpiryDate: "",
       passportIssuingAuthority: "",
-    },
-  });
-
-  const bioForm = useForm<z.infer<typeof bioSchema>>({
-    resolver: zodResolver(bioSchema),
-    defaultValues: {
-      bio: "",
-      careerGoals: "",
-      educationLevel: "",
-      fieldOfStudy: "",
-      previousEducation: "",
     },
   });
 
@@ -760,30 +699,8 @@ function StudentProfileContent() {
     },
   });
 
-  const preferencesForm = useForm<z.infer<typeof preferencesSchema>>({
-    resolver: zodResolver(preferencesSchema),
-    defaultValues: {
-      preferredDiscipline: "",
-      preferredCourseLevel: "",
-      preferredStudyMode: "",
-      preferredIntakes: [],
-      budgetMin: 5000,
-      budgetMax: 50000,
-      prPathwayInterest: false,
-      destinationCountry: "Australia",
-    },
-  });
-
-  const [budgetRange, setBudgetRange] = useState<[number, number]>([5000, 50000]);
-  const [selectedIntakes, setSelectedIntakes] = useState<string[]>([]);
-
-  const toggleIntake = (month: string) => {
-    setSelectedIntakes(prev => 
-      prev.includes(month) 
-        ? prev.filter(m => m !== month)
-        : [...prev, month]
-    );
-  };
+  const [hasPassport, setHasPassport] = useState<boolean | null>(null);
+  const [hasWorkExperience, setHasWorkExperience] = useState<boolean | null>(null);
 
   const isInAustralia = personalForm.watch("isInAustralia");
 
@@ -817,13 +734,6 @@ function StudentProfileContent() {
         australianVisaType: profile.australianVisaType || "",
         visaExpiryDate: profile.visaExpiryDate || "",
       });
-      bioForm.reset({
-        bio: profile.bio || "",
-        careerGoals: profile.careerGoals || "",
-        educationLevel: profile.educationLevel || "",
-        fieldOfStudy: profile.fieldOfStudy || "",
-        previousEducation: profile.previousEducation || "",
-      });
       emergencyForm.reset({
         emergencyContactName: profile.emergencyContactName || "",
         emergencyContactMobile: profile.emergencyContactMobile || "",
@@ -851,21 +761,8 @@ function StudentProfileContent() {
       sopForm.reset({
         statementOfPurpose: profile.statementOfPurpose || "",
       });
-      preferencesForm.reset({
-        preferredDiscipline: profile.preferredDiscipline || "",
-        preferredCourseLevel: profile.preferredCourseLevel || "",
-        preferredStudyMode: profile.preferredStudyMode || "",
-        preferredIntakes: profile.preferredIntakes || [],
-        budgetMin: profile.budgetMin ? parseFloat(profile.budgetMin) : 5000,
-        budgetMax: profile.budgetMax ? parseFloat(profile.budgetMax) : 50000,
-        prPathwayInterest: profile.prPathwayInterest || false,
-        destinationCountry: profile.destinationCountry || "Australia",
-      });
-      setBudgetRange([
-        profile.budgetMin ? parseFloat(profile.budgetMin) : 5000,
-        profile.budgetMax ? parseFloat(profile.budgetMax) : 50000,
-      ]);
-      setSelectedIntakes(profile.preferredIntakes || []);
+      setHasPassport(profile.hasPassport ?? null);
+      setHasWorkExperience(profile.hasWorkExperience ?? null);
     }
   }, [profile]);
 
@@ -1274,103 +1171,6 @@ function StudentProfileContent() {
     }
   };
 
-  const generateContent = async (field: "bio" | "careerGoals") => {
-    // Gather all existing profile data to create a richer, personalized bio
-    const personalInfo = {
-      firstName: profile?.firstName || personalForm.getValues("firstName"),
-      lastName: profile?.lastName || personalForm.getValues("lastName"),
-      nationality: profile?.nationality || passportForm.getValues("nationality"),
-      countryOfResidence: profile?.currentCountry || profile?.country,
-      preferredStudyDestination: profile?.destinationCountry,
-      intakePreference: profile?.preferredIntakes?.[0],
-    };
-
-    // Get education history from fetched data
-    const educationHistory = educations.map(edu => ({
-      level: edu.level,
-      institution: edu.institution,
-      fieldOfStudy: edu.fieldOfStudy,
-      country: edu.country,
-      gpa: edu.gpa,
-    }));
-
-    // Get language scores from fetched data
-    const languageTests = languageScores.map(score => ({
-      testType: score.testType,
-      overallScore: score.overallScore,
-      listeningScore: score.listeningScore,
-      readingScore: score.readingScore,
-      writingScore: score.writingScore,
-      speakingScore: score.speakingScore,
-    }));
-
-    // Get employment history from fetched data (optional)
-    const employmentHistory = employments.map(emp => ({
-      jobTitle: emp.jobTitle,
-      company: emp.company,
-      industry: emp.industry,
-      employmentType: emp.employmentType,
-      country: emp.country,
-      city: emp.city,
-      isCurrentlyWorking: emp.isCurrentlyWorking,
-      responsibilities: emp.responsibilities,
-      achievements: emp.achievements,
-    }));
-
-    // Also get any bio form fields already filled
-    const bioFormData = {
-      educationLevel: bioForm.getValues("educationLevel"),
-      fieldOfStudy: bioForm.getValues("fieldOfStudy"),
-      previousEducation: bioForm.getValues("previousEducation"),
-    };
-
-    // Check if we have enough data to generate
-    const hasPersonalInfo = personalInfo.firstName || personalInfo.nationality;
-    const hasEducation = educationHistory.length > 0 || bioFormData.educationLevel;
-    const hasLanguageScores = languageTests.length > 0;
-    const hasEmployment = employmentHistory.length > 0;
-
-    if (!hasPersonalInfo && !hasEducation && !hasLanguageScores) {
-      toast({
-        title: "Missing information",
-        description: "Please add some personal info, education history, or language scores first to generate personalized content.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setAiField(field);
-    setAiLoading(true);
-    try {
-      const response = await apiRequest("POST", "/api/ai/generate-student-content", {
-        field,
-        personalInfo,
-        educationHistory,
-        languageTests,
-        employmentHistory,
-        bioFormData,
-      });
-      const data = await response.json();
-      bioForm.setValue(field, data.content, { 
-        shouldDirty: true, 
-        shouldTouch: true,
-        shouldValidate: true 
-      });
-      toast({
-        title: "Content generated",
-        description: `AI has created ${field === "bio" ? "a personalized bio" : "career goals"} based on your profile.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setAiLoading(false);
-      setAiField(null);
-    }
-  };
 
   const handleEducationSubmit = educationForm.handleSubmit((data) => {
     createEducationMutation.mutate(data);
@@ -1525,10 +1325,6 @@ function StudentProfileContent() {
     }
   );
 
-  const handleBioSubmit = bioForm.handleSubmit((data) => {
-    createOrUpdateMutation.mutate(data);
-  });
-
   const handleEmergencySubmit = emergencyForm.handleSubmit((data) => {
     createOrUpdateMutation.mutate(data);
   });
@@ -1537,14 +1333,6 @@ function StudentProfileContent() {
     createOrUpdateMutation.mutate(data);
   });
 
-  const handlePreferencesSubmit = preferencesForm.handleSubmit((data) => {
-    createOrUpdateMutation.mutate({
-      ...data,
-      preferredIntakes: selectedIntakes,
-      budgetMin: budgetRange[0].toString(),
-      budgetMax: budgetRange[1].toString(),
-    });
-  });
 
   const handleFundingSubmit = fundingForm.handleSubmit((data) => {
     createOrUpdateMutation.mutate(data);
@@ -1639,7 +1427,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <User className="h-5 w-5 text-primary" />
               <span className="font-semibold">Personal Information</span>
-              <CompletionBadge isComplete={completion?.completedSections?.personalInfo || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.personalInfo || false} isPartial={completion?.partialSections?.personalInfo || false} />
               <VerificationBadge status={getVerification('personal')?.status} verifierName={getVerification('personal')?.verifierName} verifierProfileImage={getVerification('personal')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -2110,11 +1898,46 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Passport & Visa Details</span>
-              <CompletionBadge isComplete={completion?.completedSections?.passport || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.passport || false} isPartial={completion?.partialSections?.passport || false} />
               <VerificationBadge status={getVerification('passport')?.status} verifierName={getVerification('passport')?.verifierName} verifierProfileImage={getVerification('passport')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4">
+              <p className="font-medium mb-3">Do you currently have a passport?</p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={hasPassport === true ? "default" : "outline"}
+                  onClick={() => {
+                    setHasPassport(true);
+                    createOrUpdateMutation.mutate({ hasPassport: true });
+                  }}
+                  data-testid="button-has-passport-yes"
+                >
+                  Yes, I do
+                </Button>
+                <Button
+                  type="button"
+                  variant={hasPassport === false ? "default" : "outline"}
+                  onClick={() => {
+                    setHasPassport(false);
+                    createOrUpdateMutation.mutate({ hasPassport: false });
+                  }}
+                  data-testid="button-has-passport-no"
+                >
+                  Not yet
+                </Button>
+              </div>
+              {hasPassport === false && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No problem — you can add your passport details here once you have it. Our consultants can help you get started.
+                </p>
+              )}
+            </div>
+
+            {hasPassport === true && (
           <Form {...passportForm}>
             <form onSubmit={handlePassportSubmit} className="space-y-6">
               <Card>
@@ -2360,6 +2183,8 @@ function StudentProfileContent() {
               </div>
             </form>
           </Form>
+            )}
+          </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -2369,7 +2194,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <GraduationCap className="h-5 w-5 text-primary" />
               <span className="font-semibold">Education History</span>
-              <CompletionBadge isComplete={completion?.completedSections?.education || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.education || false} isPartial={completion?.partialSections?.education || false} />
               <VerificationBadge status={getVerification('education')?.status} verifierName={getVerification('education')?.verifierName} verifierProfileImage={getVerification('education')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -2805,7 +2630,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Languages className="h-5 w-5 text-primary" />
               <span className="font-semibold">English Proficiency</span>
-              <CompletionBadge isComplete={completion?.completedSections?.languageTest || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.languageTest || false} isPartial={completion?.partialSections?.languageTest || false} />
               <VerificationBadge status={getVerification('language')?.status} verifierName={getVerification('language')?.verifierName} verifierProfileImage={getVerification('language')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -3181,251 +3006,52 @@ function StudentProfileContent() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Section 5: Study Preferences */}
-        <AccordionItem value="preferences" className="border rounded-lg px-4" data-testid="accordion-preferences">
-          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-preferences">
-            <div className="flex items-center gap-3">
-              <Target className="h-5 w-5 text-primary" />
-              <span className="font-semibold">Study Preferences</span>
-              <CompletionBadge isComplete={completion?.completedSections?.preferences || false} />
-              <VerificationBadge status={getVerification('preferences')?.status} verifierName={getVerification('preferences')?.verifierName} verifierProfileImage={getVerification('preferences')?.verifierProfileImage} />
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-          <Form {...preferencesForm}>
-            <form onSubmit={handlePreferencesSubmit} className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Study Preferences</CardTitle>
-                  <CardDescription>Help us recommend the best courses for you</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={preferencesForm.control}
-                      name="preferredDiscipline"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Field of Study</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-pref-discipline">
-                                <SelectValue placeholder="What do you want to study?" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {DISCIPLINES.map((disc) => (
-                                <SelectItem key={disc} value={disc}>
-                                  {disc}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={preferencesForm.control}
-                      name="preferredCourseLevel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Course Level</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-pref-level">
-                                <SelectValue placeholder="What level of study?" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {COURSE_LEVELS.map((level) => (
-                                <SelectItem key={level} value={level}>
-                                  {level}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={preferencesForm.control}
-                      name="preferredStudyMode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Study Mode</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-study-mode">
-                                <SelectValue placeholder="How do you want to study?" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {STUDY_MODES.map((mode) => (
-                                <SelectItem key={mode.value} value={mode.value}>
-                                  {mode.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={preferencesForm.control}
-                      name="destinationCountry"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Where do you want to study?</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || "Australia"}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-destination">
-                                <SelectValue placeholder="Select destination country" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Australia">
-                                <span className="flex items-center gap-2">
-                                  <img src={getFlagUrl("AU")} alt="AU" className="w-4 h-3 object-cover rounded-sm" />
-                                  Australia
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="United Kingdom">
-                                <span className="flex items-center gap-2">
-                                  <img src={getFlagUrl("GB")} alt="GB" className="w-4 h-3 object-cover rounded-sm" />
-                                  United Kingdom
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="United States">
-                                <span className="flex items-center gap-2">
-                                  <img src={getFlagUrl("US")} alt="US" className="w-4 h-3 object-cover rounded-sm" />
-                                  United States
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="Canada">
-                                <span className="flex items-center gap-2">
-                                  <img src={getFlagUrl("CA")} alt="CA" className="w-4 h-3 object-cover rounded-sm" />
-                                  Canada
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="New Zealand">
-                                <span className="flex items-center gap-2">
-                                  <img src={getFlagUrl("NZ")} alt="NZ" className="w-4 h-3 object-cover rounded-sm" />
-                                  New Zealand
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div>
-                    <FormLabel className="mb-3 block">Preferred Intake Months</FormLabel>
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {INTAKE_MONTHS.map((month) => (
-                        <Button
-                          key={month}
-                          type="button"
-                          variant={selectedIntakes.includes(month) ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => toggleIntake(month)}
-                          className="w-full"
-                          data-testid={`btn-intake-${month.toLowerCase()}`}
-                        >
-                          {month.substring(0, 3)}
-                        </Button>
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Select all months you can start
-                    </p>
-                  </div>
-
-                  <div>
-                    <FormLabel className="mb-3 block">
-                      Annual Tuition Budget: ${budgetRange[0].toLocaleString()} - ${budgetRange[1].toLocaleString()} AUD
-                    </FormLabel>
-                    <Slider
-                      value={budgetRange}
-                      onValueChange={(value) => setBudgetRange(value as [number, number])}
-                      min={5000}
-                      max={100000}
-                      step={1000}
-                      className="w-full"
-                      data-testid="slider-budget"
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                      <span>$5,000</span>
-                      <span>$100,000</span>
-                    </div>
-                  </div>
-
-                  <FormField
-                    control={preferencesForm.control}
-                    name="prPathwayInterest"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Interested in PR Pathway?</FormLabel>
-                          <FormDescription>
-                            Show courses that may lead to permanent residency
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="switch-pr-interest"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="submit"
-                  disabled={createOrUpdateMutation.isPending}
-                  data-testid="button-save-preferences"
-                >
-                  {createOrUpdateMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Preferences"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-          </AccordionContent>
-        </AccordionItem>
-
         {/* Section 6: Work Experience */}
         <AccordionItem value="employment" className="border rounded-lg px-4" data-testid="accordion-employment">
           <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-employment">
             <div className="flex items-center gap-3">
               <Briefcase className="h-5 w-5 text-primary" />
               <span className="font-semibold">Work Experience</span>
-              <CompletionBadge isComplete={completion?.completedSections?.employment || false} isOptional />
+              <CompletionBadge isComplete={completion?.completedSections?.employment || false} isPartial={completion?.partialSections?.employment || false} isOptional />
               <VerificationBadge status={getVerification('employment')?.status} verifierName={getVerification('employment')?.verifierName} verifierProfileImage={getVerification('employment')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
           <AccordionContent>
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4">
+              <p className="font-medium mb-3">Do you have work experience?</p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={hasWorkExperience === true ? "default" : "outline"}
+                  onClick={() => {
+                    setHasWorkExperience(true);
+                    createOrUpdateMutation.mutate({ hasWorkExperience: true });
+                  }}
+                  data-testid="button-has-work-yes"
+                >
+                  Yes, I do
+                </Button>
+                <Button
+                  type="button"
+                  variant={hasWorkExperience === false ? "default" : "outline"}
+                  onClick={() => {
+                    setHasWorkExperience(false);
+                    createOrUpdateMutation.mutate({ hasWorkExperience: false });
+                  }}
+                  data-testid="button-has-work-no"
+                >
+                  No, I don&apos;t
+                </Button>
+              </div>
+              {hasWorkExperience === false && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No problem — you can update this section whenever you gain work experience in the future.
+                </p>
+              )}
+            </div>
+
+            {hasWorkExperience === true && (<>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
@@ -3741,6 +3367,8 @@ function StudentProfileContent() {
           <div className="mt-4">
             <SectionDocumentUpload section="work_experience" compact />
           </div>
+            </>)}
+          </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -3750,7 +3378,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Wallet className="h-5 w-5 text-primary" />
               <span className="font-semibold">Financial / Sponsor Information</span>
-              <CompletionBadge isComplete={completion?.completedSections?.funding || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.funding || false} isPartial={completion?.partialSections?.funding || false} />
               <VerificationBadge status={getVerification('funding')?.status} verifierName={getVerification('funding')?.verifierName} verifierProfileImage={getVerification('funding')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -3916,7 +3544,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <Phone className="h-5 w-5 text-primary" />
               <span className="font-semibold">Emergency Contact</span>
-              <CompletionBadge isComplete={completion?.completedSections?.emergency || false} />
+              <CompletionBadge isComplete={completion?.completedSections?.emergency || false} isPartial={completion?.partialSections?.emergency || false} />
               <VerificationBadge status={getVerification('emergency')?.status} verifierName={getVerification('emergency')?.verifierName} verifierProfileImage={getVerification('emergency')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -4051,7 +3679,7 @@ function StudentProfileContent() {
             <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Statement of Purpose</span>
-              <CompletionBadge isComplete={completion?.completedSections?.sop || false} isRecommended />
+              <CompletionBadge isComplete={completion?.completedSections?.sop || false} isPartial={completion?.partialSections?.sop || false} isRecommended />
               <VerificationBadge status={getVerification('sop')?.status} verifierName={getVerification('sop')?.verifierName} verifierProfileImage={getVerification('sop')?.verifierProfileImage} />
             </div>
           </AccordionTrigger>
@@ -4106,146 +3734,6 @@ function StudentProfileContent() {
                     </>
                   ) : (
                     "Save Changes"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Section 10: Bio & Career Goals (Legacy) */}
-        <AccordionItem value="bio" className="border rounded-lg px-4" data-testid="accordion-bio">
-          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-bio">
-            <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="font-semibold">Bio & Career Goals</span>
-              <CompletionBadge isComplete={completion?.completedSections?.bio || false} isOptional />
-              <VerificationBadge status={getVerification('bio')?.status} verifierName={getVerification('bio')?.verifierName} verifierProfileImage={getVerification('bio')?.verifierProfileImage} />
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-          <Form {...bioForm}>
-            <form onSubmit={handleBioSubmit} className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-accent" />
-                        Personal Bio
-                      </CardTitle>
-                      <CardDescription>Introduce yourself to universities</CardDescription>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => generateContent("bio")}
-                      disabled={aiLoading}
-                      data-testid="button-generate-bio"
-                    >
-                      {aiLoading && aiField === "bio" ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Generate with AI
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <FormField
-                    control={bioForm.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            value={field.value || ""}
-                            placeholder="Write a brief introduction about yourself, your interests, and what drives you..."
-                            className="min-h-[150px]"
-                            data-testid="textarea-bio"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-accent" />
-                        Career Goals
-                      </CardTitle>
-                      <CardDescription>Share your aspirations and objectives</CardDescription>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => generateContent("careerGoals")}
-                      disabled={aiLoading}
-                      data-testid="button-generate-career-goals"
-                    >
-                      {aiLoading && aiField === "careerGoals" ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Generate with AI
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <FormField
-                    control={bioForm.control}
-                    name="careerGoals"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            value={field.value || ""}
-                            placeholder="Describe your career aspirations, what you hope to achieve, and how this education will help..."
-                            className="min-h-[150px]"
-                            data-testid="textarea-career-goals"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="submit"
-                  disabled={createOrUpdateMutation.isPending}
-                  data-testid="button-save-bio"
-                >
-                  {createOrUpdateMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Bio & Career Goals"
                   )}
                 </Button>
               </div>

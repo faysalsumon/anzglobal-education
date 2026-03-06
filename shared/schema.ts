@@ -2032,6 +2032,9 @@ export const studentProfiles = pgTable("student_profiles", {
   // PR pathway interest
   prPathwayInterest: boolean("pr_pathway_interest").default(false),
   
+  // Passport
+  hasPassport: boolean("has_passport").default(false),
+
   // Work experience
   hasWorkExperience: boolean("has_work_experience").default(false),
   workExperienceYears: integer("work_experience_years"),
