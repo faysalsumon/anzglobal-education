@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
+import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap, Scale } from "lucide-react";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -290,17 +290,31 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             </span>
           </Link>
 
-          {/* Match */}
+          {/* Match - Center elevated */}
           <button
             onClick={handleMatchClick}
-            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1"
+            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1 -mt-3"
             data-testid="tab-match"
           >
-            <Sparkles className="h-5 w-5 text-accent" />
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-accent shadow-lg shadow-accent/30">
+              <Sparkles className="h-5 w-5 text-accent-foreground" />
+            </div>
             <span className="text-[10px] font-semibold text-accent">
               Match
             </span>
           </button>
+
+          {/* Compare */}
+          <Link
+            href="/compare-courses"
+            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1"
+            data-testid="tab-compare"
+          >
+            <Scale className={cn("h-5 w-5 transition-colors", isActive("/compare-courses") ? "text-primary" : "text-muted-foreground")} />
+            <span className={cn("text-[10px] font-medium transition-colors", isActive("/compare-courses") ? "text-primary" : "text-muted-foreground")}>
+              Compare
+            </span>
+          </Link>
 
           {/* Chat - Zan's avatar */}
           <button
