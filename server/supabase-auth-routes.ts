@@ -249,8 +249,15 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // Use the Origin header from the request so the reset link in the email
+    // always points to the domain the user is actually on (e.g. anzglobal.com.au
+    // or anzglobal.com.bd), rather than the static server-side URL which may
+    // resolve to the Replit dev preview domain.
+    const requestOrigin = req.headers.origin || req.headers.referer?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
+    const baseUrl = requestOrigin || getSiteUrl();
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getSiteUrl()}/reset-password`,
+      redirectTo: `${baseUrl}/reset-password`,
     });
 
     if (error) {
