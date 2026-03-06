@@ -235,6 +235,7 @@ export function NaturalLanguageSearch({ onSearchResults, variant = "dark" }: Nat
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder=""
+                aria-label="Search for courses in plain English"
                 className="h-14 sm:h-16 text-base sm:text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-2 sm:pr-4 bg-transparent text-foreground"
                 disabled={searchMutation.isPending}
                 data-testid="input-natural-search"

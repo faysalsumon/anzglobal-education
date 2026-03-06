@@ -96,5 +96,6 @@ Disallow: /student/
 Disallow: /institution/
 Disallow: /dashboard/
 
-# Sitemap location (add when you deploy)
-# Sitemap: https://anzglobaleducation.com/sitemap.xml
+# Sitemap locations
+Sitemap: https://anzglobal.com.bd/sitemap_index.xml
+Sitemap: https://anzglobal.com.au/sitemap_index.xml

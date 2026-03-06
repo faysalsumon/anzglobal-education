@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import fs from "fs";
 import path from "path";
@@ -58,6 +59,9 @@ declare module 'http' {
   }
 }
 app.use(cookieParser());
+
+// Gzip compression for all responses (reduces payload size significantly)
+app.use(compression());
 
 // Bot protection and security headers (must be early in middleware chain)
 app.use(securityHeadersMiddleware);
@@ -176,7 +180,17 @@ app.use((req, res, next) => {
     // In production: serve static files first, then inject page-specific meta
     // into index.html before sending it to crawlers/browsers
     const distPath = path.resolve(import.meta.dirname, "public");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (filePath.includes('/assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+      }
+    }));
     app.use("*", async (req: Request, res: Response) => {
       try {
         const indexPath = path.resolve(distPath, "index.html");

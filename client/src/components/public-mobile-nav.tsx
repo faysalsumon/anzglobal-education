@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Home, BookOpen, Sparkles, Settings, Menu, X, User, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
-import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.png";
+import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";

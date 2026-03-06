@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopNavBar } from "@/components/top-nav-bar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { ChatWidget } from "@/components/chat-widget";
+const ChatWidget = lazy(() => import("@/components/chat-widget").then(m => ({ default: m.ChatWidget })));
 import { Footer } from "@/components/footer";
 import { PublicHeader } from "@/components/public-header";
 import { useAuth } from "@/hooks/useAuth";
@@ -243,7 +243,11 @@ function AppContent() {
         </main>
         {shouldShowFooter && <Footer />}
         {/* ChatWidget only for authenticated users */}
-        {isAuthenticated && <ChatWidget />}
+        {isAuthenticated && (
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
+        )}
       </div>
     );
   }
@@ -257,7 +261,9 @@ function AppContent() {
       </main>
       {shouldShowFooter && <Footer />}
       <MobileBottomNav />
-      <ChatWidget />
+      <Suspense fallback={null}>
+        <ChatWidget />
+      </Suspense>
     </div>
   );
 }

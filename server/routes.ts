@@ -18234,7 +18234,14 @@ Sitemap: ${baseUrl}/sitemap.xml
           conditions.push(eq(universities.country, 'Australia'));
         }
         const rawInstitutions = await db
-          .select()
+          .select({
+            id: universities.id,
+            name: universities.name,
+            logo: universities.logo,
+            country: universities.country,
+            smallDescription: universities.smallDescription,
+            campusAddresses: universities.campusAddresses,
+          })
           .from(universities)
           .where(and(...conditions))
           .limit(limit);
@@ -18269,7 +18276,18 @@ Sitemap: ${baseUrl}/sitemap.xml
       if (courseIds.length > 0) {
         // First get the approved/published courses
         const rawCourses = await db
-          .select()
+          .select({
+            id: courses.id,
+            title: courses.title,
+            slug: courses.slug,
+            thumbnailUrl: courses.thumbnailUrl,
+            subject: courses.subject,
+            level: courses.level,
+            duration: courses.duration,
+            fees: courses.fees,
+            currency: courses.currency,
+            universityId: courses.universityId,
+          })
           .from(courses)
           .where(and(
             inArray(courses.id, courseIds),
@@ -18295,7 +18313,11 @@ Sitemap: ${baseUrl}/sitemap.xml
             uniConditions.push(eq(universities.country, 'Australia'));
           }
           const validUniversities = await db
-            .select()
+            .select({
+              id: universities.id,
+              name: universities.name,
+              logo: universities.logo,
+            })
             .from(universities)
             .where(and(...uniConditions));
           
@@ -18362,12 +18384,18 @@ Sitemap: ${baseUrl}/sitemap.xml
               hasDynamicPricing = true; // Only true when price actually comes from tiers
             }
             
+            // Strip base64 data URIs from thumbnails — they're stored in the DB for some
+            // courses but are 1-2.5MB each and completely unsuitable for JSON API responses.
+            // Only return real URLs (http/https or relative paths).
+            const thumbnailUrl = course.thumbnailUrl?.startsWith('data:')
+              ? null
+              : (course.thumbnailUrl || null);
+
             return {
               id: course.id,
               title: course.title,
               slug: course.slug,
-              description: course.description,
-              thumbnailUrl: course.thumbnailUrl,
+              thumbnailUrl,
               subject: course.subject,
               level: course.level,
               duration: course.duration, // Text like "2 years" or "1 year full-time"

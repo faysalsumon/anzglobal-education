@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
+import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign, Play } from "lucide-react";
 import { Link } from "wouter";
 import { getFlagUrl } from "@/lib/country-flags";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
@@ -66,6 +66,7 @@ export default function Landing() {
   const [searchType, setSearchType] = useState<"courses" | "institutions">("courses");
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
+  const [videoActive, setVideoActive] = useState(false);
   const openQuiz = () => window.dispatchEvent(new CustomEvent("open-course-quiz"));
   const { region, regionCode } = useRegion();
   const effectiveRegionCode = region?.code || regionCode;
@@ -521,7 +522,7 @@ export default function Landing() {
                       <Sparkles className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm text-foreground">AI-Powered Search</h3>
+                      <p className="font-semibold text-sm text-foreground">AI-Powered Search</p>
                       <p className="text-xs text-muted-foreground">Describe what you're looking for in plain English</p>
                     </div>
                   </div>
@@ -664,6 +665,9 @@ export default function Landing() {
                         <img 
                           src={institution.logoUrl} 
                           alt={institution.name}
+                          loading="lazy"
+                          width={72}
+                          height={72}
                           className="w-[72px] h-[72px] object-contain"
                           data-testid={`img-featured-institution-logo-${institution.id}`}
                         />
@@ -758,6 +762,9 @@ export default function Landing() {
                         <img 
                           src={course.thumbnailUrl} 
                           alt={course.title}
+                          loading="lazy"
+                          width={400}
+                          height={160}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           data-testid={`img-featured-course-thumbnail-${course.id}`}
                         />
@@ -795,6 +802,9 @@ export default function Landing() {
                           <img 
                             src={course.universityLogo} 
                             alt={course.universityName}
+                            loading="lazy"
+                            width={40}
+                            height={40}
                             className="h-10 w-10 object-contain rounded"
                             data-testid={`img-featured-course-logo-${course.id}`}
                           />
@@ -1046,14 +1056,37 @@ export default function Landing() {
                   {/* Video Container */}
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-card border border-border/50">
                     <div className="aspect-video">
-                      <iframe
-                        src="https://www.youtube.com/embed/pJSJAu4Piws"
-                        title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        className="w-full h-full"
-                        data-testid="video-promotional"
-                      ></iframe>
+                      {videoActive ? (
+                        <iframe
+                          src="https://www.youtube.com/embed/pJSJAu4Piws?autoplay=1"
+                          title="Transform Your Study Experience in Australia from Bangladesh with ANZ Global Education"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full"
+                          data-testid="video-promotional"
+                        ></iframe>
+                      ) : (
+                        <button
+                          className="relative w-full h-full block group/video cursor-pointer bg-black"
+                          onClick={() => setVideoActive(true)}
+                          aria-label="Play promotional video"
+                          data-testid="button-play-video"
+                        >
+                          <img
+                            src="https://img.youtube.com/vi/pJSJAu4Piws/maxresdefault.jpg"
+                            alt="ANZ Global Education - Study in Australia"
+                            width={1280}
+                            height={720}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/video:bg-black/30 transition-colors">
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-accent/90 backdrop-blur-sm shadow-xl group-hover/video:scale-110 transition-transform">
+                              <Play className="h-7 w-7 text-white ml-1" fill="white" />
+                            </div>
+                          </div>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1432,6 +1465,7 @@ export default function Landing() {
                       size="icon"
                       className="rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === 0 ? featuredReviews.length - 1 : prev - 1))}
+                      aria-label="Previous review"
                       data-testid="button-review-prev"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1503,6 +1537,7 @@ export default function Landing() {
                       size="icon"
                       className="rounded-full bg-background shadow-md flex-shrink-0"
                       onClick={() => setReviewIndex((prev) => (prev === featuredReviews.length - 1 ? 0 : prev + 1))}
+                      aria-label="Next review"
                       data-testid="button-review-next"
                     >
                       <ChevronRight className="h-4 w-4" />

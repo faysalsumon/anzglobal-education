@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLocation } from "wouter";
-import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.png";
+import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 
 // CTA button icon mapping based on link path
 const getCTAIcon = (href: string) => {
