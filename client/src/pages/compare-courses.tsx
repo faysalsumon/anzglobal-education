@@ -389,14 +389,14 @@ export default function CompareCourses() {
                   Add Course {courseIds.length >= 4 && '(Max 4)'}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[500px] flex flex-col max-h-[calc(100dvh-8rem)]">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Search className="h-5 w-5" />
                     Add Course to Compare
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4 flex-1 min-h-0">
                   <Input
                     placeholder="Search courses by name, institution, or discipline..."
                     value={searchQuery}
@@ -404,7 +404,7 @@ export default function CompareCourses() {
                     className="w-full"
                     data-testid="input-search-courses"
                   />
-                  <ScrollArea className="h-[300px]">
+                  <ScrollArea className="h-[45dvh] sm:h-[300px]">
                     <div className="space-y-2">
                       {availableCourses.length === 0 ? (
                         <p className="text-center text-muted-foreground py-8">
