@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/ANZ_logo.webp";
 import { useRegion } from "@/context/RegionContext";
 import { getRegionConfig } from "@/lib/region-config";
 
@@ -53,7 +53,9 @@ export function Footer() {
               <img
                 src={logoUrl}
                 alt="ANZ Global Education"
-                className="h-8 w-auto mb-4"
+                width={66}
+                height={32}
+                className="h-8 mb-4"
               />
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs mb-6">

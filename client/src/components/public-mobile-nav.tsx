@@ -226,7 +226,7 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             ) : (
               <div className="flex gap-2">
                 <Button
-                  className="flex-1 bg-accent text-white border-accent-border"
+                  className="flex-1 bg-accent text-accent-foreground border-accent-border"
                   asChild
                 >
                   <a href="/auth?mode=login" onClick={() => setMenuOpen(false)} data-testid="button-mobile-sheet-login">

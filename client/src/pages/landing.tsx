@@ -435,7 +435,7 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start mb-8">
                 <Button 
                   size="lg" 
-                  className="px-8 text-base bg-accent text-white border-accent-border"
+                  className="px-8 text-base bg-accent text-accent-foreground border-accent-border"
                   onClick={openQuiz}
                   data-testid="button-hero-find-my-course"
                 >
@@ -602,7 +602,7 @@ export default function Landing() {
                       <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{dest.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3">{dest.description}</p>
                       {dest.badge && (
-                        <Badge className="bg-accent text-white border-accent-border">{dest.badge.label}</Badge>
+                        <Badge className="bg-accent text-accent-foreground border-accent-border">{dest.badge.label}</Badge>
                       )}
                     </CardContent>
                   </Card>
@@ -613,7 +613,7 @@ export default function Landing() {
             <div className="text-center mt-10">
               <Button 
                 size="lg"
-                className="px-8 bg-accent text-white border-accent-border"
+                className="px-8 bg-accent text-accent-foreground border-accent-border"
                 onClick={() => window.dispatchEvent(new CustomEvent("open-course-quiz"))}
                 data-testid="button-bd-find-course"
               >
@@ -783,7 +783,7 @@ export default function Landing() {
                           </div>
                         )}
                         <div 
-                          className="bg-accent text-white px-2 py-1 rounded-md text-xs font-medium"
+                          className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-xs font-medium"
                           data-testid={`badge-featured-course-${course.id}`}
                         >
                           Featured
@@ -858,7 +858,7 @@ export default function Landing() {
               <Button 
                 asChild 
                 size="lg"
-                className="px-8 bg-accent text-white border-accent-border"
+                className="px-8 bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-view-all-courses"
               >
                 <Link href="/courses">
@@ -933,7 +933,7 @@ export default function Landing() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/10 to-transparent rounded-bl-full"></div>
               <CardHeader className="relative">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-accent-foreground font-bold text-xl shadow-lg">
                     3
                   </div>
                   <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -956,7 +956,7 @@ export default function Landing() {
               <Button 
                 asChild
                 size="lg" 
-                className="px-8 bg-accent text-white border-accent-border"
+                className="px-8 bg-accent text-accent-foreground border-accent-border"
                 data-testid="button-student-get-started"
               >
                 <Link href="/auth">
@@ -1125,7 +1125,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/courses" data-testid="link-explore-courses-video">
-                  <Button size="lg" className="gap-2 shadow-lg bg-accent text-white border-accent-border" data-testid="button-explore-courses-video">
+                  <Button size="lg" className="gap-2 shadow-lg bg-accent text-accent-foreground border-accent-border" data-testid="button-explore-courses-video">
                     <Search className="h-5 w-5" />
                     Explore Courses
                   </Button>
@@ -1204,7 +1204,7 @@ export default function Landing() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-accent/10 to-transparent rounded-bl-full"></div>
               <CardHeader className="relative">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center text-accent-foreground font-bold text-xl shadow-lg">
                     3
                   </div>
                   <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1226,7 +1226,7 @@ export default function Landing() {
             <Button 
               asChild
               size="lg" 
-              className="px-8 bg-accent text-white border-accent-border"
+              className="px-8 bg-accent text-accent-foreground border-accent-border"
               data-testid="button-institution-partner"
             >
               <Link href="/auth">
@@ -1597,7 +1597,7 @@ export default function Landing() {
                 <Button 
                   asChild
                   size="lg" 
-                  className="w-full sm:w-auto bg-accent text-white font-semibold shadow-lg border-accent-border" 
+                  className="w-full sm:w-auto bg-accent text-accent-foreground font-semibold shadow-lg border-accent-border" 
                   data-testid="button-institution-cta"
                 >
                   <Link href="/auth">

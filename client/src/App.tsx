@@ -203,8 +203,34 @@ function AppContent() {
   // Always show footer for unauthenticated users on any page
   const shouldShowFooter = !isAuthenticated || !isInternalDashboard;
 
-  // Show loading state while auth is initializing OR until auth status is resolved
-  // This prevents the race condition where routes render before auth hydration completes
+  // Standalone pages have their own complete layout — render immediately, no auth gate needed
+  const isStandalonePage = standalonePages.includes(location);
+  if (isStandalonePage) {
+    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
+  }
+
+  // PUBLIC ROUTES: render the full layout immediately on first React paint.
+  // The URL is known synchronously so we never need to wait for auth resolution here.
+  // This eliminates the 0.42 CLS caused by spinner → full-layout transition (footer appearing late).
+  // Auth hydrates in the background; ChatWidget only mounts once auth is confirmed.
+  if (isPublicRoute) {
+    return (
+      <div className="flex flex-col min-h-screen w-full">
+        <PublicHeader />
+        <main className="flex-1">
+          <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
+        </main>
+        <Footer />
+        {isAuthenticated && !isLoading && (
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
+        )}
+      </div>
+    );
+  }
+
+  // For auth-gated routes (portals, admin, etc.): wait until auth is resolved
   if (isLoading || !isAuthResolved) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
@@ -214,12 +240,6 @@ function AppContent() {
         </div>
       </div>
     );
-  }
-
-  // Standalone pages have their own complete layout (no header/footer wrapping)
-  const isStandalonePage = standalonePages.includes(location);
-  if (isStandalonePage) {
-    return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
   // Admin dashboard uses its own full layout with sidebar (no footer)
@@ -232,9 +252,8 @@ function AppContent() {
     return <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />;
   }
 
-  // Public routes - use PublicHeader for both authenticated and unauthenticated users
-  // The PublicHeader component now shows profile dropdown for logged-in users
-  if (isPublicRoute || !isAuthenticated || !user?.userType) {
+  // Unauthenticated users on non-public routes get the public layout
+  if (!isAuthenticated || !user?.userType) {
     return (
       <div className="flex flex-col min-h-screen w-full">
         <PublicHeader />
@@ -242,12 +261,6 @@ function AppContent() {
           <Router user={user} isAuthenticated={isAuthenticated} isLoading={isLoading} />
         </main>
         {shouldShowFooter && <Footer />}
-        {/* ChatWidget only for authenticated users */}
-        {isAuthenticated && (
-          <Suspense fallback={null}>
-            <ChatWidget />
-          </Suspense>
-        )}
       </div>
     );
   }

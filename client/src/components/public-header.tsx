@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe } from "lucide-react";
-import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
+import logoUrl from "@assets/ANZ_logo.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
@@ -159,7 +159,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center" aria-label="Go to homepage" data-testid="link-logo">
-              <img src={logoUrl} alt="ANZ Global Education logo" width={120} height={36} className="h-9 w-auto" />
+              <img src={logoUrl} alt="ANZ Global Education logo" width={74} height={36} className="h-9" />
             </Link>
 
           {/* Desktop Navigation */}
@@ -247,7 +247,7 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  className="bg-accent text-white border-accent-border"
+                  className="bg-accent text-accent-foreground border-accent-border"
                   asChild
                   data-testid="button-login"
                 >

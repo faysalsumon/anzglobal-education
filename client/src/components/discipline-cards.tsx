@@ -160,10 +160,10 @@ export function DisciplineCards() {
         {[...Array(10)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-4 md:p-6">
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-2 md:gap-3 text-center">
                 <div className="h-12 w-12 md:h-14 md:w-14 bg-muted rounded-xl"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-5 bg-muted rounded-full w-16"></div>
+                <div className="h-10 md:h-12 bg-muted rounded w-3/4"></div>
+                <div className="h-5 bg-muted rounded-full w-20"></div>
               </div>
             </CardContent>
           </Card>

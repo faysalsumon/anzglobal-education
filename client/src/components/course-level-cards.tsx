@@ -45,11 +45,14 @@ export function CourseLevelCards() {
     return (
       <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {[...Array(14)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="space-y-4">
-              <div className="h-12 w-12 bg-muted rounded-lg"></div>
-              <div className="h-4 bg-muted rounded w-3/4"></div>
+          <Card key={i} className="animate-pulse min-h-[160px]">
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto h-12 w-12 bg-muted rounded-lg"></div>
+              <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
             </CardHeader>
+            <CardContent className="text-center">
+              <div className="h-5 bg-muted rounded-full w-20 mx-auto"></div>
+            </CardContent>
           </Card>
         ))}
       </div>
