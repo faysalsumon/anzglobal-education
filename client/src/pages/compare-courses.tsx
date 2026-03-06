@@ -449,7 +449,7 @@ export default function CompareCourses() {
           <div className="overflow-x-auto rounded-xl border bg-card">
             <table 
               className="w-full border-collapse" 
-              style={{ tableLayout: 'fixed', minWidth: courses.length <= 2 ? '100%' : `${160 + courses.length * 240}px` }}
+              style={{ tableLayout: 'fixed', minWidth: `${160 + courses.length * (courses.length <= 2 ? 200 : 240)}px` }}
               data-testid="table-comparison"
             >
               <colgroup>
