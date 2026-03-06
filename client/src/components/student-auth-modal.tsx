@@ -123,7 +123,8 @@ export function StudentAuthModal({ open, onOpenChange }: StudentAuthModalProps) 
               </div>
               <div className="flex items-center justify-end">
                 <a 
-                  href="#" 
+                  href="/auth"
+                  onClick={() => onOpenChange(false)}
                   className="text-xs text-primary hover:underline font-medium"
                   data-testid="link-forgot-password"
                 >

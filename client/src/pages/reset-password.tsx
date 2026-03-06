@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
+import { supabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -17,26 +18,47 @@ export default function ResetPasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isValidSession, setIsValidSession] = useState(false);
+  const [tokenExchangeState, setTokenExchangeState] = useState<'idle' | 'loading' | 'success' | 'failed'>('idle');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { updatePassword, isConfigured, isPasswordRecovery, session, isLoading: authLoading, clearPasswordRecovery } = useSupabaseAuth();
+  const { updatePassword, isConfigured, isPasswordRecovery, isLoading: authLoading, clearPasswordRecovery } = useSupabaseAuth();
 
+  // Effect 1: Handle PKCE flow — exchange token_hash query param for a recovery session
   useEffect(() => {
-    // Wait for auth to finish loading
-    if (authLoading) return;
-    
-    // Check if we have a valid session (from password recovery link)
-    // Either the PASSWORD_RECOVERY event was fired or we have a session with recovery token in URL
+    const queryParams = new URLSearchParams(window.location.search);
+    const tokenHash = queryParams.get('token_hash');
+    const type = queryParams.get('type');
+
+    if (tokenHash && type === 'recovery' && supabase) {
+      setTokenExchangeState('loading');
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+        .then(({ error: verifyError }) => {
+          if (verifyError) {
+            setTokenExchangeState('failed');
+            setError("Invalid or expired reset link. Please request a new password reset.");
+          } else {
+            setTokenExchangeState('success');
+            // PASSWORD_RECOVERY event will fire via onAuthStateChange → isPasswordRecovery = true
+          }
+        });
+    }
+  }, []);
+
+  // Effect 2: Validate session once auth state and any PKCE exchange are known
+  useEffect(() => {
+    if (authLoading || tokenExchangeState === 'loading') return;
+
+    // Implicit flow: token arrives in URL hash (#access_token=...&type=recovery)
     const hash = window.location.hash;
-    const hasRecoveryToken = hash && (hash.includes("access_token") || hash.includes("type=recovery"));
-    
-    if (isPasswordRecovery || session || hasRecoveryToken) {
+    const hasImplicitToken = hash && (hash.includes("access_token") || hash.includes("type=recovery"));
+
+    if (isPasswordRecovery || hasImplicitToken || tokenExchangeState === 'success') {
       setIsValidSession(true);
       setError(null);
-    } else {
+    } else if (tokenExchangeState !== 'failed') {
       setError("Invalid or expired reset link. Please request a new password reset.");
     }
-  }, [authLoading, isPasswordRecovery, session]);
+  }, [authLoading, isPasswordRecovery, tokenExchangeState]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +131,7 @@ export default function ResetPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-background rounded-2xl shadow-xl p-8">
-          {authLoading ? (
+          {authLoading || tokenExchangeState === 'loading' ? (
             <div className="text-center space-y-4">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
               <p className="text-muted-foreground">Verifying reset link...</p>

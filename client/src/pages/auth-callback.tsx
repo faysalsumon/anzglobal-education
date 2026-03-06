@@ -35,7 +35,8 @@ export default function AuthCallback() {
         }
 
         if (type === "recovery") {
-          setLocation("/reset-password");
+          // Preserve the full query string so the token_hash reaches the reset-password page
+          window.location.href = "/reset-password" + window.location.search;
           return;
         }
 
