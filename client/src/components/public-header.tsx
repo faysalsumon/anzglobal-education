@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, MessageSquare, Home, Globe } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -139,11 +139,6 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
     return "/dashboard";
   };
 
-  const getMessagesUrl = () => {
-    if (isAdmin) return "/admin/dashboard#messages";
-    return "/chat";
-  };
-
   return (
     <>
       <a 
@@ -225,19 +220,11 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
                       </Link>
                     </DropdownMenuItem>
                     
-                    {/* Messages Link */}
+                    {/* Profile / Account Link */}
                     <DropdownMenuItem asChild>
-                      <Link href={getMessagesUrl()} data-testid="menu-messages">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Messages
-                      </Link>
-                    </DropdownMenuItem>
-                    
-                    {/* Profile Link */}
-                    <DropdownMenuItem asChild>
-                      <Link href={getProfileUrl()} data-testid="menu-profile">
-                        <User className="mr-2 h-4 w-4" />
-                        My Profile
+                      <Link href={isStudent ? "/student/account" : getProfileUrl()} data-testid="menu-profile">
+                        <Settings className="mr-2 h-4 w-4" />
+                        {isStudent ? "My Account" : "My Profile"}
                       </Link>
                     </DropdownMenuItem>
                     

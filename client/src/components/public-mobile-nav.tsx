@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Sparkles, MessageSquare, Menu, X, User, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
+import { Home, BookOpen, Sparkles, Settings, Menu, X, User, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.png";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -162,22 +162,13 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
                   Dashboard
                 </Link>
                 <Link
-                  href={getProfileUrl()}
+                  href={isStudent ? "/student/account" : getProfileUrl()}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-foreground hover-elevate"
                   data-testid="mobile-sheet-profile"
                 >
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  My Profile
-                </Link>
-                <Link
-                  href="/chat"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-foreground hover-elevate"
-                  data-testid="mobile-sheet-messages"
-                >
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  Messages
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  {isStudent ? "My Account" : "My Profile"}
                 </Link>
               </div>
               <div className="border-t border-border mx-5" />
