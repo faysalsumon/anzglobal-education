@@ -39,7 +39,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react";
+import { Users, Building2, BookOpen, ShieldCheck, ShieldOff, Search, Plus, Edit, Trash2, Home, GraduationCap, FileText, CheckCircle2, Clock, XCircle, Upload, Sparkles, User, LogOut, Menu, X, UserPlus, Eye, ChevronsUpDown, Check, RefreshCw, ChevronRight, ChevronLeft, Lock, Globe } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -1392,8 +1392,9 @@ export default function AdminDashboard() {
 
   // Update course publish status mutation
   const updateCoursePublishStatusMutation = useMutation({
-    mutationFn: async ({ id, publishStatus }: { id: string; publishStatus: 'draft' | 'published' }) => {
+    mutationFn: async ({ id, publishStatus, visibility }: { id: string; publishStatus: 'draft' | 'published'; visibility?: 'public' | 'private' }) => {
       const payload: any = { publishStatus };
+      if (visibility !== undefined) payload.visibility = visibility;
       if (publishStatus === 'published') {
         payload.publishedAt = new Date().toISOString();
         payload.publishedByUserId = user?.id;
@@ -1408,7 +1409,7 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/my-courses"] });
       toast({
         title: "Publish status updated",
-        description: `Course has been ${variables.publishStatus === 'published' ? 'published' : 'saved as draft'}`,
+        description: `Course has been ${variables.publishStatus === 'published' ? (variables.visibility === 'private' ? 'published privately' : 'published publicly') : 'saved as draft'}`,
       });
     },
     onError: (error: any) => {
@@ -3135,9 +3136,16 @@ export default function AdminDashboard() {
                               <DropdownMenuTrigger asChild disabled={updateCoursePublishStatusMutation.isPending}>
                                 <Button variant="ghost" size="sm" data-testid={`button-publish-status-course-${course.id}`}>
                                   {course.publishStatus === "published" ? (
-                                    <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer">
-                                      Published
-                                    </Badge>
+                                    (course as any).visibility === 'private' ? (
+                                      <Badge variant="default" className="bg-amber-500 text-xs cursor-pointer">
+                                        <Lock className="h-3 w-3 mr-1" />
+                                        Private
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs cursor-pointer">
+                                        Published
+                                      </Badge>
+                                    )
                                   ) : (
                                     <Badge variant="outline" className="text-xs cursor-pointer">
                                       Draft
@@ -3154,11 +3162,20 @@ export default function AdminDashboard() {
                                   Save as Draft
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => updateCoursePublishStatusMutation.mutate({ id: course.id, publishStatus: 'published' })}
-                                  disabled={course.publishStatus === 'published'}
-                                  data-testid={`menu-item-publish-course-${course.id}`}
+                                  onClick={() => updateCoursePublishStatusMutation.mutate({ id: course.id, publishStatus: 'published', visibility: 'public' })}
+                                  disabled={course.publishStatus === 'published' && (course as any).visibility === 'public'}
+                                  data-testid={`menu-item-publish-public-course-${course.id}`}
                                 >
-                                  Publish
+                                  <Globe className="h-4 w-4 mr-2" />
+                                  Publish Publicly
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => updateCoursePublishStatusMutation.mutate({ id: course.id, publishStatus: 'published', visibility: 'private' })}
+                                  disabled={course.publishStatus === 'published' && (course as any).visibility === 'private'}
+                                  data-testid={`menu-item-publish-private-course-${course.id}`}
+                                >
+                                  <Lock className="h-4 w-4 mr-2" />
+                                  Publish Privately
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

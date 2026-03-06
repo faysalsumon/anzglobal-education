@@ -1038,6 +1038,7 @@ export const courses = pgTable("courses", {
   
   // Publish workflow (draft/publish for collaborative content creation)
   publishStatus: varchar("publish_status", { length: 20 }).notNull().default("draft"), // 'draft', 'published'
+  visibility: varchar("visibility", { length: 20 }).notNull().default("public"), // 'public' | 'private' — private courses only visible to logged-in students
   publishedAt: timestamp("published_at"),
   publishedByUserId: varchar("published_by_user_id").references(() => users.id), // User who published
   

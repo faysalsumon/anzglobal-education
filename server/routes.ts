@@ -2548,9 +2548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const university = allUniversities.find(u => u.id === course.universityId);
         
         // Only count published and approved courses from published, approved, and publicly visible institutions
+        // Exclude private courses and courses from private institutions
         if (course.publishStatus === 'published' &&
             course.approvalStatus === 'approved' && 
             course.isActive &&
+            (course as any).visibility !== 'private' &&
             university?.publishStatus === 'published' &&
             university?.approvalStatus === 'approved' &&
             university?.isActive &&
@@ -2587,9 +2589,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const university = allUniversities.find(u => u.id === course.universityId);
         
         // Only count published and approved courses from published, approved, and publicly visible institutions
+        // Exclude private courses and courses from private institutions
         if (course.publishStatus === 'published' &&
             course.approvalStatus === 'approved' && 
             course.isActive &&
+            (course as any).visibility !== 'private' &&
             university?.publishStatus === 'published' &&
             university?.approvalStatus === 'approved' &&
             university?.isActive &&
@@ -2824,10 +2828,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter to only show published and approved courses from published, approved, and publicly visible institutions
       let courses = allCourses.filter(course => {
         const university = allUniversities.find(u => u.id === course.universityId);
-        // Check course is published, approved, and active
+        // Check course is published, approved, active, and visible to this user
+        // Course-level visibility: private courses are only visible to authenticated students
         const courseIsPublic = course.publishStatus === 'published' && 
                course.approvalStatus === 'approved' && 
-               course.isActive;
+               course.isActive &&
+               (shouldIncludePrivate || (course as any).visibility !== 'private');
         // Check institution is published, approved, active
         // If includePrivate is true AND user is authenticated, allow privately visible institutions
         const institutionIsPublic = university?.publishStatus === 'published' &&
@@ -2998,6 +3004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Only return if course is published, approved, and active
       if (course.publishStatus !== 'published' || course.approvalStatus !== 'approved' || !course.isActive) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      // Course-level visibility: private courses are only accessible to authenticated users
+      if ((course as any).visibility === 'private' && !isUserAuthenticated) {
         return res.status(404).json({ message: "Course not found" });
       }
       // Only return if institution is published, approved, active
