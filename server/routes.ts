@@ -18210,161 +18210,158 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.json({ institutions: [], courses: [] });
       }
       
-      // Get featured institutions (published, approved, publicly visible)
-      const featuredInstitutionIds = await db
-        .select({ institutionId: institutionTags.institutionId })
-        .from(institutionTags)
-        .where(and(
-          eq(institutionTags.tagId, featuredTag.id),
-          isNotNull(institutionTags.institutionId)
-        ));
-      
-      let featuredInstitutions: any[] = [];
-      const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
-      if (instIds.length > 0) {
-        const conditions = [
-          inArray(universities.id, instIds),
-          eq(universities.approvalStatus, 'approved'),
-          eq(universities.publishStatus, 'published'),
-          eq(universities.visibility, 'public'),
-          eq(universities.isActive, true),
-        ];
-        // AU region: only Australian institutions
-        if (regionCode === 'AU') {
-          conditions.push(eq(universities.country, 'Australia'));
-        }
-        const rawInstitutions = await db
-          .select({
-            id: universities.id,
-            name: universities.name,
-            logo: universities.logo,
-            country: universities.country,
-            smallDescription: universities.smallDescription,
-            campusAddresses: universities.campusAddresses,
-          })
-          .from(universities)
-          .where(and(...conditions))
-          .limit(limit);
-        
-        // Extract city/state from first campus address if available
-        featuredInstitutions = rawInstitutions.map(inst => {
-          const campuses = inst.campusAddresses as any[] | null;
-          const firstCampus = campuses?.[0];
-          return {
-            id: inst.id,
-            name: inst.name,
-            logoUrl: inst.logo,
-            country: inst.country,
-            description: inst.smallDescription,
-            city: firstCampus?.city || null,
-            state: firstCampus?.state || null,
-          };
-        });
-      }
-      
-      // Get featured courses (published, approved, from approved institutions)
-      const featuredCourseIds = await db
-        .select({ courseId: courseTags.courseId })
-        .from(courseTags)
-        .where(and(
-          eq(courseTags.tagId, featuredTag.id),
-          isNotNull(courseTags.courseId)
-        ));
-      
-      let featuredCourses: any[] = [];
-      const courseIds = featuredCourseIds.map(c => c.courseId).filter((id): id is string => id !== null);
-      if (courseIds.length > 0) {
-        // First get the approved/published courses
-        const rawCourses = await db
-          .select({
-            id: courses.id,
-            title: courses.title,
-            slug: courses.slug,
-            thumbnailUrl: courses.thumbnailUrl,
-            subject: courses.subject,
-            level: courses.level,
-            duration: courses.duration,
-            fees: courses.fees,
-            currency: courses.currency,
-            universityId: courses.universityId,
-          })
-          .from(courses)
+      // Batch 1: Get institution IDs and course IDs in parallel
+      const [featuredInstitutionIds, featuredCourseIds] = await Promise.all([
+        db.select({ institutionId: institutionTags.institutionId })
+          .from(institutionTags)
           .where(and(
-            inArray(courses.id, courseIds),
-            eq(courses.approvalStatus, 'approved'),
-            eq(courses.publishStatus, 'published')
-          ))
-          .limit(limit);
-        
-        // Get unique university IDs from the courses
-        const universityIds = [...new Set(rawCourses.map(c => c.universityId).filter((id): id is string => id !== null))];
-        
-        // Fetch universities that are approved, published, and public
-        let universityMap: Record<string, { name: string; logo: string | null }> = {};
-        if (universityIds.length > 0) {
-          const uniConditions = [
-            inArray(universities.id, universityIds),
-            eq(universities.approvalStatus, 'approved'),
-            eq(universities.publishStatus, 'published'),
-            eq(universities.visibility, 'public'),
-            eq(universities.isActive, true),
-          ];
-          if (regionCode === 'AU') {
-            uniConditions.push(eq(universities.country, 'Australia'));
-          }
-          const validUniversities = await db
-            .select({
+            eq(institutionTags.tagId, featuredTag.id),
+            isNotNull(institutionTags.institutionId)
+          )),
+        db.select({ courseId: courseTags.courseId })
+          .from(courseTags)
+          .where(and(
+            eq(courseTags.tagId, featuredTag.id),
+            isNotNull(courseTags.courseId)
+          )),
+      ]);
+
+      const instIds = featuredInstitutionIds.map(i => i.institutionId).filter((id): id is string => id !== null);
+      const courseIds = featuredCourseIds.map(c => c.courseId).filter((id): id is string => id !== null);
+
+      // Build institution conditions
+      const instConditions: any[] = [
+        inArray(universities.id, instIds.length > 0 ? instIds : ['']),
+        eq(universities.approvalStatus, 'approved'),
+        eq(universities.publishStatus, 'published'),
+        eq(universities.visibility, 'public'),
+        eq(universities.isActive, true),
+      ];
+      if (regionCode === 'AU') {
+        instConditions.push(eq(universities.country, 'Australia'));
+      }
+
+      // Batch 2: Get institution details and raw courses in parallel
+      const [rawInstitutions, rawCourses] = await Promise.all([
+        instIds.length > 0
+          ? db.select({
               id: universities.id,
               name: universities.name,
               logo: universities.logo,
+              country: universities.country,
+              smallDescription: universities.smallDescription,
+              campusAddresses: universities.campusAddresses,
             })
             .from(universities)
-            .where(and(...uniConditions));
-          
-          universityMap = validUniversities.reduce((acc, uni) => {
-            acc[uni.id] = { name: uni.name, logo: uni.logo };
-            return acc;
-          }, {} as Record<string, { name: string; logo: string | null }>);
-        }
-        
-        // Get scholarship counts for courses
-        const scholarshipCounts = await db
-          .select({
-            courseId: courseScholarships.courseId,
-            count: dsql<number>`count(*)::int`
-          })
-          .from(courseScholarships)
-          .innerJoin(scholarships, and(
-            eq(courseScholarships.scholarshipId, scholarships.id),
-            eq(scholarships.isActive, true),
-            eq(scholarships.status, 'open')
-          ))
-          .where(inArray(courseScholarships.courseId, courseIds))
-          .groupBy(courseScholarships.courseId);
-        
-        const scholarshipMap = scholarshipCounts.reduce((acc, item) => {
-          acc[item.courseId] = item.count;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        // Get minimum pricing from coursePricingTiers for courses without base fees
-        const pricingTiersMin = await db
-          .select({
-            courseId: coursePricingTiers.courseId,
-            minAmount: dsql<string>`MIN(amount)`,
-            currency: dsql<string>`MIN(currency)`
-          })
-          .from(coursePricingTiers)
-          .where(inArray(coursePricingTiers.courseId, courseIds))
-          .groupBy(coursePricingTiers.courseId);
-        
-        const pricingTiersMap = pricingTiersMin.reduce((acc, item) => {
-          acc[item.courseId] = {
-            minAmount: item.minAmount ? Number(item.minAmount) : null,
-            currency: item.currency || 'AUD'
-          };
-          return acc;
-        }, {} as Record<string, { minAmount: number | null; currency: string }>);
+            .where(and(...instConditions))
+            .limit(limit)
+          : Promise.resolve([] as any[]),
+        courseIds.length > 0
+          ? db.select({
+              id: courses.id,
+              title: courses.title,
+              slug: courses.slug,
+              thumbnailUrl: courses.thumbnailUrl,
+              subject: courses.subject,
+              level: courses.level,
+              duration: courses.duration,
+              fees: courses.fees,
+              currency: courses.currency,
+              universityId: courses.universityId,
+            })
+            .from(courses)
+            .where(and(
+              inArray(courses.id, courseIds),
+              eq(courses.approvalStatus, 'approved'),
+              eq(courses.publishStatus, 'published')
+            ))
+            .limit(limit)
+          : Promise.resolve([] as any[]),
+      ]);
+
+      // Process institutions
+      let featuredInstitutions: any[] = rawInstitutions.map(inst => {
+        const campuses = inst.campusAddresses as any[] | null;
+        const firstCampus = campuses?.[0];
+        return {
+          id: inst.id,
+          name: inst.name,
+          logoUrl: inst.logo,
+          country: inst.country,
+          description: inst.smallDescription,
+          city: firstCampus?.city || null,
+          state: firstCampus?.state || null,
+        };
+      });
+
+      // Get unique university IDs from rawCourses
+      const universityIds = [...new Set(rawCourses.map((c: any) => c.universityId).filter((id: any): id is string => id !== null))];
+
+      // Build university conditions for batch 3
+      const uniConditions: any[] = [
+        inArray(universities.id, universityIds.length > 0 ? universityIds : ['']),
+        eq(universities.approvalStatus, 'approved'),
+        eq(universities.publishStatus, 'published'),
+        eq(universities.visibility, 'public'),
+        eq(universities.isActive, true),
+      ];
+      if (regionCode === 'AU') {
+        uniConditions.push(eq(universities.country, 'Australia'));
+      }
+
+      // Batch 3: Get university data, scholarship counts, and pricing tiers in parallel
+      const [validUniversities, scholarshipCounts, pricingTiersMin] = await Promise.all([
+        universityIds.length > 0
+          ? db.select({ id: universities.id, name: universities.name, logo: universities.logo })
+              .from(universities)
+              .where(and(...uniConditions))
+          : Promise.resolve([] as any[]),
+        courseIds.length > 0
+          ? db.select({
+              courseId: courseScholarships.courseId,
+              count: dsql<number>`count(*)::int`
+            })
+            .from(courseScholarships)
+            .innerJoin(scholarships, and(
+              eq(courseScholarships.scholarshipId, scholarships.id),
+              eq(scholarships.isActive, true),
+              eq(scholarships.status, 'open')
+            ))
+            .where(inArray(courseScholarships.courseId, courseIds))
+            .groupBy(courseScholarships.courseId)
+          : Promise.resolve([] as any[]),
+        courseIds.length > 0
+          ? db.select({
+              courseId: coursePricingTiers.courseId,
+              minAmount: dsql<string>`MIN(amount)`,
+              currency: dsql<string>`MIN(currency)`
+            })
+            .from(coursePricingTiers)
+            .where(inArray(coursePricingTiers.courseId, courseIds))
+            .groupBy(coursePricingTiers.courseId)
+          : Promise.resolve([] as any[]),
+      ]);
+
+      const universityMap: Record<string, { name: string; logo: string | null }> = validUniversities.reduce((acc: any, uni: any) => {
+        acc[uni.id] = { name: uni.name, logo: uni.logo };
+        return acc;
+      }, {} as Record<string, { name: string; logo: string | null }>);
+
+      const scholarshipMap = scholarshipCounts.reduce((acc: any, item: any) => {
+        acc[item.courseId] = item.count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const pricingTiersMap = pricingTiersMin.reduce((acc: any, item: any) => {
+        acc[item.courseId] = {
+          minAmount: item.minAmount ? Number(item.minAmount) : null,
+          currency: item.currency || 'AUD'
+        };
+        return acc;
+      }, {} as Record<string, { minAmount: number | null; currency: string }>);
+
+      let featuredCourses: any[] = [];
+      if (rawCourses.length > 0) {
         
         // Combine courses with university data, only including courses from valid universities
         featuredCourses = rawCourses

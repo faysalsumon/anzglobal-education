@@ -97,7 +97,7 @@ export default function Landing() {
   });
 
   // Fetch featured institutions and courses (12 institutions for 4x3 grid)
-  const { data: featuredData } = useQuery<FeaturedData>({
+  const { data: featuredData, isLoading: featuredLoading } = useQuery<FeaturedData>({
     queryKey: ["/api/public/featured", regionQuery],
   });
 
@@ -627,7 +627,7 @@ export default function Landing() {
       )}
 
       {/* Featured Partners Section */}
-      {featuredInstitutions.length > 0 && (
+      {(featuredLoading || featuredInstitutions.length > 0) && (
         <section className="py-16 md:py-24 relative overflow-hidden">
           {/* Decorative floating shapes */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
@@ -652,7 +652,17 @@ export default function Landing() {
             </div>
             
             <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {featuredInstitutions.slice(0, 12).map((institution) => (
+              {featuredLoading
+                ? Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex flex-col items-center gap-3 p-4">
+                      <div className="w-24 h-24 rounded-full bg-muted animate-pulse" />
+                      <div className="space-y-2 w-full text-center">
+                        <div className="h-4 bg-muted rounded animate-pulse mx-auto w-3/4" />
+                        <div className="h-3 bg-muted rounded animate-pulse mx-auto w-1/2" />
+                      </div>
+                    </div>
+                  ))
+                : featuredInstitutions.slice(0, 12).map((institution) => (
                 <Link 
                   key={institution.id} 
                   href={`/institutions/${institution.slug || institution.id}`}
@@ -731,7 +741,7 @@ export default function Landing() {
       </section>
 
       {/* Featured Courses Section */}
-      {featuredCourses.length > 0 && (
+      {(featuredLoading || featuredCourses.length > 0) && (
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -750,7 +760,27 @@ export default function Landing() {
             </div>
             
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {featuredCourses.slice(0, 16).map((course) => (
+              {featuredLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="h-full">
+                      <div className="h-40 bg-muted animate-pulse rounded-t-md" />
+                      <CardHeader className="pb-2">
+                        <div className="h-5 bg-muted rounded animate-pulse w-full mb-2" />
+                        <div className="h-4 bg-muted rounded animate-pulse w-2/3" />
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="h-10 w-10 bg-muted rounded animate-pulse flex-shrink-0" />
+                          <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex gap-3">
+                          <div className="h-3 bg-muted rounded animate-pulse w-1/3" />
+                          <div className="h-3 bg-muted rounded animate-pulse w-1/3" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                : featuredCourses.slice(0, 16).map((course) => (
                 <Link 
                   key={course.id} 
                   href={`/courses/${course.slug || course.id}`}
