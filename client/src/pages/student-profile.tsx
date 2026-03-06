@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQueryParams } from "@/hooks/useQueryParams";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -550,8 +551,25 @@ function VerificationBadge({ status, verifierName, verifierProfileImage }: Verif
   return null;
 }
 
+const VALID_SECTIONS = ["personal", "passport", "education", "language", "preferences", "employment", "funding", "emergency", "sop", "bio"];
+
 function StudentProfileContent() {
   const { toast } = useToast();
+  const { params, setParams } = useQueryParams();
+
+  // URL-based accordion section deep linking
+  const initialSection = useMemo(() => {
+    const s = params.get("section");
+    return s && VALID_SECTIONS.includes(s) ? s : "personal";
+  }, []);
+  const [openSections, setOpenSections] = useState<string[]>([initialSection]);
+
+  const handleAccordionChange = (vals: string[]) => {
+    setOpenSections(vals);
+    const last = vals[vals.length - 1];
+    setParams({ section: last || null });
+  };
+
   const [aiLoading, setAiLoading] = useState(false);
   const [aiField, setAiField] = useState<"bio" | "careerGoals" | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -1611,7 +1629,7 @@ function StudentProfileContent() {
       )}
 
 
-      <Accordion type="multiple" defaultValue={["personal"]} className="space-y-4">
+      <Accordion type="multiple" value={openSections} onValueChange={handleAccordionChange} className="space-y-4">
         {/* Section 1: Personal Information */}
         <AccordionItem value="personal" className="border rounded-lg px-4" data-testid="accordion-personal">
           <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-personal">

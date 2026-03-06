@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQueryParams } from "@/hooks/useQueryParams";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,6 +34,8 @@ export default function StudentAccount() {
   const { user, isLoading, isAuthenticated, isAuthResolved } = useAuth();
   const { session } = useSupabaseAuth();
   const [, setLocation] = useLocation();
+  const { params, setParams } = useQueryParams();
+  const activeTab = params.get("tab") || "profile";
   const [isUploading, setIsUploading] = useState(false);
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
@@ -220,7 +223,7 @@ export default function StudentAccount() {
               </p>
             </div>
 
-            <Tabs defaultValue="profile" className="w-full">
+            <Tabs value={activeTab} onValueChange={(val) => setParams({ tab: val })} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="profile" data-testid="tab-profile">
                   <User className="h-4 w-4 mr-2" />

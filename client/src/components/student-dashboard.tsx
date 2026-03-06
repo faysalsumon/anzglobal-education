@@ -292,7 +292,7 @@ export function StudentDashboard() {
           </Card>
 
           <Card className="border-2 cursor-pointer group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
-            <Link href="/student/profile?tab=favorites" data-testid="link-view-favorites">
+            <Link href="/student/favorites" data-testid="link-view-favorites">
               <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="py-4 md:py-5 relative min-h-[60px] md:min-h-[72px]">
                 <div className="flex items-center gap-2.5 md:gap-3">
