@@ -4706,10 +4706,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Student profile not found" });
       }
 
-      const data = insertStudentEducationSchema.parse({
+      // When a qualificationTypeId is provided but no legacy level, default level to 'other'
+      // so older rows that may still have a NOT NULL constraint at the DB level don't fail.
+      const bodyWithLevel = {
         ...req.body,
         studentProfileId: profile.id,
-      });
+        level: req.body.level || (req.body.qualificationTypeId ? 'other' : undefined),
+      };
+
+      const data = insertStudentEducationSchema.parse(bodyWithLevel);
 
       const education = await storage.createEducation(data);
       
