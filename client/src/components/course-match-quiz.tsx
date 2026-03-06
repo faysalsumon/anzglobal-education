@@ -91,17 +91,6 @@ type StepType = "country" | "discipline" | "level" | "budget" | "results_contact
 const BD_STEPS: StepType[] = ["country", "discipline", "level", "budget", "results_contact"];
 const AU_STEPS: StepType[] = ["discipline", "level", "budget"];
 
-const BD_DESTINATION_COUNTRIES = [
-  "Australia",
-  "United Kingdom",
-  "Canada",
-  "New Zealand",
-  "Malaysia",
-  "Ireland",
-  "Germany",
-  "United States",
-  "United Arab Emirates",
-];
 
 const STEP_CONFIG: Record<StepType, { title: string; subtitle: string; icon: LucideIcon }> = {
   country: { title: "Where do you want to study?", subtitle: "Pick your dream study destination", icon: Globe },
@@ -423,11 +412,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
     </div>
   );
 
-  const renderCountryStep = () => {
-    const displayCountries = isBD ? BD_DESTINATION_COUNTRIES : countries;
-    const isLoading = !isBD && filtersLoading;
-    const isEmpty = !isBD && displayCountries.length === 0;
-    return (
+  const renderCountryStep = () => (
     <div className="space-y-6" data-testid="quiz-step-country">
       <div className="text-center space-y-2 mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-3">
@@ -436,17 +421,17 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         <h2 id="quiz-title" className="text-2xl sm:text-3xl font-bold text-foreground">{stepConfig.title}</h2>
         <p id="quiz-description" className="text-muted-foreground text-base">{stepConfig.subtitle}</p>
       </div>
-      {isLoading ? (
+      {filtersLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
         </div>
-      ) : isEmpty ? (
+      ) : countries.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>No destinations available at this time.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 max-w-md mx-auto">
-          {displayCountries.map((countryName) => {
+          {countries.map((countryName) => {
             const countryData = getCountryByName(countryName);
             const code = countryData?.code || "";
             return (
@@ -479,8 +464,7 @@ export function CourseMatchQuiz({ open, onClose }: CourseMatchQuizProps) {
         </div>
       )}
     </div>
-    );
-  };
+  );
 
   const renderBudgetStep = () => (
     <div className="space-y-8" data-testid="quiz-step-budget">
