@@ -1984,7 +1984,7 @@ export default function PublicCourses() {
       {/* Sticky Comparison Bar */}
       {comparisons.length > 0 && (
         <div 
-          className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground shadow-lg border-t z-50"
+          className="fixed bottom-14 md:bottom-0 left-0 right-0 bg-primary text-primary-foreground shadow-lg border-t z-50"
           data-testid="comparison-bar"
         >
           <div className="container mx-auto px-4 py-4">
