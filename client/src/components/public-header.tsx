@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Info, LayoutDashboard, User, LogOut, Settings, Home, Globe, ChevronDown, Menu } from "lucide-react";
 import logoUrl from "@assets/ANZ_logo.webp";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
@@ -265,9 +265,44 @@ export function PublicHeader({ onStudentLoginClick }: PublicHeaderProps = {}) {
             )}
           </div>
 
-          {/* Mobile: Notification bell only (navigation moved to bottom tab bar) */}
+          {/* Mobile: Menu button at top right (Semrush-style) */}
           <div className="md:hidden flex items-center gap-2">
-            {isAuthenticated && user && <NotificationBell />}
+            {isAuthenticated && user ? (
+              <>
+                <NotificationBell />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 font-medium"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-menu"))}
+                  data-testid="button-mobile-menu"
+                >
+                  Menu
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  className="bg-accent text-accent-foreground border-accent-border font-medium"
+                  asChild
+                  data-testid="button-mobile-login"
+                >
+                  <a href="/auth?mode=login">Login</a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 font-medium"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-menu"))}
+                  data-testid="button-mobile-menu"
+                >
+                  Menu
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

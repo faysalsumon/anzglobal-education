@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Sparkles, Settings, Menu, X, User, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
+import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap } from "lucide-react";
 import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,6 +84,12 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
     if (path === "/") return location === "/";
     return location.startsWith(path);
   };
+
+  useEffect(() => {
+    const handler = () => setMenuOpen(true);
+    window.addEventListener("open-mobile-menu", handler);
+    return () => window.removeEventListener("open-mobile-menu", handler);
+  }, []);
 
   return (
     <>
@@ -312,36 +318,6 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             <span className="text-[10px] font-medium text-muted-foreground">
               Zan
             </span>
-          </button>
-
-          {/* Menu / Profile */}
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1"
-            data-testid="tab-menu"
-          >
-            {isAuthenticated && user ? (
-              <>
-                <Avatar className="h-6 w-6">
-                  {profileImageUrl && (
-                    <AvatarImage src={profileImageUrl} alt="Profile" />
-                  )}
-                  <AvatarFallback className="bg-primary text-primary-foreground text-[8px] font-medium">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  Profile
-                </span>
-              </>
-            ) : (
-              <>
-                <Menu className="h-5 w-5 text-muted-foreground" />
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  More
-                </span>
-              </>
-            )}
           </button>
         </div>
       </nav>
