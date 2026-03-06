@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useRegion } from "@/context/RegionContext";
 import { useQueryParams } from "@/hooks/useQueryParams";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -563,6 +564,8 @@ function StudentProfileContent() {
     return s && VALID_SECTIONS.includes(s) ? s : "personal";
   }, []);
   const [openSections, setOpenSections] = useState<string[]>([initialSection]);
+  const { regionCode } = useRegion();
+  const isAURegion = regionCode?.toUpperCase() === 'AU';
 
   const handleAccordionChange = (vals: string[]) => {
     setOpenSections(vals);
@@ -1854,8 +1857,8 @@ function StudentProfileContent() {
                     />
                   </div>
 
-                  {/* Visa Status Section */}
-                  <div className="pt-4 border-t">
+                  {/* Visa Status Section — only shown for AU region */}
+                  {isAURegion && <div className="pt-4 border-t">
                     <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
                       Visa Status
@@ -1928,7 +1931,7 @@ function StudentProfileContent() {
                         />
                       </div>
                     )}
-                  </div>
+                  </div>}
 
                   <div className="pt-4 border-t">
                     <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
