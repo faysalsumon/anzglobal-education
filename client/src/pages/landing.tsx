@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, Users, Sparkles, TrendingUp, GraduationCap, Search, FileCheck, Filter, UserPlus, Calendar, ArrowRight, Quote, MapPin, Award, CheckCircle, MessageCircle, ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import { Link } from "wouter";
+import { getFlagUrl } from "@/lib/country-flags";
 import type { Course, University, Blog, Testimonial } from "@shared/schema";
 import { TypingText } from "@/components/typing-text";
 import { PublicLayout } from "@/components/public-layout";
@@ -552,41 +553,63 @@ export default function Landing() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
-              <Card className="hover-elevate group" data-testid="card-destination-australia">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">AU</div>
-                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Australia</h3>
-                  <p className="text-sm text-muted-foreground mb-3">World-ranked universities, post-study work rights & pathway to PR</p>
-                  <Badge variant="secondary">Most Popular</Badge>
-                </CardContent>
-              </Card>
-
-              <Card className="hover-elevate group" data-testid="card-destination-uk">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">UK</div>
-                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">United Kingdom</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Prestigious institutions, 1-year Masters & Graduate Route visa</p>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </CardContent>
-              </Card>
-
-              <Card className="hover-elevate group" data-testid="card-destination-canada">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">CA</div>
-                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Canada</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Affordable education, work permits & immigration-friendly policies</p>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </CardContent>
-              </Card>
-
-              <Card className="hover-elevate group" data-testid="card-destination-malaysia">
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">MY</div>
-                  <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">Malaysia</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Budget-friendly quality education with cultural familiarity</p>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </CardContent>
-              </Card>
+              {([
+                {
+                  code: "AU",
+                  flagCode: "AU",
+                  name: "Australia",
+                  country: "Australia",
+                  description: "World-ranked universities, post-study work rights & pathway to PR",
+                  badge: { label: "Most Popular", variant: "secondary" as const },
+                },
+                {
+                  code: "GB",
+                  flagCode: "GB",
+                  name: "United Kingdom",
+                  country: "United Kingdom",
+                  description: "Prestigious institutions, 1-year Masters & Graduate Route visa",
+                  badge: null,
+                },
+                {
+                  code: "CA",
+                  flagCode: "CA",
+                  name: "Canada",
+                  country: "Canada",
+                  description: "Affordable education, work permits & immigration-friendly policies",
+                  badge: null,
+                },
+                {
+                  code: "US",
+                  flagCode: "US",
+                  name: "United States",
+                  country: "United States",
+                  description: "World-class research universities, diverse programs & global career outcomes",
+                  badge: null,
+                },
+              ] as const).map((dest) => (
+                <Link
+                  key={dest.code}
+                  href={`/institutions?countries=${encodeURIComponent(dest.country)}`}
+                  data-testid={`card-destination-${dest.code.toLowerCase()}`}
+                >
+                  <Card className="hover-elevate group cursor-pointer h-full">
+                    <CardContent className="p-6 text-center">
+                      <div className="flex items-center justify-center mb-3">
+                        <img
+                          src={getFlagUrl(dest.flagCode)}
+                          alt={`${dest.name} flag`}
+                          className="w-14 h-9 object-cover rounded shadow-sm"
+                        />
+                      </div>
+                      <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{dest.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{dest.description}</p>
+                      {dest.badge && (
+                        <Badge variant={dest.badge.variant}>{dest.badge.label}</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
 
             <div className="text-center mt-10">
