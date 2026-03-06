@@ -560,7 +560,7 @@ export default function Landing() {
                   name: "Australia",
                   country: "Australia",
                   description: "World-ranked universities, post-study work rights & pathway to PR",
-                  badge: { label: "Most Popular", variant: "secondary" as const },
+                  badge: { label: "Most Popular" },
                 },
                 {
                   code: "GB",
@@ -604,7 +604,7 @@ export default function Landing() {
                       <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">{dest.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3">{dest.description}</p>
                       {dest.badge && (
-                        <Badge variant={dest.badge.variant}>{dest.badge.label}</Badge>
+                        <Badge className="bg-accent text-white border-accent-border">{dest.badge.label}</Badge>
                       )}
                     </CardContent>
                   </Card>
