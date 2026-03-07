@@ -16459,7 +16459,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
-  // Get my tasks (assigned to current user)
+  // Get my tasks (assigned to OR created by current user)
   app.get("/api/tasks/my-tasks", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -16469,11 +16469,49 @@ Sitemap: ${baseUrl}/sitemap.xml
         return res.status(403).json({ message: "Admin access required" });
       }
       
-      const tasks = await storage.getTasksWithRelations({ assignedToId: userId });
+      const tasks = await storage.getTasksWithRelations({ involvedUserId: userId });
       res.json(tasks);
     } catch (error: any) {
       console.error("Error fetching my tasks:", error);
       res.status(500).json({ message: "Failed to fetch my tasks" });
+    }
+  });
+
+  // Get notes for a task
+  app.get("/api/tasks/:id/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const notes = await storage.getTaskNotes(req.params.id);
+      res.json(notes);
+    } catch (error: any) {
+      console.error("Error fetching task notes:", error);
+      res.status(500).json({ message: "Failed to fetch task notes" });
+    }
+  });
+
+  // Post a new note on a task
+  app.post("/api/tasks/:id/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const { content, mentionedUserIds } = req.body;
+      if (!content?.trim()) return res.status(400).json({ message: "Content is required" });
+
+      const note = await storage.createTaskNote({
+        taskId: req.params.id,
+        authorId: userId,
+        content: content.trim(),
+        mentionedUserIds: mentionedUserIds || null,
+      });
+      res.status(201).json(note);
+    } catch (error: any) {
+      console.error("Error creating task note:", error);
+      res.status(500).json({ message: "Failed to create task note" });
     }
   });
 

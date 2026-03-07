@@ -68,11 +68,15 @@ import {
   type InsertContactInquiry,
   // CRM imports
   tasks,
+  taskNotes,
   applicationInternalNotes,
   followUpReminders,
   type Task,
   type InsertTask,
   type UpdateTask,
+  type TaskNote,
+  type InsertTaskNote,
+  type TaskNoteWithAuthor,
   type ApplicationInternalNote,
   type InsertApplicationInternalNote,
   type FollowUpReminder,
@@ -325,6 +329,7 @@ export interface IStorage {
     status?: string; 
     priority?: string; 
     assignedToId?: string;
+    involvedUserId?: string;
     applicationId?: string;
     category?: string;
   }): Promise<Task[]>;
@@ -332,6 +337,7 @@ export interface IStorage {
     status?: string; 
     priority?: string; 
     assignedToId?: string;
+    involvedUserId?: string;
     applicationId?: string;
     category?: string;
   }): Promise<TaskWithRelations[]>;
@@ -339,6 +345,8 @@ export interface IStorage {
   updateTask(id: string, data: UpdateTask): Promise<Task>;
   deleteTask(id: string): Promise<void>;
   completeTask(id: string): Promise<Task>;
+  getTaskNotes(taskId: string): Promise<TaskNoteWithAuthor[]>;
+  createTaskNote(data: InsertTaskNote): Promise<TaskNote>;
   
   // Application internal notes operations
   getNoteById(id: string): Promise<ApplicationInternalNote | undefined>;
@@ -1949,6 +1957,7 @@ export class DatabaseStorage implements IStorage {
     status?: string; 
     priority?: string; 
     assignedToId?: string;
+    involvedUserId?: string; // tasks where user is assignee OR creator
     applicationId?: string;
     category?: string;
   }): Promise<Task[]> {
@@ -1960,7 +1969,12 @@ export class DatabaseStorage implements IStorage {
     if (filters?.priority) {
       conditions.push(eq(tasks.priority, filters.priority as any));
     }
-    if (filters?.assignedToId) {
+    if (filters?.involvedUserId) {
+      conditions.push(or(
+        eq(tasks.assignedToId, filters.involvedUserId),
+        eq(tasks.createdById, filters.involvedUserId)
+      ));
+    } else if (filters?.assignedToId) {
       conditions.push(eq(tasks.assignedToId, filters.assignedToId));
     }
     if (filters?.applicationId) {
@@ -1985,6 +1999,7 @@ export class DatabaseStorage implements IStorage {
     status?: string; 
     priority?: string; 
     assignedToId?: string;
+    involvedUserId?: string;
     applicationId?: string;
     category?: string;
   }): Promise<TaskWithRelations[]> {
@@ -2076,6 +2091,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.id, id))
       .returning();
     return task;
+  }
+
+  // Task notes operations
+  async getTaskNotes(taskId: string): Promise<TaskNoteWithAuthor[]> {
+    const notes = await db
+      .select()
+      .from(taskNotes)
+      .where(eq(taskNotes.taskId, taskId))
+      .orderBy(taskNotes.createdAt);
+
+    return Promise.all(notes.map(async (note) => {
+      let author = null;
+      if (note.authorId) {
+        const [user] = await db.select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+        }).from(users).where(eq(users.id, note.authorId));
+        author = user || null;
+      }
+      return { ...note, author };
+    }));
+  }
+
+  async createTaskNote(data: InsertTaskNote): Promise<TaskNote> {
+    const [note] = await db.insert(taskNotes).values(data).returning();
+    return note;
   }
 
   // Application internal notes operations

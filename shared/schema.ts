@@ -2257,6 +2257,30 @@ export const tasks = pgTable("tasks", {
   index("tasks_created_by_idx").on(table.createdById),
 ]);
 
+// Task notes / comments thread for internal team updates
+export const taskNotes = pgTable("task_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  authorId: varchar("author_id").references(() => users.id, { onDelete: "set null" }),
+
+  content: text("content").notNull(),
+
+  // IDs of team members @mentioned in this note
+  mentionedUserIds: varchar("mentioned_user_ids").array(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("task_notes_task_idx").on(table.taskId),
+  index("task_notes_author_idx").on(table.authorId),
+]);
+
+export const insertTaskNoteSchema = createInsertSchema(taskNotes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTaskNote = z.infer<typeof insertTaskNoteSchema>;
+export type TaskNote = typeof taskNotes.$inferSelect;
+
 // Application internal notes for team communication (not visible to students)
 export const applicationInternalNotes = pgTable("application_internal_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4558,6 +4582,15 @@ export interface TaskWithRelations extends Task {
     currentStage: string;
     studentName?: string;
     courseName?: string;
+  } | null;
+}
+
+export interface TaskNoteWithAuthor extends TaskNote {
+  author?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
   } | null;
 }
 

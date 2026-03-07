@@ -26,12 +26,15 @@ import {
   Plus,
   Bell,
   Edit,
+  ArrowRight,
+  UserCircle,
 } from "lucide-react";
-import { format, formatDistanceToNow, isPast, isToday, isTomorrow, addDays } from "date-fns";
+import { format, formatDistanceToNow, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { TaskDialog } from "@/components/task-dialog";
+import { useAuth } from "@/hooks/useAuth";
 import type { Task, FollowUpReminder } from "@shared/schema";
 
 interface TaskWithRelations extends Task {
@@ -41,6 +44,11 @@ interface TaskWithRelations extends Task {
     lastName?: string | null;
     email?: string | null;
     profileImageUrl?: string | null;
+  } | null;
+  createdBy?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
   } | null;
   application?: {
     id: string;
@@ -73,6 +81,9 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export function MyTasksPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -176,8 +187,18 @@ export function MyTasksPanel() {
     const PriorityIcon = priority.icon;
     const dueDisplay = task.dueDate ? getDueDateDisplay(task.dueDate) : null;
 
+    const isCreator = currentUserId && task.createdById === currentUserId;
+    const isAssignee = currentUserId && task.assignedToId === currentUserId;
+
+    const assigneeName = task.assignee
+      ? `${task.assignee.firstName || ''} ${task.assignee.lastName || ''}`.trim() || task.assignee.email
+      : null;
+    const creatorName = task.createdBy
+      ? `${task.createdBy.firstName || ''} ${task.createdBy.lastName || ''}`.trim()
+      : null;
+
     return (
-      <div 
+      <div
         className="flex items-start gap-3 p-3 rounded-lg border bg-card hover-elevate"
         data-testid={`task-item-${task.id}`}
       >
@@ -208,6 +229,20 @@ export function MyTasksPanel() {
               <span className={`flex items-center gap-1 ${dueDisplay.className}`}>
                 <Clock className="h-3 w-3" />
                 {dueDisplay.text}
+              </span>
+            )}
+            {/* Show who this task is assigned to if I'm the creator */}
+            {isCreator && !isAssignee && assigneeName && (
+              <span className="flex items-center gap-1 text-primary">
+                <ArrowRight className="h-3 w-3" />
+                {assigneeName}
+              </span>
+            )}
+            {/* Show who created this if I'm the assignee and didn't create it */}
+            {isAssignee && !isCreator && creatorName && (
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <UserCircle className="h-3 w-3" />
+                from {creatorName}
               </span>
             )}
             {task.application && (
@@ -312,7 +347,7 @@ export function MyTasksPanel() {
           <CardContent className="px-4 pb-3">
             <div className="space-y-2">
               {reminders.slice(0, 5).map(reminder => (
-                <div 
+                <div
                   key={reminder.id}
                   className="flex items-center gap-2 p-2 rounded-md border bg-card"
                   data-testid={`reminder-item-${reminder.id}`}
@@ -327,7 +362,7 @@ export function MyTasksPanel() {
                     <p className="text-xs font-medium truncate">{reminder.message}</p>
                     <p className="text-xs text-muted-foreground">
                       <Clock className="h-3 w-3 inline mr-1" />
-                      {reminder.reminderAt 
+                      {reminder.reminderAt
                         ? format(new Date(reminder.reminderAt), "MMM d 'at' h:mm a")
                         : "No date set"}
                     </p>
@@ -347,7 +382,7 @@ export function MyTasksPanel() {
                 <ListTodo className="h-4 w-4" />
                 My Tasks
               </CardTitle>
-              <CardDescription className="text-xs">Tasks assigned to you</CardDescription>
+              <CardDescription className="text-xs">Tasks assigned to or created by you</CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
