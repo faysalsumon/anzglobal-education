@@ -110,9 +110,6 @@ const fundingSchema = z.object({
   sponsorAddress: z.string().optional().nullable(),
 });
 
-const sopSchema = z.object({
-  statementOfPurpose: z.string().optional().nullable(),
-});
 
 const FUNDING_SOURCES = [
   { value: "self", label: "Self-Funded" },
@@ -504,7 +501,7 @@ function VerificationBadge({ status, verifierName, verifierProfileImage }: Verif
   return null;
 }
 
-const VALID_SECTIONS = ["personal", "passport", "education", "language", "employment", "funding", "emergency", "sop"];
+const VALID_SECTIONS = ["personal", "passport", "education", "language", "employment", "funding", "emergency"];
 
 function StudentProfileContent() {
   const { toast } = useToast();
@@ -627,12 +624,6 @@ function StudentProfileContent() {
     },
   });
 
-  const sopForm = useForm<z.infer<typeof sopSchema>>({
-    resolver: zodResolver(sopSchema),
-    defaultValues: {
-      statementOfPurpose: "",
-    },
-  });
 
   const educationForm = useForm<z.infer<typeof educationFormSchema>>({
     resolver: zodResolver(educationFormSchema),
@@ -758,9 +749,6 @@ function StudentProfileContent() {
         sponsorPhone: profile.sponsorPhone || "",
         sponsorEmail: profile.sponsorEmail || "",
         sponsorAddress: profile.sponsorAddress || "",
-      });
-      sopForm.reset({
-        statementOfPurpose: profile.statementOfPurpose || "",
       });
       setHasPassport(profile.hasPassport ?? null);
       setHasEnglishTest(profile.hasEnglishTest ?? null);
@@ -1337,10 +1325,6 @@ function StudentProfileContent() {
 
 
   const handleFundingSubmit = fundingForm.handleSubmit((data) => {
-    createOrUpdateMutation.mutate(data);
-  });
-
-  const handleSopSubmit = sopForm.handleSubmit((data) => {
     createOrUpdateMutation.mutate(data);
   });
 
@@ -3712,74 +3696,6 @@ function StudentProfileContent() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Section 9: Statement of Purpose */}
-        <AccordionItem value="sop" className="border rounded-lg px-4" data-testid="accordion-sop">
-          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-sop">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-primary" />
-              <span className="font-semibold">Statement of Purpose</span>
-              <CompletionBadge isComplete={completion?.completedSections?.sop || false} isPartial={completion?.partialSections?.sop || false} isRecommended />
-              <VerificationBadge status={getVerification('sop')?.status} verifierName={getVerification('sop')?.verifierName} verifierProfileImage={getVerification('sop')?.verifierProfileImage} />
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-          <Form {...sopForm}>
-            <form onSubmit={handleSopSubmit} className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Statement of Purpose</CardTitle>
-                  <CardDescription>Tell institutions about yourself and why you want to study abroad</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={sopForm.control}
-                    name="statementOfPurpose"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Your Statement</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            value={field.value || ""} 
-                            placeholder="Write about your educational background, career goals, why you chose this field, and what you hope to achieve..."
-                            className="min-h-[200px]"
-                            data-testid="textarea-sop"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          This statement will be included with your applications. Aim for 300-500 words.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <div className="mt-4">
-                <SectionDocumentUpload section="sop" compact />
-              </div>
-
-              <div className="flex justify-end">
-                <Button 
-                  type="submit" 
-                  disabled={createOrUpdateMutation.isPending}
-                  data-testid="button-save-sop"
-                >
-                  {createOrUpdateMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
     </div>
   );
