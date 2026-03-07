@@ -38,7 +38,6 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   lastName: true,
   preferredName: true,
   gender: true,
-  maritalStatus: true,
   phone: true,
   whatsapp: true,
   country: true,
@@ -54,7 +53,6 @@ const personalDetailsSchema = insertStudentProfileSchema.pick({
   lastName: z.string().min(1, "Last name is required"),
   preferredName: z.string().optional().nullable(),
   gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional().nullable(),
-  maritalStatus: z.enum(["single", "married", "divorced", "widowed", "separated", "prefer_not_to_say"]).optional().nullable(),
   phone: z.string().min(1, "Phone number is required"),
   whatsapp: z.string().optional().nullable(),
   country: z.string().min(1, "Country is required"),
@@ -98,6 +96,17 @@ const emergencyContactSchema = z.object({
   emergencyContactMobile: z.string().optional().nullable(),
   emergencyContactRelationship: z.string().optional().nullable(),
   emergencyContactAddress: z.string().optional().nullable(),
+});
+
+const maritalSchema = z.object({
+  maritalStatus: z.enum(["single", "married", "de_facto", "divorced", "widowed", "separated", "prefer_not_to_say"]).optional().nullable(),
+  spouseFirstName: z.string().optional().nullable(),
+  spouseLastName: z.string().optional().nullable(),
+  spouseDateOfBirth: z.string().optional().nullable(),
+  spouseNationality: z.string().optional().nullable(),
+  spouseCountryOfBirth: z.string().optional().nullable(),
+  spousePassportNumber: z.string().optional().nullable(),
+  spouseIsAccompanying: z.boolean().optional(),
 });
 
 const fundingSchema = z.object({
@@ -374,6 +383,7 @@ interface ProfileCompletionResult {
     emergency: boolean;
     sop: boolean;
     bio: boolean;
+    marital?: boolean;
   };
   partialSections: {
     personalInfo: boolean;
@@ -386,6 +396,7 @@ interface ProfileCompletionResult {
     emergency: boolean;
     sop: boolean;
     bio: boolean;
+    marital?: boolean;
   };
 }
 
@@ -501,7 +512,7 @@ function VerificationBadge({ status, verifierName, verifierProfileImage }: Verif
   return null;
 }
 
-const VALID_SECTIONS = ["personal", "passport", "education", "language", "employment", "funding", "emergency"];
+const VALID_SECTIONS = ["personal", "marital", "passport", "education", "language", "employment", "funding", "emergency"];
 
 function StudentProfileContent() {
   const { toast } = useToast();
@@ -571,7 +582,6 @@ function StudentProfileContent() {
       lastName: "",
       preferredName: "",
       gender: undefined,
-      maritalStatus: undefined,
       phone: "",
       whatsapp: "",
       country: "",
@@ -598,6 +608,20 @@ function StudentProfileContent() {
       passportIssuedDate: "",
       passportExpiryDate: "",
       passportIssuingAuthority: "",
+    },
+  });
+
+  const maritalForm = useForm<z.infer<typeof maritalSchema>>({
+    resolver: zodResolver(maritalSchema),
+    defaultValues: {
+      maritalStatus: undefined,
+      spouseFirstName: "",
+      spouseLastName: "",
+      spouseDateOfBirth: "",
+      spouseNationality: "",
+      spouseCountryOfBirth: "",
+      spousePassportNumber: "",
+      spouseIsAccompanying: false,
     },
   });
 
@@ -711,7 +735,6 @@ function StudentProfileContent() {
         lastName: profile.lastName || "",
         preferredName: profile.preferredName || "",
         gender: profile.gender || undefined,
-        maritalStatus: (profile.maritalStatus as "single" | "married" | "divorced" | "widowed" | "separated" | "prefer_not_to_say") || undefined,
         phone: profile.phone || "",
         whatsapp: profile.whatsapp || "",
         country: profile.country || "",
@@ -749,6 +772,16 @@ function StudentProfileContent() {
         sponsorPhone: profile.sponsorPhone || "",
         sponsorEmail: profile.sponsorEmail || "",
         sponsorAddress: profile.sponsorAddress || "",
+      });
+      maritalForm.reset({
+        maritalStatus: (profile.maritalStatus as z.infer<typeof maritalSchema>["maritalStatus"]) || undefined,
+        spouseFirstName: profile.spouseFirstName || "",
+        spouseLastName: profile.spouseLastName || "",
+        spouseDateOfBirth: profile.spouseDateOfBirth || "",
+        spouseNationality: profile.spouseNationality || "",
+        spouseCountryOfBirth: profile.spouseCountryOfBirth || "",
+        spousePassportNumber: profile.spousePassportNumber || "",
+        spouseIsAccompanying: profile.spouseIsAccompanying ?? false,
       });
       setHasPassport(profile.hasPassport ?? null);
       setHasEnglishTest(profile.hasEnglishTest ?? null);
@@ -1328,6 +1361,14 @@ function StudentProfileContent() {
     createOrUpdateMutation.mutate(data);
   });
 
+  const handleMaritalSubmit = maritalForm.handleSubmit((data) => {
+    createOrUpdateMutation.mutate(data);
+  });
+
+  // Watch marital status to conditionally show spouse fields
+  const watchedMaritalStatus = maritalForm.watch("maritalStatus");
+  const showSpouseFields = watchedMaritalStatus === "married" || watchedMaritalStatus === "de_facto";
+
   // Watch funding source to conditionally show sponsor fields
   const watchedFundingSource = fundingForm.watch("fundingSource");
   const showSponsorFields = watchedFundingSource && watchedFundingSource !== "self" && watchedFundingSource !== "loan";
@@ -1511,31 +1552,6 @@ function StudentProfileContent() {
                       )}
                     />
 
-                    <FormField
-                      control={personalForm.control}
-                      name="maritalStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Marital Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-marital-status">
-                                <SelectValue placeholder="Select marital status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="single">Single</SelectItem>
-                              <SelectItem value="married">Married</SelectItem>
-                              <SelectItem value="divorced">Divorced</SelectItem>
-                              <SelectItem value="widowed">Widowed</SelectItem>
-                              <SelectItem value="separated">Separated</SelectItem>
-                              <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -1878,7 +1894,212 @@ function StudentProfileContent() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Section 2: Passport & Visa */}
+        {/* Section 2: Marital Status */}
+        <AccordionItem value="marital" className="border rounded-lg px-4" data-testid="accordion-marital">
+          <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-marital">
+            <div className="flex items-center gap-3">
+              <Heart className="h-5 w-5 text-primary" />
+              <span className="font-semibold">Marital Status</span>
+              <CompletionBadge isComplete={completion?.completedSections?.marital || false} isPartial={completion?.partialSections?.marital || false} isOptional />
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+          <Form {...maritalForm}>
+            <form onSubmit={handleMaritalSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Marital Status</CardTitle>
+                  <CardDescription>Your current relationship status as it appears on official documents</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={maritalForm.control}
+                    name="maritalStatus"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-marital-status">
+                              <SelectValue placeholder="Select marital status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="single">Single</SelectItem>
+                            <SelectItem value="married">Married</SelectItem>
+                            <SelectItem value="de_facto">De Facto</SelectItem>
+                            <SelectItem value="divorced">Divorced</SelectItem>
+                            <SelectItem value="widowed">Widowed</SelectItem>
+                            <SelectItem value="separated">Separated</SelectItem>
+                            <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {showSpouseFields && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Partner / Spouse Details</CardTitle>
+                    <CardDescription>Details about your partner as they appear on official documents</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={maritalForm.control}
+                        name="spouseFirstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="Partner's first name" data-testid="input-spouse-first-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={maritalForm.control}
+                        name="spouseLastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="Partner's last name" data-testid="input-spouse-last-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={maritalForm.control}
+                        name="spouseDateOfBirth"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Date of Birth</FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} type="date" data-testid="input-spouse-dob" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={maritalForm.control}
+                        name="spouseNationality"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nationality</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-spouse-nationality">
+                                  <SelectValue placeholder="Select nationality" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {NATIONALITIES_SORTED.map((nat) => (
+                                  <SelectItem key={nat} value={nat}>{nat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={maritalForm.control}
+                        name="spouseCountryOfBirth"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country of Birth</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-spouse-country-of-birth">
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {COUNTRIES.map((c) => (
+                                  <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={maritalForm.control}
+                        name="spousePassportNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Passport Number <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                            <FormControl>
+                              <Input {...field} value={field.value || ""} placeholder="e.g. AB1234567" data-testid="input-spouse-passport" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="rounded-lg border p-4">
+                      <p className="font-medium mb-3">Will your partner be accompanying you to Australia?</p>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant={maritalForm.watch("spouseIsAccompanying") === true ? "default" : "outline"}
+                          onClick={() => maritalForm.setValue("spouseIsAccompanying", true)}
+                          data-testid="button-spouse-accompanying-yes"
+                        >
+                          Yes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={maritalForm.watch("spouseIsAccompanying") === false ? "default" : "outline"}
+                          onClick={() => maritalForm.setValue("spouseIsAccompanying", false)}
+                          data-testid="button-spouse-accompanying-no"
+                        >
+                          No
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={createOrUpdateMutation.isPending}
+                  data-testid="button-save-marital"
+                >
+                  {createOrUpdateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Section 3: Passport & Visa */}
         <AccordionItem value="passport" className="border rounded-lg px-4" data-testid="accordion-passport">
           <AccordionTrigger className="hover:no-underline" data-testid="accordion-trigger-passport">
             <div className="flex items-center gap-3">
