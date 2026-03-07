@@ -700,6 +700,7 @@ function StudentProfileContent() {
   });
 
   const [hasPassport, setHasPassport] = useState<boolean | null>(null);
+  const [hasEnglishTest, setHasEnglishTest] = useState<boolean | null>(null);
   const [hasWorkExperience, setHasWorkExperience] = useState<boolean | null>(null);
 
   const isInAustralia = personalForm.watch("isInAustralia");
@@ -762,6 +763,7 @@ function StudentProfileContent() {
         statementOfPurpose: profile.statementOfPurpose || "",
       });
       setHasPassport(profile.hasPassport ?? null);
+      setHasEnglishTest(profile.hasEnglishTest ?? null);
       setHasWorkExperience(profile.hasWorkExperience ?? null);
     }
   }, [profile]);
@@ -2635,6 +2637,41 @@ function StudentProfileContent() {
             </div>
           </AccordionTrigger>
           <AccordionContent>
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4">
+              <p className="font-medium mb-3">Have you completed an English language test?</p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={hasEnglishTest === true ? "default" : "outline"}
+                  onClick={() => {
+                    setHasEnglishTest(true);
+                    createOrUpdateMutation.mutate({ hasEnglishTest: true });
+                  }}
+                  data-testid="button-has-english-yes"
+                >
+                  Yes, I have
+                </Button>
+                <Button
+                  type="button"
+                  variant={hasEnglishTest === false ? "default" : "outline"}
+                  onClick={() => {
+                    setHasEnglishTest(false);
+                    createOrUpdateMutation.mutate({ hasEnglishTest: false });
+                  }}
+                  data-testid="button-has-english-no"
+                >
+                  Not yet
+                </Button>
+              </div>
+              {hasEnglishTest === false && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No problem — you can add your test scores once you have completed an English language test.
+                </p>
+              )}
+            </div>
+
+            {hasEnglishTest === true && (<>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
               <div>
@@ -3002,6 +3039,8 @@ function StudentProfileContent() {
 
           <div className="mt-4">
             <SectionDocumentUpload section="english_proficiency" compact />
+          </div>
+          </>)}
           </div>
           </AccordionContent>
         </AccordionItem>

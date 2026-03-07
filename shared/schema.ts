@@ -2017,6 +2017,7 @@ export const studentProfiles = pgTable("student_profiles", {
   // English proficiency
   englishProficiencyStatus: englishProficiencyStatusEnum("english_proficiency_status"),
   englishTestScores: jsonb("english_test_scores").$type<StudentEnglishTestScores>(),
+  hasEnglishTest: boolean("has_english_test").default(false),
   
   // Study preferences (for course recommendations)
   preferredDiscipline: disciplineEnum("preferred_discipline"),

@@ -60,52 +60,97 @@ export const SECTION_DOCUMENT_MAPPING = {
   passport_visa: {
     types: ["passport", "visa"],
     label: "Passport & Visa Documents",
-    description: "Upload your passport and visa documents",
+    description: "Your passport is required for all applications. A visa copy is needed if you currently hold one.",
     requiredTypes: [
-      { type: "passport", label: "Passport Copy", required: true },
-      { type: "visa", label: "Visa Copy", required: false },
+      {
+        type: "passport",
+        label: "Passport Copy",
+        required: true,
+        hint: "Scan the photo/personal details page clearly. Include all pages with existing visa stamps. Passport must be valid for at least 6 months from your intended course start date.",
+      },
+      {
+        type: "visa",
+        label: "Visa Copy",
+        required: false,
+        hint: "Upload your current visa grant notice or physical visa stamp. Include both front and back if it is a physical sticker. If you are on a student visa, include the grant letter.",
+      },
     ],
   },
   education: {
     types: ["transcript", "diploma"],
     label: "Education Documents",
-    description: "Upload your academic transcripts and certificates",
+    description: "Official academic records proving your highest level of education completed.",
     requiredTypes: [
-      { type: "transcript", label: "Academic Transcript", required: true },
-      { type: "diploma", label: "Diploma/Degree Certificate", required: false },
+      {
+        type: "transcript",
+        label: "Academic Transcript",
+        required: true,
+        hint: "Official transcripts showing all subjects, grades, and GPA from each institution attended. Documents must be in English or accompanied by a certified translation.",
+      },
+      {
+        type: "diploma",
+        label: "Diploma / Degree Certificate",
+        required: false,
+        hint: "Official degree or diploma certificate issued by your institution. If you have not yet graduated, upload an enrolment confirmation letter or expected graduation statement.",
+      },
     ],
   },
   english_proficiency: {
     types: ["language_test"],
     label: "English Test Results",
-    description: "Upload your English proficiency test results",
+    description: "Required by most Australian institutions. Your test result must typically be no more than 2 years old at the time of application.",
     requiredTypes: [
-      { type: "language_test", label: "IELTS/PTE/TOEFL Score Report", required: true },
+      {
+        type: "language_test",
+        label: "IELTS / PTE / TOEFL Score Report",
+        required: true,
+        hint: "Official score report from your test provider showing the test date, overall band/score, and individual sub-scores (Listening, Reading, Writing, Speaking). Accepted tests: IELTS Academic, PTE Academic, TOEFL iBT, Duolingo English Test.",
+      },
     ],
   },
   financial: {
     types: ["financial"],
     label: "Financial Documents",
-    description: "Upload bank statements and sponsor letters",
+    description: "Proof of sufficient funds to cover tuition fees and living costs for your study period.",
     requiredTypes: [
-      { type: "financial", label: "Bank Statement / Sponsor Letter", required: true },
+      {
+        type: "financial",
+        label: "Bank Statement / Sponsor Letter",
+        required: true,
+        hint: "Bank statements from the last 3–6 months showing your full name, account number, and current balance. If sponsored, include a sponsor letter stating the relationship to you along with their bank statement confirming available funds.",
+      },
     ],
   },
   work_experience: {
     types: ["cv", "recommendation"],
     label: "Work & Reference Documents",
-    description: "Upload your CV and recommendation letters",
+    description: "Optional but strengthens your application, especially for postgraduate and professional programs.",
     requiredTypes: [
-      { type: "cv", label: "CV/Resume", required: false },
-      { type: "recommendation", label: "Letter of Recommendation", required: false },
+      {
+        type: "cv",
+        label: "CV / Resume",
+        required: false,
+        hint: "Your most up-to-date CV or resume including all work history, education, and key skills. Keep it to 2 pages where possible. Save as a PDF to preserve formatting.",
+      },
+      {
+        type: "recommendation",
+        label: "Letter of Recommendation",
+        required: false,
+        hint: "Written on official letterhead and signed by a previous employer, manager, or academic supervisor. Should describe your skills, character, and suitability for further study.",
+      },
     ],
   },
   sop: {
     types: ["sop"],
     label: "Statement of Purpose",
-    description: "Upload your statement of purpose document",
+    description: "A personal essay explaining your study goals and why you chose this course. Typically 500–800 words.",
     requiredTypes: [
-      { type: "sop", label: "Statement of Purpose (PDF/DOC)", required: false },
+      {
+        type: "sop",
+        label: "Statement of Purpose (PDF / DOC)",
+        required: false,
+        hint: "Cover the following: why you chose this specific course and institution, your academic and professional background, your career goals after graduation, and why studying in Australia aligns with those goals. Aim for 500–800 words.",
+      },
     ],
   },
 } as const;
@@ -298,7 +343,9 @@ export function SectionDocumentUpload({
           </div>
 
           <div className="space-y-2">
-            {sectionConfig.requiredTypes.map(({ type, label, required }) => {
+            {sectionConfig.requiredTypes.map((docType) => {
+              const { type, label, required } = docType;
+              const hint = (docType as { hint?: string }).hint;
               const uploaded = hasDocumentOfType(type);
               const docs = sectionDocuments.filter((d) => d.type === type);
 
@@ -306,78 +353,99 @@ export function SectionDocumentUpload({
                 <div
                   key={type}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-lg border",
+                    "rounded-lg border",
                     uploaded ? "bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800" : "bg-muted/30"
                   )}
                   data-testid={`section-doc-${section}-${type}`}
                 >
-                  <div className="flex items-center gap-3">
-                    {uploaded ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <div className={cn(
-                        "h-5 w-5 rounded-full border-2",
-                        required ? "border-orange-400" : "border-muted-foreground/40"
-                      )} />
-                    )}
-                    <div>
-                      <span className="font-medium text-sm">{label}</span>
-                      {required && !uploaded && (
-                        <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 border-orange-300 text-orange-600">
-                          Required
-                        </Badge>
-                      )}
-                      {docs.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {docs.map((doc) => (
-                            <Badge
-                              key={doc.id}
-                              variant="secondary"
-                              className={cn(
-                                "text-[10px] px-1.5 py-0",
-                                statusConfig[doc.status as keyof typeof statusConfig]?.color
-                              )}
-                            >
-                              {doc.fileName} ({formatFileSize(doc.fileSize || 0)})
+                  <div className="flex items-start justify-between p-3 gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="mt-0.5 shrink-0">
+                        {uploaded ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <div className={cn(
+                            "h-5 w-5 rounded-full border-2",
+                            required ? "border-orange-400" : "border-muted-foreground/40"
+                          )} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-1">
+                          <span className="font-medium text-sm">{label}</span>
+                          {required && !uploaded && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-orange-300 text-orange-600">
+                              Required
                             </Badge>
-                          ))}
+                          )}
                         </div>
-                      )}
+                        {hint && (
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed italic">
+                            {hint}
+                          </p>
+                        )}
+                        {docs.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {docs.map((doc) => (
+                              <Badge
+                                key={doc.id}
+                                variant="secondary"
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0",
+                                  statusConfig[doc.status as keyof typeof statusConfig]?.color
+                                )}
+                              >
+                                {doc.fileName} ({formatFileSize(doc.fileSize || 0)})
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    <Dialog open={uploadDialogOpen && selectedDocType === type} onOpenChange={(open) => {
+                      if (!open) setUploadDialogOpen(false);
+                    }}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={uploaded ? "outline" : "default"}
+                          onClick={() => openUploadDialog(type)}
+                          data-testid={`button-upload-${type}`}
+                        >
+                          <Upload className="h-3 w-3 mr-1" />
+                          {uploaded ? "Add More" : "Upload"}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Upload {label}</DialogTitle>
+                          <DialogDescription asChild>
+                            <div className="space-y-2">
+                              <p>{sectionConfig.description}</p>
+                              {hint && (
+                                <div className="rounded-md bg-muted/60 px-3 py-2">
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    <span className="font-medium text-foreground">What to include: </span>
+                                    {hint}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogDescription>
+                        </DialogHeader>
+                        <SectionUploadForm
+                          section={section}
+                          defaultType={type}
+                          onSuccess={() => {
+                            setUploadDialogOpen(false);
+                            queryClient.invalidateQueries({ queryKey: ["/api/student/documents"] });
+                            onDocumentChange?.();
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  <Dialog open={uploadDialogOpen && selectedDocType === type} onOpenChange={(open) => {
-                    if (!open) setUploadDialogOpen(false);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={uploaded ? "outline" : "default"}
-                        onClick={() => openUploadDialog(type)}
-                        data-testid={`button-upload-${type}`}
-                      >
-                        <Upload className="h-3 w-3 mr-1" />
-                        {uploaded ? "Add More" : "Upload"}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Upload {label}</DialogTitle>
-                        <DialogDescription>
-                          {sectionConfig.description}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <SectionUploadForm
-                        section={section}
-                        defaultType={type}
-                        onSuccess={() => {
-                          setUploadDialogOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ["/api/student/documents"] });
-                          onDocumentChange?.();
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
                 </div>
               );
             })}
