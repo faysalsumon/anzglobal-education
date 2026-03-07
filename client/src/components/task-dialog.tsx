@@ -269,8 +269,13 @@ function NoteComposer({
                 key={member.id}
                 type="button"
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm hover-elevate text-left"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onMouseDown={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   insertMention(member);
                 }}
                 data-testid={`mention-option-${member.id}`}
