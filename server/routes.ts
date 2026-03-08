@@ -822,6 +822,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public serving route for note attachments (images + PDFs) — no auth required
+  // Files live in the public/ path of object storage so this is safe to expose
+  app.get("/api/public-storage/public/note-attachments/:userId/:filename", async (req, res) => {
+    try {
+      const { userId, filename } = req.params;
+
+      if (!userId || !/^[a-zA-Z0-9_\-]+$/.test(userId)) {
+        return res.status(400).json({ message: "Invalid user id" });
+      }
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+      if (!allowedExtensions.includes(ext)) {
+        return res.status(400).json({ message: "Invalid file type" });
+      }
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const filePath = `public/note-attachments/${userId}/${filename}`;
+      const result = await storageClient.downloadAsBytes(filePath);
+
+      if (!result.ok || !result.value) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+        'pdf': 'application/pdf',
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      const fileBuffer = Buffer.concat((result.value as Buffer[]).map(c => Buffer.isBuffer(c) ? c : Buffer.from(c)));
+
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Content-Type', contentType);
+      if (ext === 'pdf') {
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      }
+      res.send(fileBuffer);
+    } catch (error) {
+      console.error("Error serving note attachment:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
   // Get current authenticated user
   app.get("/api/auth/me", isAuthenticated, async (req, res) => {
     try {

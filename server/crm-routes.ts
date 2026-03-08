@@ -1848,8 +1848,7 @@ router.post(
         return res.status(500).json({ message: "Failed to upload file" });
       }
 
-      const encodedPath = encodeURIComponent(objectPath);
-      const url = `/api/crm/notes/attachment/${encodedPath}`;
+      const url = `/api/public-storage/public/note-attachments/${userId}/${sanitizedFilename}`;
 
       res.json({
         url,
@@ -1864,7 +1863,7 @@ router.post(
   }
 );
 
-router.get("/notes/attachment/:encodedPath(*)", requireAdmin, async (req: any, res) => {
+router.get("/notes/attachment/:encodedPath(*)", async (req: any, res) => {
   try {
     const objectPath = decodeURIComponent(req.params.encodedPath);
 
