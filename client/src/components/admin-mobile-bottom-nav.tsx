@@ -329,6 +329,7 @@ export function AdminMobileBottomNav({
         <SheetContent
           side="bottom"
           className="h-[85dvh] rounded-t-2xl px-0 pb-0 flex flex-col"
+          aria-describedby={undefined}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 flex-shrink-0">

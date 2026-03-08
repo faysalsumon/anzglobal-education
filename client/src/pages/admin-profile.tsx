@@ -16,8 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSupabaseAuth } from "@/lib/supabase-auth";
-import { Loader2, Upload, Check, Shield, Eye, EyeOff, Home, Menu, X, LogOut } from "lucide-react";
+import { Loader2, Upload, Check, Shield, Eye, EyeOff, Home, LogOut } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
+import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Badge } from "@/components/ui/badge";
 
@@ -130,8 +131,6 @@ export default function AdminProfile() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   // Redirect unauthenticated users to admin login
   useEffect(() => {
     if (isAuthResolved && !isAuthenticated) {
@@ -512,26 +511,23 @@ export default function AdminProfile() {
         hasFullAdminAccess={hasFullAdminAccess}
         isCTO={isCTO}
         isMarketingExecutive={isMarketingExecutive}
-        isMobileMenuOpen={isMobileMenuOpen}
-        onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMobileMenuOpen={false}
+        onMobileMenuToggle={() => {}}
       />
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 h-full">
-        {/* Top Header with Breadcrumb - Same as dashboard */}
+        {/* Top Header */}
         <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
-          {/* Mobile menu toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden flex-shrink-0"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            data-testid="button-mobile-menu-toggle"
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-          
-          <div className="flex flex-1 items-center justify-between gap-4">
+          {/* Mobile: section title */}
+          <div className="flex lg:hidden flex-1 items-center min-w-0">
+            <span className="font-semibold text-base truncate" data-testid="mobile-section-title">
+              My Profile
+            </span>
+          </div>
+
+          {/* Desktop: breadcrumb */}
+          <div className="hidden lg:flex flex-1 items-center justify-between gap-4">
             <Breadcrumb data-testid="breadcrumb">
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -555,48 +551,49 @@ export default function AdminProfile() {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            
-            {/* Platform-wide Notifications, Messages, Profile, and Logout */}
-            <div className="flex items-center gap-2">
-              <NotificationBell />
-              
-              {/* Profile Avatar */}
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Link href="/admin/profile">
-                    <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile-header">
-                      {user?.profileImageUrl && (
-                        <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
-                      )}
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>My Profile</TooltipContent>
-              </Tooltip>
+          </div>
 
-              {/* Logout Button */}
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleLogout}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Logout</TooltipContent>
-              </Tooltip>
-            </div>
+          {/* Right side icons — always visible */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <NotificationBell />
+
+            {/* Profile Avatar */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Link href="/admin/profile">
+                  <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile-header">
+                    {user?.profileImageUrl && (
+                      <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
+                    )}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>My Profile</TooltipContent>
+            </Tooltip>
+
+            {/* Logout Button — desktop only (mobile uses More sheet) */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  data-testid="button-logout"
+                  className="hidden lg:flex text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Logout</TooltipContent>
+            </Tooltip>
           </div>
         </header>
 
         {/* Scrollable Content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-20 lg:pb-6">
           <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold" data-testid="text-profile-title">
@@ -1375,6 +1372,16 @@ export default function AdminProfile() {
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <AdminMobileBottomNav
+        activeTab="profile"
+        onTabChange={handleTabChange}
+        hasFullAdminAccess={hasFullAdminAccess}
+        isCTO={isCTO}
+        isMarketingExecutive={isMarketingExecutive}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
