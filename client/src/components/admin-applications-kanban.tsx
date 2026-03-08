@@ -17,14 +17,16 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, User, FileText, CheckCircle, XCircle, Clock, 
   ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell,
   List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye, AlertTriangle,
-  CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal
+  CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal, Save
 } from "lucide-react";
+import type { SavedFilter } from "@shared/schema";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
@@ -690,6 +692,57 @@ export function AdminApplicationsKanban() {
     setSearchQuery("");
   };
 
+  // Saved filters
+  const [saveFilterName, setSaveFilterName] = useState("");
+  const [saveFilterOpen, setSaveFilterOpen] = useState(false);
+
+  const { data: savedFiltersData } = useQuery<SavedFilter[]>({
+    queryKey: ["/api/saved-filters", { panelType: "applications" }],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch("/api/saved-filters?panelType=applications", { credentials: "include", headers });
+      if (!res.ok) throw new Error("Failed to fetch saved filters");
+      return res.json();
+    },
+  });
+
+  const createSavedFilterMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const filters = { stageFilter, statusFilter, consultantFilter, branchFilter, countryFilter, slaFilter };
+      return apiRequest("POST", "/api/saved-filters", { name, panelType: "applications", filters });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-filters", { panelType: "applications" }] });
+      setSaveFilterName("");
+      setSaveFilterOpen(false);
+      toast({ title: "Filter saved" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to save filter", variant: "destructive" }),
+  });
+
+  const deleteSavedFilterMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/saved-filters/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-filters", { panelType: "applications" }] });
+      toast({ title: "Filter deleted" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to delete filter", variant: "destructive" }),
+  });
+
+  const loadSavedFilter = (sf: SavedFilter) => {
+    const f = sf.filters as any;
+    if (f.stageFilter !== undefined) setStageFilter(f.stageFilter);
+    if (f.statusFilter !== undefined) setStatusFilter(f.statusFilter);
+    if (f.consultantFilter !== undefined) setConsultantFilter(f.consultantFilter);
+    if (f.branchFilter !== undefined) setBranchFilter(f.branchFilter);
+    if (f.countryFilter !== undefined) setCountryFilter(f.countryFilter);
+    if (f.slaFilter !== undefined) setSlaFilter(f.slaFilter as any);
+  };
+
   // Calculate SLA counts for quick filter chips
   const slaCounts = useMemo(() => {
     const counts = { 'on-track': 0, 'at-risk': 0, 'overdue': 0 };
@@ -887,18 +940,6 @@ export function AdminApplicationsKanban() {
         
         {/* Right: View Toggle and Search */}
         <div className="flex items-center gap-2">
-          {user?.id && (
-            <Button
-              variant="outline"
-              size="sm"
-              className={`h-8 toggle-elevate${consultantFilter === user.id ? " toggle-elevated" : ""}`}
-              onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
-              data-testid="button-my-applications-topbar"
-            >
-              <User className="h-3.5 w-3.5 mr-1.5" />
-              My Applications
-            </Button>
-          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -909,6 +950,18 @@ export function AdminApplicationsKanban() {
               data-testid="input-search-applications"
             />
           </div>
+          {user?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-8 shrink-0 toggle-elevate${consultantFilter === user.id ? " toggle-elevated" : ""}`}
+              onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
+              data-testid="button-my-applications-topbar"
+            >
+              <User className="h-3.5 w-3.5 mr-1.5" />
+              My Applications
+            </Button>
+          )}
           <div className="flex items-center gap-1 border rounded-lg p-0.5">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -930,6 +983,88 @@ export function AdminApplicationsKanban() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Inline Filter Row */}
+      <div className="flex items-center gap-2 flex-wrap mb-3">
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-[150px] h-8 text-sm" data-testid="select-stage-filter-inline">
+            <SelectValue placeholder="All Stages" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stages</SelectItem>
+            {ALL_STAGES.map((stage) => (
+              <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px] h-8 text-sm" data-testid="select-status-filter-inline">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="withdrawn">Withdrawn</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="deferred">Deferred</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={consultantFilter} onValueChange={setConsultantFilter}>
+          <SelectTrigger className="w-[180px] h-8 text-sm" data-testid="select-consultant-filter-inline">
+            <SelectValue placeholder="All Consultants" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Consultants</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {consultants.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.firstName} {c.lastName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" className="h-8" onClick={clearAllFilters} data-testid="button-clear-filters-inline">
+            <X className="h-3.5 w-3.5 mr-1.5" />
+            Clear All
+          </Button>
+        )}
+        {hasActiveFilters && (
+          <Popover open={saveFilterOpen} onOpenChange={setSaveFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8" data-testid="button-save-filter-apps">
+                <Bookmark className="h-3.5 w-3.5 mr-1.5" />
+                Save Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3" align="end">
+              <p className="text-sm font-medium mb-2">Name this filter</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. Active BD Apps"
+                  value={saveFilterName}
+                  onChange={(e) => setSaveFilterName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && saveFilterName.trim()) createSavedFilterMutation.mutate(saveFilterName.trim()); }}
+                  className="h-8 text-sm"
+                  data-testid="input-save-filter-name-apps"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  className="h-8 shrink-0"
+                  disabled={!saveFilterName.trim() || createSavedFilterMutation.isPending}
+                  onClick={() => createSavedFilterMutation.mutate(saveFilterName.trim())}
+                  data-testid="button-confirm-save-filter-apps"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {/* Bulk Actions Bar (when items selected) */}
@@ -1024,61 +1159,32 @@ export function AdminApplicationsKanban() {
                     Unassigned
                     <Badge variant="outline" className="ml-auto text-[10px] h-4">{stats.unassigned}</Badge>
                   </Button>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* Filter by Stage */}
-              <Collapsible defaultOpen>
-                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Filter by Stage
-                  </div>
-                  <ChevronDown className="h-3 w-3" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Select value={stageFilter} onValueChange={setStageFilter}>
-                    <SelectTrigger className="h-7 text-xs" data-testid="select-stage-filter">
-                      <SelectValue placeholder="All Stages" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Stages</SelectItem>
-                      {ALL_STAGES.map((stage) => (
-                        <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                  {savedFiltersData && savedFiltersData.length > 0 && (
+                    <>
+                      <div className="border-t my-1.5" />
+                      {savedFiltersData.map((sf) => (
+                        <div key={sf.id} className="flex items-center group">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 justify-start h-7 text-xs truncate"
+                            onClick={() => loadSavedFilter(sf)}
+                            data-testid={`button-load-saved-filter-${sf.id}`}
+                          >
+                            <Bookmark className="h-3 w-3 mr-1.5 shrink-0 text-muted-foreground" />
+                            <span className="truncate">{sf.name}</span>
+                          </Button>
+                          <button
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-destructive shrink-0"
+                            onClick={() => deleteSavedFilterMutation.mutate(sf.id)}
+                            data-testid={`button-delete-saved-filter-${sf.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
-              {/* Filter by Consultant */}
-              <Collapsible defaultOpen>
-                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5" />
-                    Consultant
-                  </div>
-                  <ChevronDown className="h-3 w-3" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Select value={consultantFilter} onValueChange={setConsultantFilter}>
-                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-consultant">
-                      <SelectValue placeholder="All Consultants" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Consultants</SelectItem>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {consultants.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.firstName} {c.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    </>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
 
@@ -1136,48 +1242,6 @@ export function AdminApplicationsKanban() {
                 </CollapsibleContent>
               </Collapsible>
 
-              <Separator />
-
-              {/* Filter by Status */}
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="h-3.5 w-3.5" />
-                    Status
-                  </div>
-                  <ChevronDown className="h-3 w-3" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-status">
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <>
-                  <Separator />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-7 text-xs"
-                    onClick={clearAllFilters}
-                    data-testid="button-clear-filters"
-                  >
-                    <X className="h-3 w-3 mr-1.5" />
-                    Clear All Filters
-                  </Button>
-                </>
-              )}
             </div>
           </div>
         )}

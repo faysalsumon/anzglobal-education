@@ -5242,3 +5242,18 @@ export type InsertChannel = z.infer<typeof insertChannelSchema>;
 export type ChannelMember = typeof channelMembers.$inferSelect;
 export type ChannelMessage = typeof channelMessages.$inferSelect;
 export type InsertChannelMessage = z.infer<typeof insertChannelMessageSchema>;
+
+// ── Saved Filters ─────────────────────────────────────────────────────────────
+
+export const savedFilters = pgTable("saved_filters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  panelType: varchar("panel_type", { length: 20 }).notNull(),
+  filters: jsonb("filters").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSavedFilterSchema = createInsertSchema(savedFilters).omit({ id: true, createdAt: true });
+export type SavedFilter = typeof savedFilters.$inferSelect;
+export type InsertSavedFilter = z.infer<typeof insertSavedFilterSchema>;

@@ -63,8 +63,12 @@ import {
   Clock,
   BookOpen,
   Star,
-  Link2
+  Link2,
+  Bookmark,
+  Save
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { SavedFilter } from "@shared/schema";
 import { format } from "date-fns";
 
 type ContactType = 'none' | 'clients' | 'external' | 'internal' | 'others' | 'partner' | 'providers_rep';
@@ -424,6 +428,56 @@ export function CrmContactsPanel() {
     }
   };
 
+  // Saved filters state
+  const [saveFilterName, setSaveFilterName] = useState("");
+  const [saveFilterOpen, setSaveFilterOpen] = useState(false);
+
+  const { data: savedFiltersData } = useQuery<SavedFilter[]>({
+    queryKey: ["/api/saved-filters", { panelType: "contacts" }],
+    queryFn: async () => {
+      const headers = await getAuthHeaders();
+      const res = await fetch("/api/saved-filters?panelType=contacts", { credentials: "include", headers });
+      if (!res.ok) throw new Error("Failed to fetch saved filters");
+      return res.json();
+    },
+  });
+
+  const createSavedFilterMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const filters = { typeFilter, clientStatusFilter, leadStageFilter, entrySourceFilter, branchFilter, countryFilter, nationalityFilter, assignedFilter };
+      return apiRequest("POST", "/api/saved-filters", { name, panelType: "contacts", filters });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-filters", { panelType: "contacts" }] });
+      setSaveFilterName("");
+      setSaveFilterOpen(false);
+      toast({ title: "Filter saved", description: "Your filter has been saved" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to save filter", variant: "destructive" }),
+  });
+
+  const deleteSavedFilterMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/saved-filters/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-filters", { panelType: "contacts" }] });
+      toast({ title: "Filter deleted" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to delete filter", variant: "destructive" }),
+  });
+
+  const loadSavedFilter = (sf: SavedFilter) => {
+    const f = sf.filters as any;
+    if (f.typeFilter !== undefined) setTypeFilter(f.typeFilter);
+    if (f.clientStatusFilter !== undefined) setClientStatusFilter(f.clientStatusFilter);
+    if (f.leadStageFilter !== undefined) setLeadStageFilter(f.leadStageFilter);
+    if (f.entrySourceFilter !== undefined) setEntrySourceFilter(f.entrySourceFilter);
+    if (f.branchFilter !== undefined) setBranchFilter(f.branchFilter);
+    if (f.countryFilter !== undefined) setCountryFilter(f.countryFilter);
+    if (f.nationalityFilter !== undefined) setNationalityFilter(f.nationalityFilter);
+    if (f.assignedFilter !== undefined) setAssignedFilter(f.assignedFilter);
+    setFiltersOpen(false);
+  };
+
   const openEditPage = (contact: CrmContact) => {
     navigate(`/admin/contacts/${contact.id}/edit`);
   };
@@ -614,92 +668,132 @@ export function CrmContactsPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search contacts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="input-search-contacts"
-          />
+      <div className="flex flex-col gap-2">
+        {/* Row 1: Search + My Contacts */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-contacts"
+            />
+          </div>
+          {user?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={`shrink-0 gap-2 toggle-elevate${assignedFilter === user.id ? " toggle-elevated" : ""}`}
+              onClick={() => setAssignedFilter(assignedFilter === user.id ? "all" : user.id)}
+              data-testid="button-my-contacts-filter"
+            >
+              My Contacts
+            </Button>
+          )}
         </div>
-        <Select value={clientStatusFilter} onValueChange={(v) => {
-          setClientStatusFilter(v);
-          if (v !== 'lead') setLeadStageFilter("all");
-        }}>
-          <SelectTrigger className="w-[160px]" data-testid="select-client-status-filter">
-            <SelectValue placeholder="Client Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="lead">Lead</SelectItem>
-            <SelectItem value="applicant">Applicant</SelectItem>
-            <SelectItem value="enrolled">Enrolled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-        {clientStatusFilter === 'lead' && (
-          <Select value={leadStageFilter} onValueChange={setLeadStageFilter}>
-            <SelectTrigger className="w-[180px]" data-testid="select-lead-stage-filter">
-              <SelectValue placeholder="All Stages" />
+        {/* Row 2: Dropdown filters + More Filters + Clear */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={clientStatusFilter} onValueChange={(v) => {
+            setClientStatusFilter(v);
+            if (v !== 'lead') setLeadStageFilter("all");
+          }}>
+            <SelectTrigger className="w-[150px]" data-testid="select-client-status-filter">
+              <SelectValue placeholder="Client Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Lead Stages</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="contacted">Contacted</SelectItem>
-              <SelectItem value="qualified">Qualified</SelectItem>
-              <SelectItem value="counselling">Counselling</SelectItem>
-              <SelectItem value="ready_to_apply">Ready to Apply</SelectItem>
-              <SelectItem value="converted">Converted</SelectItem>
-              <SelectItem value="lost">Lost</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="lead">Lead</SelectItem>
+              <SelectItem value="applicant">Applicant</SelectItem>
+              <SelectItem value="enrolled">Enrolled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
-        )}
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
-            <SelectValue placeholder="Contact Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="clients">Clients (Students)</SelectItem>
-            <SelectItem value="external">External (Referrals)</SelectItem>
-            <SelectItem value="internal">Internal</SelectItem>
-            <SelectItem value="partner">Partner</SelectItem>
-            <SelectItem value="providers_rep">Providers Rep</SelectItem>
-            <SelectItem value="others">Others</SelectItem>
-          </SelectContent>
-        </Select>
-        {user?.id && (
-          <Button
-            variant="outline"
-            className={`gap-2 toggle-elevate${assignedFilter === user.id ? " toggle-elevated" : ""}`}
-            onClick={() => setAssignedFilter(assignedFilter === user.id ? "all" : user.id)}
-            data-testid="button-my-contacts-filter"
-          >
-            My Contacts
-          </Button>
-        )}
-        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" data-testid="button-more-filters">
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="ml-2">{activeFiltersCount}</Badge>
-              )}
-              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+          {clientStatusFilter === 'lead' && (
+            <Select value={leadStageFilter} onValueChange={setLeadStageFilter}>
+              <SelectTrigger className="w-[160px]" data-testid="select-lead-stage-filter">
+                <SelectValue placeholder="All Stages" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Lead Stages</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="contacted">Contacted</SelectItem>
+                <SelectItem value="qualified">Qualified</SelectItem>
+                <SelectItem value="counselling">Counselling</SelectItem>
+                <SelectItem value="ready_to_apply">Ready to Apply</SelectItem>
+                <SelectItem value="converted">Converted</SelectItem>
+                <SelectItem value="lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[150px]" data-testid="select-type-filter">
+              <SelectValue placeholder="Contact Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="clients">Clients (Students)</SelectItem>
+              <SelectItem value="external">External (Referrals)</SelectItem>
+              <SelectItem value="internal">Internal</SelectItem>
+              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="providers_rep">Providers Rep</SelectItem>
+              <SelectItem value="others">Others</SelectItem>
+            </SelectContent>
+          </Select>
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-more-filters">
+                <Filter className="h-4 w-4 mr-2" />
+                More Filters
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ml-2">{activeFiltersCount}</Badge>
+                )}
+                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
+          {activeFiltersCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearAllFilters} data-testid="button-clear-filters">
+              <X className="h-4 w-4 mr-1" />
+              Clear All
             </Button>
-          </CollapsibleTrigger>
-        </Collapsible>
-        {activeFiltersCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearAllFilters} data-testid="button-clear-filters">
-            <X className="h-4 w-4 mr-1" />
-            Clear All
-          </Button>
-        )}
+          )}
+          {activeFiltersCount > 0 && (
+            <Popover open={saveFilterOpen} onOpenChange={setSaveFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" data-testid="button-save-filter">
+                  <Bookmark className="h-4 w-4 mr-1.5" />
+                  Save Filter
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="end">
+                <p className="text-sm font-medium mb-2">Name this filter</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Hot Leads BD"
+                    value={saveFilterName}
+                    onChange={(e) => setSaveFilterName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && saveFilterName.trim()) createSavedFilterMutation.mutate(saveFilterName.trim()); }}
+                    className="h-8 text-sm"
+                    data-testid="input-save-filter-name"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 shrink-0"
+                    disabled={!saveFilterName.trim() || createSavedFilterMutation.isPending}
+                    onClick={() => createSavedFilterMutation.mutate(saveFilterName.trim())}
+                    data-testid="button-confirm-save-filter"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
       </div>
 
       {clientStatusFilter === 'lead' && (
@@ -731,6 +825,35 @@ export function CrmContactsPanel() {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
           <Card className="p-4">
+            {savedFiltersData && savedFiltersData.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Bookmark className="h-3.5 w-3.5" />
+                  Saved Filters
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {savedFiltersData.map((sf) => (
+                    <div key={sf.id} className="flex items-center gap-1 border rounded-md px-2 py-1 text-sm bg-muted/40">
+                      <button
+                        className="hover:text-primary transition-colors"
+                        onClick={() => loadSavedFilter(sf)}
+                        data-testid={`button-load-saved-filter-${sf.id}`}
+                      >
+                        {sf.name}
+                      </button>
+                      <button
+                        className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                        onClick={() => deleteSavedFilterMutation.mutate(sf.id)}
+                        data-testid={`button-delete-saved-filter-${sf.id}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t mt-3 mb-1" />
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Entry Source</Label>

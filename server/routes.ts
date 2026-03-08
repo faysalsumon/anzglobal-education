@@ -127,7 +127,7 @@ import {
   getUserPermissions,
   invalidatePermissionCache
 } from "./permission-service";
-import { roles, branches, regions } from "@shared/schema";
+import { roles, branches, regions, savedFilters, insertSavedFilterSchema } from "@shared/schema";
 import {
   generateUniversityDescription,
   generateCourseDescription,
@@ -16644,7 +16644,50 @@ Sitemap: ${baseUrl}/sitemap.xml
   }
   
   console.log('WebSocket server initialized on path /ws with session-based authentication');
-  
+
+  // ── Saved Filters API ────────────────────────────────────────────────────────
+
+  app.get("/api/saved-filters", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { panelType } = req.query;
+      const conditions: any[] = [eq(savedFilters.userId, userId)];
+      if (panelType) conditions.push(eq(savedFilters.panelType, panelType as string));
+      const filters = await db.select().from(savedFilters).where(and(...conditions)).orderBy(savedFilters.createdAt);
+      res.json(filters);
+    } catch (error) {
+      console.error("Error fetching saved filters:", error);
+      res.status(500).json({ message: "Failed to fetch saved filters" });
+    }
+  });
+
+  app.post("/api/saved-filters", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const parsed = insertSavedFilterSchema.safeParse({ ...req.body, userId });
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      const [created] = await db.insert(savedFilters).values(parsed.data).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error creating saved filter:", error);
+      res.status(500).json({ message: "Failed to create saved filter" });
+    }
+  });
+
+  app.delete("/api/saved-filters/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const [existing] = await db.select().from(savedFilters).where(and(eq(savedFilters.id, id), eq(savedFilters.userId, userId)));
+      if (!existing) return res.status(404).json({ message: "Filter not found or not owned by you" });
+      await db.delete(savedFilters).where(eq(savedFilters.id, id));
+      res.json({ message: "Filter deleted" });
+    } catch (error) {
+      console.error("Error deleting saved filter:", error);
+      res.status(500).json({ message: "Failed to delete saved filter" });
+    }
+  });
+
   // Register chat routes
   const { registerChatRoutes } = await import('./chat-routes');
   registerChatRoutes(app);
