@@ -3,18 +3,13 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
 
-interface TeamMember {
-  id: number;
-  userId: string;
-  role: string;
-  isActive: boolean;
-  user: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    profileImageUrl?: string | null;
-  };
+interface MentionableUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  profileImageUrl: string | null;
+  branchId: string | null;
 }
 
 interface UnifiedNoteRaw {
@@ -39,28 +34,24 @@ interface ApplicationInternalNotesProps {
   applicationId: string;
   currentUserId?: string;
   compact?: boolean;
+  branchId?: string | null;
 }
 
 export function ApplicationInternalNotes({
   applicationId,
   currentUserId,
   compact = false,
+  branchId,
 }: ApplicationInternalNotesProps) {
   const { toast } = useToast();
 
-  const { data: teamMembers = [] } = useQuery<TeamMember[]>({
-    queryKey: ["/api/admin/team-members"],
+  const { data: mentionableUsers = [] } = useQuery<MentionableUser[]>({
+    queryKey: ["/api/applications", applicationId, "mentionable-users"],
+    enabled: !!applicationId,
   });
 
   const { data: rawNotes = [], isLoading } = useQuery<UnifiedNoteRaw[]>({
     queryKey: ["/api/applications", applicationId, "unified-notes"],
-    queryFn: async () => {
-      const res = await fetch(`/api/applications/${applicationId}/unified-notes`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch notes");
-      return res.json();
-    },
     enabled: !!applicationId,
   });
 
@@ -146,12 +137,12 @@ export function ApplicationInternalNotes({
     author: n.author,
   }));
 
-  const threadTeamMembers: ThreadTeamMember[] = teamMembers.map((m) => ({
-    id: m.userId,
-    firstName: m.user.firstName,
-    lastName: m.user.lastName,
-    email: m.user.email,
-    profileImageUrl: m.user.profileImageUrl || null,
+  const threadTeamMembers: ThreadTeamMember[] = mentionableUsers.map((m) => ({
+    id: m.id,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    email: m.email,
+    profileImageUrl: m.profileImageUrl || null,
   }));
 
   return (

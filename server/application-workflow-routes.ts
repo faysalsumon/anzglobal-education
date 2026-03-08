@@ -405,7 +405,7 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         return res.status(403).json({ error: "You don't have permission to view applications" });
       }
 
-      const { stage, status, consultantId } = req.query;
+      const { stage, status, consultantId, branchId } = req.query;
 
       // Build query conditions
       const conditions: any[] = [];
@@ -415,15 +415,22 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         if (accessContext.defaultScope === 'self') {
           // Self scope: only see applications assigned to you
           conditions.push(eq(applications.assignedConsultantId, userId));
+        } else if (accessContext.defaultScope === 'branch' && accessContext.allowedBranchIds.length > 0) {
+          // Branch scope: only see applications belonging to this branch
+          conditions.push(inArray(applications.branchId, accessContext.allowedBranchIds));
+        } else if (accessContext.defaultScope === 'region' && accessContext.regionId) {
+          // Region scope: filter by branches in this region (via allowedBranchIds)
+          if (accessContext.allowedBranchIds.length > 0) {
+            conditions.push(inArray(applications.branchId, accessContext.allowedBranchIds));
+          }
         }
-        // For branch/region scope, we'd filter by the consultant's branch
-        // For now, branch/region/global scopes see all applications
-        // A more complete implementation would add branchId to applications table
+        // global scope: no filter, sees all
       }
 
       if (stage) conditions.push(eq(applications.currentStage, stage as any));
       if (status) conditions.push(eq(applications.status, status as string));
       if (consultantId) conditions.push(eq(applications.assignedConsultantId, consultantId as string));
+      if (branchId) conditions.push(eq(applications.branchId, branchId as string));
 
       // Get applications with related data
       const adminApplications = await db
@@ -609,12 +616,13 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         ? `${assigningAdmin.firstName} ${assigningAdmin.lastName}` 
         : 'Admin';
 
-      // Assign applications
+      // Assign applications — inherit the consultant's branchId for RBAC scoping
       await db
         .update(applications)
         .set({
           assignedConsultantId: validatedData.consultantId,
           assignedAt: new Date(),
+          branchId: consultant.branchId ?? null,
         })
         .where(inArray(applications.id, validatedData.applicationIds));
 
@@ -867,6 +875,17 @@ export function registerApplicationWorkflowRoutes(app: Express) {
         updateData.assignedConsultantId = validatedData.assignedConsultantId;
         updateData.assignedAt = validatedData.assignedConsultantId ? new Date() : null;
         changes.push('consultant assignment');
+        // Inherit the consultant's branchId for RBAC scoping
+        if (validatedData.assignedConsultantId) {
+          const [consultant] = await db
+            .select({ branchId: users.branchId })
+            .from(users)
+            .where(eq(users.id, validatedData.assignedConsultantId))
+            .limit(1);
+          updateData.branchId = consultant?.branchId ?? null;
+        } else {
+          updateData.branchId = null;
+        }
       }
       if (validatedData.personalStatement !== undefined) {
         updateData.personalStatement = validatedData.personalStatement;

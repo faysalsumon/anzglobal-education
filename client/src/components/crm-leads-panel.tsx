@@ -83,6 +83,7 @@ interface CrmLead {
   leadSource: string | null;
   leadCreationMethod: 'manually' | 'website_form' | 'facebook_ads' | 'google_ads' | 'education_fair' | 'referral' | 'recruitment_agent' | 'campus_walk_in' | 'database_import' | 'ai_web_scrape' | null;
   branch: string | null;
+  branchId: string | null;
   nationality: string | null;
   country: string | null;
   city: string | null;
@@ -1290,6 +1291,7 @@ function LeadDetailView({ lead, onBack, onEdit, onDelete, onConvert, activeTab, 
           <LeadNotes 
             leadId={lead.id} 
             leadName={`${lead.firstName} ${lead.lastName}`}
+            branchId={lead.branchId}
           />
         </TabsContent>
 

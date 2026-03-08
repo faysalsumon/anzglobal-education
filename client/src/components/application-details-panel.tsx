@@ -75,6 +75,7 @@ interface ApplicationDetailsPanelProps {
     currentStage: ApplicationStage;
     status: string;
     assignedConsultantId: string | null;
+    branchId?: string | null;
     personalStatement?: string | null;
     additionalInfo?: string | null;
     createdAt: string;
@@ -1017,6 +1018,7 @@ export function ApplicationDetailsPanel({
           <ApplicationInternalNotes
             applicationId={application.id}
             currentUserId={currentUserId}
+            branchId={application.branchId}
           />
         </TabsContent>
 

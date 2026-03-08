@@ -5,20 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  if (!supabase) return { "Content-Type": "application/json" };
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    return {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    };
-  }
-  return { "Content-Type": "application/json" };
-}
-
 interface LeadNote {
   id: string;
   leadId: string;
@@ -49,9 +35,10 @@ interface CrmTeamMember {
 interface LeadNotesProps {
   leadId: string;
   leadName: string;
+  branchId?: string | null;
 }
 
-export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
+export function LeadNotes({ leadId, leadName, branchId }: LeadNotesProps) {
   const { toast } = useToast();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -69,29 +56,16 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
 
   const { data: rawNotes, isLoading: notesLoading } = useQuery<LeadNote[]>({
     queryKey: ["/api/crm/leads", leadId, "notes"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/crm/leads/${leadId}/notes`, {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) throw new Error("Failed to fetch notes");
-      return response.json();
-    },
     enabled: !!leadId,
   });
 
+  const teamMembersQueryKey = branchId
+    ? ["/api/crm/team-members", { branchId }]
+    : ["/api/crm/team-members"];
+
   const { data: rawTeamMembers } = useQuery<CrmTeamMember[]>({
-    queryKey: ["/api/crm/team-members"],
-    queryFn: async () => {
-      const headers = await getAuthHeaders();
-      const response = await fetch("/api/crm/team-members", {
-        credentials: "include",
-        headers,
-      });
-      if (!response.ok) throw new Error("Failed to fetch team members");
-      return response.json();
-    },
+    queryKey: teamMembersQueryKey,
+    enabled: !!leadId,
   });
 
   const createNoteMutation = useMutation({

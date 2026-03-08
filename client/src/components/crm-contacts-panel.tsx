@@ -2219,6 +2219,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             <LeadNotes
               leadId={contact.id}
               leadName={`${contact.firstName} ${contact.lastName}`}
+              branchId={contact.branchId}
             />
           </CardContent>
         </Card>

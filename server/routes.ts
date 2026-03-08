@@ -17612,6 +17612,56 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // GET /api/applications/:id/mentionable-users
+  // Returns admin users that can be @mentioned in notes for this application.
+  // Currently returns ALL admin + platform_admin users (open mentions).
+  // The application's branchId is resolved here so future branch-scoped filtering
+  // requires only adding a WHERE clause — no frontend changes needed.
+  app.get("/api/applications/:id/mentionable-users", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const applicationId = req.params.id;
+
+      // Resolve the application's effective branch for future scoping
+      const [application] = await db
+        .select({ id: applications.id, branchId: applications.branchId })
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+
+      // Resolve branchId via application.branchId (populated on consultant assignment)
+      // Kept as context variable — when you want to enforce branch-scoped mentions,
+      // add: if (effectiveBranchId) conditions.push(eq(users.branchId, effectiveBranchId));
+      // const effectiveBranchId = application?.branchId ?? null;
+
+      const mentionableUsers = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          profileImageUrl: users.profileImageUrl,
+          branchId: users.branchId,
+        })
+        .from(users)
+        .where(
+          or(
+            eq(users.userType, 'admin'),
+            eq(users.userType, 'platform_admin')
+          )
+        )
+        .orderBy(users.firstName);
+
+      res.json(mentionableUsers);
+    } catch (error: any) {
+      console.error("Error fetching mentionable users:", error);
+      res.status(500).json({ message: "Failed to fetch mentionable users" });
+    }
+  });
+
   // ============================================
   // FOLLOW-UP REMINDERS API
   // ============================================

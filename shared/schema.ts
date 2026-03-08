@@ -2112,6 +2112,10 @@ export const applications = pgTable("applications", {
   // Consultant assignment for admin workflow
   assignedConsultantId: varchar("assigned_consultant_id").references(() => users.id, { onDelete: "set null" }), // Admin/consultant assigned to review
   assignedAt: timestamp("assigned_at"),
+
+  // Branch ownership — inherited from the assigned consultant's branch at time of assignment
+  // Used for branch-scoped RBAC filtering and reporting KPIs
+  branchId: varchar("branch_id").references(() => branches.id, { onDelete: "set null" }),
   
   // Application details
   personalStatement: text("personal_statement"),

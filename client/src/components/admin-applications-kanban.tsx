@@ -29,7 +29,6 @@ import {
   ArrowUpDown, ChevronLeft
 } from "lucide-react";
 import type { SavedFilter } from "@shared/schema";
-import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
