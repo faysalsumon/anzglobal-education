@@ -327,9 +327,11 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
         clearPendingFile();
         setMessageInput("");
         if (activeView.type === "dm") {
-          queryClient.invalidateQueries({ queryKey: [`/api/conversations/${activeView.id}/messages`] });
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeView.id, "messages"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
         } else {
-          queryClient.invalidateQueries({ queryKey: [`/api/channels/${activeView.id}/messages`] });
+          queryClient.invalidateQueries({ queryKey: ["/api/channels", activeView.id, "messages"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
         }
       } catch (err: any) {
         toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -419,13 +421,21 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                       isMine ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-muted rounded-tl-none"
                     }`}>
                       {msg.content}
-                      {msg.fileUrl && (
-                        <div className="mt-2 p-2 rounded bg-background/10 border border-white/20 flex items-center gap-2">
-                          <File className="h-4 w-4" />
-                          <span className="truncate flex-1">{msg.fileName}</span>
-                          <a href={msg.fileUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
-                        </div>
-                      )}
+                      {msg.fileUrl && (() => {
+                        const ext = (msg.fileName || "").split('.').pop()?.toLowerCase() || '';
+                        const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
+                        return isImage ? (
+                          <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="block mt-2">
+                            <img src={msg.fileUrl} alt={msg.fileName || "image"} className="max-w-[200px] max-h-48 rounded-lg object-cover" />
+                          </a>
+                        ) : (
+                          <div className="mt-2 p-2 rounded bg-background/10 border border-white/20 flex items-center gap-2">
+                            <File className="h-4 w-4 shrink-0" />
+                            <span className="truncate flex-1 text-xs">{msg.fileName}</span>
+                            <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="shrink-0"><Download className="h-4 w-4" /></a>
+                          </div>
+                        );
+                      })()}
                       <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
                         {format(parseISO(msg.createdAt), "h:mm a")}
                         {isMine && activeView?.type === "dm" && (
