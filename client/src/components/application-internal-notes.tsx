@@ -126,8 +126,8 @@ export function ApplicationInternalNotes({
       currentUserId={currentUserId || null}
       teamMembers={threadTeamMembers}
       isSubmitting={createNoteMutation.isPending}
-      onAddNote={(content, mentionedUserIds) => {
-        createNoteMutation.mutate({ content, mentionedUserIds });
+      onAddNote={async (content, mentionedUserIds) => {
+        await createNoteMutation.mutateAsync({ content, mentionedUserIds });
       }}
       onDeleteNote={(noteId) => {
         const note = rawNotes.find((n) => n.id === noteId);

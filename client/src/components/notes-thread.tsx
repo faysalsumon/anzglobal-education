@@ -30,6 +30,9 @@ import {
   X,
   Loader2,
   AtSign,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
@@ -62,11 +65,18 @@ export interface ThreadTeamMember {
   profileImageUrl?: string | null;
 }
 
+interface AttachedFile {
+  url: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+}
+
 interface NotesThreadProps {
   notes: UnifiedNote[];
   isLoading: boolean;
   currentUserId: string | null;
-  onAddNote: (content: string, mentionedUserIds: string[]) => void;
+  onAddNote: (content: string, mentionedUserIds: string[]) => Promise<void> | void;
   onEditNote?: (noteId: string, content: string) => void;
   onDeleteNote?: (noteId: string) => void;
   teamMembers?: ThreadTeamMember[];
@@ -140,6 +150,7 @@ const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) =>
 
         return (
           <button
+            type="button"
             key={item.id}
             className={`flex items-center gap-2 w-full px-3 py-2 text-left text-sm hover-elevate ${
               index === selectedIndex ? "bg-accent text-accent-foreground" : ""
@@ -175,6 +186,12 @@ function extractMentions(json: any): string[] {
   return [...new Set(mentions)];
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function NoteComposer({
   teamMembers = [],
   onSubmit,
@@ -191,7 +208,11 @@ function NoteComposer({
   placeholder?: string;
 }) {
   const teamMembersRef = useRef<ThreadTeamMember[]>(teamMembers);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [mentionCount, setMentionCount] = useState(0);
+  const [hasContent, setHasContent] = useState(!!initialContent);
+  const [pendingAttachments, setPendingAttachments] = useState<AttachedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     teamMembersRef.current = teamMembers;
@@ -263,14 +284,71 @@ function NoteComposer({
     },
     onUpdate: ({ editor }) => {
       setMentionCount(extractMentions(editor.getJSON()).length);
+      setHasContent(!editor.isEmpty);
     },
   });
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      alert("Only images (JPEG, PNG, GIF, WebP) and PDFs are supported.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File must be under 10 MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/crm/notes/upload-attachment", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data: AttachedFile = await res.json();
+      setPendingAttachments((prev) => [...prev, data]);
+      setHasContent(true);
+    } catch {
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (url: string) => {
+    setPendingAttachments((prev) => prev.filter((a) => a.url !== url));
+  };
+
   const handleSubmit = () => {
-    if (!editor || editor.isEmpty) return;
-    onSubmit(editor.getHTML(), extractMentions(editor.getJSON()));
+    if (!editor || (!hasContent && pendingAttachments.length === 0)) return;
+
+    let html = editor.getHTML();
+
+    if (pendingAttachments.length > 0) {
+      const attachmentsHtml = pendingAttachments
+        .map((a) => {
+          if (a.mimeType.startsWith("image/")) {
+            return `<img src="${a.url}" alt="${a.filename}" class="note-attachment-image" />`;
+          }
+          return `<a href="${a.url}" class="note-attachment-pdf" target="_blank" rel="noopener noreferrer">${a.filename}</a>`;
+        })
+        .join("");
+      html += `<div class="note-attachments">${attachmentsHtml}</div>`;
+    }
+
+    onSubmit(html, extractMentions(editor.getJSON()));
     editor.commands.clearContent();
     setMentionCount(0);
+    setHasContent(false);
+    setPendingAttachments([]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -280,30 +358,95 @@ function NoteComposer({
     }
   };
 
+  const canSubmit = (hasContent || pendingAttachments.length > 0) && !isSubmitting && !isUploading;
+
   return (
     <div className="border rounded-md bg-background" data-testid="note-composer">
       <div onKeyDown={handleKeyDown}>
         <EditorContent editor={editor} data-testid="textarea-new-note" />
       </div>
+
+      {pendingAttachments.length > 0 && (
+        <div className="px-3 pb-2 flex flex-wrap gap-2">
+          {pendingAttachments.map((a) => (
+            <div
+              key={a.url}
+              className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs"
+              data-testid={`attachment-preview-${a.filename}`}
+            >
+              {a.mimeType.startsWith("image/") ? (
+                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              ) : (
+                <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              )}
+              <span className="truncate max-w-[120px]">{a.filename}</span>
+              <span className="text-muted-foreground">({formatFileSize(a.size)})</span>
+              <button
+                type="button"
+                onClick={() => removeAttachment(a.url)}
+                className="ml-0.5 text-muted-foreground hover:text-foreground"
+                data-testid={`button-remove-attachment-${a.filename}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {mentionCount > 0 && (
         <div className="px-3 pb-1 flex items-center gap-1 text-xs text-muted-foreground">
           <AtSign className="h-3 w-3" />
           <span>Mentioning {mentionCount} team member{mentionCount > 1 ? "s" : ""}</span>
         </div>
       )}
+
       <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t">
-        <p className="text-xs text-muted-foreground">Ctrl+Enter to send</p>
+        <div className="flex items-center gap-1">
+          <p className="text-xs text-muted-foreground">Ctrl+Enter to send</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+            className="hidden"
+            onChange={handleFileSelect}
+            data-testid="input-file-attachment"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            title="Attach file (image or PDF)"
+            data-testid="button-attach-file"
+          >
+            {isUploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Paperclip className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
         <div className="flex gap-2">
           {onCancel && (
-            <Button variant="ghost" size="sm" onClick={onCancel} data-testid="button-cancel-note">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              data-testid="button-cancel-note"
+            >
               <X className="h-4 w-4 mr-1" />
               Cancel
             </Button>
           )}
           <Button
+            type="button"
             size="sm"
             onClick={handleSubmit}
-            disabled={!editor || editor.isEmpty || isSubmitting}
+            disabled={!canSubmit}
             data-testid="button-save-note"
           >
             {isSubmitting ? (
@@ -338,13 +481,21 @@ function formatNoteDate(date: Date | string | null): string {
   return format(d, "dd/MM/yyyy h:mm a");
 }
 
+const DOMPURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+  ALLOWED_TAGS: [
+    "p", "br", "strong", "em", "u", "s", "span", "div", "a",
+    "img", "ul", "ol", "li", "code", "pre",
+  ],
+  ALLOWED_ATTR: ["class", "href", "src", "alt", "target", "rel"],
+  ALLOW_DATA_ATTR: false,
+};
+
 function NoteItem({
   note,
   currentUserId,
   onEdit,
   onDelete,
   teamMembers,
-  isDeleting,
   editingNoteId,
   onSaveEdit,
   onCancelEdit,
@@ -355,7 +506,6 @@ function NoteItem({
   onEdit: (noteId: string) => void;
   onDelete: (noteId: string) => void;
   teamMembers?: ThreadTeamMember[];
-  isDeleting?: boolean;
   editingNoteId: string | null;
   onSaveEdit: (noteId: string, content: string) => void;
   onCancelEdit: () => void;
@@ -390,13 +540,14 @@ function NoteItem({
           <div className="group">
             <div className="flex items-start justify-between gap-1">
               <div
-                className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-snug"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
+                className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-snug [&_.note-attachment-image]:max-w-full [&_.note-attachment-image]:rounded-md [&_.note-attachment-image]:mt-2 [&_.note-attachment-image]:block [&_.note-attachment-pdf]:flex [&_.note-attachment-pdf]:items-center [&_.note-attachment-pdf]:gap-1.5 [&_.note-attachment-pdf]:mt-2 [&_.note-attachment-pdf]:text-sm [&_.note-attachment-pdf]:underline"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content, DOMPURIFY_CONFIG) }}
               />
               {canEdit && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -461,8 +612,9 @@ export function NotesThread({
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const handleAddNote = (content: string, mentionedUserIds: string[]) => {
-    onAddNote(content, mentionedUserIds);
-    setIsComposing(false);
+    Promise.resolve(onAddNote(content, mentionedUserIds)).then(() => {
+      setIsComposing(false);
+    });
   };
 
   const handleSaveEdit = async (noteId: string, content: string) => {
@@ -508,7 +660,7 @@ export function NotesThread({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <span className="font-semibold text-sm">{title}</span>
+          <span className="text-sm font-semibold text-foreground">{title}</span>
           {notes.length > 0 && (
             <Badge variant="secondary" className="text-xs">
               {notes.length}
@@ -517,6 +669,7 @@ export function NotesThread({
         </div>
         {!readOnly && !isComposing && (
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             onClick={() => { setIsComposing(true); setEditingNoteId(null); }}
@@ -545,6 +698,7 @@ export function NotesThread({
           <p className="text-sm">No notes yet</p>
           {!readOnly && (
             <Button
+              type="button"
               variant="outline"
               size="sm"
               className="mt-3"

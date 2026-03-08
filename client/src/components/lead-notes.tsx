@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -158,33 +156,23 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
   }));
 
   return (
-    <Card data-testid="lead-notes-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="h-4 w-4" />
-          Notes
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <NotesThread
-          notes={notes}
-          isLoading={notesLoading}
-          currentUserId={currentUserId}
-          teamMembers={teamMembers}
-          isSubmitting={createNoteMutation.isPending}
-          onAddNote={(content, mentionedUserIds) => {
-            createNoteMutation.mutate({ content, mentions: mentionedUserIds });
-          }}
-          onEditNote={(noteId, content) => {
-            updateNoteMutation.mutate({ noteId, content });
-          }}
-          onDeleteNote={(noteId) => {
-            deleteNoteMutation.mutate(noteId);
-          }}
-          readOnly={false}
-        />
-      </CardContent>
-    </Card>
+    <NotesThread
+      notes={notes}
+      isLoading={notesLoading}
+      currentUserId={currentUserId}
+      teamMembers={teamMembers}
+      isSubmitting={createNoteMutation.isPending}
+      onAddNote={async (content, mentionedUserIds) => {
+        await createNoteMutation.mutateAsync({ content, mentions: mentionedUserIds });
+      }}
+      onEditNote={(noteId, content) => {
+        updateNoteMutation.mutate({ noteId, content });
+      }}
+      onDeleteNote={(noteId) => {
+        deleteNoteMutation.mutate(noteId);
+      }}
+      readOnly={false}
+    />
   );
 }
 

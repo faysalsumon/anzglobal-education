@@ -1803,4 +1803,112 @@ router.delete("/leads/:id/notes/:noteId", requireAdmin, async (req: any, res) =>
   }
 });
 
+// Note attachment upload route
+const noteAttachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed."));
+    }
+  },
+});
+
+router.post(
+  "/notes/upload-attachment",
+  requireAdmin,
+  noteAttachmentUpload.single("file"),
+  async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No file uploaded" });
+
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, "_");
+      const sanitizedFilename = `${baseName}_${timestamp}${ext}`;
+      const objectPath = `public/note-attachments/${userId}/${sanitizedFilename}`;
+
+      if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+        return res.status(503).json({ message: "Object storage not configured" });
+      }
+
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const uploadResult = await storageClient.uploadFromBytes(objectPath, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+      if (!uploadResult.ok) {
+        console.error("Object storage upload failed:", uploadResult.error);
+        return res.status(500).json({ message: "Failed to upload file" });
+      }
+
+      const encodedPath = encodeURIComponent(objectPath);
+      const url = `/api/crm/notes/attachment/${encodedPath}`;
+
+      res.json({
+        url,
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+      });
+    } catch (error) {
+      console.error("Error uploading note attachment:", error);
+      res.status(500).json({ message: "Failed to upload attachment" });
+    }
+  }
+);
+
+router.get("/notes/attachment/:encodedPath(*)", requireAdmin, async (req: any, res) => {
+  try {
+    const objectPath = decodeURIComponent(req.params.encodedPath);
+
+    if (!objectPath.startsWith("public/note-attachments/")) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (!process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+      return res.status(503).json({ message: "Object storage not configured" });
+    }
+
+    const { Client } = await import("@replit/object-storage");
+    const storageClient = new Client();
+    const result = await storageClient.downloadAsBytes(objectPath);
+
+    if (!result.ok || !result.value) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    const ext = path.extname(objectPath).toLowerCase();
+    const contentTypeMap: Record<string, string> = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
+      ".pdf": "application/pdf",
+    };
+    const contentType = contentTypeMap[ext] || "application/octet-stream";
+
+    const buffer = Buffer.concat(
+      (result.value as Buffer[]).map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c)))
+    );
+
+    res.set("Content-Type", contentType);
+    res.set("Cache-Control", "private, max-age=3600");
+    if (contentType === "application/pdf") {
+      res.set("Content-Disposition", `inline; filename="${path.basename(objectPath)}"`);
+    }
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error serving note attachment:", error);
+    res.status(500).json({ message: "Failed to serve file" });
+  }
+});
+
 export default router;
