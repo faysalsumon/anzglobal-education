@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { LeadNotes } from "@/components/lead-notes";
 
 // Helper to get auth headers for fetch requests
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -1912,32 +1913,32 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back">
+      <div className="flex items-start gap-3 flex-wrap">
+        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back" className="flex-shrink-0 mt-0.5">
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-12 w-12">
+        <Avatar className="h-12 w-12 flex-shrink-0">
           <AvatarImage src={contact.photo || undefined} />
           <AvatarFallback>{contact.firstName?.[0]}{contact.lastName?.[0]}</AvatarFallback>
         </Avatar>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold" data-testid="text-contact-detail-name">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold leading-tight" data-testid="text-contact-detail-name">
             {contact.firstName} {contact.lastName}
             {contact.preferredName && (
-              <span className="text-lg font-normal text-muted-foreground ml-2">
-                (Call: {contact.preferredName})
+              <span className="text-base font-normal text-muted-foreground ml-2">
+                ({contact.preferredName})
               </span>
             )}
           </h2>
-          <p className="text-muted-foreground">{contact.email}</p>
+          <p className="text-sm text-muted-foreground truncate">{contact.email}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onEdit} data-testid="button-edit-contact">
-            <Edit className="h-4 w-4 mr-2" />
+        <div className="flex gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
+            <Edit className="h-4 w-4 mr-1" />
             Edit
           </Button>
-          <Button variant="destructive" onClick={onDelete} data-testid="button-delete-contact">
-            <Trash2 className="h-4 w-4 mr-2" />
+          <Button variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
+            <Trash2 className="h-4 w-4 mr-1" />
             Delete
           </Button>
         </div>
@@ -2213,16 +2214,14 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
           </CardContent>
         </Card>
 
-        {contact.notes && (
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{contact.notes}</p>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="md:col-span-2">
+          <CardContent className="pt-4">
+            <LeadNotes
+              leadId={contact.id}
+              leadName={`${contact.firstName} ${contact.lastName}`}
+            />
+          </CardContent>
+        </Card>
 
         {roleNeedsInstitution(contact.contactType) && (
           <Card className="md:col-span-2">

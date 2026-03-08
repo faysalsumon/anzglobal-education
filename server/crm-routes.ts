@@ -13,6 +13,7 @@ import {
   studentProfiles,
   applications,
   applicationCourses,
+  contactNotes,
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, count, isNull, aliasedTable, ne, sql, type SQL } from "drizzle-orm";
 import { logActivity } from "./activity-logger";
@@ -1648,5 +1649,158 @@ export async function updateContactStatusOnApplication(userId: string, newStatus
     console.error('[CRM] Error updating contact status:', error);
   }
 }
+
+// ============================
+// LEAD / CONTACT NOTES ROUTES
+// ============================
+
+router.get("/leads/:id/notes", requireAdmin, async (req: any, res) => {
+  try {
+    const contactId = req.params.id;
+    const contact = await db.select().from(crmContacts).where(eq(crmContacts.id, contactId)).limit(1).then(r => r[0]);
+    if (!contact) return res.status(404).json({ message: "Contact not found" });
+
+    const notes = await db
+      .select({
+        id: contactNotes.id,
+        contactId: contactNotes.contactId,
+        title: contactNotes.title,
+        content: contactNotes.content,
+        mentions: contactNotes.mentions,
+        visibility: contactNotes.visibility,
+        visibleTo: contactNotes.visibleTo,
+        createdById: contactNotes.createdById,
+        createdAt: contactNotes.createdAt,
+        authorFirstName: users.firstName,
+        authorLastName: users.lastName,
+        authorEmail: users.email,
+        authorProfileImageUrl: users.profileImageUrl,
+      })
+      .from(contactNotes)
+      .leftJoin(users, eq(contactNotes.createdById, users.id))
+      .where(eq(contactNotes.contactId, contactId))
+      .orderBy(desc(contactNotes.createdAt));
+
+    res.json(notes.map(n => ({
+      id: n.id,
+      leadId: n.contactId,
+      title: n.title,
+      content: n.content,
+      mentions: n.mentions,
+      visibility: n.visibility,
+      visibleTo: n.visibleTo,
+      createdById: n.createdById,
+      createdAt: n.createdAt,
+      author: {
+        id: n.createdById,
+        firstName: n.authorFirstName,
+        lastName: n.authorLastName,
+        email: n.authorEmail,
+        profileImageUrl: n.authorProfileImageUrl,
+      },
+    })));
+  } catch (error) {
+    console.error("Error fetching lead notes:", error);
+    res.status(500).json({ message: "Failed to fetch notes" });
+  }
+});
+
+router.post("/leads/:id/notes", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const contactId = req.params.id;
+    const { title, content, mentions, visibility, visibleTo } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const contact = await db.select().from(crmContacts).where(eq(crmContacts.id, contactId)).limit(1).then(r => r[0]);
+    if (!contact) return res.status(404).json({ message: "Contact not found" });
+
+    const [newNote] = await db.insert(contactNotes).values({
+      contactId,
+      title: title || null,
+      content,
+      mentions: mentions || [],
+      visibility: visibility || 'public',
+      visibleTo: visibleTo || [],
+      createdById: userId,
+    }).returning();
+
+    const author = await db.select().from(users).where(eq(users.id, userId)).limit(1).then(r => r[0]);
+
+    res.status(201).json({
+      ...newNote,
+      leadId: newNote.contactId,
+      author: author ? {
+        id: author.id,
+        firstName: author.firstName,
+        lastName: author.lastName,
+        email: author.email,
+        profileImageUrl: author.profileImageUrl,
+      } : null,
+    });
+  } catch (error) {
+    console.error("Error creating lead note:", error);
+    res.status(500).json({ message: "Failed to create note" });
+  }
+});
+
+router.put("/leads/:id/notes/:noteId", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { noteId } = req.params;
+    const { title, content, mentions, visibility, visibleTo } = req.body;
+
+    const existing = await db.select().from(contactNotes).where(eq(contactNotes.id, noteId)).limit(1).then(r => r[0]);
+    if (!existing) return res.status(404).json({ message: "Note not found" });
+
+    if (existing.createdById !== userId) {
+      const { isAdmin: admin } = await isAdminTeamMember(userId);
+      if (!admin) return res.status(403).json({ message: "Cannot edit this note" });
+    }
+
+    const [updated] = await db
+      .update(contactNotes)
+      .set({
+        title: title !== undefined ? title : existing.title,
+        content: content || existing.content,
+        mentions: mentions !== undefined ? mentions : existing.mentions,
+        visibility: visibility || existing.visibility,
+        visibleTo: visibleTo !== undefined ? visibleTo : existing.visibleTo,
+      })
+      .where(eq(contactNotes.id, noteId))
+      .returning();
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating lead note:", error);
+    res.status(500).json({ message: "Failed to update note" });
+  }
+});
+
+router.delete("/leads/:id/notes/:noteId", requireAdmin, async (req: any, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { noteId } = req.params;
+    const existing = await db.select().from(contactNotes).where(eq(contactNotes.id, noteId)).limit(1).then(r => r[0]);
+    if (!existing) return res.status(404).json({ message: "Note not found" });
+
+    if (existing.createdById !== userId) {
+      const { isAdmin: admin } = await isAdminTeamMember(userId);
+      if (!admin) return res.status(403).json({ message: "Cannot delete this note" });
+    }
+
+    await db.delete(contactNotes).where(eq(contactNotes.id, noteId));
+    res.json({ message: "Note deleted" });
+  } catch (error) {
+    console.error("Error deleting lead note:", error);
+    res.status(500).json({ message: "Failed to delete note" });
+  }
+});
 
 export default router;

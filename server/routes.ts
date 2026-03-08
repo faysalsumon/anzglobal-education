@@ -63,6 +63,7 @@ import {
   adminTeamMembers,
   crmContacts,
   contactStatusHistory,
+  contactNotes,
   // CMS imports
   insertTestimonialSchema,
   updateTestimonialSchema,
@@ -17416,6 +17417,100 @@ Sitemap: ${baseUrl}/sitemap.xml
     } catch (error: any) {
       console.error("Error deleting note:", error);
       res.status(500).json({ message: "Failed to delete note" });
+    }
+  });
+
+  // ============================================
+  // UNIFIED NOTES (lead history + application notes merged)
+  // ============================================
+
+  app.get("/api/applications/:id/unified-notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isAdmin } = await isAdminTeamMember(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+      const applicationId = req.params.id;
+      const application = await storage.getApplicationById(applicationId);
+      if (!application) return res.status(404).json({ message: "Application not found" });
+
+      // Fetch application internal notes
+      const appNotes = await storage.getNotesByApplicationId(applicationId);
+      const enrichedAppNotes = await Promise.all(appNotes.map(async (note) => {
+        const author = await storage.getUser(note.authorId);
+        return {
+          id: note.id,
+          content: note.content,
+          createdAt: note.createdAt,
+          createdById: note.authorId,
+          isPinned: note.isPinned,
+          source: 'application' as const,
+          author: author ? {
+            id: author.id,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            email: author.email,
+            profileImageUrl: author.profileImageUrl,
+          } : null,
+        };
+      }));
+
+      // Try to find the linked CRM contact via student profile → linkedUserId
+      let leadNotesList: any[] = [];
+      try {
+        const profile = await db.query.studentProfiles.findFirst({
+          where: eq(studentProfiles.id, application.studentId),
+        });
+        if (profile?.userId) {
+          const contact = await db.select().from(crmContacts)
+            .where(eq(crmContacts.linkedUserId, profile.userId))
+            .limit(1)
+            .then(r => r[0]);
+          if (contact) {
+            const cNotes = await db
+              .select({
+                id: contactNotes.id,
+                content: contactNotes.content,
+                createdAt: contactNotes.createdAt,
+                createdById: contactNotes.createdById,
+                authorFirstName: users.firstName,
+                authorLastName: users.lastName,
+                authorEmail: users.email,
+                authorProfileImageUrl: users.profileImageUrl,
+              })
+              .from(contactNotes)
+              .leftJoin(users, eq(contactNotes.createdById, users.id))
+              .where(eq(contactNotes.contactId, contact.id));
+            leadNotesList = cNotes.map(n => ({
+              id: n.id,
+              content: n.content,
+              createdAt: n.createdAt,
+              createdById: n.createdById,
+              isPinned: false,
+              source: 'lead' as const,
+              author: {
+                id: n.createdById,
+                firstName: n.authorFirstName,
+                lastName: n.authorLastName,
+                email: n.authorEmail,
+                profileImageUrl: n.authorProfileImageUrl,
+              },
+            }));
+          }
+        }
+      } catch (_) {}
+
+      // Merge and sort by createdAt ascending (show journey from oldest to newest)
+      const allNotes = [...leadNotesList, ...enrichedAppNotes].sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return aTime - bTime;
+      });
+
+      res.json(allNotes);
+    } catch (error: any) {
+      console.error("Error fetching unified notes:", error);
+      res.status(500).json({ message: "Failed to fetch notes" });
     }
   });
 
