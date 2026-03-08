@@ -322,16 +322,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
           ? `/api/conversations/${activeView.id}/upload`
           : `/api/channels/${activeView.id}/upload`;
 
-        const resp = await fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.message || "Upload failed");
-        }
+        await apiRequest("POST", uploadUrl, formData);
 
         clearPendingFile();
         setMessageInput("");
