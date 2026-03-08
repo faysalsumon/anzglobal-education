@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap, Scale } from "lucide-react";
-import chatAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
+import { Home, BookOpen, Sparkles, Settings, X, LayoutDashboard, Info, Users, LogOut, GraduationCap, Scale, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -316,19 +315,15 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
             </span>
           </Link>
 
-          {/* Chat - Zan's avatar */}
+          {/* Chat */}
           <button
             onClick={handleChatClick}
             className="flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-1"
             data-testid="tab-chat"
           >
-            <img
-              src={chatAvatarImage}
-              alt="Ask Zan"
-              className="h-6 w-6 rounded-full object-cover border border-primary/30"
-            />
+            <MessageCircle className="h-5 w-5 transition-colors text-muted-foreground" />
             <span className="text-[10px] font-medium text-muted-foreground">
-              Zan
+              Chat
             </span>
           </button>
         </div>
