@@ -1319,8 +1319,6 @@ router.post('/admin/create-user', async (req: any, res: Response) => {
       // Don't fail the request, just log the error
     }
 
-    console.log(`[Admin Create User] User ${email} created by ${adminUser.email}`);
-
     res.status(201).json({
       message: 'User created successfully. Login credentials have been sent via email.',
       user: {
