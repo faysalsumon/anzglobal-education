@@ -57,7 +57,7 @@ export function MobileBottomNav() {
     { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
     { title: "Courses", url: "/courses", icon: Search },
     { title: "Institutions", url: "/institutions", icon: Building2 },
-    { title: "Messages", url: "/chat", icon: MessageSquare, badge: unreadCount },
+    { title: "Chat", url: "/admin/dashboard?tab=messages", icon: MessageSquare, badge: unreadCount },
     { title: "Profile", url: "/admin/profile", icon: User },
     ...(hasFullAdminAccess ? [{ title: "Manage", url: "/admin/dashboard#institutions", icon: PlusCircle }] : []),
   ];

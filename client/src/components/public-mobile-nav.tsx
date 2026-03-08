@@ -15,7 +15,7 @@ interface PublicMobileNavProps {
 }
 
 export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, isAuthenticated, isAdmin, isStudent, isUniversity } = useAuth();
   const { signOut } = useSupabaseAuth();
@@ -68,7 +68,11 @@ export function PublicMobileNav({ onMatchClick }: PublicMobileNavProps) {
   };
 
   const handleChatClick = () => {
-    window.dispatchEvent(new CustomEvent("open-chat-widget"));
+    if (isAdmin) {
+      setLocation('/admin/dashboard?tab=messages');
+    } else {
+      window.dispatchEvent(new CustomEvent("open-chat-widget"));
+    }
   };
 
   const handleMatchClick = () => {
