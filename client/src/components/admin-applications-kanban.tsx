@@ -208,6 +208,7 @@ interface Consultant {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  branchId: string | null;
 }
 
 const STAGES: ApplicationStage[] = [
@@ -521,6 +522,7 @@ export function AdminApplicationsKanban() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [consultantFilter, setConsultantFilter] = useState("all");
+  const [branchFilter, setBranchFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
   const [stageFilter, setStageFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -555,6 +557,11 @@ export function AdminApplicationsKanban() {
   // Fetch all users and filter admin consultants
   const { data: usersData } = useQuery<{ users: Consultant[] }>({
     queryKey: ["/api/admin/users"],
+  });
+
+  // Fetch branches for branch filter
+  const { data: branchesData } = useQuery<{ id: string; name: string; city: string | null }[]>({
+    queryKey: ["/api/admin/branches"],
   });
 
   // Assign mutation
@@ -624,6 +631,13 @@ export function AdminApplicationsKanban() {
       (consultantFilter === "unassigned" && !app.application.assignedConsultantId) ||
       app.application.assignedConsultantId === consultantFilter;
 
+    const matchesBranch = (() => {
+      if (branchFilter === "all") return true;
+      if (!app.application.assignedConsultantId) return false;
+      const consultant = allUsers.find(u => u.id === app.application.assignedConsultantId);
+      return consultant?.branchId === branchFilter;
+    })();
+
     const matchesCountry =
       countryFilter === "all" ||
       app.university.country === countryFilter;
@@ -643,18 +657,19 @@ export function AdminApplicationsKanban() {
     );
     const matchesSla = slaFilter === "all" || appSlaStatus === slaFilter;
 
-    return matchesSearch && matchesConsultant && matchesCountry && matchesStage && matchesStatus && matchesSla;
+    return matchesSearch && matchesConsultant && matchesBranch && matchesCountry && matchesStage && matchesStatus && matchesSla;
   });
 
   // Get unique universities
   const universities = Array.from(new Set(applications.map(app => app.university.name).filter(Boolean)));
   
   // Check if any filters are active
-  const hasActiveFilters = consultantFilter !== "all" || countryFilter !== "all" || stageFilter !== "all" || statusFilter !== "all" || slaFilter !== "all";
+  const hasActiveFilters = consultantFilter !== "all" || branchFilter !== "all" || countryFilter !== "all" || stageFilter !== "all" || statusFilter !== "all" || slaFilter !== "all";
   
   // Clear all filters
   const clearAllFilters = () => {
     setConsultantFilter("all");
+    setBranchFilter("all");
     setCountryFilter("all");
     setStageFilter("all");
     setStatusFilter("all");
@@ -960,6 +975,20 @@ export function AdminApplicationsKanban() {
                     At Risk
                     <Badge variant="outline" className="ml-auto text-[10px] h-4">{slaCounts['at-risk']}</Badge>
                   </Button>
+                  {user?.id && (
+                    <Button
+                      variant={consultantFilter === user.id ? "secondary" : "ghost"}
+                      size="sm"
+                      className="w-full justify-start h-7 text-xs"
+                      onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
+                      data-testid="button-my-applications-filter"
+                    >
+                      My Applications
+                      <Badge variant="outline" className="ml-auto text-[10px] h-4">
+                        {applications.filter(a => a.application.assignedConsultantId === user.id).length}
+                      </Badge>
+                    </Button>
+                  )}
                   <Button 
                     variant={consultantFilter === 'unassigned' ? "secondary" : "ghost"} 
                     size="sm" 
@@ -1021,6 +1050,34 @@ export function AdminApplicationsKanban() {
                       {consultants.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.firstName} {c.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {/* Filter by Branch */}
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Branch
+                  </div>
+                  <ChevronDown className="h-3 w-3" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={branchFilter} onValueChange={setBranchFilter}>
+                    <SelectTrigger className="h-7 text-xs" data-testid="select-filter-branch">
+                      <SelectValue placeholder="All Branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Branches</SelectItem>
+                      {branchesData?.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}{branch.city ? ` (${branch.city})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

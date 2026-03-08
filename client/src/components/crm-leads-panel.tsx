@@ -23,6 +23,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { LeadNotes } from "@/components/lead-notes";
 
 // Helper to get auth headers for fetch requests
@@ -158,6 +159,7 @@ const statusLabels: Record<string, string> = {
 
 export function CrmLeadsPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -470,6 +472,17 @@ export function CrmLeadsPanel() {
                   <SelectItem value="hot">Hot</SelectItem>
                 </SelectContent>
               </Select>
+              {user?.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`gap-2 toggle-elevate${assignedFilter === user.id ? " toggle-elevated" : ""}`}
+                  onClick={() => setAssignedFilter(assignedFilter === user.id ? "all" : user.id)}
+                  data-testid="button-my-leads-filter"
+                >
+                  My Leads
+                </Button>
+              )}
               <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
                 <CollapsibleTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
