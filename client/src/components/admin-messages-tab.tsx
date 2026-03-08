@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import zanAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -383,8 +384,9 @@ export function AdminMessagesTab() {
         ))}
         {isTyping && (
           <div className="flex gap-3">
-             <Avatar className="h-8 w-8 bg-purple-600">
-               <AvatarFallback className="text-white">Z</AvatarFallback>
+             <Avatar className="h-8 w-8 border-2 border-purple-200">
+               <AvatarImage src={zanAvatarImage} />
+               <AvatarFallback className="bg-purple-600 text-white">Z</AvatarFallback>
              </Avatar>
              <div className="bg-muted p-3 rounded-2xl rounded-tl-none text-sm italic">Zan is typing...</div>
           </div>
@@ -473,7 +475,7 @@ export function AdminMessagesTab() {
                   >
                     <div className="relative">
                       <Avatar className="h-10 w-10 border-2 border-purple-200">
-                        <AvatarImage src="/zan-avatar.png" />
+                        <AvatarImage src={zanAvatarImage} />
                         <AvatarFallback className="bg-purple-600 text-white">Z</AvatarFallback>
                       </Avatar>
                     </div>
@@ -581,7 +583,7 @@ export function AdminMessagesTab() {
                 ) : (
                   <>
                     <Avatar className="h-9 w-9 border-2 border-purple-200">
-                      <AvatarImage src="/zan-avatar.png" />
+                      <AvatarImage src={zanAvatarImage} />
                       <AvatarFallback className="bg-purple-600 text-white">Z</AvatarFallback>
                     </Avatar>
                     <div>
@@ -702,7 +704,7 @@ export function AdminMessagesTab() {
             <div className="flex flex-wrap gap-3 justify-center">
                <Button onClick={() => createZanSessionMutation.mutate()} className="gap-2 bg-purple-600 hover:bg-purple-700">
                  <Avatar className="h-5 w-5 border border-white/20">
-                   <AvatarImage src="/zan-avatar.png" />
+                   <AvatarImage src={zanAvatarImage} />
                    <AvatarFallback className="text-[10px]">Z</AvatarFallback>
                  </Avatar>
                  Chat with Zan

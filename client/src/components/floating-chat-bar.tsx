@@ -480,7 +480,7 @@ export function FloatingChatBar() {
           <div className="flex items-center gap-2">
             <MessageCircle className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold" data-testid="text-team-chat-label">
-              Team Chat
+              Chat
             </span>
             <Circle
               className={`h-2 w-2 ${isConnected ? "fill-green-500 text-green-500" : "fill-yellow-500 text-yellow-500"}`}
