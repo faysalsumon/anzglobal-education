@@ -85,6 +85,7 @@ import { ListPagination } from "@/components/list-pagination";
 import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
 import { AdminNotificationSettingsPanel } from "@/components/admin-notification-settings-panel";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -1888,13 +1889,13 @@ export default function AdminDashboard() {
 
       {/* Main Content Area - Flex column with fixed header and scrollable content */}
       <div className="flex flex-col flex-1 min-w-0 h-full">
-        {/* Top Header with Breadcrumb - Fixed height, never scrolls */}
+        {/* Top Header - Fixed height, never scrolls */}
         <header className="flex-shrink-0 h-14 flex items-center gap-2 border-b bg-background px-4 md:px-6">
-          {/* Mobile menu toggle - only visible on mobile */}
+          {/* Desktop-only: hamburger toggle for sidebar (desktop doesn't need it since sidebar is always shown, kept for legacy) */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden flex-shrink-0"
+            className="hidden flex-shrink-0"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             data-testid="button-mobile-menu-toggle"
           >
@@ -1902,11 +1903,20 @@ export default function AdminDashboard() {
           </Button>
           
           <div className="flex flex-1 items-center justify-between gap-4">
-            <Breadcrumb data-testid="breadcrumb">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link href="/admin/dashboard" data-testid="breadcrumb-home">
+            {/* Mobile: show current section title only */}
+            <div className="flex lg:hidden flex-1 items-center min-w-0">
+              <span className="text-sm font-semibold truncate" data-testid="mobile-section-title">
+                {getCurrentBreadcrumbName()}
+              </span>
+            </div>
+
+            {/* Desktop: full breadcrumb */}
+            <div className="hidden lg:flex flex-1">
+              <Breadcrumb data-testid="breadcrumb">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/admin/dashboard" data-testid="breadcrumb-home">
                         <Home className="h-4 w-4" />
                       </Link>
                     </BreadcrumbLink>
@@ -1925,54 +1935,55 @@ export default function AdminDashboard() {
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
-              
-              {/* Platform-wide Notifications, Profile, and Logout */}
-              <div className="flex items-center gap-2">
-                <NotificationBell />
-                
-                {/* Profile Avatar */}
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Link href="/admin/profile">
-                      <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile">
-                        {user?.profileImageUrl && (
-                          <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
-                        )}
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                          {getUserInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>My Profile</TooltipContent>
-                </Tooltip>
-
-                {/* Logout Button */}
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={handleLogout}
-                      data-testid="button-logout"
-                    >
-                      <LogOut className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Logout</TooltipContent>
-                </Tooltip>
-              </div>
             </div>
-          </header>
+
+            {/* Platform-wide Notifications, Profile, and Logout */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              
+              {/* Profile Avatar */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/profile">
+                    <Avatar className="h-9 w-9 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" data-testid="button-admin-profile">
+                      {user?.profileImageUrl && (
+                        <AvatarImage src={user.profileImageUrl} alt={user.email || "Admin"} />
+                      )}
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>My Profile</TooltipContent>
+              </Tooltip>
+
+              {/* Logout Button — desktop only; mobile uses More sheet */}
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden lg:flex text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleLogout}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Logout</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </header>
 
           {/* Main Content - Full-height for Applications, scrollable for all others */}
           {activeTab === "applications" ? (
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4 pb-20 lg:pb-4">
               <AdminApplicationsKanban />
             </div>
           ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
             <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4">
               {/* Simple single-column layout */}
               <div className="space-y-4">
@@ -4078,6 +4089,16 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+
+    {/* Admin Mobile Bottom Navigation — visible only on mobile (lg:hidden) */}
+    <AdminMobileBottomNav
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      hasFullAdminAccess={hasFullAdminAccess}
+      isCTO={isCTO}
+      isMarketingExecutive={isMarketingExecutive}
+      onLogout={handleLogout}
+    />
     </>
   );
 }
