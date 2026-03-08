@@ -12646,7 +12646,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'private, max-age=3600');
-      res.send(Buffer.from(result.value));
+      const chunks = result.value as unknown as Uint8Array[];
+      res.send(Buffer.concat(chunks.map((c: Uint8Array) => Buffer.from(c))));
     } catch (error) {
       console.error("Error serving chat file:", error);
       res.status(500).json({ message: "Failed to serve file" });
