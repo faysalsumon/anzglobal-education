@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -9,33 +9,106 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Send, 
-  MessageSquare, 
-  Users, 
+import {
+  Send,
+  MessageSquare,
+  Users,
   Search,
   Plus,
   ArrowLeft,
   Circle,
-  Hash
+  Hash,
+  ChevronDown,
+  ChevronRight,
+  MoreVertical,
+  Smile,
+  Paperclip,
+  Image as ImageIcon,
+  FileText,
+  File,
+  MapPin,
+  User as UserIcon,
+  Download,
+  Check,
+  CheckCheck,
+  Mic,
+  Laptop,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday, isThisWeek, parseISO } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+
+const STATUS_COLORS: Record<string, string> = {
+  available: 'bg-green-500',
+  away: 'bg-yellow-500',
+  busy: 'bg-red-500',
+  do_not_disturb: 'bg-red-600',
+  invisible: 'bg-gray-400',
+};
+
+const COMMON_EMOJIS = [
+  "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇",
+  "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚",
+  "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩",
+  "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣"
+];
+
+const insertChannelSchema = z.object({
+  name: z.string().min(1, "Channel name is required").max(100),
+  description: z.string().optional(),
+  isPrivate: z.boolean().default(false),
+});
 
 type Message = {
   id: string;
-  conversationId: string;
+  conversationId?: string;
+  channelId?: string;
   senderId: string;
   content: string;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  fileType?: string | null;
+  sender?: {
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+    availabilityStatus?: string;
+  };
 };
 
 type Conversation = {
   id: string;
   participant1Id: string;
   participant2Id: string;
-  lastMessageAt: Date;
+  lastMessageAt: string;
   otherParticipant: {
     id: string;
     firstName: string;
@@ -44,9 +117,21 @@ type Conversation = {
     userType: string;
     role?: string;
     profileImageUrl?: string;
+    availabilityStatus?: string;
+    customStatusText?: string;
   } | null;
   unreadCount: number;
   lastMessage: Message | null;
+};
+
+type Channel = {
+  id: string;
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  memberCount: number;
+  lastMessage?: Message | null;
+  unreadCount: number;
 };
 
 type AdminTeamMember = {
@@ -58,568 +143,648 @@ type AdminTeamMember = {
   role: string | null;
   profileImageUrl: string | null;
   isActive: boolean;
+  availabilityStatus: string;
+  customStatusText: string | null;
 };
 
-type ViewMode = "conversations" | "new-chat" | "chat";
+type ChatView = {
+  type: "dm" | "channel" | "zan";
+  id: string;
+};
 
 export function AdminMessagesTab() {
   const { user } = useAuth();
   const { isConnected, lastMessage, sendMessage } = useWebSocket();
-  const [viewMode, setViewMode] = useState<ViewMode>("conversations");
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [activeView, setActiveView] = useState<ChatView | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNewChannelDialogOpen, setIsNewChannelDialogOpen] = useState(false);
+  const [isChannelsExpanded, setIsChannelsExpanded] = useState(true);
+  const [isDMsExpanded, setIsDMsExpanded] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch conversations
-  const { data: conversations, isLoading: loadingConversations } = useQuery<Conversation[]>({
+  const currentUser = user as any;
+  const currentUserId = currentUser?.id || currentUser?.claims?.sub;
+
+  // Queries
+  const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
-    refetchInterval: 10000,
+    refetchInterval: 15000,
   });
 
-  // Fetch messages for selected conversation
-  const { data: messages, isLoading: loadingMessages } = useQuery<Message[]>({
-    queryKey: ["/api/conversations", selectedConversation, "messages"],
-    enabled: !!selectedConversation,
+  const { data: channels = [] } = useQuery<Channel[]>({
+    queryKey: ["/api/channels"],
+    refetchInterval: 15000,
   });
 
-  // Fetch admin team members for starting new conversations
-  const { data: teamMembers = [], isLoading: loadingTeamMembers } = useQuery<AdminTeamMember[]>({
-    queryKey: ["/api/admin/messaging/team"],
-    enabled: viewMode === "new-chat",
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
+    queryKey: activeView?.type === "dm" 
+      ? ["/api/conversations", activeView.id, "messages"]
+      : activeView?.type === "channel"
+      ? ["/api/channels", activeView.id, "messages"]
+      : ["/api/chat/conversations", activeView?.id, "messages"],
+    enabled: !!activeView,
   });
 
-  // Create new conversation mutation
-  const createConversationMutation = useMutation({
-    mutationFn: async (otherUserId: string) =>
-      apiRequest("POST", "/api/conversations", { otherUserId }),
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      setSelectedConversation(data.id);
-      setViewMode("chat");
+  // Mutations
+  const createChannelMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof insertChannelSchema>) =>
+      apiRequest("POST", "/api/channels", values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsNewChannelDialogOpen(false);
+      toast({ title: "Success", description: "Channel created successfully" });
     },
   });
 
-  // Mark conversation as read
+  const createZanSessionMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/chat/conversations", { 
+        sessionId: `admin-zan-${currentUserId}` 
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setActiveView({ type: "zan", id: data.id });
+    }
+  });
+
+  const sendZanMessageMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: string, content: string }) => {
+      setIsTyping(true);
+      return apiRequest("POST", `/api/chat/conversations/${id}/messages`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", activeView?.id, "messages"] });
+      setIsTyping(false);
+    },
+    onError: () => {
+      setIsTyping(false);
+    }
+  });
+
   const markAsReadMutation = useMutation({
-    mutationFn: async (conversationId: string) =>
-      apiRequest("PATCH", `/api/conversations/${conversationId}/mark-read`),
+    mutationFn: async (id: string) =>
+      apiRequest("PATCH", `/api/conversations/${id}/mark-read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations/unread-count"] });
     },
   });
 
-  // Handle WebSocket messages
+  // Form for new channel
+  const form = useForm<z.infer<typeof insertChannelSchema>>({
+    resolver: zodResolver(insertChannelSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      isPrivate: false,
+    },
+  });
+
+  // WebSocket handling
   useEffect(() => {
     if (lastMessage) {
       if (lastMessage.type === "new_message" || lastMessage.type === "message_sent") {
         queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/conversations/unread-count"] });
-        if (selectedConversation === lastMessage.conversationId) {
-          queryClient.invalidateQueries({
-            queryKey: ["/api/conversations", selectedConversation, "messages"],
-          });
+        if (activeView?.type === "dm" && lastMessage.conversationId === activeView.id) {
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeView.id, "messages"] });
+        }
+      } else if (lastMessage.type === "channel_message") {
+        queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+        if (activeView?.type === "channel" && lastMessage.channelId === activeView.id) {
+          queryClient.invalidateQueries({ queryKey: ["/api/channels", activeView.id, "messages"] });
         }
       }
     }
-  }, [lastMessage, selectedConversation]);
+  }, [lastMessage, activeView]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // Mark messages as read when conversation is selected
+  // Mark read
   useEffect(() => {
-    if (selectedConversation) {
-      const conversation = conversations?.find((c) => c.id === selectedConversation);
-      if (conversation && conversation.unreadCount > 0) {
-        markAsReadMutation.mutate(selectedConversation);
+    if (activeView?.type === "dm") {
+      const conv = conversations.find(c => c.id === activeView.id);
+      if (conv && conv.unreadCount > 0) {
+        markAsReadMutation.mutate(activeView.id);
       }
     }
-  }, [selectedConversation]);
+  }, [activeView, conversations]);
 
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedConversation) return;
+    if (!messageInput.trim() || !activeView) return;
 
-    const conversation = conversations?.find((c) => c.id === selectedConversation);
-    if (!conversation) return;
-
-    const otherParticipantId = conversation.otherParticipant?.id;
-    if (!otherParticipantId) return;
-
-    sendMessage({
-      type: "send_message",
-      conversationId: selectedConversation,
-      content: messageInput.trim(),
-      recipientId: otherParticipantId,
-    });
+    if (activeView.type === "dm") {
+      const conv = conversations.find(c => c.id === activeView.id);
+      if (!conv?.otherParticipant?.id) return;
+      sendMessage({
+        type: "send_message",
+        conversationId: activeView.id,
+        content: messageInput.trim(),
+        recipientId: conv.otherParticipant.id,
+      });
+    } else if (activeView.type === "channel") {
+      sendMessage({
+        type: "send_channel_message",
+        channelId: activeView.id,
+        content: messageInput.trim(),
+      });
+    } else if (activeView.type === "zan") {
+      sendZanMessageMutation.mutate({ id: activeView.id, content: messageInput.trim() });
+    }
 
     setMessageInput("");
   };
 
-  const handleSelectConversation = (conversationId: string) => {
-    setSelectedConversation(conversationId);
-    setViewMode("chat");
+  const formatDate = (dateStr: string) => {
+    const date = parseISO(dateStr);
+    if (isToday(date)) return format(date, "h:mm a");
+    if (isYesterday(date)) return "Yesterday";
+    if (isThisWeek(date)) return format(date, "EEE");
+    return format(date, "d MMM");
   };
 
-  const handleStartNewChat = (memberId: string) => {
-    // Check if conversation already exists
-    const existingConversation = conversations?.find(
-      (c) => c.otherParticipant?.id === memberId
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    return `${(firstName || "?")[0]}${(lastName || "?")[0]}`.toUpperCase();
+  };
+
+  const renderMessageList = () => {
+    if (isLoadingMessages) return <div className="flex-1 flex items-center justify-center">Loading...</div>;
+    
+    const groupedMessages: { [key: string]: Message[] } = {};
+    messages.forEach(msg => {
+      const dateKey = format(parseISO(msg.createdAt), "yyyy-MM-dd");
+      if (!groupedMessages[dateKey]) groupedMessages[dateKey] = [];
+      groupedMessages[dateKey].push(msg);
+    });
+
+    return (
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {Object.entries(groupedMessages).map(([dateKey, msgs]) => (
+          <div key={dateKey} className="space-y-4">
+            <div className="flex justify-center">
+              <span className="text-xs font-bold text-muted-foreground uppercase bg-muted px-2 py-1 rounded">
+                {isToday(parseISO(dateKey)) ? "Today" : format(parseISO(dateKey), "EEE, d MMM").toUpperCase()}
+              </span>
+            </div>
+            {msgs.map((msg, idx) => {
+              const isMine = msg.senderId === currentUserId;
+              const prevMsg = msgs[idx - 1];
+              const isSameSenderAsPrev = prevMsg && prevMsg.senderId === msg.senderId;
+              
+              return (
+                <div key={msg.id} className={`flex gap-3 ${isMine ? "flex-row-reverse" : "flex-row"} ${isSameSenderAsPrev ? "mt-[-12px]" : ""}`}>
+                  {!isMine && !isSameSenderAsPrev && (
+                    <Avatar className="h-8 w-8">
+                      {msg.sender?.profileImageUrl ? (
+                        <AvatarImage src={msg.sender.profileImageUrl} />
+                      ) : (
+                        <AvatarFallback>{getInitials(msg.sender?.firstName, msg.sender?.lastName)}</AvatarFallback>
+                      )}
+                    </Avatar>
+                  )}
+                  {!isMine && isSameSenderAsPrev && <div className="w-8" />}
+                  
+                  <div className={`flex flex-col max-w-[70%] ${isMine ? "items-end" : "items-start"}`}>
+                    {!isSameSenderAsPrev && !isMine && (
+                      <span className="text-xs font-bold mb-1 ml-1">{msg.sender?.firstName} {msg.sender?.lastName}</span>
+                    )}
+                    <div className={`group relative p-3 rounded-2xl text-sm ${
+                      isMine ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-muted rounded-tl-none"
+                    }`}>
+                      {msg.content}
+                      {msg.fileUrl && (
+                        <div className="mt-2 p-2 rounded bg-background/10 border border-white/20 flex items-center gap-2">
+                          <File className="h-4 w-4" />
+                          <span className="truncate flex-1">{msg.fileName}</span>
+                          <a href={msg.fileUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /></a>
+                        </div>
+                      )}
+                      <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                        {format(parseISO(msg.createdAt), "h:mm a")}
+                        {isMine && activeView?.type === "dm" && (
+                          msg.isRead ? <CheckCheck className="h-3 w-3 text-white" /> : <CheckCheck className="h-3 w-3" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex gap-3">
+             <Avatar className="h-8 w-8 bg-purple-600">
+               <AvatarFallback className="text-white">Z</AvatarFallback>
+             </Avatar>
+             <div className="bg-muted p-3 rounded-2xl rounded-tl-none text-sm italic">Zan is typing...</div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
     );
-    if (existingConversation) {
-      setSelectedConversation(existingConversation.id);
-      setViewMode("chat");
-    } else {
-      createConversationMutation.mutate(memberId);
-    }
   };
-
-  const handleBackToList = () => {
-    setViewMode("conversations");
-    setSelectedConversation(null);
-  };
-
-  const getInitials = (firstName?: string, lastName?: string, email?: string) => {
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    }
-    if (email) {
-      return email.substring(0, 2).toUpperCase();
-    }
-    return "??";
-  };
-
-  const getRoleBadgeColor = (role?: string) => {
-    switch (role) {
-      case "cto":
-        return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300";
-      case "ceo":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
-      case "branch_manager":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300";
-      case "senior_consultant":
-        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
-      case "junior_consultant":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
-    }
-  };
-
-  const formatRole = (role?: string) => {
-    if (!role) return "Team Member";
-    return role.split("_").map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(" ");
-  };
-
-  const filteredTeamMembers = teamMembers.filter((member) => {
-    const userData = user as any;
-    const currentUserId = userData?.claims?.sub || userData?.id;
-    if (member.id === currentUserId) return false;
-    if (!member.isActive) return false;
-    if (!searchQuery) return true;
-    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase()) || 
-           member.email.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const selectedConversationData = conversations?.find((c) => c.id === selectedConversation);
 
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-background rounded-lg border">
-      {/* Left Panel - Conversations/Team Members List */}
-      <div className="w-80 border-r flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {viewMode === "new-chat" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setViewMode("conversations")}
-                  className="h-8 w-8"
-                  data-testid="button-back-to-conversations"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
-              <h2 className="text-lg font-semibold" data-testid="text-messages-title">
-                {viewMode === "new-chat" ? "New Message" : "Team Messages"}
-              </h2>
-            </div>
-            {viewMode !== "new-chat" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setViewMode("new-chat")}
-                className="gap-1"
-                data-testid="button-new-message"
-              >
-                <Plus className="h-4 w-4" />
-                New
-              </Button>
-            )}
-          </div>
-          
-          {viewMode === "new-chat" && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search team members..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-members"
-              />
-            </div>
-          )}
-          
-          {!isConnected && viewMode !== "new-chat" && (
-            <div className="flex items-center gap-2 mt-2">
-              <Circle className="h-2 w-2 fill-yellow-500 text-yellow-500" />
-              <span className="text-xs text-muted-foreground">Connecting...</span>
-            </div>
-          )}
-          {isConnected && viewMode !== "new-chat" && (
-            <div className="flex items-center gap-2 mt-2">
-              <Circle className="h-2 w-2 fill-green-500 text-green-500" />
-              <span className="text-xs text-muted-foreground">Connected</span>
-            </div>
-          )}
+    <div className="flex h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm">
+      {/* Sidebar */}
+      <div className="w-80 border-r flex flex-col bg-muted/30">
+        <div className="p-4 flex items-center justify-between border-b">
+          <h2 className="text-xl font-bold">Chats</h2>
+          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+            <Search className="h-5 w-5" />
+          </Button>
         </div>
+        
+        {isSearchOpen && (
+          <div className="px-4 py-2 border-b">
+            <Input 
+              placeholder="Search..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8"
+            />
+          </div>
+        )}
 
-        {/* Content */}
         <ScrollArea className="flex-1">
-          {viewMode === "new-chat" ? (
-            // Team Members List
-            <div className="p-2">
-              {loadingTeamMembers ? (
-                <div className="p-4 text-center">
-                  <p className="text-sm text-muted-foreground">Loading team members...</p>
+          <div className="p-2 space-y-4">
+            {/* Channels */}
+            <div>
+              <button 
+                className="w-full flex items-center justify-between px-2 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                onClick={() => setIsChannelsExpanded(!isChannelsExpanded)}
+              >
+                <div className="flex items-center gap-1">
+                  {isChannelsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  Channels
                 </div>
-              ) : filteredTeamMembers && filteredTeamMembers.length > 0 ? (
-                <div className="space-y-1">
-                  {filteredTeamMembers.map((member) => (
-                    <Card
-                      key={member.id}
-                      className="p-3 cursor-pointer hover-elevate"
-                      onClick={() => handleStartNewChat(member.id)}
-                      data-testid={`member-${member.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          {member.profileImageUrl && (
-                            <AvatarImage src={member.profileImageUrl} alt={member.email} />
-                          )}
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(member.firstName || undefined, member.lastName || undefined, member.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {member.firstName || ''} {member.lastName || ''}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs ${getRoleBadgeColor(member.role || undefined)}`}
-                            >
-                              {formatRole(member.role || undefined)}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-40 p-4">
-                  <Users className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground text-center">
-                    {searchQuery ? "No team members found" : "No team members available"}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            // Conversations List
-            <div className="p-2">
-              {loadingConversations ? (
-                <div className="p-4 text-center">
-                  <p className="text-sm text-muted-foreground">Loading conversations...</p>
-                </div>
-              ) : conversations && conversations.length > 0 ? (
-                <div className="space-y-1">
-                  {conversations.map((conversation) => (
-                    <Card
-                      key={conversation.id}
-                      className={`p-3 cursor-pointer transition-colors hover-elevate ${
-                        selectedConversation === conversation.id && viewMode === "chat"
-                          ? "bg-accent border-primary/50"
-                          : ""
+                <Plus className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setIsNewChannelDialogOpen(true); }} />
+              </button>
+              {isChannelsExpanded && (
+                <div className="mt-1 space-y-1">
+                  {channels.map(ch => (
+                    <button
+                      key={ch.id}
+                      onClick={() => setActiveView({ type: "channel", id: ch.id })}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-muted ${
+                        activeView?.type === "channel" && activeView.id === ch.id ? "bg-muted text-foreground font-medium" : "text-muted-foreground"
                       }`}
-                      onClick={() => handleSelectConversation(conversation.id)}
-                      data-testid={`conversation-${conversation.id}`}
                     >
-                      <div className="flex items-start gap-3">
-                        <Avatar>
-                          {conversation.otherParticipant?.profileImageUrl && (
-                            <AvatarImage 
-                              src={conversation.otherParticipant.profileImageUrl} 
-                              alt={conversation.otherParticipant.email} 
-                            />
-                          )}
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(
-                              conversation.otherParticipant?.firstName,
-                              conversation.otherParticipant?.lastName,
-                              conversation.otherParticipant?.email
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={`truncate ${conversation.unreadCount > 0 ? 'font-bold' : 'font-medium'}`}>
-                              {conversation.otherParticipant?.firstName}{" "}
-                              {conversation.otherParticipant?.lastName}
-                            </p>
-                            {conversation.unreadCount > 0 && (
-                              <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs shrink-0">
-                                {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
-                              </Badge>
-                            )}
-                          </div>
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs mt-1 ${getRoleBadgeColor(conversation.otherParticipant?.role)}`}
-                          >
-                            {formatRole(conversation.otherParticipant?.role)}
-                          </Badge>
-                          {conversation.lastMessage && (
-                            <p className={`text-sm truncate mt-1.5 ${
-                              conversation.unreadCount > 0 
-                                ? 'font-semibold text-foreground' 
-                                : 'text-muted-foreground'
-                            }`}>
-                              {conversation.lastMessage.content}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
+                      <Hash className="h-4 w-4" />
+                      <span className="truncate flex-1 text-left">{ch.name}</span>
+                      {ch.unreadCount > 0 && (
+                        <Badge variant="destructive" className="h-4 min-w-4 px-1">{ch.unreadCount}</Badge>
+                      )}
+                    </button>
                   ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-40 p-4">
-                  <MessageSquare className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground text-center mb-3">
-                    No conversations yet
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setViewMode("new-chat")}
-                    className="gap-1"
-                    data-testid="button-start-conversation"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Start a conversation
-                  </Button>
                 </div>
               )}
             </div>
-          )}
-        </ScrollArea>
 
-        {/* Future: Channels section placeholder */}
-        <div className="p-3 border-t">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Hash className="h-4 w-4" />
-            <span className="text-xs">Channels coming soon</span>
+            {/* Direct Messages */}
+            <div>
+              <button 
+                className="w-full flex items-center justify-between px-2 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                onClick={() => setIsDMsExpanded(!isDMsExpanded)}
+              >
+                <div className="flex items-center gap-1">
+                  {isDMsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  Direct Messages
+                </div>
+              </button>
+              {isDMsExpanded && (
+                <div className="mt-1 space-y-1">
+                  {/* Zan Bot */}
+                  <button
+                    onClick={() => createZanSessionMutation.mutate()}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all hover:bg-muted group ${
+                      activeView?.type === "zan" ? "bg-muted shadow-sm" : ""
+                    }`}
+                  >
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 border-2 border-purple-200">
+                        <AvatarImage src="/zan-avatar.png" />
+                        <AvatarFallback className="bg-purple-600 text-white">Z</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold truncate">Zan · ANZ AI</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate font-medium text-purple-600/80">AI Education Consultant</p>
+                    </div>
+                  </button>
+
+                  {conversations.map(conv => {
+                    const other = conv.otherParticipant;
+                    const isActive = activeView?.type === "dm" && activeView.id === conv.id;
+                    const isUnread = conv.unreadCount > 0;
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => setActiveView({ type: "dm", id: conv.id })}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all hover:bg-muted group ${
+                          isActive ? "bg-muted shadow-sm" : ""
+                        }`}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            {other?.profileImageUrl ? (
+                              <AvatarImage src={other.profileImageUrl} />
+                            ) : (
+                              <AvatarFallback>{getInitials(other?.firstName, other?.lastName)}</AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${
+                            STATUS_COLORS[other?.availabilityStatus || 'available']
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex justify-between items-baseline">
+                            <span className={`truncate ${isUnread ? "font-bold text-foreground" : "font-medium"}`}>
+                              {other?.firstName} {other?.lastName}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                              {conv.lastMessageAt ? formatDate(conv.lastMessageAt) : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {conv.lastMessage && conv.lastMessage.senderId === currentUserId && (
+                              <span className="text-xs text-muted-foreground font-medium">You:</span>
+                            )}
+                            <p className={`text-xs truncate ${isUnread ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
+                              {conv.lastMessage?.content || "No messages yet"}
+                            </p>
+                          </div>
+                        </div>
+                        {isUnread && (
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </div>
 
-      {/* Right Panel - Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {viewMode === "chat" && selectedConversationData ? (
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-background">
+        {activeView ? (
           <>
-            {/* Chat Header */}
-            <div className="p-4 border-b">
+            {/* Header */}
+            <div className="h-16 border-b flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
               <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBackToList}
-                  className="h-8 w-8 md:hidden"
-                  data-testid="button-back-to-list-mobile"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <Avatar>
-                  {selectedConversationData.otherParticipant?.profileImageUrl && (
-                    <AvatarImage 
-                      src={selectedConversationData.otherParticipant.profileImageUrl} 
-                      alt={selectedConversationData.otherParticipant.email} 
-                    />
-                  )}
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(
-                      selectedConversationData.otherParticipant?.firstName,
-                      selectedConversationData.otherParticipant?.lastName,
-                      selectedConversationData.otherParticipant?.email
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold" data-testid="text-chat-participant-name">
-                    {selectedConversationData.otherParticipant?.firstName}{" "}
-                    {selectedConversationData.otherParticipant?.lastName}
-                  </p>
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs ${getRoleBadgeColor(selectedConversationData.otherParticipant?.role)}`}
-                  >
-                    {formatRole(selectedConversationData.otherParticipant?.role)}
-                  </Badge>
-                </div>
+                {activeView.type === "dm" ? (
+                  <>
+                    <div className="relative">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={conversations.find(c => c.id === activeView.id)?.otherParticipant?.profileImageUrl} />
+                        <AvatarFallback>{getInitials(conversations.find(c => c.id === activeView.id)?.otherParticipant?.firstName, conversations.find(c => c.id === activeView.id)?.otherParticipant?.lastName)}</AvatarFallback>
+                      </Avatar>
+                      <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${
+                        STATUS_COLORS[conversations.find(c => c.id === activeView.id)?.otherParticipant?.availabilityStatus || 'available']
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm leading-tight">
+                        {conversations.find(c => c.id === activeView.id)?.otherParticipant?.firstName} {conversations.find(c => c.id === activeView.id)?.otherParticipant?.lastName}
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground font-medium">
+                        {conversations.find(c => c.id === activeView.id)?.otherParticipant?.customStatusText || 
+                         (conversations.find(c => c.id === activeView.id)?.otherParticipant?.availabilityStatus || "Available").replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  </>
+                ) : activeView.type === "channel" ? (
+                  <>
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      <Hash className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm leading-tight">#{channels.find(ch => ch.id === activeView.id)?.name}</h3>
+                      <p className="text-[11px] text-muted-foreground font-medium">{channels.find(ch => ch.id === activeView.id)?.memberCount} members</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Avatar className="h-9 w-9 border-2 border-purple-200">
+                      <AvatarImage src="/zan-avatar.png" />
+                      <AvatarFallback className="bg-purple-600 text-white">Z</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-bold text-sm leading-tight text-purple-600">Zan · ANZ AI</h3>
+                      <p className="text-[11px] text-muted-foreground font-medium">AI Education Consultant</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-muted-foreground"><Search className="h-5 w-5" /></Button>
+                <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="h-5 w-5" /></Button>
               </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              {loadingMessages ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground">Loading messages...</p>
-                </div>
-              ) : messages && messages.length > 0 ? (
-                <div className="space-y-4">
-                  {messages.map((message) => {
-                    const userData = user as any;
-                    const isMine = message.senderId === (userData?.claims?.sub || userData?.id);
-                    const otherParticipant = selectedConversationData?.otherParticipant;
-                    
-                    const senderName = isMine 
-                      ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'You'
-                      : otherParticipant 
-                        ? `${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || 'Team Member'
-                        : 'Team Member';
-                    
-                    const senderInitials = isMine
-                      ? getInitials(userData?.firstName, userData?.lastName, userData?.email)
-                      : otherParticipant 
-                        ? getInitials(otherParticipant.firstName, otherParticipant.lastName, otherParticipant.email)
-                        : 'TM';
-                    
-                    const senderImage = isMine 
-                      ? userData?.profileImageUrl 
-                      : otherParticipant?.profileImageUrl || null;
-                    
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex gap-3 ${isMine ? "flex-row-reverse" : "flex-row"}`}
-                        data-testid={`message-${message.id}`}
-                      >
-                        <Avatar className="h-8 w-8 shrink-0">
-                          {senderImage && (
-                            <AvatarImage src={senderImage} alt={senderName} />
-                          )}
-                          <AvatarFallback className={`text-xs ${isMine ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20'}`}>
-                            {senderInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className={`flex flex-col max-w-[70%] ${isMine ? "items-end" : "items-start"}`}>
-                          <div className={`flex items-center gap-2 mb-1 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
-                            <span className="text-sm font-medium">{senderName}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(message.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </div>
-                          <div
-                            className={`rounded-lg px-3 py-2 ${
-                              isMine
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap">
-                              {message.content}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground" data-testid="text-no-messages">
-                    No messages yet. Start the conversation!
-                  </p>
-                </div>
-              )}
-            </ScrollArea>
+            {renderMessageList()}
 
-            {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Input
+            {/* Composer */}
+            <div className="p-4 border-t bg-card/30 backdrop-blur-sm">
+              <div className="flex items-end gap-2 bg-background border rounded-xl p-1 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-muted no-default-hover-elevate">
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2" align="start">
+                    <div className="grid gap-1">
+                      <button className="flex items-center gap-3 w-full p-2 text-sm rounded-md hover:bg-muted transition-colors" onClick={() => imageInputRef.current?.click()}>
+                        <ImageIcon className="h-4 w-4 text-blue-500" />
+                        <span>Photos</span>
+                      </button>
+                      <button className="flex items-center gap-3 w-full p-2 text-sm rounded-md hover:bg-muted transition-colors" onClick={() => fileInputRef.current?.click()}>
+                        <FileText className="h-4 w-4 text-orange-500" />
+                        <span>File</span>
+                      </button>
+                      <button className="flex items-center gap-3 w-full p-2 text-sm rounded-md hover:bg-muted transition-colors" onClick={() => toast({ title: "Coming soon", description: "Document scanner is in development" })}>
+                        <Laptop className="h-4 w-4 text-emerald-500" />
+                        <span>Document Scanner</span>
+                      </button>
+                      <button className="flex items-center gap-3 w-full p-2 text-sm rounded-md hover:bg-muted transition-colors" onClick={() => toast({ title: "Coming soon", description: "Location sharing is in development" })}>
+                        <MapPin className="h-4 w-4 text-red-500" />
+                        <span>Location</span>
+                      </button>
+                      <button className="flex items-center gap-3 w-full p-2 text-sm rounded-md hover:bg-muted transition-colors" onClick={() => toast({ title: "Coming soon", description: "Contact sharing is in development" })}>
+                        <UserIcon className="h-4 w-4 text-purple-500" />
+                        <span>Contact</span>
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
+                <Textarea
+                  placeholder="Type a message..."
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                  placeholder="Type a message..."
-                  disabled={!isConnected}
-                  data-testid="input-message"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 px-3 py-3 text-sm flex-1 bg-transparent"
                 />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || !isConnected}
-                  size="icon"
-                  data-testid="button-send-message"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+
+                <div className="flex items-center gap-1 pr-1 pb-1">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted no-default-hover-elevate">
+                        <Smile className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2" align="end">
+                      <div className="grid grid-cols-8 gap-1">
+                        {COMMON_EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            className="h-7 w-7 flex items-center justify-center hover:bg-muted rounded text-lg"
+                            onClick={() => setMessageInput(prev => prev + emoji)}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {messageInput.trim() ? (
+                    <Button 
+                      size="icon" 
+                      className="h-8 w-8 rounded-lg bg-primary shadow-sm hover:opacity-90 transition-opacity"
+                      onClick={handleSendMessage}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground opacity-50 cursor-not-allowed no-default-hover-elevate">
+                      <Mic className="h-5 w-5" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              {!isConnected && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Connecting to chat server...
-                </p>
-              )}
+              <p className="text-[10px] text-muted-foreground mt-2 text-center font-medium opacity-60">
+                Press Enter to send, Shift + Enter for new line
+              </p>
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center p-8">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Team Messaging</h3>
-              <p className="text-sm text-muted-foreground max-w-sm" data-testid="text-select-conversation">
-                Select a conversation or start a new one to communicate with your team members
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setViewMode("new-chat")}
-                className="gap-1 mt-4"
-                data-testid="button-new-conversation-cta"
-              >
-                <Plus className="h-4 w-4" />
-                Start a conversation
-              </Button>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-muted/5">
+            <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
+              <MessageSquare className="h-10 w-10 text-primary/40" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Your Team Workspace</h2>
+            <p className="text-muted-foreground max-w-sm mb-8">
+              Select a conversation or channel from the sidebar to start collaborating with your team or talk to Zan, your AI consultant.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+               <Button onClick={() => createZanSessionMutation.mutate()} className="gap-2 bg-purple-600 hover:bg-purple-700">
+                 <Avatar className="h-5 w-5 border border-white/20">
+                   <AvatarImage src="/zan-avatar.png" />
+                   <AvatarFallback className="text-[10px]">Z</AvatarFallback>
+                 </Avatar>
+                 Chat with Zan
+               </Button>
+               <Button variant="outline" onClick={() => setIsNewChannelDialogOpen(true)} className="gap-2">
+                 <Hash className="h-4 w-4" />
+                 Browse Channels
+               </Button>
             </div>
           </div>
         )}
       </div>
+
+      <input type="file" ref={fileInputRef} className="hidden" onChange={() => toast({ title: "Coming soon", description: "File upload is in development" })} />
+      <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={() => toast({ title: "Coming soon", description: "Image upload is in development" })} />
+
+      {/* New Channel Dialog */}
+      <Dialog open={isNewChannelDialogOpen} onOpenChange={setIsNewChannelDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create a Channel</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((v) => createChannelMutation.mutate(v))} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Channel Name</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="e.g. general" className="pl-9" {...field} />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="What's this channel about?" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isPrivate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Private Channel</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Only invited members can see this channel.
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={createChannelMutation.isPending}>
+                  {createChannelMutation.isPending ? "Creating..." : "Create Channel"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

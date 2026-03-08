@@ -5202,3 +5202,43 @@ export type InsertUserNotificationOverride = typeof userNotificationOverrides.$i
 
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type InsertEmailTemplate = typeof emailTemplates.$inferInsert;
+
+// ── Team Channels ─────────────────────────────────────────────────────────────
+
+export const channels = pgTable("channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  createdById: varchar("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  isPrivate: boolean("is_private").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const channelMembers = pgTable("channel_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 20 }).default("member"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const channelMessages = pgTable("channel_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  senderId: varchar("sender_id").references(() => users.id, { onDelete: "set null" }),
+  content: text("content").notNull(),
+  fileUrl: text("file_url"),
+  fileName: varchar("file_name"),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChannelSchema = createInsertSchema(channels).omit({ id: true, createdAt: true });
+export const insertChannelMessageSchema = createInsertSchema(channelMessages).omit({ id: true, createdAt: true });
+
+export type Channel = typeof channels.$inferSelect;
+export type InsertChannel = z.infer<typeof insertChannelSchema>;
+export type ChannelMember = typeof channelMembers.$inferSelect;
+export type ChannelMessage = typeof channelMessages.$inferSelect;
+export type InsertChannelMessage = z.infer<typeof insertChannelMessageSchema>;

@@ -25,6 +25,11 @@ import {
   insertNotificationSchema,
   insertConversationSchema,
   insertMessageSchema,
+  insertChannelSchema,
+  insertChannelMessageSchema,
+  channels,
+  channelMembers,
+  channelMessages,
   insertContactSubmissionSchema,
   insertBlogSchema,
   insertContactInquirySchema,
@@ -12745,6 +12750,299 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // ===== CHANNELS ROUTES =====
+
+  // List all channels current user is a member of
+  app.get("/api/channels", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+
+      // Find all channels where user is a member
+      const userChannels = await db
+        .select({
+          channel: channels,
+          memberRole: channelMembers.role,
+        })
+        .from(channels)
+        .innerJoin(channelMembers, eq(channels.id, channelMembers.channelId))
+        .where(eq(channelMembers.userId, userId))
+        .orderBy(desc(channels.createdAt));
+
+      // Enrich channels with member count and last message
+      const enrichedChannels = await Promise.all(
+        userChannels.map(async ({ channel, memberRole }) => {
+          // Get member count
+          const [memberCountResult] = await db
+            .select({ count: dsql<number>`count(*)` })
+            .from(channelMembers)
+            .where(eq(channelMembers.channelId, channel.id));
+          
+          const memberCount = Number(memberCountResult?.count || 0);
+
+          // Get last message with sender details
+          const lastMessageResult = await db
+            .select({
+              message: channelMessages,
+              sender: {
+                id: users.id,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                profileImageUrl: users.profileImageUrl,
+              }
+            })
+            .from(channelMessages)
+            .leftJoin(users, eq(channelMessages.senderId, users.id))
+            .where(eq(channelMessages.channelId, channel.id))
+            .orderBy(desc(channelMessages.createdAt))
+            .limit(1);
+
+          return {
+            ...channel,
+            memberRole,
+            memberCount,
+            lastMessage: lastMessageResult[0] || null,
+            unreadCount: 0, // Placeholder as per requirements
+          };
+        })
+      );
+
+      res.json(enrichedChannels);
+    } catch (error) {
+      console.error("Error fetching channels:", error);
+      res.status(500).json({ message: "Failed to fetch channels" });
+    }
+  });
+
+  // List all non-private channels for discovery
+  app.get("/api/channels/public", isAuthenticated, async (req, res) => {
+    try {
+      const publicChannels = await db
+        .select()
+        .from(channels)
+        .where(eq(channels.isPrivate, false))
+        .orderBy(desc(channels.createdAt));
+      
+      res.json(publicChannels);
+    } catch (error) {
+      console.error("Error fetching public channels:", error);
+      res.status(500).json({ message: "Failed to fetch public channels" });
+    }
+  });
+
+  // Create new channel
+  app.post("/api/channels", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      
+      const validatedData = insertChannelSchema.parse(req.body);
+      
+      const [newChannel] = await db
+        .insert(channels)
+        .values({
+          ...validatedData,
+          createdById: userId,
+        })
+        .returning();
+      
+      // Auto-add creator as admin member
+      await db.insert(channelMembers).values({
+        channelId: newChannel.id,
+        userId: userId,
+        role: 'admin',
+      });
+      
+      res.json(newChannel);
+    } catch (error: any) {
+      console.error("Error creating channel:", error);
+      res.status(400).json({ message: error.message || "Failed to create channel" });
+    }
+  });
+
+  // Join a channel
+  app.post("/api/channels/:id/join", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+      
+      // Check if channel exists and is not private (or check if user is invited, but for now public join)
+      const [channel] = await db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, channelId))
+        .limit(1);
+      
+      if (!channel) {
+        return res.status(404).json({ message: "Channel not found" });
+      }
+      
+      if (channel.isPrivate) {
+        return res.status(403).json({ message: "Cannot join private channel without invitation" });
+      }
+      
+      // Check if already a member
+      const [existingMember] = await db
+        .select()
+        .from(channelMembers)
+        .where(
+          and(
+            eq(channelMembers.channelId, channelId),
+            eq(channelMembers.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      if (existingMember) {
+        return res.json({ message: "Already a member", member: existingMember });
+      }
+      
+      const [newMember] = await db
+        .insert(channelMembers)
+        .values({
+          channelId,
+          userId,
+          role: 'member',
+        })
+        .returning();
+      
+      res.json(newMember);
+    } catch (error) {
+      console.error("Error joining channel:", error);
+      res.status(500).json({ message: "Failed to join channel" });
+    }
+  });
+
+  // Get messages for a channel
+  app.get("/api/channels/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+      
+      // Verify user is a member of the channel
+      const [membership] = await db
+        .select()
+        .from(channelMembers)
+        .where(
+          and(
+            eq(channelMembers.channelId, channelId),
+            eq(channelMembers.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied. You are not a member of this channel." });
+      }
+      
+      // Get messages with sender details
+      const messagesWithSender = await db
+        .select({
+          id: channelMessages.id,
+          channelId: channelMessages.channelId,
+          senderId: channelMessages.senderId,
+          content: channelMessages.content,
+          fileUrl: channelMessages.fileUrl,
+          fileName: channelMessages.fileName,
+          fileSize: channelMessages.fileSize,
+          fileType: channelMessages.fileType,
+          createdAt: channelMessages.createdAt,
+          sender: {
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            availabilityStatus: users.availabilityStatus,
+          }
+        })
+        .from(channelMessages)
+        .leftJoin(users, eq(channelMessages.senderId, users.id))
+        .where(eq(channelMessages.channelId, channelId))
+        .orderBy(channelMessages.createdAt);
+      
+      res.json(messagesWithSender);
+    } catch (error) {
+      console.error("Error fetching channel messages:", error);
+      res.status(500).json({ message: "Failed to fetch channel messages" });
+    }
+  });
+
+  // Send message to a channel
+  app.post("/api/channels/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+      
+      // Verify user is a member of the channel
+      const [membership] = await db
+        .select()
+        .from(channelMembers)
+        .where(
+          and(
+            eq(channelMembers.channelId, channelId),
+            eq(channelMembers.userId, userId)
+          )
+        )
+        .limit(1);
+      
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied. You are not a member of this channel." });
+      }
+      
+      const validatedData = insertChannelMessageSchema.parse({
+        ...req.body,
+        channelId,
+      });
+      
+      const [newMessage] = await db
+        .insert(channelMessages)
+        .values({
+          ...validatedData,
+          senderId: userId,
+        })
+        .returning();
+      
+      // Get sender details for broadcast
+      const [senderUser] = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          availabilityStatus: users.availabilityStatus,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const messageWithSender = {
+        ...newMessage,
+        sender: senderUser,
+      };
+
+      // Broadcast to all channel members
+      const allMembers = await db
+        .select({ userId: channelMembers.userId })
+        .from(channelMembers)
+        .where(eq(channelMembers.channelId, channelId));
+      
+      const memberUserIds = allMembers.map(m => m.userId);
+      broadcastToUsers(memberUserIds, {
+        type: "channel_message",
+        channelId,
+        message: messageWithSender,
+      });
+      
+      res.json(messageWithSender);
+    } catch (error: any) {
+      console.error("Error sending channel message:", error);
+      res.status(400).json({ message: error.message || "Failed to send channel message" });
     }
   });
 
