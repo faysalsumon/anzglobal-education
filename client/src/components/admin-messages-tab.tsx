@@ -110,6 +110,82 @@ type Message = {
   };
 };
 
+function ChatFileMessage({ fileUrl, fileName, isMine }: { fileUrl: string; fileName: string | null; isMine: boolean }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const ext = (fileName || "").split('.').pop()?.toLowerCase() || '';
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    setLoading(true);
+    setError(false);
+    setBlobUrl(null);
+
+    apiRequest("GET", fileUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [fileUrl]);
+
+  const handleDownload = () => {
+    if (blobUrl) {
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName || "file";
+      a.click();
+    }
+  };
+
+  const overlayClass = isMine ? "bg-white/10 border-white/20" : "bg-muted border-border";
+
+  if (loading) {
+    return (
+      <div className={`mt-2 p-2 rounded border flex items-center gap-2 ${overlayClass}`}>
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent shrink-0" />
+        <span className="text-xs opacity-70 truncate">{fileName || "Loading..."}</span>
+      </div>
+    );
+  }
+
+  if (error || !blobUrl) {
+    return (
+      <div className={`mt-2 p-2 rounded border flex items-center gap-2 ${overlayClass}`}>
+        <File className="h-4 w-4 shrink-0 opacity-50" />
+        <span className="text-xs opacity-50 truncate">{fileName || "File unavailable"}</span>
+      </div>
+    );
+  }
+
+  if (isImage) {
+    return (
+      <button onClick={handleDownload} className="block mt-2 rounded-lg overflow-hidden">
+        <img src={blobUrl} alt={fileName || "image"} className="max-w-[200px] max-h-48 rounded-lg object-cover" />
+      </button>
+    );
+  }
+
+  return (
+    <div className={`mt-2 p-2 rounded border flex items-center gap-2 ${overlayClass}`}>
+      <File className="h-4 w-4 shrink-0" />
+      <span className="truncate flex-1 text-xs">{fileName}</span>
+      <button onClick={handleDownload} className="shrink-0 opacity-70 hover:opacity-100">
+        <Download className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 type Conversation = {
   id: string;
   participant1Id: string;
@@ -420,22 +496,10 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                     <div className={`group relative p-3 rounded-2xl text-sm ${
                       isMine ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-muted rounded-tl-none"
                     }`}>
-                      {msg.content}
-                      {msg.fileUrl && (() => {
-                        const ext = (msg.fileName || "").split('.').pop()?.toLowerCase() || '';
-                        const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
-                        return isImage ? (
-                          <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="block mt-2">
-                            <img src={msg.fileUrl} alt={msg.fileName || "image"} className="max-w-[200px] max-h-48 rounded-lg object-cover" />
-                          </a>
-                        ) : (
-                          <div className="mt-2 p-2 rounded bg-background/10 border border-white/20 flex items-center gap-2">
-                            <File className="h-4 w-4 shrink-0" />
-                            <span className="truncate flex-1 text-xs">{msg.fileName}</span>
-                            <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="shrink-0"><Download className="h-4 w-4" /></a>
-                          </div>
-                        );
-                      })()}
+                      {msg.fileUrl && msg.content?.startsWith("Shared a file:") ? null : msg.content}
+                      {msg.fileUrl && (
+                        <ChatFileMessage fileUrl={msg.fileUrl} fileName={msg.fileName ?? null} isMine={isMine} />
+                      )}
                       <div className={`text-[10px] mt-1 opacity-70 flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
                         {format(parseISO(msg.createdAt), "h:mm a")}
                         {isMine && activeView?.type === "dm" && (
