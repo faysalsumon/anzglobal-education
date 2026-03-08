@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDroppable } from "@dnd-kit/core";
@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -539,7 +540,8 @@ export function AdminApplicationsKanban() {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [batchStageDialogOpen, setBatchStageDialogOpen] = useState(false);
   const [batchTargetStage, setBatchTargetStage] = useState<ApplicationStage | undefined>();
 
@@ -678,6 +680,17 @@ export function AdminApplicationsKanban() {
   // Get unique universities
   const universities = Array.from(new Set(applications.map(app => app.university.name).filter(Boolean)));
   
+  // Track mobile breakpoint
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile && !filterSidebarOpen) setFilterSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [filterSidebarOpen]);
+
   // Check if any filters are active
   const hasActiveFilters = consultantFilter !== "all" || branchFilter !== "all" || countryFilter !== "all" || stageFilter !== "all" || statusFilter !== "all" || slaFilter !== "all";
   
@@ -914,55 +927,34 @@ export function AdminApplicationsKanban() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Top Header Bar */}
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-        {/* Left: Toggle and Stats */}
-        <div className="flex items-center gap-3">
+      {/* Top Header Bar — two rows */}
+      <div className="flex flex-col gap-2 mb-3">
+        {/* Row 1: Filter toggle + Stats + View toggle */}
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setFilterSidebarOpen(!filterSidebarOpen)}
             data-testid="button-toggle-filter-sidebar"
             title={filterSidebarOpen ? "Hide filters" : "Show filters"}
+            className="shrink-0"
           >
             {filterSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
           </Button>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="font-medium">{stats.total} Applications</span>
-            <span className="text-muted-foreground">|</span>
-            <span className="text-amber-600">{stats.unassigned} Unassigned</span>
-            <span className="text-muted-foreground">|</span>
-            <span className="text-blue-600">{stats.inProgress} In Progress</span>
-            <span className="text-muted-foreground">|</span>
-            <span className="text-green-600">{stats.completed} Completed</span>
+          {/* Stats — compact on mobile, full on sm+ */}
+          <div className="flex items-center gap-2 text-sm min-w-0 flex-1">
+            <span className="font-medium shrink-0">{stats.total} Applications</span>
+            <span className="hidden sm:flex items-center gap-2 text-sm flex-wrap">
+              <span className="text-muted-foreground">|</span>
+              <span className="text-amber-600 shrink-0">{stats.unassigned} Unassigned</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-blue-600 shrink-0">{stats.inProgress} In Progress</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-green-600 shrink-0">{stats.completed} Completed</span>
+            </span>
           </div>
-        </div>
-        
-        {/* Right: View Toggle and Search */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 w-48 h-8"
-              data-testid="input-search-applications"
-            />
-          </div>
-          {user?.id && (
-            <Button
-              variant="outline"
-              size="sm"
-              className={`h-8 shrink-0 toggle-elevate${consultantFilter === user.id ? " toggle-elevated" : ""}`}
-              onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
-              data-testid="button-my-applications-topbar"
-            >
-              <User className="h-3.5 w-3.5 mr-1.5" />
-              My Applications
-            </Button>
-          )}
-          <div className="flex items-center gap-1 border rounded-lg p-0.5">
+          {/* View toggle — right side */}
+          <div className="flex items-center gap-1 border rounded-lg p-0.5 shrink-0 ml-auto">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="sm"
@@ -983,12 +975,37 @@ export function AdminApplicationsKanban() {
             </Button>
           </div>
         </div>
+        {/* Row 2: Search + My Applications */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 w-full"
+              data-testid="input-search-applications"
+            />
+          </div>
+          {user?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-8 shrink-0 toggle-elevate${consultantFilter === user.id ? " toggle-elevated" : ""}`}
+              onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
+              data-testid="button-my-applications-topbar"
+            >
+              <User className="h-3.5 w-3.5 mr-1.5" />
+              My Applications
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Inline Filter Row */}
-      <div className="flex items-center gap-2 flex-wrap mb-3">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-3 flex-nowrap">
         <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="w-[150px] h-8 text-sm" data-testid="select-stage-filter-inline">
+          <SelectTrigger className="min-w-[130px] w-[150px] h-8 text-sm shrink-0" data-testid="select-stage-filter-inline">
             <SelectValue placeholder="All Stages" />
           </SelectTrigger>
           <SelectContent>
@@ -999,7 +1016,7 @@ export function AdminApplicationsKanban() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] h-8 text-sm" data-testid="select-status-filter-inline">
+          <SelectTrigger className="min-w-[130px] w-[150px] h-8 text-sm shrink-0" data-testid="select-status-filter-inline">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -1013,7 +1030,7 @@ export function AdminApplicationsKanban() {
           </SelectContent>
         </Select>
         <Select value={consultantFilter} onValueChange={setConsultantFilter}>
-          <SelectTrigger className="w-[180px] h-8 text-sm" data-testid="select-consultant-filter-inline">
+          <SelectTrigger className="min-w-[140px] w-[180px] h-8 text-sm shrink-0" data-testid="select-consultant-filter-inline">
             <SelectValue placeholder="All Consultants" />
           </SelectTrigger>
           <SelectContent>
@@ -1027,7 +1044,7 @@ export function AdminApplicationsKanban() {
           </SelectContent>
         </Select>
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" className="h-8" onClick={clearAllFilters} data-testid="button-clear-filters-inline">
+          <Button variant="ghost" size="sm" className="h-8 shrink-0" onClick={clearAllFilters} data-testid="button-clear-filters-inline">
             <X className="h-3.5 w-3.5 mr-1.5" />
             Clear All
           </Button>
@@ -1035,7 +1052,7 @@ export function AdminApplicationsKanban() {
         {hasActiveFilters && (
           <Popover open={saveFilterOpen} onOpenChange={setSaveFilterOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" data-testid="button-save-filter-apps">
+              <Button variant="outline" size="sm" className="h-8 shrink-0" data-testid="button-save-filter-apps">
                 <Bookmark className="h-3.5 w-3.5 mr-1.5" />
                 Save Filter
               </Button>
@@ -1092,9 +1109,26 @@ export function AdminApplicationsKanban() {
 
       {/* Main Content Area with Left Sidebar */}
       <div className="flex flex-1 gap-3 min-h-0">
-        {/* Left Filter Sidebar */}
+        {/* Left Filter Sidebar — overlay on mobile, inline on desktop */}
+        {filterSidebarOpen && isMobile && (
+          <div
+            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40"
+            onClick={() => setFilterSidebarOpen(false)}
+          />
+        )}
         {filterSidebarOpen && (
-          <div className="w-56 flex-shrink-0 border rounded-lg bg-card overflow-y-auto">
+          <div className={isMobile
+            ? "fixed left-0 top-0 bottom-0 z-50 w-72 border-r bg-card overflow-y-auto shadow-xl"
+            : "w-56 flex-shrink-0 border rounded-lg bg-card overflow-y-auto"
+          }>
+            {isMobile && (
+              <div className="flex items-center justify-between px-3 py-2 border-b">
+                <span className="text-sm font-semibold">Filters</span>
+                <Button size="icon" variant="ghost" onClick={() => setFilterSidebarOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <div className="p-3 space-y-4">
               {/* Saved Filters */}
               <Collapsible defaultOpen>
