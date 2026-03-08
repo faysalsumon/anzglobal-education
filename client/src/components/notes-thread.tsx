@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import { getCsrfToken } from "@/hooks/useCsrf";
+import { supabase } from "@/lib/supabase";
 import DOMPurify from "dompurify";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -304,11 +306,17 @@ function NoteComposer({
 
     setIsUploading(true);
     try {
+      const csrfToken = await getCsrfToken();
+      const { data: { session } } = await (supabase?.auth.getSession() ?? Promise.resolve({ data: { session: null } }));
+      const uploadHeaders: Record<string, string> = { "X-CSRF-Token": csrfToken };
+      if (session?.access_token) uploadHeaders["Authorization"] = `Bearer ${session.access_token}`;
+
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/crm/notes/upload-attachment", {
         method: "POST",
         credentials: "include",
+        headers: uploadHeaders,
         body: formData,
       });
       if (!res.ok) throw new Error("Upload failed");
