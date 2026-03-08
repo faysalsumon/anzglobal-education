@@ -23,6 +23,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   MessageSquare,
   Pencil,
   Trash2,
@@ -35,6 +40,11 @@ import {
   Paperclip,
   FileText,
   Image as ImageIcon,
+  Globe2,
+  Lock,
+  Users,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
@@ -42,6 +52,13 @@ import StarterKit from "@tiptap/starter-kit";
 import Mention from "@tiptap/extension-mention";
 import Placeholder from "@tiptap/extension-placeholder";
 import tippy, { Instance as TippyInstance } from "tippy.js";
+
+export type NoteVisibility = "public" | "private" | "selected";
+
+export interface NoteVisibilityOpts {
+  visibility?: NoteVisibility;
+  visibleTo?: string[];
+}
 
 export interface UnifiedNote {
   id: string;
@@ -57,6 +74,8 @@ export interface UnifiedNote {
   } | null;
   source?: "lead" | "application";
   isPinned?: boolean | null;
+  visibility?: NoteVisibility;
+  visibleTo?: string[];
 }
 
 export interface ThreadTeamMember {
@@ -78,8 +97,8 @@ interface NotesThreadProps {
   notes: UnifiedNote[];
   isLoading: boolean;
   currentUserId: string | null;
-  onAddNote: (content: string, mentionedUserIds: string[]) => Promise<void> | void;
-  onEditNote?: (noteId: string, content: string) => void;
+  onAddNote: (content: string, mentionedUserIds: string[], opts?: NoteVisibilityOpts) => Promise<void> | void;
+  onEditNote?: (noteId: string, content: string, opts?: NoteVisibilityOpts) => void;
   onDeleteNote?: (noteId: string) => void;
   teamMembers?: ThreadTeamMember[];
   isSubmitting?: boolean;
@@ -185,7 +204,7 @@ function extractMentions(json: any): string[] {
     if (Array.isArray(node.content)) node.content.forEach(traverse);
   }
   if (json?.content) json.content.forEach(traverse);
-  return [...new Set(mentions)];
+  return Array.from(new Set(mentions));
 }
 
 function formatFileSize(bytes: number): string {
@@ -194,19 +213,139 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const VISIBILITY_OPTIONS: { value: NoteVisibility; label: string; icon: typeof Globe2; description: string }[] = [
+  { value: "public", label: "Public", icon: Globe2, description: "Visible to all team members" },
+  { value: "private", label: "Private", icon: Lock, description: "Only you and @mentioned members" },
+  { value: "selected", label: "Specific people", icon: Users, description: "Choose who can see this" },
+];
+
+function VisibilityPicker({
+  value,
+  onChange,
+  visibleTo,
+  onVisibleToChange,
+  teamMembers,
+}: {
+  value: NoteVisibility;
+  onChange: (v: NoteVisibility) => void;
+  visibleTo: string[];
+  onVisibleToChange: (ids: string[]) => void;
+  teamMembers: ThreadTeamMember[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const current = VISIBILITY_OPTIONS.find((o) => o.value === value)!;
+  const Icon = current.icon;
+
+  const togglePerson = (id: string) => {
+    onVisibleToChange(
+      visibleTo.includes(id) ? visibleTo.filter((x) => x !== id) : [...visibleTo, id]
+    );
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 gap-1 text-xs text-muted-foreground"
+            data-testid="button-visibility-picker"
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {current.label}
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-1" align="start">
+          {VISIBILITY_OPTIONS.map((opt) => {
+            const OptIcon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                className="flex items-start gap-2 w-full px-2 py-1.5 rounded-sm text-left hover-elevate"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                data-testid={`visibility-option-${opt.value}`}
+              >
+                <OptIcon className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                <div>
+                  <div className="text-sm font-medium">{opt.label}</div>
+                  <div className="text-xs text-muted-foreground">{opt.description}</div>
+                </div>
+              </button>
+            );
+          })}
+        </PopoverContent>
+      </Popover>
+
+      {value === "selected" && (
+        <Popover open={peopleOpen} onOpenChange={setPeopleOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 gap-1 text-xs text-muted-foreground"
+              data-testid="button-select-people"
+            >
+              {visibleTo.length > 0 ? `${visibleTo.length} selected` : "Select people"}
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-1 max-h-48 overflow-y-auto" align="start">
+            {teamMembers.length === 0 && (
+              <p className="text-xs text-muted-foreground p-2">No team members available</p>
+            )}
+            {teamMembers.map((m) => {
+              const name = m.firstName && m.lastName ? `${m.firstName} ${m.lastName}` : m.email || "Unknown";
+              const initials = m.firstName && m.lastName ? `${m.firstName[0]}${m.lastName[0]}` : "??";
+              const checked = visibleTo.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm text-left hover-elevate"
+                  onClick={() => togglePerson(m.id)}
+                  data-testid={`select-person-${m.id}`}
+                >
+                  <div className="h-4 w-4 flex-shrink-0 border rounded flex items-center justify-center">
+                    {checked && <Check className="h-3 w-3" />}
+                  </div>
+                  <Avatar className="h-5 w-5 flex-shrink-0">
+                    <AvatarImage src={m.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm truncate">{name}</span>
+                </button>
+              );
+            })}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  );
+}
+
 function NoteComposer({
   teamMembers = [],
   onSubmit,
   onCancel,
   isSubmitting,
   initialContent = "",
+  initialVisibility = "public",
+  initialVisibleTo = [],
   placeholder = "Add a note… Type @ to mention team members",
 }: {
   teamMembers?: ThreadTeamMember[];
-  onSubmit: (content: string, mentionedUserIds: string[]) => void;
+  onSubmit: (content: string, mentionedUserIds: string[], opts: NoteVisibilityOpts) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
   initialContent?: string;
+  initialVisibility?: NoteVisibility;
+  initialVisibleTo?: string[];
   placeholder?: string;
 }) {
   const teamMembersRef = useRef<ThreadTeamMember[]>(teamMembers);
@@ -215,6 +354,8 @@ function NoteComposer({
   const [hasContent, setHasContent] = useState(!!initialContent);
   const [pendingAttachments, setPendingAttachments] = useState<AttachedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [visibility, setVisibility] = useState<NoteVisibility>(initialVisibility);
+  const [visibleTo, setVisibleTo] = useState<string[]>(initialVisibleTo);
 
   useEffect(() => {
     teamMembersRef.current = teamMembers;
@@ -352,11 +493,14 @@ function NoteComposer({
       html += `<div class="note-attachments">${attachmentsHtml}</div>`;
     }
 
-    onSubmit(html, extractMentions(editor.getJSON()));
+    const opts: NoteVisibilityOpts = { visibility, visibleTo: visibility === "selected" ? visibleTo : [] };
+    onSubmit(html, extractMentions(editor.getJSON()), opts);
     editor.commands.clearContent();
     setMentionCount(0);
     setHasContent(false);
     setPendingAttachments([]);
+    setVisibility("public");
+    setVisibleTo([]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -409,9 +553,8 @@ function NoteComposer({
         </div>
       )}
 
-      <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t">
-        <div className="flex items-center gap-1">
-          <p className="text-xs text-muted-foreground">Ctrl+Enter to send</p>
+      <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t gap-2">
+        <div className="flex items-center gap-1 flex-wrap">
           <input
             ref={fileInputRef}
             type="file"
@@ -436,8 +579,15 @@ function NoteComposer({
               <Paperclip className="h-3.5 w-3.5" />
             )}
           </Button>
+          <VisibilityPicker
+            value={visibility}
+            onChange={setVisibility}
+            visibleTo={visibleTo}
+            onVisibleToChange={setVisibleTo}
+            teamMembers={teamMembers}
+          />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           {onCancel && (
             <Button
               type="button"
@@ -498,6 +648,22 @@ const DOMPURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOW_DATA_ATTR: false,
 };
 
+function VisibilityBadge({ visibility, visibleTo }: { visibility?: NoteVisibility; visibleTo?: string[] }) {
+  if (!visibility || visibility === "public") return null;
+  if (visibility === "private") {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+        <Lock className="h-3 w-3" /> Private
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+      <Users className="h-3 w-3" /> Shared with {visibleTo?.length ?? 0} {(visibleTo?.length ?? 0) === 1 ? "person" : "people"}
+    </span>
+  );
+}
+
 function NoteItem({
   note,
   currentUserId,
@@ -508,6 +674,7 @@ function NoteItem({
   onSaveEdit,
   onCancelEdit,
   isEditSubmitting,
+  canEditLead,
 }: {
   note: UnifiedNote;
   currentUserId: string | null;
@@ -515,17 +682,19 @@ function NoteItem({
   onDelete: (noteId: string) => void;
   teamMembers?: ThreadTeamMember[];
   editingNoteId: string | null;
-  onSaveEdit: (noteId: string, content: string) => void;
+  onSaveEdit: (noteId: string, content: string, opts: NoteVisibilityOpts) => void;
   onCancelEdit: () => void;
   isEditSubmitting?: boolean;
+  canEditLead: boolean;
 }) {
   const isEditing = editingNoteId === note.id;
-  const isReadOnly = note.source === "lead";
+  const isReadOnly = note.source === "lead" && !canEditLead;
   const isOwn = currentUserId === note.createdById;
   const canEdit = !isReadOnly && isOwn;
 
   const authorName = getAuthorName(note.author);
   const authorInitials = getAuthorInitials(note.author);
+  const isLeadBadge = note.source === "lead";
 
   return (
     <div className="flex gap-3 py-3" data-testid={`note-item-${note.id}`}>
@@ -539,7 +708,9 @@ function NoteItem({
           <NoteComposer
             teamMembers={teamMembers}
             initialContent={note.content}
-            onSubmit={(content) => onSaveEdit(note.id, content)}
+            initialVisibility={note.visibility ?? "public"}
+            initialVisibleTo={note.visibleTo ?? []}
+            onSubmit={(content, _mentions, opts) => onSaveEdit(note.id, content, opts)}
             onCancel={onCancelEdit}
             isSubmitting={isEditSubmitting}
             placeholder="Edit note…"
@@ -589,11 +760,12 @@ function NoteItem({
                 {formatNoteDate(note.createdAt)} by{" "}
                 <span className="font-medium text-foreground">{authorName}</span>
               </span>
-              {isReadOnly && (
+              {isLeadBadge && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                   Lead
                 </Badge>
               )}
+              <VisibilityBadge visibility={note.visibility} visibleTo={note.visibleTo} />
             </div>
           </div>
         )}
@@ -619,17 +791,19 @@ export function NotesThread({
   const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
-  const handleAddNote = (content: string, mentionedUserIds: string[]) => {
-    Promise.resolve(onAddNote(content, mentionedUserIds)).then(() => {
+  const canEditLead = !!onEditNote;
+
+  const handleAddNote = (content: string, mentionedUserIds: string[], opts?: NoteVisibilityOpts) => {
+    Promise.resolve(onAddNote(content, mentionedUserIds, opts)).then(() => {
       setIsComposing(false);
     });
   };
 
-  const handleSaveEdit = async (noteId: string, content: string) => {
+  const handleSaveEdit = async (noteId: string, content: string, opts: NoteVisibilityOpts) => {
     if (!onEditNote) return;
     setIsEditSubmitting(true);
     try {
-      await Promise.resolve(onEditNote(noteId, content));
+      await Promise.resolve(onEditNote(noteId, content, opts));
     } finally {
       setIsEditSubmitting(false);
       setEditingNoteId(null);
@@ -732,6 +906,7 @@ export function NotesThread({
               onSaveEdit={handleSaveEdit}
               onCancelEdit={() => setEditingNoteId(null)}
               isEditSubmitting={isEditSubmitting}
+              canEditLead={canEditLead}
             />
           ))}
         </div>

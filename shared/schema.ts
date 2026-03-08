@@ -335,6 +335,9 @@ export const publishStatusEnum = pgEnum('publish_status', [
   'published',
 ]);
 
+// Note visibility enum — used by both contactNotes and applicationInternalNotes
+export const noteVisibilityEnum = pgEnum("note_visibility", ["public", "private", "selected"]);
+
 // Role scope enum - determines data visibility level for hierarchy
 export const roleScopeEnum = pgEnum('role_scope', [
   'global',   // Can see all data across all regions/branches (CTO, CEO, CFO)
@@ -2294,7 +2297,11 @@ export const applicationInternalNotes = pgTable("application_internal_notes", {
   
   // Mark important notes
   isPinned: boolean("is_pinned").default(false),
-  
+
+  // Visibility controls (mirrors contactNotes)
+  visibility: noteVisibilityEnum("visibility").notNull().default("public"),
+  visibleTo: text("visible_to").array().default(sql`'{}'::text[]`),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -2723,9 +2730,6 @@ export const contactSubmissions = pgTable("contact_submissions", {
 // ============================================
 // CRM CONTACTS TABLES
 // ============================================
-
-// Note visibility enum for contact notes
-export const noteVisibilityEnum = pgEnum("note_visibility", ["public", "private", "selected"]);
 
 // CRM Contacts table - unified contact management for all contact types
 export const crmContacts = pgTable("crm_contacts", {

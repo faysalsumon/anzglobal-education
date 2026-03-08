@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { NotesThread, type UnifiedNote, type ThreadTeamMember } from "@/components/notes-thread";
+import { NotesThread, type UnifiedNote, type ThreadTeamMember, type NoteVisibilityOpts } from "@/components/notes-thread";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   if (!supabase) return { "Content-Type": "application/json" };
@@ -95,12 +95,12 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
   });
 
   const createNoteMutation = useMutation({
-    mutationFn: async (data: { content: string; mentions: string[] }) => {
+    mutationFn: async (data: { content: string; mentions: string[]; visibility?: string; visibleTo?: string[] }) => {
       return apiRequest("POST", `/api/crm/leads/${leadId}/notes`, {
         content: data.content,
         mentions: data.mentions,
-        visibility: "public",
-        visibleTo: [],
+        visibility: data.visibility ?? "public",
+        visibleTo: data.visibleTo ?? [],
       });
     },
     onSuccess: () => {
@@ -113,8 +113,12 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
   });
 
   const updateNoteMutation = useMutation({
-    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
-      return apiRequest("PUT", `/api/crm/leads/${leadId}/notes/${noteId}`, { content });
+    mutationFn: async (data: { noteId: string; content: string; visibility?: string; visibleTo?: string[] }) => {
+      return apiRequest("PUT", `/api/crm/leads/${leadId}/notes/${data.noteId}`, {
+        content: data.content,
+        visibility: data.visibility,
+        visibleTo: data.visibleTo,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crm/leads", leadId, "notes"] });
@@ -145,6 +149,8 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
     createdById: n.createdById,
     author: n.author,
     source: "lead" as const,
+    visibility: n.visibility,
+    visibleTo: n.visibleTo ?? [],
   }));
 
   const teamMembers: ThreadTeamMember[] = (rawTeamMembers || []).map((m) => ({
@@ -162,11 +168,21 @@ export function LeadNotes({ leadId, leadName }: LeadNotesProps) {
       currentUserId={currentUserId}
       teamMembers={teamMembers}
       isSubmitting={createNoteMutation.isPending}
-      onAddNote={async (content, mentionedUserIds) => {
-        await createNoteMutation.mutateAsync({ content, mentions: mentionedUserIds });
+      onAddNote={async (content, mentionedUserIds, opts?: NoteVisibilityOpts) => {
+        await createNoteMutation.mutateAsync({
+          content,
+          mentions: mentionedUserIds,
+          visibility: opts?.visibility,
+          visibleTo: opts?.visibleTo,
+        });
       }}
-      onEditNote={(noteId, content) => {
-        updateNoteMutation.mutate({ noteId, content });
+      onEditNote={(noteId, content, opts?: NoteVisibilityOpts) => {
+        updateNoteMutation.mutate({
+          noteId,
+          content,
+          visibility: opts?.visibility,
+          visibleTo: opts?.visibleTo,
+        });
       }}
       onDeleteNote={(noteId) => {
         deleteNoteMutation.mutate(noteId);

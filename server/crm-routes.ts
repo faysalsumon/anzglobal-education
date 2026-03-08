@@ -1681,7 +1681,18 @@ router.get("/leads/:id/notes", requireAdmin, async (req: any, res) => {
       .where(eq(contactNotes.contactId, contactId))
       .orderBy(desc(contactNotes.createdAt));
 
-    res.json(notes.map(n => ({
+    const userId = getUserId(req) || "";
+    const canSeeNote = (authorId: string, vis: string, mentions: string[] | null, visibleTo: string[] | null) => {
+      if (vis === "public") return true;
+      if (userId === authorId) return true;
+      if (vis === "private") return (mentions || []).includes(userId);
+      if (vis === "selected") return (visibleTo || []).includes(userId);
+      return true;
+    };
+
+    res.json(notes
+      .filter(n => canSeeNote(n.createdById, n.visibility ?? "public", n.mentions, n.visibleTo))
+      .map(n => ({
       id: n.id,
       leadId: n.contactId,
       title: n.title,
