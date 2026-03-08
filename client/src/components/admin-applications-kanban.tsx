@@ -28,6 +28,7 @@ import {
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { CreateReminderModal } from "@/components/create-reminder-modal";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
 import { ApplicationDetailsPanel } from "@/components/application-details-panel";
 import { format, differenceInDays } from "date-fns";
@@ -556,7 +557,19 @@ export function AdminApplicationsKanban() {
 
   // Fetch all users and filter admin consultants
   const { data: usersData } = useQuery<{ users: Consultant[] }>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/admin/applications/users"],
+    queryFn: async () => {
+      const headers: Record<string, string> = {};
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      }
+      const res = await fetch("/api/admin/users", { credentials: "include", headers });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
   });
 
   // Fetch branches for branch filter
@@ -874,6 +887,18 @@ export function AdminApplicationsKanban() {
         
         {/* Right: View Toggle and Search */}
         <div className="flex items-center gap-2">
+          {user?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-8 toggle-elevate${consultantFilter === user.id ? " toggle-elevated" : ""}`}
+              onClick={() => setConsultantFilter(consultantFilter === user.id ? "all" : user.id)}
+              data-testid="button-my-applications-topbar"
+            >
+              <User className="h-3.5 w-3.5 mr-1.5" />
+              My Applications
+            </Button>
+          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
