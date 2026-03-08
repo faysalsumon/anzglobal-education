@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import zanAvatarImage from "@assets/generated_images/friendly_education_consultant_avatar.webp";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -252,6 +252,9 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingFilePreview, setPendingFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionAnchor, setMentionAnchor] = useState<number>(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -265,6 +268,10 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   const { data: channels = [] } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
     refetchInterval: 15000,
+  });
+
+  const { data: allTeamMembers = [] } = useQuery<Pick<AdminTeamMember, 'id' | 'firstName' | 'lastName' | 'email' | 'profileImageUrl' | 'availabilityStatus' | 'customStatusText'>[]>({
+    queryKey: ["/api/admin/team-status"],
   });
 
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
@@ -331,6 +338,67 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
       isPrivate: false,
     },
   });
+
+  // Filtered sidebar lists based on search query
+  const filteredChannels = useMemo(() => {
+    if (!searchQuery.trim()) return channels;
+    const q = searchQuery.toLowerCase();
+    return channels.filter(ch => ch.name.toLowerCase().includes(q));
+  }, [channels, searchQuery]);
+
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(conv => {
+      const other = conv.otherParticipant;
+      if (!other) return false;
+      return (
+        (other.firstName || '').toLowerCase().includes(q) ||
+        (other.lastName || '').toLowerCase().includes(q) ||
+        (other.email || '').toLowerCase().includes(q)
+      );
+    });
+  }, [conversations, searchQuery]);
+
+  // @mention filtered results
+  const mentionResults = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return allTeamMembers
+      .filter(m => {
+        if (m.id === currentUserId) return false;
+        const name = `${m.firstName || ''} ${m.lastName || ''}`.toLowerCase();
+        const email = (m.email || '').toLowerCase();
+        return name.includes(q) || email.includes(q);
+      })
+      .slice(0, 6);
+  }, [mentionQuery, allTeamMembers, currentUserId]);
+
+  const handleMentionSelect = useCallback((member: Pick<AdminTeamMember, 'id' | 'firstName' | 'lastName' | 'email' | 'profileImageUrl' | 'availabilityStatus' | 'customStatusText'>) => {
+    const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim();
+    const before = messageInput.slice(0, mentionAnchor);
+    const after = messageInput.slice(mentionAnchor + 1 + (mentionQuery?.length || 0));
+    setMessageInput(`${before}@${fullName} ${after}`);
+    setMentionQuery(null);
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [messageInput, mentionAnchor, mentionQuery]);
+
+  const handleMessageInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessageInput(value);
+    const cursor = e.target.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursor);
+    const atIndex = textBeforeCursor.lastIndexOf('@');
+    if (atIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(atIndex + 1);
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        setMentionQuery(textAfterAt);
+        setMentionAnchor(atIndex);
+        return;
+      }
+    }
+    setMentionQuery(null);
+  }, []);
 
   // WebSocket handling
   useEffect(() => {
@@ -565,7 +633,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
               </button>
               {isChannelsExpanded && (
                 <div className="mt-1 space-y-1">
-                  {channels.map(ch => (
+                  {filteredChannels.map(ch => (
                     <button
                       key={ch.id}
                       onClick={() => setActiveView({ type: "channel", id: ch.id })}
@@ -618,7 +686,7 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                     </div>
                   </button>
 
-                  {conversations.map(conv => {
+                  {filteredConversations.map(conv => {
                     const other = conv.otherParticipant;
                     const isActive = activeView?.type === "dm" && activeView.id === conv.id;
                     const isUnread = conv.unreadCount > 0;
@@ -771,7 +839,31 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                   </PopoverContent>
                 </Popover>
                 
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 flex flex-col min-w-0 relative">
+                  {/* @mention dropdown */}
+                  {mentionQuery !== null && mentionResults.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border rounded-lg shadow-lg z-50 overflow-hidden">
+                      {mentionResults.map(member => (
+                        <button
+                          key={member.id}
+                          onMouseDown={(e) => { e.preventDefault(); handleMentionSelect(member); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover-elevate text-left"
+                        >
+                          <Avatar className="h-6 w-6 shrink-0">
+                            {member.profileImageUrl ? (
+                              <AvatarImage src={member.profileImageUrl} />
+                            ) : (
+                              <AvatarFallback className="text-[10px]">{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                            )}
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate leading-tight">{member.firstName} {member.lastName}</p>
+                            <p className="text-[11px] text-muted-foreground truncate capitalize">{member.customStatusText || (member.availabilityStatus || 'available').replace(/_/g, ' ')}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {pendingFile && (
                     <div className="flex items-center gap-2 px-3 pt-2 pb-1">
                       {pendingFilePreview ? (
@@ -788,10 +880,15 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                     </div>
                   )}
                   <Textarea
+                    ref={textareaRef}
                     placeholder="Type a message..."
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
+                    onChange={handleMessageInputChange}
                     onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setMentionQuery(null);
+                        return;
+                      }
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
