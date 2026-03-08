@@ -25,7 +25,8 @@ import {
   Search, User, FileText, CheckCircle, XCircle, Clock, 
   ChevronRight, UserPlus, AlertCircle, Filter, BarChart3, GripVertical, MessageSquare, Bell,
   List, LayoutGrid, ChevronDown, X, Building2, GraduationCap, Calendar, Eye, AlertTriangle,
-  CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal, Save
+  CheckCheck, Users, Trash2, PanelLeftClose, PanelLeft, Bookmark, SlidersHorizontal, Save,
+  ArrowUpDown, ChevronLeft
 } from "lucide-react";
 import type { SavedFilter } from "@shared/schema";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
@@ -539,6 +540,9 @@ export function AdminApplicationsKanban() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name-az' | 'name-za' | 'stage' | 'sla'>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
@@ -676,6 +680,46 @@ export function AdminApplicationsKanban() {
 
     return matchesSearch && matchesConsultant && matchesBranch && matchesCountry && matchesStage && matchesStatus && matchesSla;
   });
+
+  // Sort filtered applications
+  const sortedApplications = useMemo(() => {
+    const sorted = [...filteredApplications];
+    switch (sortBy) {
+      case 'newest':
+        sorted.sort((a, b) => new Date(b.application.createdAt ?? 0).getTime() - new Date(a.application.createdAt ?? 0).getTime());
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.application.createdAt ?? 0).getTime() - new Date(b.application.createdAt ?? 0).getTime());
+        break;
+      case 'name-az':
+        sorted.sort((a, b) => (a.student.lastName ?? '').localeCompare(b.student.lastName ?? ''));
+        break;
+      case 'name-za':
+        sorted.sort((a, b) => (b.student.lastName ?? '').localeCompare(a.student.lastName ?? ''));
+        break;
+      case 'stage':
+        sorted.sort((a, b) => ALL_STAGES.indexOf(a.application.currentStage as ApplicationStage) - ALL_STAGES.indexOf(b.application.currentStage as ApplicationStage));
+        break;
+      case 'sla': {
+        const order: Record<string, number> = { overdue: 0, 'at-risk': 1, 'on-track': 2 };
+        sorted.sort((a, b) =>
+          (order[getSLAStatus(a.application.createdAt, a.application.updatedAt, a.application.currentStage)] ?? 3) -
+          (order[getSLAStatus(b.application.createdAt, b.application.updatedAt, b.application.currentStage)] ?? 3)
+        );
+        break;
+      }
+    }
+    return sorted;
+  }, [filteredApplications, sortBy]);
+
+  // Reset page when filters or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredApplications.length, sortBy]);
+
+  // Paginated slice for list view
+  const totalPages = Math.ceil(sortedApplications.length / PAGE_SIZE);
+  const paginatedApplications = sortedApplications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Get unique universities
   const universities = Array.from(new Set(applications.map(app => app.university.name).filter(Boolean)));
@@ -834,7 +878,7 @@ export function AdminApplicationsKanban() {
     "Application Lost": [],
   };
 
-  filteredApplications.forEach((app) => {
+  sortedApplications.forEach((app) => {
     applicationsByStage[app.application.currentStage].push(app);
   });
 
@@ -953,8 +997,23 @@ export function AdminApplicationsKanban() {
               <span className="text-green-600 shrink-0">{stats.completed} Completed</span>
             </span>
           </div>
+          {/* Sort control */}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="h-8 w-auto text-sm gap-1.5 shrink-0 border-dashed" data-testid="select-sort-applications">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="name-az">Name A → Z</SelectItem>
+              <SelectItem value="name-za">Name Z → A</SelectItem>
+              <SelectItem value="stage">By stage</SelectItem>
+              <SelectItem value="sla">By SLA urgency</SelectItem>
+            </SelectContent>
+          </Select>
           {/* View toggle — right side */}
-          <div className="flex items-center gap-1 border rounded-lg p-0.5 shrink-0 ml-auto">
+          <div className="flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="sm"
@@ -1281,10 +1340,10 @@ export function AdminApplicationsKanban() {
         )}
 
         {/* Main Content - Kanban or List */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
           {/* Quick Filter Chips */}
           {selectedApplications.size === 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 flex-shrink-0">
               <span className="text-xs text-muted-foreground mr-1 flex-shrink-0">Quick:</span>
                 <Button
                   variant={slaFilter === 'all' ? 'secondary' : 'outline'}
@@ -1341,7 +1400,7 @@ export function AdminApplicationsKanban() {
 
           {/* Loading State */}
       {isLoading ? (
-        <Card>
+        <Card className="flex-shrink-0">
           <CardContent className="py-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="mt-4 text-muted-foreground">Loading applications...</p>
@@ -1349,8 +1408,9 @@ export function AdminApplicationsKanban() {
         </Card>
       ) : viewMode === 'list' ? (
         /* List View */
-        <div className="space-y-4" data-testid="applications-list-view">
-          {filteredApplications.length === 0 ? (
+        <>
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2" data-testid="applications-list-view">
+          {sortedApplications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -1358,7 +1418,7 @@ export function AdminApplicationsKanban() {
               </CardContent>
             </Card>
           ) : (
-            filteredApplications.map((app) => {
+            paginatedApplications.map((app) => {
               const stageIndex = STAGES.indexOf(app.application.currentStage);
               const progress = calculateStageProgress(
                 app.application.currentStage,
@@ -1478,6 +1538,38 @@ export function AdminApplicationsKanban() {
             })
           )}
         </div>
+        {/* Pagination Bar */}
+        {sortedApplications.length > PAGE_SIZE && (
+          <div className="flex-shrink-0 flex items-center justify-between gap-4 pt-2 pb-1 border-t" data-testid="pagination-bar">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              data-testid="button-pagination-prev"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Prev
+            </Button>
+            <span className="text-sm text-muted-foreground" data-testid="text-pagination-page">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              data-testid="button-pagination-next"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+            <span className="text-xs text-muted-foreground ml-auto" data-testid="text-pagination-count">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sortedApplications.length)} of {sortedApplications.length}
+            </span>
+          </div>
+        )}
+        </>
       ) : (
         /* Zoho-style Kanban View - All stages in single row */
         <DndContext
@@ -1486,10 +1578,10 @@ export function AdminApplicationsKanban() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-2 overflow-x-auto pb-4" style={{ height: 'calc(100vh - 340px)' }}>
+          <div className="flex gap-2 overflow-x-auto pb-4 flex-1 min-h-0">
             {ALL_STAGES.map((stage) => {
               const stageCount = applicationsByStage[stage].length;
-              const totalCount = filteredApplications.length || 1;
+              const totalCount = sortedApplications.length || 1;
               const percentage = Math.round((stageCount / totalCount) * 100);
               const isTerminal = TERMINAL_STAGES.includes(stage);
               

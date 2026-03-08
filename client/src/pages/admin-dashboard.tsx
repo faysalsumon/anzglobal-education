@@ -1966,7 +1966,12 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          {/* Main Content - Scrollable area */}
+          {/* Main Content - Full-height for Applications, scrollable for all others */}
+          {activeTab === "applications" ? (
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 md:px-6 py-4">
+              <AdminApplicationsKanban />
+            </div>
+          ) : (
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-6xl px-4 md:px-6 py-4">
               {/* Simple single-column layout */}
@@ -3268,13 +3273,6 @@ export default function AdminDashboard() {
         )
         )}
 
-        {/* Applications Tab */}
-        {activeTab === "applications" && (
-          <div className="space-y-4">
-            <AdminApplicationsKanban />
-          </div>
-        )}
-
         {/* Data Import Tab */}
         {activeTab === "blogs" && (
           <div className="space-y-4">
@@ -3383,7 +3381,7 @@ export default function AdminDashboard() {
           </div>
           {/* End of mx-auto container */}
         </div>
-        {/* End of overflow-y-auto */}
+          )}
       </div>
       {/* End of flex-col flex-1 */}
 
