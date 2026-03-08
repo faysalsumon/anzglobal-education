@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 // Helper to get auth headers for fetch requests
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -300,6 +301,7 @@ const LEAD_PIPELINE_STAGES: LeadStage[] = ['new', 'contacted', 'qualified', 'cou
 
 export function CrmContactsPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -670,6 +672,16 @@ export function CrmContactsPanel() {
             <SelectItem value="others">Others</SelectItem>
           </SelectContent>
         </Select>
+        {user?.id && (
+          <Button
+            variant="outline"
+            className={`gap-2 toggle-elevate${assignedFilter === user.id ? " toggle-elevated" : ""}`}
+            onClick={() => setAssignedFilter(assignedFilter === user.id ? "all" : user.id)}
+            data-testid="button-my-contacts-filter"
+          >
+            My Contacts
+          </Button>
+        )}
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" data-testid="button-more-filters">
