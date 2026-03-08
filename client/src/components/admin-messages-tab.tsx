@@ -397,9 +397,9 @@ export function AdminMessagesTab() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm">
-      {/* Sidebar */}
-      <div className="w-80 border-r flex flex-col bg-muted/30">
+    <div className="flex h-[calc(100dvh-200px)] md:h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm">
+      {/* Sidebar — full width on mobile when no active chat; hidden on mobile when chat is open */}
+      <div className={`${activeView ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r flex-col bg-muted/30`}>
         <div className="p-4 flex items-center justify-between border-b">
           <h2 className="text-xl font-bold">Chats</h2>
           <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)}>
@@ -542,13 +542,16 @@ export function AdminMessagesTab() {
         </ScrollArea>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-background">
+      {/* Main Chat Area — full width on mobile when chat is open; hidden on mobile when showing sidebar */}
+      <div className={`${activeView ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-background`}>
         {activeView ? (
           <>
             {/* Header */}
-            <div className="h-16 border-b flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-              <div className="flex items-center gap-3">
+            <div className="h-16 border-b flex items-center justify-between px-3 md:px-6 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Button variant="ghost" size="icon" className="md:hidden -ml-1 shrink-0" onClick={() => setActiveView(null)}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
                 {activeView.type === "dm" ? (
                   <>
                     <div className="relative">
@@ -687,7 +690,7 @@ export function AdminMessagesTab() {
                   )}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2 text-center font-medium opacity-60">
+              <p className="hidden md:block text-[10px] text-muted-foreground mt-2 text-center font-medium opacity-60">
                 Press Enter to send, Shift + Enter for new line
               </p>
             </div>
