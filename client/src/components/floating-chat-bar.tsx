@@ -474,7 +474,7 @@ export function FloatingChatBar() {
 
         <div
           className="bg-card border-t border-l border-border rounded-tl-lg flex items-center gap-2 px-3 py-2 cursor-pointer select-none"
-          onClick={() => setIsPanelOpen((v) => !v)}
+          onClick={() => window.dispatchEvent(new CustomEvent("open-admin-chat"))}
           data-testid="chat-bar-toggle"
         >
           <div className="flex items-center gap-2">

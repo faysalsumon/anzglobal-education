@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,11 +54,11 @@ export function MobileBottomNav() {
     { title: "Profile", url: "/student/profile", icon: User },
   ];
 
-  const adminNavItems = [
+  const adminNavItems: Array<{ title: string; url: string; icon: React.ElementType; badge?: number; action?: () => void }> = [
     { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
     { title: "Courses", url: "/courses", icon: Search },
     { title: "Institutions", url: "/institutions", icon: Building2 },
-    { title: "Chat", url: "/admin/dashboard?tab=messages", icon: MessageSquare, badge: unreadCount },
+    { title: "Chat", url: "#", icon: MessageSquare, badge: unreadCount, action: () => window.dispatchEvent(new CustomEvent("open-admin-chat")) },
     { title: "Profile", url: "/admin/profile", icon: User },
     ...(hasFullAdminAccess ? [{ title: "Manage", url: "/admin/dashboard#institutions", icon: PlusCircle }] : []),
   ];
@@ -68,37 +69,45 @@ export function MobileBottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t shadow-lg safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
-          const isActive = location === item.url || 
-                         (item.url !== "/dashboard" && location.startsWith(item.url));
-          return (
-            <Link key={item.title} href={item.url} className="flex-1">
-              <button
-                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative ${
-                  isActive 
-                    ? "text-primary" 
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`mobile-nav-${item.title.toLowerCase()}`}
-              >
-                <div className="relative">
-                  <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/10" : ""}`} />
-                  {item.badge && item.badge > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-2 -right-2 h-4 min-w-4 px-1 text-[10px] rounded-full"
-                      data-testid="badge-mobile-unread"
-                    >
-                      {item.badge > 9 ? "9+" : item.badge}
-                    </Badge>
-                  )}
-                </div>
-                <span className={`text-[10px] font-medium ${isActive ? "text-primary" : ""}`}>
-                  {item.title}
-                </span>
-                {isActive && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-primary rounded-b-full" />
+          const isActive = !item.action && (location === item.url || 
+                         (item.url !== "/dashboard" && location.startsWith(item.url)));
+          const innerContent = (
+            <button
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative ${
+                isActive 
+                  ? "text-primary" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid={`mobile-nav-${item.title.toLowerCase()}`}
+              onClick={item.action}
+            >
+              <div className="relative">
+                <item.icon className={`h-5 w-5 ${isActive ? "fill-primary/10" : ""}`} />
+                {item.badge && item.badge > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-4 min-w-4 px-1 text-[10px] rounded-full"
+                    data-testid="badge-mobile-unread"
+                  >
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </Badge>
                 )}
-              </button>
+              </div>
+              <span className={`text-[10px] font-medium ${isActive ? "text-primary" : ""}`}>
+                {item.title}
+              </span>
+              {isActive && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-primary rounded-b-full" />
+              )}
+            </button>
+          );
+          return item.action ? (
+            <div key={item.title} className="flex-1">
+              {innerContent}
+            </div>
+          ) : (
+            <Link key={item.title} href={item.url} className="flex-1">
+              {innerContent}
             </Link>
           );
         })}

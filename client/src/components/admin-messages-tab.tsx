@@ -64,6 +64,10 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 
+interface AdminMessagesTabProps {
+  inSheet?: boolean;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   available: 'bg-green-500',
   away: 'bg-yellow-500',
@@ -153,7 +157,7 @@ type ChatView = {
   id: string;
 };
 
-export function AdminMessagesTab() {
+export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}) {
   const { user } = useAuth();
   const { isConnected, lastMessage, sendMessage } = useWebSocket();
   const { toast } = useToast();
@@ -397,7 +401,7 @@ export function AdminMessagesTab() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-200px)] md:h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm">
+    <div className={inSheet ? "flex h-full bg-background overflow-hidden" : "flex h-[calc(100dvh-200px)] md:h-[calc(100vh-140px)] bg-background border rounded-xl overflow-hidden shadow-sm"}>
       {/* Sidebar — full width on mobile when no active chat; hidden on mobile when chat is open */}
       <div className={`${activeView ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r flex-col bg-muted/30`}>
         <div className="p-4 flex items-center justify-between border-b">

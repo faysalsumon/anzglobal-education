@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Breadcrumb,
@@ -10,6 +11,8 @@ import {
 import { Home } from "lucide-react";
 import { AdminMegaSidebar } from "@/components/admin-mega-sidebar";
 import { FloatingChatBar } from "@/components/floating-chat-bar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AdminLayoutProps {
@@ -52,9 +55,16 @@ export function AdminLayout({
 }: AdminLayoutProps) {
   const { hasFullAdminAccess, isCTO, adminRole } = useAuth();
   const [location, setLocation] = useLocation();
+  const [isChatOpen, setIsChatOpen] = useState(false);
   
   const derivedTab = activeTab || getTabFromPath(location);
   const isMarketingExecutive = adminRole === "marketing_executive" || adminRole === "support_staff";
+
+  useEffect(() => {
+    const handler = () => setIsChatOpen(true);
+    window.addEventListener("open-admin-chat", handler);
+    return () => window.removeEventListener("open-admin-chat", handler);
+  }, []);
 
   const handleTabChange = (tab: string) => {
     const route = TAB_TO_ROUTE_MAP[tab];
@@ -108,6 +118,12 @@ export function AdminLayout({
       </div>
 
       <FloatingChatBar />
+
+      <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[520px] p-0 flex flex-col [&>button]:z-50">
+          <AdminMessagesTab inSheet />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
