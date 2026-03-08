@@ -329,6 +329,22 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
     },
   });
 
+  const startConversationMutation = useMutation({
+    mutationFn: async (otherUserId: string) => {
+      const res = await apiRequest("POST", "/api/conversations", { otherUserId });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      setActiveView({ type: "dm", id: data.id });
+      setSearchQuery("");
+      setIsSearchOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Could not open conversation", variant: "destructive" });
+    },
+  });
+
   // Form for new channel
   const form = useForm<z.infer<typeof insertChannelSchema>>({
     resolver: zodResolver(insertChannelSchema),
@@ -359,6 +375,20 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
       );
     });
   }, [conversations, searchQuery]);
+
+  // Team members visible in search that don't have an existing conversation yet
+  const searchedMembers = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    const existingIds = new Set(conversations.map(c => c.otherParticipant?.id).filter(Boolean));
+    return allTeamMembers.filter(m => {
+      if (m.id === currentUserId) return false;
+      if (existingIds.has(m.id)) return false;
+      const name = `${m.firstName || ''} ${m.lastName || ''}`.toLowerCase();
+      const email = (m.email || '').toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [searchQuery, allTeamMembers, conversations, currentUserId]);
 
   // @mention filtered results
   const mentionResults = useMemo(() => {
@@ -737,6 +767,42 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                 </div>
               )}
             </div>
+
+            {/* Directory results — team members with no existing conversation */}
+            {searchedMembers.length > 0 && (
+              <div>
+                <div className="px-2 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Team Members
+                </div>
+                <div className="mt-1 space-y-1">
+                  {searchedMembers.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => startConversationMutation.mutate(member.id)}
+                      disabled={startConversationMutation.isPending}
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors hover:bg-muted"
+                    >
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          {member.profileImageUrl ? (
+                            <AvatarImage src={member.profileImageUrl} />
+                          ) : (
+                            <AvatarFallback>{getInitials(member.firstName, member.lastName)}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${STATUS_COLORS[member.availabilityStatus || 'available']}`} />
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="font-medium truncate">{member.firstName} {member.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate capitalize">
+                          {member.customStatusText || (member.availabilityStatus || 'available').replace(/_/g, ' ')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </div>
