@@ -13046,6 +13046,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/channels/:id/upload — upload file to channel (saves to object storage)
+  app.post("/api/channels/:id/upload", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const channelId = req.params.id;
+
+      const [membership] = await db
+        .select()
+        .from(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)))
+        .limit(1);
+
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied. You are not a member of this channel." });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.file;
+      const ext = file.originalname.split('.').pop()?.toLowerCase() || '';
+      const uniqueName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+      const storagePath = `.private/chat-files/channels/${channelId}/${uniqueName}`;
+
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const uploadResult = await storageClient.uploadFromBytes(storagePath, file.buffer);
+      if (!uploadResult.ok) {
+        console.error("Object storage upload failed:", uploadResult.error);
+        return res.status(500).json({ message: "File upload failed" });
+      }
+
+      const fileUrl = `/api/chat-files/channels/${channelId}/${uniqueName}`;
+      const content = req.body.content?.trim() || `Shared a file: ${file.originalname}`;
+
+      const [newMessage] = await db.insert(channelMessages).values({
+        channelId,
+        senderId: userId,
+        content,
+        fileUrl,
+        fileName: file.originalname,
+      }).returning();
+
+      const [senderUser] = await db
+        .select({ id: users.id, firstName: users.firstName, lastName: users.lastName, profileImageUrl: users.profileImageUrl, availabilityStatus: users.availabilityStatus })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const messageWithSender = { ...newMessage, sender: senderUser };
+
+      const allMembers = await db
+        .select({ userId: channelMembers.userId })
+        .from(channelMembers)
+        .where(eq(channelMembers.channelId, channelId));
+
+      broadcastToUsers(allMembers.map(m => m.userId), {
+        type: "channel_message",
+        channelId,
+        message: messageWithSender,
+      });
+
+      res.json(messageWithSender);
+    } catch (error: any) {
+      console.error("Error uploading channel file:", error);
+      res.status(500).json({ message: error.message || "File upload failed" });
+    }
+  });
+
+  // GET /api/chat-files/channels/:channelId/:filename — serve channel chat files from object storage
+  app.get("/api/chat-files/channels/:channelId/:filename", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const userId = user.claims?.sub || user.id;
+      const { channelId, filename } = req.params;
+
+      if (!filename || !/^[a-zA-Z0-9_\-.]+$/.test(filename)) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+
+      const [membership] = await db
+        .select()
+        .from(channelMembers)
+        .where(and(eq(channelMembers.channelId, channelId), eq(channelMembers.userId, userId)))
+        .limit(1);
+
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const storagePath = `.private/chat-files/channels/${channelId}/${filename}`;
+      const { Client } = await import("@replit/object-storage");
+      const storageClient = new Client();
+      const result = await storageClient.downloadAsBytes(storagePath);
+
+      if (!result.ok || !result.value) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'gif': 'image/gif', 'webp': 'image/webp',
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls': 'application/vnd.ms-excel',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt': 'text/plain', 'csv': 'text/csv',
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      const chunks = result.value as unknown as Uint8Array[];
+      res.send(Buffer.concat(chunks.map((c: Uint8Array) => Buffer.from(c))));
+    } catch (error) {
+      console.error("Error serving channel file:", error);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
   // ========================================
   // BLOG ROUTES
   // ========================================

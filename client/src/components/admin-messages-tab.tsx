@@ -34,6 +34,7 @@ import {
   CheckCheck,
   Mic,
   Laptop,
+  X,
 } from "lucide-react";
 import { format, isToday, isYesterday, isThisWeek, parseISO } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -172,6 +173,9 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFilePreview, setPendingFilePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const currentUser = user as any;
   const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -284,9 +288,67 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
     }
   }, [activeView, conversations]);
 
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !activeView) return;
+  const clearPendingFile = () => {
+    if (pendingFilePreview) URL.revokeObjectURL(pendingFilePreview);
+    setPendingFile(null);
+    setPendingFilePreview(null);
+  };
 
+  const handleFileSelect = (file: File) => {
+    clearPendingFile();
+    setPendingFile(file);
+    if (file.type.startsWith("image/")) {
+      setPendingFilePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!activeView) return;
+    if (!messageInput.trim() && !pendingFile) return;
+
+    // If there's a file to upload
+    if (pendingFile) {
+      if (activeView.type === "zan") {
+        toast({ title: "Not supported", description: "File sharing is not available with Zan." });
+        return;
+      }
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+        if (messageInput.trim()) formData.append("content", messageInput.trim());
+
+        const uploadUrl = activeView.type === "dm"
+          ? `/api/conversations/${activeView.id}/upload`
+          : `/api/channels/${activeView.id}/upload`;
+
+        const resp = await fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.message || "Upload failed");
+        }
+
+        clearPendingFile();
+        setMessageInput("");
+        if (activeView.type === "dm") {
+          queryClient.invalidateQueries({ queryKey: [`/api/conversations/${activeView.id}/messages`] });
+        } else {
+          queryClient.invalidateQueries({ queryKey: [`/api/channels/${activeView.id}/messages`] });
+        }
+      } catch (err: any) {
+        toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+
+    // Text-only send
     if (activeView.type === "dm") {
       const conv = conversations.find(c => c.id === activeView.id);
       if (!conv?.otherParticipant?.id) return;
@@ -644,18 +706,35 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                   </PopoverContent>
                 </Popover>
                 
-                <Textarea
-                  placeholder="Type a message..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 px-3 py-3 text-sm flex-1 bg-transparent"
-                />
+                <div className="flex-1 flex flex-col min-w-0">
+                  {pendingFile && (
+                    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                      {pendingFilePreview ? (
+                        <img src={pendingFilePreview} alt="preview" className="h-10 w-10 rounded object-cover border" />
+                      ) : (
+                        <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center">
+                          <File className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="text-xs text-foreground truncate max-w-[160px]">{pendingFile.name}</span>
+                      <button onClick={clearPendingFile} className="ml-auto text-muted-foreground hover:text-foreground shrink-0">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  <Textarea
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 px-3 py-3 text-sm bg-transparent"
+                  />
+                </div>
 
                 <div className="flex items-center gap-1 pr-1 pb-1">
                   <Popover>
@@ -679,13 +758,18 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
                     </PopoverContent>
                   </Popover>
 
-                  {messageInput.trim() ? (
+                  {(messageInput.trim() || pendingFile) ? (
                     <Button 
                       size="icon" 
                       className="h-8 w-8 rounded-lg bg-primary shadow-sm hover:opacity-90 transition-opacity"
                       onClick={handleSendMessage}
+                      disabled={isUploading}
                     >
-                      <Send className="h-4 w-4" />
+                      {isUploading ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                     </Button>
                   ) : (
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground opacity-50 cursor-not-allowed no-default-hover-elevate">
@@ -725,8 +809,27 @@ export function AdminMessagesTab({ inSheet = false }: AdminMessagesTabProps = {}
         )}
       </div>
 
-      <input type="file" ref={fileInputRef} className="hidden" onChange={() => toast({ title: "Coming soon", description: "File upload is in development" })} />
-      <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={() => toast({ title: "Coming soon", description: "Image upload is in development" })} />
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileSelect(file);
+          e.target.value = "";
+        }}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={imageInputRef}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileSelect(file);
+          e.target.value = "";
+        }}
+      />
 
       {/* New Channel Dialog */}
       <Dialog open={isNewChannelDialogOpen} onOpenChange={setIsNewChannelDialogOpen}>
