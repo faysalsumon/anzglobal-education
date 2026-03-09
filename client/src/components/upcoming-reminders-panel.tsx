@@ -13,10 +13,12 @@ import {
   FileText,
   ListTodo,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface Reminder {
   id: string;
@@ -43,6 +45,15 @@ export function UpcomingRemindersPanel({
   compact = false,
 }: UpcomingRemindersPanelProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const navigateToReminder = (reminder: Reminder) => {
+    if (reminder.taskId) {
+      setLocation(`/admin?tab=my-tasks&taskId=${reminder.taskId}`);
+    } else if (reminder.applicationId) {
+      setLocation(`/admin/applications/${reminder.applicationId}`);
+    }
+  };
 
   const { data: reminders = [], isLoading, isError, error } = useQuery<Reminder[]>({
     queryKey: ["/api/reminders/upcoming"],
@@ -188,6 +199,7 @@ export function UpcomingRemindersPanel({
             <div className="space-y-2 pr-4">
               {displayedReminders.map((reminder) => {
                 const timeInfo = getTimeLabel(reminder.reminderAt);
+                const isNavigable = !!(reminder.taskId || reminder.applicationId);
                 return (
                   <div
                     key={reminder.id}
@@ -197,39 +209,53 @@ export function UpcomingRemindersPanel({
                     data-testid={`reminder-item-${reminder.id}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5">
-                        {reminder.applicationId ? (
-                          <FileText className="h-4 w-4 text-primary" />
-                        ) : reminder.taskId ? (
-                          <ListTodo className="h-4 w-4 text-amber-500" />
-                        ) : (
-                          <Bell className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <Badge variant={timeInfo.variant} className="text-xs">
-                            {timeInfo.label}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(reminder.reminderAt)}
-                          </span>
+                      <button
+                        type="button"
+                        className={`flex items-start gap-3 flex-1 min-w-0 text-left bg-transparent border-0 p-0 ${
+                          isNavigable ? "cursor-pointer" : "cursor-default"
+                        }`}
+                        onClick={() => isNavigable && navigateToReminder(reminder)}
+                        data-testid={`button-navigate-reminder-${reminder.id}`}
+                        tabIndex={isNavigable ? 0 : -1}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {reminder.applicationId ? (
+                            <FileText className="h-4 w-4 text-primary" />
+                          ) : reminder.taskId ? (
+                            <ListTodo className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <Bell className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </div>
-                        {reminder.message ? (
-                          <p className="text-sm line-clamp-2">{reminder.message}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground italic">
-                            {reminder.applicationId
-                              ? "Application follow-up"
-                              : reminder.taskId
-                              ? "Task reminder"
-                              : "Reminder"}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <Badge variant={timeInfo.variant} className="text-xs">
+                              {timeInfo.label}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatTime(reminder.reminderAt)}
+                            </span>
+                            {isNavigable && (
+                              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                            )}
+                          </div>
+                          {reminder.message ? (
+                            <p className="text-sm line-clamp-2">{reminder.message}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">
+                              {reminder.applicationId
+                                ? "Application follow-up"
+                                : reminder.taskId
+                                ? "Task reminder"
+                                : "Reminder"}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                      <div className="flex gap-1 shrink-0">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => completeMutation.mutate(reminder.id)}
@@ -240,6 +266,7 @@ export function UpcomingRemindersPanel({
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                         </Button>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => deleteMutation.mutate(reminder.id)}

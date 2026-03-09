@@ -27,13 +27,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { CalendarIcon, ListTodo, Loader2, User } from "lucide-react";
+import { Bell, CalendarIcon, ListTodo, Loader2, User } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { TaskInlineNotes } from "@/components/task-inline-notes";
+import { CreateReminderModal } from "@/components/create-reminder-modal";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -134,6 +135,7 @@ export function TaskDialog({
   const { toast } = useToast();
   const { user } = useAuth();
   const isEditing = !!task;
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -502,6 +504,18 @@ export function TaskDialog({
             )}
 
             <DialogFooter className="gap-2 sm:gap-0">
+              {isEditing && task && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setReminderModalOpen(true)}
+                  className="mr-auto"
+                  data-testid="button-set-task-reminder"
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  Set Reminder
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -530,6 +544,14 @@ export function TaskDialog({
           </>
         )}
       </DialogContent>
+
+      {isEditing && task && (
+        <CreateReminderModal
+          open={reminderModalOpen}
+          onOpenChange={setReminderModalOpen}
+          taskId={task.id}
+        />
+      )}
     </Dialog>
   );
 }

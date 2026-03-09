@@ -141,7 +141,7 @@ import {
   type ApiKeyUsageLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, or, desc, isNull, sql, lt } from "drizzle-orm";
+import { eq, and, like, or, desc, isNull, sql, lt, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -362,6 +362,7 @@ export interface IStorage {
   getReminderById(id: string): Promise<FollowUpReminder | undefined>;
   getRemindersByUserId(userId: string): Promise<FollowUpReminder[]>;
   getUpcomingReminders(userId: string): Promise<FollowUpReminder[]>;
+  getDueReminders(): Promise<FollowUpReminder[]>;
   getRemindersByApplicationId(applicationId: string): Promise<FollowUpReminder[]>;
   createReminder(reminder: InsertFollowUpReminder): Promise<FollowUpReminder>;
   updateReminder(id: string, data: Partial<InsertFollowUpReminder>): Promise<FollowUpReminder>;
@@ -2208,6 +2209,20 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(followUpReminders.userId, userId),
           eq(followUpReminders.isCompleted, false)
+        )
+      )
+      .orderBy(followUpReminders.reminderAt);
+  }
+
+  async getDueReminders(): Promise<FollowUpReminder[]> {
+    return await db
+      .select()
+      .from(followUpReminders)
+      .where(
+        and(
+          lte(followUpReminders.reminderAt, new Date()),
+          eq(followUpReminders.isCompleted, false),
+          eq(followUpReminders.notificationSent, false)
         )
       )
       .orderBy(followUpReminders.reminderAt);

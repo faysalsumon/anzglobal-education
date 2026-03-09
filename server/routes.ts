@@ -178,6 +178,7 @@ import {
   notifyDocumentRequested,
   notifyDocumentUploadedToAdmin,
   notifyTaskAssigned,
+  notifyTaskDueReminder,
 } from "./notifications";
 import { sendContactInquiryEmails, sendProfileCompletionReminder, sendNewLeadAdminNotification, sendTaskAssignedEmail, sendTaskDueReminderEmail, sendTaskCompletedEmail, sendLeadAssignedEmail, sendApplicationAssignedEmail, sendDocumentUploadedAdminEmail } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
@@ -22659,6 +22660,67 @@ Sitemap: ${baseUrl}/sitemap.xml
   // ============================================
   // END NOTIFICATION SETTINGS API ENDPOINTS
   // ============================================
+
+  // ==========================================
+  // Scheduled: Fire due follow-up reminders
+  // ==========================================
+  const REMINDER_CHECK_INTERVAL = 5 * 60 * 1000; // every 5 minutes
+  setInterval(async () => {
+    try {
+      const dueReminders = await storage.getDueReminders();
+      if (!dueReminders.length) return;
+
+      for (const reminder of dueReminders) {
+        try {
+          const user = await storage.getUser(reminder.userId);
+          if (!user) continue;
+
+          let contextLabel = reminder.message || "You have a follow-up reminder";
+          let taskTitle: string | undefined;
+
+          if (reminder.taskId) {
+            const task = await storage.getTaskById(reminder.taskId);
+            if (task) {
+              taskTitle = task.title;
+              contextLabel = reminder.message || `Follow-up on task: ${task.title}`;
+            }
+          } else if (reminder.applicationId) {
+            contextLabel = reminder.message || "Application follow-up reminder";
+          }
+
+          // In-app notification
+          await notifyTaskDueReminder({
+            userId: reminder.userId,
+            taskId: reminder.taskId || reminder.id,
+            taskTitle: taskTitle || contextLabel,
+            dueDate: "now",
+          });
+
+          // Email notification
+          if (user.email) {
+            sendTaskDueReminderEmail({
+              recipientEmail: user.email,
+              recipientName: getUserDisplayName(user),
+              taskTitle: taskTitle || "Follow-up reminder",
+              dueDate: new Date(reminder.reminderAt).toLocaleString(),
+            }).catch(err => console.error('[Reminder] Failed to send reminder email:', err));
+          }
+
+          // Mark as sent
+          await storage.updateReminder(reminder.id, {
+            notificationSent: true,
+            notificationSentAt: new Date(),
+          });
+
+          console.log(`[Reminder] Dispatched reminder ${reminder.id} to user ${reminder.userId}`);
+        } catch (err) {
+          console.error(`[Reminder] Failed to process reminder ${reminder.id}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('[Reminder] Scheduler error:', err);
+    }
+  }, REMINDER_CHECK_INTERVAL);
 
   // Start scraping worker only if Redis is available
   const { checkRedisAvailability } = await import('./scraping-queue');
