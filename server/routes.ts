@@ -17366,6 +17366,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       };
       
       const data = updateTaskSchema.parse(bodyWithDates);
+
+      // Only the task owner (creator) can mark a task as completed
+      if (data.status === 'completed' && existingTask.createdById && userId !== existingTask.createdById) {
+        return res.status(403).json({ message: "Only the task owner can mark a task as completed" });
+      }
+
       const task = await storage.updateTask(req.params.id, data);
       
       // Log activity with user attribution

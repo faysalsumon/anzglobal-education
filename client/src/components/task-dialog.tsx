@@ -68,6 +68,7 @@ interface Task {
   applicationId: string | null;
   dueDate: string | null;
   createdAt: string | null;
+  createdById?: string | null;
 }
 
 interface TeamMember {
@@ -136,6 +137,7 @@ export function TaskDialog({
   const { user } = useAuth();
   const isEditing = !!task;
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const isOwner = !isEditing || !task?.createdById || task.createdById === user?.id;
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -375,11 +377,13 @@ export function TaskDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
+                        {Object.entries(STATUS_LABELS)
+                          .filter(([value]) => isOwner || value !== "completed")
+                          .map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
