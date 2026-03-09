@@ -86,6 +86,8 @@ import { AdminApiKeysPanel } from "@/components/admin-api-keys-panel";
 import { AdminNotificationSettingsPanel } from "@/components/admin-notification-settings-panel";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminMobileBottomNav } from "@/components/admin-mobile-bottom-nav";
+import { ClockInButton } from "@/components/clock-in-button";
+import { AttendancePanel } from "@/components/attendance-panel";
 
 // Helper function to get ISO 2-letter country code for flag-icons library
 const getCountryIsoCode = (country: string | null | undefined): string | null => {
@@ -541,6 +543,11 @@ export default function AdminDashboard() {
     'profile-management': 'Permission Profiles',
     'messages': 'Messages',
     'notification-settings': 'Notification Settings',
+    'attendance': 'Attendance',
+    'api-keys': 'Partner API',
+    'tags': 'Tag Manager',
+    'qualification-types': 'Qualification Types',
+    'entry-requirement-templates': 'Entry Requirements',
   };
   
   const getCurrentBreadcrumbName = () => tabDisplayNames[activeTab] || 'Dashboard';
@@ -1939,6 +1946,7 @@ export default function AdminDashboard() {
 
             {/* Platform-wide Notifications, Profile, and Logout */}
             <div className="flex items-center gap-2">
+              <ClockInButton />
               <NotificationBell />
               
               {/* Profile Avatar */}
@@ -3383,6 +3391,15 @@ export default function AdminDashboard() {
         {/* Notification Settings Tab */}
         {activeTab === "notification-settings" && hasFullAdminAccess && (
           <AdminNotificationSettingsPanel />
+        )}
+
+        {/* Attendance Tab - People / HR Module */}
+        {activeTab === "attendance" && (
+          <AttendancePanel
+            hasFullAdminAccess={hasFullAdminAccess}
+            isCTO={isCTO}
+            userBranchId={user?.branchId ?? null}
+          />
         )}
 
               </div>

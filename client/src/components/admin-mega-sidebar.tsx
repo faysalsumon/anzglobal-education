@@ -41,6 +41,7 @@ import {
   Key,
   Bell,
   MessageCircle,
+  UserCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/ANZ PNG Logo_1762427712478.png";
@@ -134,6 +135,16 @@ export function AdminMegaSidebar({
         { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess && canSeeFeature('branches') },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess && canSeeFeature('regions') },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
+      ],
+    },
+    {
+      id: "people",
+      label: "People",
+      icon: UsersRound,
+      color: "text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400",
+      routes: [
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: true },
+        // Future: Leave, KPI Tracking, Performance Reviews
       ],
     },
     {

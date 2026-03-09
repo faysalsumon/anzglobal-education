@@ -5265,3 +5265,29 @@ export const savedFilters = pgTable("saved_filters", {
 export const insertSavedFilterSchema = createInsertSchema(savedFilters).omit({ id: true, createdAt: true });
 export type SavedFilter = typeof savedFilters.$inferSelect;
 export type InsertSavedFilter = z.infer<typeof insertSavedFilterSchema>;
+
+// ── People / HR Module ────────────────────────────────────────────────────────
+// This domain will grow to include Leave, KPI Tracking, and Performance Reviews.
+// All tables share the pattern: userId (FK → users), branchId (snapshot at creation),
+// timestamps, and RBAC scoping enforced at the API layer.
+
+export const attendanceRecords = pgTable("attendance_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  branchId: varchar("branch_id"),
+  clockInAt: timestamp("clock_in_at").notNull().defaultNow(),
+  clockInPhotoPath: varchar("clock_in_photo_path").notNull(),
+  clockOutAt: timestamp("clock_out_at"),
+  clockOutPhotoPath: varchar("clock_out_photo_path"),
+  totalMinutes: integer("total_minutes"),
+  workDate: varchar("work_date", { length: 10 }).notNull(),
+  notes: varchar("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAttendanceRecordSchema = createInsertSchema(attendanceRecords).omit({
+  id: true,
+  createdAt: true,
+});
+export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
+export type InsertAttendanceRecord = z.infer<typeof insertAttendanceRecordSchema>;

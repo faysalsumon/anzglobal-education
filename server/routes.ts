@@ -16779,6 +16779,11 @@ Sitemap: ${baseUrl}/sitemap.xml
   // Register Supabase authentication routes
   setupSupabaseAuth(app);
 
+  // Register attendance routes (People / HR module)
+  const { registerAttendanceRoutes } = await import('./attendance-routes');
+  registerAttendanceRoutes(app);
+  console.log('Attendance routes registered for People/HR module');
+
   // ========== Activity Logs API ==========
   
   // Get all activity logs (admin only) with optional filtering

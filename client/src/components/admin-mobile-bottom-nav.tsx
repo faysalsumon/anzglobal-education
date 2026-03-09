@@ -48,6 +48,7 @@ import {
   Settings,
   Wrench,
   ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -181,6 +182,16 @@ export function AdminMobileBottomNav({
         { icon: MapPin, label: "Branches", value: "branches", show: hasFullAdminAccess && canSeeFeature("branches") },
         { icon: Globe, label: "Regions", value: "regions", show: hasFullAdminAccess && canSeeFeature("regions") },
         { icon: Link2, label: "Affiliates", value: "affiliates", show: hasFullAdminAccess },
+      ],
+    },
+    {
+      id: "people",
+      label: "People",
+      icon: UsersRound,
+      colorClass: "text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-400",
+      items: [
+        { icon: UserCheck, label: "Attendance", value: "attendance", show: true },
+        // Future: Leave, KPI Tracking, Performance Reviews
       ],
     },
     {
