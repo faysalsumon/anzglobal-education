@@ -119,7 +119,7 @@ import {
   NOTIFICATION_TYPES,
   NOTIFICATION_ROLES,
 } from "@shared/schema";
-import { eq, and, or, desc, not, inArray, sql as dsql, isNull, isNotNull, ne } from "drizzle-orm";
+import { eq, and, or, desc, not, inArray, sql as dsql, isNull, isNotNull, ne, count, sum } from "drizzle-orm";
 import { z } from "zod";
 import { 
   isAdmin as checkIsAdmin, 
@@ -9614,6 +9614,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error revoking invitation:", error);
       res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  // ==================== BRANCH MANAGER DASHBOARD ====================
+
+  // GET /api/admin/branch/stats — aggregated branch dashboard data
+  app.get("/api/admin/branch/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const access = await checkAdminAccess(userId);
+      if (!access) return res.status(403).json({ message: "Admin access required" });
+
+      const { users: usersTable, courses, universities, studentProfiles, crmContacts, attendanceRecords } = await import("@shared/schema");
+
+      // Resolve branch: branch managers use their own, CTO/admin can pass ?branchId=
+      let branchId: string | null = null;
+      if (access.role === "branch_manager") {
+        const [self] = await db.select({ branchId: usersTable.branchId }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        branchId = self?.branchId ?? null;
+      } else if (req.query.branchId) {
+        branchId = req.query.branchId as string;
+      }
+
+      if (!branchId) return res.status(400).json({ message: "No branch associated with this account" });
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Run all queries in parallel
+      const [
+        branchRow,
+        leadCountRow,
+        appRows,
+        teamRows,
+        attendanceStatsRow,
+        recentApps,
+        todayAttendeeRows,
+        teamMemberRows,
+      ] = await Promise.all([
+        // Branch info
+        db.select({ id: branches.id, name: branches.name, city: branches.city, country: branches.country, address: branches.address })
+          .from(branches).where(eq(branches.id, branchId)).limit(1),
+
+        // Lead count (clientStatus = 'lead')
+        db.select({ cnt: count() }).from(crmContacts)
+          .where(and(eq(crmContacts.branchId, branchId), eq(crmContacts.clientStatus, "lead" as any))),
+
+        // Applications by status
+        db.select({ status: applications.status, cnt: count() }).from(applications)
+          .where(eq(applications.branchId, branchId)).groupBy(applications.status),
+
+        // Team size (admin users in this branch)
+        db.select({ cnt: count() }).from(usersTable)
+          .where(and(eq(usersTable.branchId, branchId), eq(usersTable.userType, "admin"))),
+
+        // Today's attendance stats
+        db.select({ cnt: count(), totalMins: sum(attendanceRecords.totalMinutes) }).from(attendanceRecords)
+          .where(and(eq(attendanceRecords.branchId, branchId), eq(attendanceRecords.workDate, today))),
+
+        // Recent applications (last 8) with student name + course
+        db.select({
+          id: applications.id,
+          status: applications.status,
+          createdAt: applications.createdAt,
+          studentFirstName: studentProfiles.firstName,
+          studentLastName: studentProfiles.lastName,
+          courseName: courses.name,
+          institutionName: universities.name,
+        }).from(applications)
+          .innerJoin(studentProfiles, eq(applications.studentId, studentProfiles.id))
+          .leftJoin(courses, eq(applications.courseId, courses.id))
+          .leftJoin(universities, eq(courses.universityId, universities.id))
+          .where(eq(applications.branchId, branchId))
+          .orderBy(desc(applications.createdAt)).limit(8),
+
+        // Today's attendees with user info
+        db.select({
+          userId: attendanceRecords.userId,
+          clockInAt: attendanceRecords.clockInAt,
+          clockOutAt: attendanceRecords.clockOutAt,
+          totalMinutes: attendanceRecords.totalMinutes,
+          firstName: usersTable.firstName,
+          lastName: usersTable.lastName,
+          email: usersTable.email,
+          profileImageUrl: usersTable.profileImageUrl,
+        }).from(attendanceRecords)
+          .innerJoin(usersTable, eq(attendanceRecords.userId, usersTable.id))
+          .where(and(eq(attendanceRecords.branchId, branchId), eq(attendanceRecords.workDate, today)))
+          .orderBy(desc(attendanceRecords.clockInAt)),
+
+        // All team members with role name
+        db.select({
+          id: usersTable.id,
+          firstName: usersTable.firstName,
+          lastName: usersTable.lastName,
+          email: usersTable.email,
+          profileImageUrl: usersTable.profileImageUrl,
+          roleName: roles.displayName,
+        }).from(usersTable)
+          .leftJoin(roles, eq(usersTable.roleId, roles.id))
+          .where(and(eq(usersTable.branchId, branchId), eq(usersTable.userType, "admin")))
+          .orderBy(usersTable.firstName),
+      ]);
+
+      // Aggregate application counts by status
+      const appCounts = { total: 0, pending: 0, reviewing: 0, accepted: 0, rejected: 0, withdrawn: 0, other: 0 };
+      for (const row of appRows) {
+        const n = Number(row.cnt);
+        appCounts.total += n;
+        const s = row.status as string;
+        if (s === "pending") appCounts.pending += n;
+        else if (s === "reviewing") appCounts.reviewing += n;
+        else if (s === "accepted") appCounts.accepted += n;
+        else if (s === "rejected") appCounts.rejected += n;
+        else if (s === "withdrawn") appCounts.withdrawn += n;
+        else appCounts.other += n;
+      }
+
+      // Build attendee set for presence lookup
+      const presentUserIds = new Set(todayAttendeeRows.map(a => a.userId));
+
+      res.json({
+        branch: branchRow[0] ?? null,
+        stats: {
+          leadCount: Number(leadCountRow[0]?.cnt ?? 0),
+          applicationCounts: appCounts,
+          teamSize: Number(teamRows[0]?.cnt ?? 0),
+          todayAttendance: {
+            present: Number(attendanceStatsRow[0]?.cnt ?? 0),
+            totalMinutes: Number(attendanceStatsRow[0]?.totalMins ?? 0),
+          },
+        },
+        recentApplications: recentApps,
+        todayAttendees: todayAttendeeRows,
+        teamMembers: teamMemberRows.map(m => ({ ...m, isPresent: presentUserIds.has(m.id) })),
+      });
+    } catch (err) {
+      console.error("[Branch] GET /api/admin/branch/stats error:", err);
+      res.status(500).json({ message: "Failed to load branch stats" });
     }
   });
 

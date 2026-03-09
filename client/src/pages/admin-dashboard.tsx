@@ -75,6 +75,7 @@ import { AdminTeamPanel } from "@/components/admin-team-panel";
 import { AdminBranchesPanel } from "@/components/admin-branches-panel";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminDashboardOverview } from "@/components/admin-dashboard-overview";
+import { BranchManagerDashboard } from "@/components/branch-manager-dashboard";
 import { InstitutionEditor } from "@/components/institution-editor";
 import { CourseEditor } from "@/components/course-editor";
 import { AdminTagsPanel } from "@/components/admin-tags-panel";
@@ -424,7 +425,7 @@ const PROVIDER_TYPES = ["Institution", "TAFE", "University", "College", "School"
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin } = useAuth();
+  const { user, isLoading, isAuthenticated, isAuthResolved, adminRole, isConsultant, isCTO, isMarketingExecutive, hasFullAdminAccess, isAdmin, isBranchManager } = useAuth();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { signOut } = useSupabaseAuth();
@@ -1998,10 +1999,16 @@ export default function AdminDashboard() {
                 <div className="space-y-4 md:space-y-5">
         {/* Dashboard Overview Tab */}
         {activeTab === "overview" && (
-          <AdminDashboardOverview 
-            onNavigate={(tab) => setActiveTab(tab)} 
-            hasFullAdminAccess={hasFullAdminAccess}
-          />
+          isBranchManager && user?.branchId
+            ? <BranchManagerDashboard
+                branchId={user.branchId}
+                userName={[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || ""}
+                onNavigate={(tab) => setActiveTab(tab)}
+              />
+            : <AdminDashboardOverview
+                onNavigate={(tab) => setActiveTab(tab)}
+                hasFullAdminAccess={hasFullAdminAccess}
+              />
         )}
 
         {/* My Tasks Tab */}

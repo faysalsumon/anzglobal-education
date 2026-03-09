@@ -85,7 +85,7 @@ export function AdminMegaSidebar({
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(true);
   const isOnProfilePage = location === "/admin/profile";
 
-  const { user } = useAuth();
+  const { user, isBranchManager } = useAuth();
   const adminRegionCode = user?.regionCode || null;
   const isGlobalScope = user?.defaultScope === 'global' || !adminRegionCode;
 
@@ -262,11 +262,11 @@ export function AdminMegaSidebar({
                     }}
                     data-testid="button-dashboard-overview"
                   >
-                    <LayoutDashboard className="h-5 w-5" />
+                    {isBranchManager ? <Building2 className="h-5 w-5" /> : <LayoutDashboard className="h-5 w-5" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  Dashboard
+                  {isBranchManager ? "Branch Overview" : "Dashboard"}
                 </TooltipContent>
               </Tooltip>
 
