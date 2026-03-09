@@ -20,6 +20,7 @@ import {
   X,
   Trash2,
   Loader2,
+  ImageOff,
 } from "lucide-react";
 
 interface AttendanceRecord {
@@ -73,6 +74,38 @@ function getUserInitials(firstName: string | null, lastName: string | null, emai
 function getPhotoUrl(path: string, userId: string): string {
   const filename = path.split("/").pop();
   return `/api/public-storage/attendance-photos/${userId}/${filename}`;
+}
+
+function PhotoThumb({ src, alt, onClick, testId, title }: {
+  src: string;
+  alt: string;
+  onClick: () => void;
+  testId: string;
+  title: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={failed ? undefined : onClick}
+      className="flex-shrink-0 h-9 w-9 rounded flex items-center justify-center hover-elevate"
+      data-testid={testId}
+      title={title}
+    >
+      {failed ? (
+        <span className="flex items-center justify-center h-9 w-9 rounded bg-muted text-muted-foreground">
+          <ImageOff className="h-4 w-4" />
+        </span>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="h-9 w-9 object-cover rounded"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </button>
+  );
 }
 
 function getDefaultDateFrom(): string {
@@ -377,35 +410,21 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
+                        <PhotoThumb
+                          src={getPhotoUrl(record.clockInPhotoPath, record.userId)}
+                          alt="Clock-in"
                           onClick={() => setLightboxUrl(getPhotoUrl(record.clockInPhotoPath, record.userId))}
-                          className="flex-shrink-0 rounded overflow-hidden hover-elevate"
-                          data-testid={`img-clock-in-photo-${record.id}`}
+                          testId={`img-clock-in-photo-${record.id}`}
                           title="Clock-in photo"
-                        >
-                          <img
-                            src={getPhotoUrl(record.clockInPhotoPath, record.userId)}
-                            alt="Clock-in"
-                            className="h-9 w-9 object-cover rounded"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                          />
-                        </button>
+                        />
                         {record.clockOutPhotoPath && (
-                          <button
-                            type="button"
+                          <PhotoThumb
+                            src={getPhotoUrl(record.clockOutPhotoPath, record.userId)}
+                            alt="Clock-out"
                             onClick={() => setLightboxUrl(getPhotoUrl(record.clockOutPhotoPath!, record.userId))}
-                            className="flex-shrink-0 rounded overflow-hidden hover-elevate"
-                            data-testid={`img-clock-out-photo-${record.id}`}
+                            testId={`img-clock-out-photo-${record.id}`}
                             title="Clock-out photo"
-                          >
-                            <img
-                              src={getPhotoUrl(record.clockOutPhotoPath, record.userId)}
-                              alt="Clock-out"
-                              className="h-9 w-9 object-cover rounded"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                          </button>
+                          />
                         )}
                       </div>
                     </td>

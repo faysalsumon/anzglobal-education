@@ -32,7 +32,14 @@ async function uploadPhotoToStorage(
   const objectPath = `attendance-photos/${userId}/${filename}`;
   const { Client } = await import("@replit/object-storage");
   const client = new Client();
-  await client.uploadFromBytes(objectPath, buffer);
+  const uploadResult = await client.uploadFromBytes(objectPath, buffer, {
+    contentType: "image/jpeg",
+  });
+  if (!uploadResult.ok) {
+    console.error("[Attendance] Photo upload failed:", uploadResult.error);
+    throw new Error("Failed to upload attendance photo to storage");
+  }
+  console.log("[Attendance] Photo uploaded:", objectPath);
   return objectPath;
 }
 
@@ -173,10 +180,13 @@ export function registerAttendanceRoutes(app: Express) {
       const { Client } = await import("@replit/object-storage");
       const client = new Client();
       const result = await client.downloadAsBytes(objectPath);
-      if (!result.ok) return res.status(404).json({ message: "Photo not found" });
+      if (!result.ok) {
+        console.warn("[Attendance] Photo not found in storage:", objectPath);
+        return res.status(404).json({ message: "Photo not found" });
+      }
       res.set("Content-Type", "image/jpeg");
       res.set("Cache-Control", "public, max-age=86400");
-      res.send(Buffer.from(result.value));
+      res.send(result.value);
     } catch (err) {
       console.error("[Attendance] Photo proxy error:", err);
       res.status(404).json({ message: "Photo not found" });
