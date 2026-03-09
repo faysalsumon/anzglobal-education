@@ -238,13 +238,13 @@ export default function Landing() {
   const heroTypingWords = isAU
     ? ["Dream Course in Australia", "Perfect Australian University", "Future Career in Australia"]
     : isBD
-      ? ["Dream Course Abroad", "Perfect University Worldwide", "Future in Australia, UK or Canada"]
+      ? ["Dream Course Abroad", "Perfect University Worldwide", "Future in Australia, UK, Canada or New Zealand"]
       : ["Dream Course", "Perfect University", "Future Career"];
 
   const heroSubtitle = isAU
     ? "Your gateway to world-class Australian education — search courses, compare universities, and apply with confidence."
     : isBD
-      ? "Bangladesh's most trusted study abroad platform — find courses in Australia, UK, Canada & more. Free expert counseling, visa guidance & scholarship support."
+      ? "Bangladesh's most trusted study abroad platform — find courses in Australia, UK, Canada, New Zealand & more. Free expert counseling, visa guidance & scholarship support."
       : "We take the guesswork out of studying abroad — search courses, compare options, and apply with confidence.";
 
   // SEO data
@@ -252,12 +252,12 @@ export default function Landing() {
   const pageTitle = isAU
     ? "ANZ Global Education - Study Abroad | Top Australian Universities & Courses"
     : isBD
-      ? "ANZ Global Education - Study Abroad | Australia, UK, Canada Universities"
+      ? "ANZ Global Education - Study Abroad | Australia, UK, Canada & NZ Universities"
       : "ANZ Global Education - Study Abroad | Connect Universities and Students Worldwide";
   const pageDescription = isAU
     ? "Discover top Australian universities and courses. AI-powered course matching, scholarships, and expert visa guidance for international students."
     : isBD
-      ? "Bangladesh's trusted study abroad platform. Find courses in Australia, UK, Canada & more. Free counseling, 98% visa success rate, scholarship support for Bangladeshi students."
+      ? "Bangladesh's trusted study abroad platform. Find courses in Australia, UK, Canada, New Zealand & more. Free counseling, 98% visa success rate, scholarship support for Bangladeshi students."
       : "AI-powered course discovery platform connecting universities and students worldwide. Find your perfect course with intelligent filtering and direct application system.";
   const ogImage = `${siteUrl}/og-image.png`;
 
@@ -360,7 +360,7 @@ export default function Landing() {
                 "@type": "SiteNavigationElement",
                 "position": 1,
                 "name": "Find Courses",
-                "description": isAU ? "Browse thousands of Australian university courses" : "Browse courses in Australia, UK, Canada and more",
+                "description": isAU ? "Browse thousands of Australian university courses" : "Browse courses in Australia, UK, Canada, New Zealand and more",
                 "url": `${siteUrl}/courses`
               },
               {
@@ -550,7 +550,7 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
+            <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5 max-w-6xl mx-auto">
               {([
                 {
                   code: "AU",
@@ -582,6 +582,14 @@ export default function Landing() {
                   name: "United States",
                   country: "United States",
                   description: "World-class research universities, diverse programs & global career outcomes",
+                  badge: null,
+                },
+                {
+                  code: "NZ",
+                  flagCode: "NZ",
+                  name: "New Zealand",
+                  country: "New Zealand",
+                  description: "High quality education, post-study work visas & a welcoming lifestyle",
                   badge: null,
                 },
               ] as const).map((dest) => (
