@@ -38,19 +38,61 @@ export function WebcamCaptureModal({
   const startCamera = async () => {
     setCameraError(null);
     setCameraReady(false);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Your browser does not support camera access. Please use a modern browser (Chrome, Safari, Firefox) over HTTPS.");
+      return;
+    }
+
+    const attemptGetStream = async (constraints: MediaStreamConstraints): Promise<MediaStream> => {
+      return navigator.mediaDevices.getUserMedia(constraints);
+    };
+
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
+      // First attempt: preferred front-facing camera with ideal (not exact) dimensions
+      stream = await attemptGetStream({
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
       });
+    } catch (err: any) {
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+        setCameraError("Camera permission denied. Please allow camera access in your browser settings and try again.");
+        return;
+      }
+      // Second attempt: bare video with no constraints (widest device compatibility)
+      try {
+        stream = await attemptGetStream({ video: true });
+      } catch (err2: any) {
+        if (err2?.name === "NotAllowedError" || err2?.name === "PermissionDeniedError") {
+          setCameraError("Camera permission denied. Please allow camera access in your browser settings and try again.");
+        } else if (err2?.name === "NotFoundError" || err2?.name === "DevicesNotFoundError") {
+          setCameraError("No camera found on this device. Please connect a camera and try again.");
+        } else if (err2?.name === "NotReadableError" || err2?.name === "TrackStartError") {
+          setCameraError("Camera is in use by another application. Please close other apps using the camera and try again.");
+        } else {
+          setCameraError("Camera not available. Please allow camera access in your browser settings and try again.");
+        }
+        return;
+      }
+    }
+
+    if (stream) {
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => setCameraReady(true);
+        const video = videoRef.current;
+        video.srcObject = stream;
+        const markReady = () => setCameraReady(true);
+        video.addEventListener("loadedmetadata", markReady, { once: true });
+        video.addEventListener("canplay", markReady, { once: true });
+        video.play().catch(() => {
+          // play() may be blocked — camera still usable for capture
+          setCameraReady(true);
+        });
       }
-    } catch {
-      setCameraError(
-        "Camera not available. Please allow camera access in your browser settings and try again."
-      );
     }
   };
 
