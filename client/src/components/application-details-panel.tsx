@@ -33,10 +33,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentEvents } from "@/hooks/useDocumentEvents";
 import { 
-  User, GraduationCap, Building, FileText, History, MessageSquare,
+  User, GraduationCap, Building, Building2, FileText, History, MessageSquare,
   Edit, Trash2, Upload, Download, Eye, CheckCircle, XCircle, Clock,
   AlertTriangle, Plus, Calendar, UserCheck, ExternalLink, Send, Layers
 } from "lucide-react";
+import { format } from "date-fns";
 import { ApplicationInternalNotes } from "@/components/application-internal-notes";
 import { StudentApplicationNotes } from "@/components/student-application-notes";
 import { ApplicationStageSelector } from "@/components/application-stage-selector";
@@ -519,213 +520,234 @@ export function ApplicationDetailsPanel({
     return { label: "Uploaded", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" };
   };
 
+  const statusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'accepted': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
+      case 'reviewing': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'withdrawn': return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400';
+      case 'pending': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+      default: return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+    }
+  };
+  const formatStatus = (s: string) =>
+    s === 'accepted' ? 'Accepted' : s === 'reviewing' ? 'Under Review' : s === 'rejected' ? 'Rejected'
+    : s === 'withdrawn' ? 'Withdrawn' : s === 'pending' ? 'Pending'
+    : s.charAt(0).toUpperCase() + s.slice(1);
+
+  const tabTriggerClass = "rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 sm:px-4 py-2.5 text-sm gap-1.5 shrink-0";
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+
+      {/* ── Hero Banner ─────────────────────────────────────── */}
+      <Card className="overflow-hidden" data-testid="card-application-hero">
+        <CardContent className="p-5">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Avatar className="h-14 w-14 shrink-0 ring-2 ring-background ring-offset-2">
+              <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
+                {(student.firstName?.[0] ?? '') + (student.lastName?.[0] ?? '')}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                {application.applicationNumber && (
+                  <Badge variant="outline" className="font-mono text-xs no-default-active-elevate" data-testid="badge-application-number">
+                    {application.applicationNumber}
+                  </Badge>
+                )}
+                <Badge className={`text-xs no-default-active-elevate ${statusBadgeClass(application.status)}`} data-testid="badge-status-hero">
+                  {formatStatus(application.status)}
+                </Badge>
+              </div>
+              <h2 className="text-xl font-bold leading-tight" data-testid="text-student-name-hero">
+                {student.firstName} {student.lastName}
+              </h2>
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+                <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+                {course.title}
+                {course.level && <span className="text-xs text-muted-foreground/70">· {course.level}</span>}
+              </p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <Building2 className="h-3 w-3 shrink-0" />
+                {university.name}
+                {university.country && <span className="opacity-70">· {university.country}</span>}
+              </p>
+            </div>
+
+            <div className="flex sm:flex-col items-start sm:items-end gap-2 shrink-0">
+              {!isEditing && (
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)} data-testid="button-edit-application">
+                    <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setDeleteConfirmOpen(true)} data-testid="button-delete-application">
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                  </Button>
+                </div>
+              )}
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3 shrink-0" />
+                Applied {format(new Date(application.createdAt), 'd MMM yyyy')}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Tabs ─────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="details" className="flex items-center gap-1" data-testid="tab-details">
-            <FileText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Details</span>
+        <TabsList className="w-full border-b bg-transparent h-auto p-0 rounded-none justify-start overflow-x-auto">
+          <TabsTrigger value="details" className={tabTriggerClass} data-testid="tab-details">
+            <FileText className="h-3.5 w-3.5" />Details
           </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-1" data-testid="tab-documents">
-            <Upload className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Documents</span>
+          <TabsTrigger value="documents" className={tabTriggerClass} data-testid="tab-documents">
+            <Upload className="h-3.5 w-3.5" />Documents
             {documents.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">{documents.length}</Badge>
+              <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px] no-default-active-elevate">{documents.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="messages" className="flex items-center gap-1" data-testid="tab-messages">
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Messages</span>
+          <TabsTrigger value="messages" className={tabTriggerClass} data-testid="tab-messages">
+            <MessageSquare className="h-3.5 w-3.5" />Messages
           </TabsTrigger>
-          <TabsTrigger value="notes" className="flex items-center gap-1" data-testid="tab-notes">
-            <User className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Internal</span>
+          <TabsTrigger value="notes" className={tabTriggerClass} data-testid="tab-notes">
+            <User className="h-3.5 w-3.5" /><span className="hidden sm:inline">Internal Notes</span><span className="sm:hidden">Notes</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-1" data-testid="tab-history">
-            <History className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">History</span>
+          <TabsTrigger value="history" className={tabTriggerClass} data-testid="tab-history">
+            <History className="h-3.5 w-3.5" />History
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="mt-4 space-y-6">
-          {/* Application Number Header */}
-          {application.applicationNumber && (
-            <div className="flex items-center gap-2 mb-4">
-              <Badge variant="outline" className="text-sm font-mono px-3 py-1" data-testid="badge-application-number">
-                {application.applicationNumber}
-              </Badge>
-              <span className="text-xs text-muted-foreground">Application Reference</span>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ApplicationStageSelector
-                applicationId={application.id}
-                currentStage={application.currentStage}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              {!isEditing && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} data-testid="button-edit-application">
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setDeleteConfirmOpen(true)} data-testid="button-delete-application">
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </>
-              )}
-            </div>
+        <TabsContent value="details" className="mt-5 space-y-5">
+          {/* Stage Selector */}
+          <div className="flex items-center gap-3">
+            <ApplicationStageSelector
+              applicationId={application.id}
+              currentStage={application.currentStage}
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  Student Information
+          {/* 3-column grid: Courses (wide) + Assignment (narrow) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Courses & Institution — spans 2 cols */}
+            <Card className="lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                  Courses &amp; Institution ({applicationCourses.length || 1})
                 </CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAddCourseDialogOpen(true)}
+                  data-testid="button-add-course"
+                >
+                  <Plus className="h-3 w-3 mr-1" />Add
+                </Button>
               </CardHeader>
               <CardContent className="space-y-2">
+                {coursesLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading courses...</p>
+                ) : applicationCourses.length > 0 ? (
+                  applicationCourses.map((appCourse, index) => (
+                    <div key={appCourse.id} className="flex items-start justify-between gap-3 p-3 rounded-md border" data-testid={`course-item-${index}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-sm font-medium">{appCourse.course.title}</p>
+                          {appCourse.isPrimary && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 no-default-active-elevate">Primary</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Building className="h-3 w-3 shrink-0" />{appCourse.university.name}
+                        </p>
+                        {appCourse.course.level && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">{appCourse.course.level}</p>
+                        )}
+                      </div>
+                      {applicationCourses.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeCourseMutation.mutate(appCourse.courseId)}
+                          disabled={removeCourseMutation.isPending}
+                          data-testid={`button-remove-course-${index}`}
+                        >
+                          <XCircle className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 rounded-md border">
+                    <p className="text-sm font-medium">{course.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <Building className="h-3 w-3 shrink-0" />{university.name}
+                    </p>
+                    {course.level && <p className="text-xs text-muted-foreground/70 mt-0.5">{course.level}</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Assignment — narrow */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  Assignment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium">{student.firstName} {student.lastName}</p>
-                  <p className="text-xs text-muted-foreground">{student.email}</p>
+                  <p className="text-xs text-muted-foreground mb-1.5">Consultant</p>
+                  <Select
+                    value={application.assignedConsultantId || "_unassigned"}
+                    onValueChange={(v) => {
+                      assignConsultantMutation.mutate(v === "_unassigned" ? null : v);
+                    }}
+                    disabled={assignConsultantMutation.isPending}
+                  >
+                    <SelectTrigger data-testid="select-assign-consultant">
+                      <SelectValue placeholder="Assign consultant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_unassigned">Unassigned</SelectItem>
+                      {assignableUsers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {consultant?.email && (
+                    <p className="text-xs text-muted-foreground mt-1.5">{consultant.email}</p>
+                  )}
                 </div>
-                <Separator className="my-2" />
+                <Separator />
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Application Slots</p>
-                    <p className="text-sm font-medium">
-                      {slotsData?.usedSlots || 0} / {slotsData?.maxSlots || 3} used
+                    <p className="text-sm font-semibold mt-0.5">
+                      {slotsData?.usedSlots || 0} / {slotsData?.maxSlots || 3} <span className="font-normal text-muted-foreground">used</span>
                     </p>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setNewMaxSlots(slotsData?.maxSlots || 3);
                       setSlotsDialogOpen(true);
                     }}
                     data-testid="button-manage-slots"
                   >
-                    <Layers className="h-3 w-3 mr-1" />
-                    Manage
+                    <Layers className="h-3 w-3 mr-1" />Manage
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                    Courses ({applicationCourses.length || 1})
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setAddCourseDialogOpen(true)}
-                    data-testid="button-add-course"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {coursesLoading ? (
-                  <p className="text-xs text-muted-foreground">Loading courses...</p>
-                ) : applicationCourses.length > 0 ? (
-                  applicationCourses.map((appCourse, index) => (
-                    <div key={appCourse.id} className="flex items-start justify-between gap-2 p-2 rounded-md border" data-testid={`course-item-${index}`}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-sm font-medium truncate">{appCourse.course.title}</p>
-                          {appCourse.isPrimary && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0">Primary</Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{appCourse.university.name}</p>
-                        {appCourse.course.level && (
-                          <p className="text-xs text-muted-foreground">{appCourse.course.level}</p>
-                        )}
-                      </div>
-                      {applicationCourses.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => removeCourseMutation.mutate(appCourse.courseId)}
-                          disabled={removeCourseMutation.isPending}
-                          data-testid={`button-remove-course-${index}`}
-                        >
-                          <XCircle className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-2 rounded-md border">
-                    <p className="text-sm font-medium">{course.title}</p>
-                    <p className="text-xs text-muted-foreground">{university.name}</p>
-                    {course.level && <p className="text-xs text-muted-foreground">{course.level}</p>}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  University
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm font-medium">{university.name}</p>
-                  <p className="text-xs text-muted-foreground">{university.country}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-muted-foreground" />
-                  Assigned Consultant
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {/* Always show consultant selector for quick assignment */}
-                <Select
-                  value={application.assignedConsultantId || "_unassigned"}
-                  onValueChange={(v) => {
-                    const newConsultantId = v === "_unassigned" ? null : v;
-                    assignConsultantMutation.mutate(newConsultantId);
-                  }}
-                  disabled={assignConsultantMutation.isPending}
-                >
-                  <SelectTrigger data-testid="select-assign-consultant">
-                    <SelectValue placeholder="Assign consultant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_unassigned">Unassigned</SelectItem>
-                    {assignableUsers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.firstName} {c.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {consultant?.email && (
-                  <p className="text-xs text-muted-foreground">{consultant.email}</p>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -784,42 +806,24 @@ export function ApplicationDetailsPanel({
           )}
 
           <Separator />
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4" data-testid="section-application-meta">
             <div>
-              <span className="text-muted-foreground">Application Status:</span>
-              <Badge 
-                className={`ml-2 ${
-                  application.status === 'accepted' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                    : application.status === 'reviewing' 
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                    : application.status === 'rejected'
-                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    : application.status === 'withdrawn'
-                    ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                    : application.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                }`}
-                data-testid="badge-application-status"
-              >
-                {application.status === 'accepted' ? 'Accepted' 
-                  : application.status === 'reviewing' ? 'Under Review'
-                  : application.status === 'rejected' ? 'Rejected'
-                  : application.status === 'withdrawn' ? 'Withdrawn'
-                  : application.status === 'pending' ? 'Pending'
-                  : application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-              </Badge>
+              <dt className="text-xs text-muted-foreground mb-1">Status</dt>
+              <dd>
+                <Badge className={`text-xs no-default-active-elevate ${statusBadgeClass(application.status)}`} data-testid="badge-application-status">
+                  {formatStatus(application.status)}
+                </Badge>
+              </dd>
             </div>
             <div>
-              <span className="text-muted-foreground">Applied:</span>
-              <span className="ml-2">{new Date(application.createdAt).toLocaleDateString()}</span>
+              <dt className="text-xs text-muted-foreground mb-1">Applied</dt>
+              <dd className="text-sm font-medium">{format(new Date(application.createdAt), 'd MMM yyyy')}</dd>
             </div>
             <div>
-              <span className="text-muted-foreground">Last Updated:</span>
-              <span className="ml-2">{new Date(application.updatedAt).toLocaleDateString()}</span>
+              <dt className="text-xs text-muted-foreground mb-1">Last Updated</dt>
+              <dd className="text-sm font-medium">{format(new Date(application.updatedAt), 'd MMM yyyy')}</dd>
             </div>
-          </div>
+          </dl>
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">

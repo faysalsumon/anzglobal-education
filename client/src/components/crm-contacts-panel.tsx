@@ -626,24 +626,35 @@ export function CrmContactsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
         <div>
           <h2 className="text-2xl font-bold" data-testid="text-crm-contacts-title">CRM Contacts</h2>
-          <p className="text-muted-foreground">Manage your contact database</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-muted-foreground text-sm">Manage your contact database</p>
+            {contactsData && (
+              <Badge variant="secondary" className="text-xs no-default-active-elevate" data-testid="badge-contact-count">
+                {contactsData.total} contact{contactsData.total !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center border rounded-lg p-1">
+          <div className="flex items-center gap-1">
             <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              type="button"
+              variant="ghost"
               size="sm"
+              className={`toggle-elevate${viewMode === 'list' ? ' toggle-elevated' : ''}`}
               onClick={() => setViewMode('list')}
               data-testid="button-view-list"
             >
               <List className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              type="button"
+              variant="ghost"
               size="sm"
+              className={`toggle-elevate${viewMode === 'kanban' ? ' toggle-elevated' : ''}`}
               onClick={() => setViewMode('kanban')}
               data-testid="button-view-kanban"
             >
@@ -662,7 +673,7 @@ export function CrmContactsPanel() {
               </SelectContent>
             </Select>
           )}
-          <Button onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
+          <Button type="button" onClick={() => navigate("/admin/contacts/new")} data-testid="button-create-contact">
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
           </Button>
@@ -1000,85 +1011,83 @@ export function CrmContactsPanel() {
           {contactsData?.contacts?.map((contact) => (
             <div
               key={contact.id}
-              className="flex items-center gap-4 p-4 border rounded-lg hover-elevate cursor-pointer"
+              className="flex items-center gap-3 px-4 py-3 border rounded-lg hover-elevate cursor-pointer"
               onClick={() => setSelectedContact(contact)}
               data-testid={`card-contact-${contact.id}`}
             >
-              <Avatar className="h-10 w-10">
+              {/* Avatar */}
+              <Avatar className="h-9 w-9 shrink-0">
                 <AvatarImage src={contact.photo || undefined} />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                   {contact.firstName?.[0]}{contact.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
+
+              {/* Main content */}
               <div className="flex-1 min-w-0">
+                {/* Name + primary badges */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium" data-testid={`text-contact-name-${contact.id}`}>
+                  <span className="text-sm font-semibold leading-tight" data-testid={`text-contact-name-${contact.id}`}>
                     {contact.firstName} {contact.lastName}
                   </span>
+                  <Badge variant="outline" className={`text-xs no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
+                    {contactTypeLabels[contact.contactType]}
+                  </Badge>
                   {contact.clientStatus && (
-                    <Badge variant="outline" className={clientStatusColors[contact.clientStatus]} data-testid={`badge-status-${contact.id}`}>
+                    <Badge variant="outline" className={`text-xs no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid={`badge-status-${contact.id}`}>
                       {clientStatusLabels[contact.clientStatus]}
                     </Badge>
                   )}
                   {contact.clientStatus === 'lead' && contact.leadStage && (
-                    <Badge variant="outline" className={`text-xs ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
+                    <Badge variant="outline" className={`text-xs no-default-active-elevate ${leadStageColors[contact.leadStage]}`} data-testid={`badge-lead-stage-${contact.id}`}>
                       {leadStageLabels[contact.leadStage]}
                     </Badge>
                   )}
-                  <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
-                    {contactTypeLabels[contact.contactType]}
-                  </Badge>
                   {contact.leadRating && (
-                    <Badge variant="secondary" className={leadRatingColors[contact.leadRating]}>
+                    <Badge variant="secondary" className={`text-xs no-default-active-elevate ${leadRatingColors[contact.leadRating]}`}>
                       {leadRatingLabels[contact.leadRating]}
                     </Badge>
                   )}
-                  {contact.entrySource && (
-                    <Badge variant="secondary" className={`text-xs ${entrySourceColors[contact.entrySource]}`}>
-                      {entrySourceLabels[contact.entrySource]}
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {contact.email}
-                  </span>
+                {/* Meta row */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                  {contact.email && (
+                    <span className="flex items-center gap-1 truncate max-w-[200px]">
+                      <Mail className="h-3 w-3 shrink-0" />{contact.email}
+                    </span>
+                  )}
                   {contact.mobile && (
                     <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {contact.mobile}
+                      <Phone className="h-3 w-3 shrink-0" />{contact.mobile}
                     </span>
                   )}
-                  {contact.city && (
+                  {(contact.city || contact.country) && (
                     <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {contact.city}
-                    </span>
-                  )}
-                  {contact.country && (
-                    <span className="flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      {contact.country}
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {[contact.city, contact.country].filter(Boolean).join(', ')}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="text-right text-sm text-muted-foreground">
+
+              {/* Right column: date + owner */}
+              <div className="text-right text-xs text-muted-foreground shrink-0 hidden sm:block">
                 {contact.createdAt && (
-                  <div className="flex items-center gap-1">
+                  <p className="flex items-center justify-end gap-1">
                     <Calendar className="h-3 w-3" />
-                    {format(new Date(contact.createdAt), "MMM d, yyyy")}
-                  </div>
+                    {format(new Date(contact.createdAt), "d MMM yyyy")}
+                  </p>
                 )}
                 {contact.ownerUser && (
-                  <div className="flex items-center gap-1 mt-1">
+                  <p className="flex items-center justify-end gap-1 mt-0.5">
                     <User className="h-3 w-3" />
                     {contact.ownerUser.firstName} {contact.ownerUser.lastName}
-                  </div>
+                  </p>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }}>
+
+              {/* View icon */}
+              <Button type="button" variant="ghost" size="icon" className="shrink-0 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }} data-testid={`button-view-contact-${contact.id}`}>
                 <Eye className="h-4 w-4" />
               </Button>
             </div>
@@ -1912,100 +1921,134 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-3 flex-wrap">
-        <Button variant="ghost" size="icon" onClick={onBack} data-testid="button-back" className="flex-shrink-0 mt-0.5">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Avatar className="h-12 w-12 flex-shrink-0">
-          <AvatarImage src={contact.photo || undefined} />
-          <AvatarFallback>{contact.firstName?.[0]}{contact.lastName?.[0]}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold leading-tight" data-testid="text-contact-detail-name">
-            {contact.firstName} {contact.lastName}
-            {contact.preferredName && (
-              <span className="text-base font-normal text-muted-foreground ml-2">
-                ({contact.preferredName})
-              </span>
+    <div className="space-y-5">
+      {/* ── Hero Card ─────────────────────────────────────────── */}
+      <Card className="overflow-hidden border-t-4 border-t-primary" data-testid="card-contact-hero">
+        <CardContent className="pt-5 pb-4 px-5">
+          {/* Back + actions row */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <Button type="button" variant="ghost" size="sm" onClick={onBack} data-testid="button-back" className="-ml-1 gap-1">
+              <ChevronLeft className="h-4 w-4" />Back
+            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
+                <Edit className="h-3.5 w-3.5 mr-1" />Edit
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
+                <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+              </Button>
+            </div>
+          </div>
+
+          {/* Avatar + identity */}
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16 shrink-0 ring-2 ring-background ring-offset-2">
+              <AvatarImage src={contact.photo || undefined} />
+              <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                {contact.firstName?.[0]}{contact.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold leading-tight" data-testid="text-contact-detail-name">
+                {contact.firstName} {contact.lastName}
+              </h2>
+              {contact.preferredName && (
+                <p className="text-sm text-muted-foreground">{contact.preferredName}</p>
+              )}
+              {contact.email && (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mt-0.5 w-fit"
+                  data-testid="link-contact-email"
+                >
+                  <Mail className="h-3.5 w-3.5 shrink-0" />{contact.email}
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Badges row */}
+          <div className="flex items-center gap-2 flex-wrap mt-4">
+            <Badge variant="outline" className={`no-default-active-elevate ${contactTypeColors[contact.contactType]}`}>
+              {contactTypeLabels[contact.contactType]}
+            </Badge>
+            {contact.clientStatus && (
+              <Badge variant="outline" className={`no-default-active-elevate ${clientStatusColors[contact.clientStatus]}`} data-testid="badge-contact-status">
+                {clientStatusLabels[contact.clientStatus]}
+              </Badge>
             )}
-          </h2>
-          <p className="text-sm text-muted-foreground truncate">{contact.email}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={onEdit} data-testid="button-edit-contact">
-            <Edit className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
-          <Button variant="destructive" size="sm" onClick={onDelete} data-testid="button-delete-contact">
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
-        </div>
-      </div>
+            {contact.gender && (
+              <Badge variant="secondary" className="no-default-active-elevate">
+                {contact.gender === 'male' ? 'Male' : contact.gender === 'female' ? 'Female' : contact.gender === 'other' ? 'Other' : 'Prefer not to say'}
+              </Badge>
+            )}
+            {contact.nationality && (
+              <Badge variant="secondary" className="no-default-active-elevate">{contact.nationality}</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" className={contactTypeColors[contact.contactType]}>
-          {contactTypeLabels[contact.contactType]}
-        </Badge>
-        {contact.gender && (
-          <Badge variant="secondary">
-            {contact.gender === 'male' ? 'Male' : 
-             contact.gender === 'female' ? 'Female' : 
-             contact.gender === 'other' ? 'Other' : 
-             'Prefer not to say'}
-          </Badge>
-        )}
-        {contact.nationality && <Badge variant="secondary">{contact.nationality}</Badge>}
-      </div>
-
+      {/* ── Lead Stage Progress ────────────────────────────────── */}
       {contact.clientStatus === 'lead' && contact.leadStage && (
-        <LeadStageProgressBar 
-          currentStage={contact.leadStage as LeadStage} 
-          contactId={contact.id}
-          onStageChange={(newStage) => {
-            updateStageMutation.mutate({ id: contact.id, data: { leadStage: newStage } });
-          }}
-          isUpdating={updateStageMutation.isPending}
-        />
+        <div className="my-1">
+          <LeadStageProgressBar 
+            currentStage={contact.leadStage as LeadStage} 
+            contactId={contact.id}
+            onStageChange={(newStage) => {
+              updateStageMutation.mutate({ id: contact.id, data: { leadStage: newStage } });
+            }}
+            isUpdating={updateStageMutation.isPending}
+          />
+        </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Contact Information</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              Contact Information
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>{contact.email}</span>
-            </div>
+          <CardContent className="space-y-2.5">
+            {contact.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <a href={`mailto:${contact.email}`} className="text-sm hover:text-primary truncate" data-testid="link-email-detail">{contact.email}</a>
+              </div>
+            )}
             {contact.mobile && (
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.mobile} (Mobile)</span>
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                <a href={`tel:${contact.mobile}`} className="text-sm hover:text-primary" data-testid="link-mobile-detail">{contact.mobile}</a>
+                <span className="text-xs text-muted-foreground">Mobile</span>
               </div>
             )}
             {contact.whatsapp && (
               <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.whatsapp} (WhatsApp)</span>
+                <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g,'')}`} className="text-sm hover:text-primary" target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp-detail">{contact.whatsapp}</a>
+                <span className="text-xs text-muted-foreground">WhatsApp</span>
               </div>
             )}
             {contact.phone && (
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{contact.phone}</span>
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                <a href={`tel:${contact.phone}`} className="text-sm hover:text-primary" data-testid="link-phone-detail">{contact.phone}</a>
               </div>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Address</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              Address
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-1 text-sm">
             {contact.street || contact.city ? (
               <>
                 {(contact.unitNo || contact.street) && (
@@ -2025,8 +2068,11 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
 
         {(contact.courseName || contact.entrySource || contact.leadRating || contact.visaStatus || contact.country) && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Inquiry Details</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Inquiry Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {contact.courseName && (
