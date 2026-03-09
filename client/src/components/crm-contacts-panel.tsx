@@ -308,6 +308,96 @@ const KANBAN_TYPES: ContactType[] = ['clients', 'external', 'internal', 'partner
 const KANBAN_CLIENT_STATUSES: ClientStatus[] = ['lead', 'applicant', 'enrolled', 'completed', 'inactive'];
 const LEAD_PIPELINE_STAGES: LeadStage[] = ['new', 'contacted', 'qualified', 'counselling', 'ready_to_apply', 'converted', 'lost'];
 
+type AdminUser = { id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null };
+
+function AssignPopover({
+  contactId,
+  assignedTo,
+  admins,
+  onAssign,
+  triggerClassName,
+}: {
+  contactId: string;
+  assignedTo: string | null;
+  admins: AdminUser[];
+  onAssign: (contactId: string, adminId: string | null) => void;
+  triggerClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = admins.filter((a) => {
+    const q = search.toLowerCase();
+    return (
+      a.firstName.toLowerCase().includes(q) ||
+      a.lastName.toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch(""); }}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={`shrink-0 text-muted-foreground ${triggerClassName || ""}`}
+          onClick={(e) => e.stopPropagation()}
+          data-testid={`button-assign-contact-${contactId}`}
+        >
+          <UserPlus className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-2 z-50" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-muted-foreground px-1 pb-2">Assign to team member</p>
+        <div className="relative mb-2">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search..."
+            className="h-8 pl-7 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+        {assignedTo && (
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate text-destructive"
+            onClick={(e) => { e.stopPropagation(); onAssign(contactId, null); setOpen(false); }}
+          >
+            <UserMinus className="h-4 w-4 shrink-0" />
+            <span>Unassign</span>
+          </button>
+        )}
+        <div className="max-h-48 overflow-y-auto space-y-0.5">
+          {filtered.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">No results</p>
+          ) : (
+            filtered.map((admin) => (
+              <button
+                key={admin.id}
+                type="button"
+                className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate ${assignedTo === admin.id ? "bg-primary/10 text-primary font-medium" : ""}`}
+                onClick={(e) => { e.stopPropagation(); onAssign(contactId, admin.id); setOpen(false); }}
+                data-testid={`option-assign-${admin.id}`}
+              >
+                <Avatar className="h-6 w-6 shrink-0">
+                  <AvatarImage src={admin.profileImageUrl || undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {admin.firstName?.[0]}{admin.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate">{admin.firstName} {admin.lastName}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function CrmContactsPanel() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -382,7 +472,7 @@ export function CrmContactsPanel() {
     enabled: !!selectedContact?.id,
   });
 
-  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; userType: string }[]>({
+  const { data: admins } = useQuery<{ id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null }[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const headers = await getAuthHeaders();
@@ -1119,57 +1209,12 @@ export function CrmContactsPanel() {
               </div>
 
               {/* Quick-assign button */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-muted-foreground"
-                    onClick={(e) => e.stopPropagation()}
-                    data-testid={`button-assign-contact-${contact.id}`}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-1 z-50" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Assign to team member</p>
-                  {contact.assignedTo && (
-                    <button
-                      type="button"
-                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateMutation.mutate({ id: contact.id, data: { assignedTo: null } });
-                      }}
-                    >
-                      <UserMinus className="h-4 w-4 shrink-0" />
-                      <span>Unassign</span>
-                    </button>
-                  )}
-                  <div className="max-h-48 overflow-y-auto">
-                    {admins?.map((admin) => (
-                      <button
-                        key={admin.id}
-                        type="button"
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate ${contact.assignedTo === admin.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateMutation.mutate({ id: contact.id, data: { assignedTo: admin.id } });
-                        }}
-                        data-testid={`option-assign-${admin.id}`}
-                      >
-                        <Avatar className="h-5 w-5 shrink-0">
-                          <AvatarFallback className="text-[10px]">
-                            {admin.firstName?.[0]}{admin.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{admin.firstName} {admin.lastName}</span>
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <AssignPopover
+                contactId={contact.id}
+                assignedTo={contact.assignedTo}
+                admins={admins || []}
+                onAssign={(id, adminId) => updateMutation.mutate({ id, data: { assignedTo: adminId } })}
+              />
 
               {/* View icon */}
               <Button type="button" variant="ghost" size="icon" className="shrink-0 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }} data-testid={`button-view-contact-${contact.id}`}>
@@ -1884,7 +1929,7 @@ interface ContactDetailViewProps {
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  admins: { id: string; firstName: string; lastName: string; userType: string }[];
+  admins: { id: string; firstName: string; lastName: string; userType: string; profileImageUrl: string | null }[];
   onAssign: (contactId: string, adminId: string | null) => void;
 }
 
@@ -2334,44 +2379,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign
                 ) : (
                   <span className="text-sm text-muted-foreground italic">Not assigned</span>
                 )}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" data-testid="button-detail-assign">
-                      <UserPlus className="h-3.5 w-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-1 z-50">
-                    <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Assign to team member</p>
-                    {contact.assignedTo && (
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate text-destructive"
-                        onClick={() => onAssign(contact.id, null)}
-                      >
-                        <UserMinus className="h-4 w-4 shrink-0" />
-                        <span>Unassign</span>
-                      </button>
-                    )}
-                    <div className="max-h-48 overflow-y-auto">
-                      {admins.map((admin) => (
-                        <button
-                          key={admin.id}
-                          type="button"
-                          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate ${contact.assignedTo === admin.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                          onClick={() => onAssign(contact.id, admin.id)}
-                          data-testid={`option-detail-assign-${admin.id}`}
-                        >
-                          <Avatar className="h-5 w-5 shrink-0">
-                            <AvatarFallback className="text-[10px]">
-                              {admin.firstName?.[0]}{admin.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="truncate">{admin.firstName} {admin.lastName}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <AssignPopover
+                  contactId={contact.id}
+                  assignedTo={contact.assignedTo}
+                  admins={admins}
+                  onAssign={onAssign}
+                />
               </div>
             </div>
             {contact.sourceLead && (
