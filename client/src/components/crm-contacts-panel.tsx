@@ -67,9 +67,12 @@ import {
   Link2,
   Bookmark,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  UserPlus,
+  UserMinus
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SavedFilter } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -1071,7 +1074,7 @@ export function CrmContactsPanel() {
                 </div>
               </div>
 
-              {/* Right column: date + owner */}
+              {/* Right column: date + people avatars */}
               <div className="text-right text-xs text-muted-foreground shrink-0 hidden sm:block">
                 {contact.createdAt && (
                   <p className="flex items-center justify-end gap-1">
@@ -1079,13 +1082,92 @@ export function CrmContactsPanel() {
                     {format(new Date(contact.createdAt), "d MMM yyyy")}
                   </p>
                 )}
-                {contact.ownerUser && (
-                  <p className="flex items-center justify-end gap-1 mt-0.5">
-                    <User className="h-3 w-3" />
-                    {contact.ownerUser.firstName} {contact.ownerUser.lastName}
-                  </p>
-                )}
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  {contact.ownerUser && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-6 w-6 cursor-default">
+                          <AvatarImage src={contact.ownerUser.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {contact.ownerUser.firstName?.[0]}{contact.ownerUser.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs">Owner: {contact.ownerUser.firstName} {contact.ownerUser.lastName}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {contact.assignedUser && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-6 w-6 cursor-default ring-2 ring-primary/30">
+                          <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs">Assigned to: {contact.assignedUser.firstName} {contact.assignedUser.lastName}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
+
+              {/* Quick-assign button */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-muted-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid={`button-assign-contact-${contact.id}`}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-1 z-50" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Assign to team member</p>
+                  {contact.assignedTo && (
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateMutation.mutate({ id: contact.id, data: { assignedTo: null } });
+                      }}
+                    >
+                      <UserMinus className="h-4 w-4 shrink-0" />
+                      <span>Unassign</span>
+                    </button>
+                  )}
+                  <div className="max-h-48 overflow-y-auto">
+                    {admins?.map((admin) => (
+                      <button
+                        key={admin.id}
+                        type="button"
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate ${contact.assignedTo === admin.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateMutation.mutate({ id: contact.id, data: { assignedTo: admin.id } });
+                        }}
+                        data-testid={`option-assign-${admin.id}`}
+                      >
+                        <Avatar className="h-5 w-5 shrink-0">
+                          <AvatarFallback className="text-[10px]">
+                            {admin.firstName?.[0]}{admin.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{admin.firstName} {admin.lastName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {/* View icon */}
               <Button type="button" variant="ghost" size="icon" className="shrink-0 text-muted-foreground" onClick={(e) => { e.stopPropagation(); setSelectedContact(contact); }} data-testid={`button-view-contact-${contact.id}`}>
@@ -1373,6 +1455,17 @@ function DraggableContactCard({
               </>
             )}
           </div>
+          {contact.assignedUser && (
+            <div className="mt-2 pt-2 border-t flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Avatar className="h-5 w-5 shrink-0 ring-1 ring-primary/30">
+                <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                  {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -1403,6 +1496,17 @@ function KanbanContactCardOverlay({ contact }: { contact: CrmContact }) {
               </p>
             </div>
           </div>
+          {contact.assignedUser && (
+            <div className="mt-2 pt-2 border-t flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Avatar className="h-5 w-5 shrink-0 ring-1 ring-primary/30">
+                <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                  {contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+            </div>
+          )}
         </div>
       </div>
     </Card>
