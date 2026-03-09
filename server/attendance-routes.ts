@@ -184,9 +184,11 @@ export function registerAttendanceRoutes(app: Express) {
         console.warn("[Attendance] Photo not found in storage:", objectPath);
         return res.status(404).json({ message: "Photo not found" });
       }
-      res.set("Content-Type", "image/jpeg");
-      res.set("Cache-Control", "public, max-age=86400");
-      res.send(result.value);
+      // Google Cloud Storage SDK returns [Buffer] (array), not a raw Buffer
+      const imgBuffer = Array.isArray(result.value) ? result.value[0] : result.value;
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.end(imgBuffer);
     } catch (err) {
       console.error("[Attendance] Photo proxy error:", err);
       res.status(404).json({ message: "Photo not found" });
@@ -236,6 +238,7 @@ export function registerAttendanceRoutes(app: Express) {
             firstName: users.firstName,
             lastName: users.lastName,
             email: users.email,
+            profileImageUrl: users.profileImageUrl,
             userBranchId: users.branchId,
             branchName: branches.name,
           })

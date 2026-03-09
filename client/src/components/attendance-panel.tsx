@@ -36,6 +36,7 @@ interface AttendanceRecord {
   firstName: string | null;
   lastName: string | null;
   email: string | null;
+  profileImageUrl: string | null;
   branchName: string | null;
 }
 
@@ -87,7 +88,7 @@ function PhotoThumb({ src, alt, onClick, testId, title }: {
   return (
     <button
       type="button"
-      onClick={failed ? undefined : onClick}
+      onClick={onClick}
       className="flex-shrink-0 h-9 w-9 rounded flex items-center justify-center hover-elevate"
       data-testid={testId}
       title={title}
@@ -374,6 +375,10 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-7 w-7 flex-shrink-0">
+                          <AvatarImage
+                            src={record.profileImageUrl ?? undefined}
+                            alt={record.firstName ? `${record.firstName} ${record.lastName}` : (record.email ?? "")}
+                          />
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">
                             {getUserInitials(record.firstName, record.lastName, record.email)}
                           </AvatarFallback>
