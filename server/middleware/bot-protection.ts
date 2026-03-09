@@ -249,7 +249,7 @@ export function securityHeadersMiddleware(_req: Request, res: Response, next: Ne
   
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
   
   next();
 }
