@@ -716,7 +716,7 @@ export default function AdminDashboard() {
   });
 
   // Queries - Conditionally loaded based on role
-  // Users and Institutions: Only for CTO and support_manager (full admin access)
+  // Users and Institutions: Only for CTO and branch_manager (full admin access)
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/super-admin/users"],
     enabled: hasFullAdminAccess, // Only full admins can access users
@@ -3722,7 +3722,7 @@ export default function AdminDashboard() {
                 <SelectContent>
                   <SelectItem value="cto">CTO</SelectItem>
                   <SelectItem value="platform_admin">Platform Admin</SelectItem>
-                  <SelectItem value="support_manager">Support Manager</SelectItem>
+                  <SelectItem value="branch_manager">Branch Manager</SelectItem>
                   <SelectItem value="support_staff">Support Staff</SelectItem>
                   <SelectItem value="operations_staff">Operations Staff</SelectItem>
                 </SelectContent>

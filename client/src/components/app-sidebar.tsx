@@ -42,7 +42,7 @@ export function AppSidebar() {
   const getPortalLabel = () => {
     if (isAdmin) {
       if (isCTO) return "CTO Portal";
-      if (adminRole === "support_manager") return "Support Manager Portal";
+      if (adminRole === "branch_manager") return "Branch Manager Portal";
       if (adminRole === "support_staff") return "Support Staff Portal";
       if (adminRole === "operations_staff") return "Operations Staff Portal";
       return "Admin Portal";

@@ -57,7 +57,7 @@ export function TopNavBar() {
 
   const hasFullAdminAccess = isAdmin && (
     user?.adminRole === "cto" ||
-    user?.adminRole === "support_manager"
+    user?.adminRole === "branch_manager"
   );
 
   const universityNavItems: NavItem[] = [
@@ -101,7 +101,7 @@ export function TopNavBar() {
     if (user.userType === "admin") {
       const adminRole = user.adminRole || user.role;
       if (adminRole === "cto") return "CTO";
-      if (adminRole === "support_manager") return "Support Manager";
+      if (adminRole === "branch_manager") return "Branch Manager";
       if (adminRole === "support_staff") return "Consultant";
       return "Admin";
     }

@@ -1394,7 +1394,7 @@ function formatRole(role: string): string {
   const roleLabels: Record<string, string> = {
     cto: 'CTO',
     platform_admin: 'Platform Admin',
-    support_manager: 'Support Manager',
+    branch_manager: 'Branch Manager',
     support_staff: 'Support Staff',
     operations_staff: 'Operations Staff',
   };

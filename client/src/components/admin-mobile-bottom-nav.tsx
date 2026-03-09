@@ -131,7 +131,7 @@ export function AdminMobileBottomNav({
     if (!user?.adminRole) return "Admin";
     const roleMap: Record<string, string> = {
       cto: "CTO",
-      support_manager: "Support Manager",
+      branch_manager: "Branch Manager",
       branch_manager: "Branch Manager",
       asst_branch_manager: "Asst. Branch Manager",
       senior_consultant: "Senior Consultant",

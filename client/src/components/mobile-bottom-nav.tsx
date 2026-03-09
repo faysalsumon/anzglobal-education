@@ -33,7 +33,7 @@ export function MobileBottomNav() {
 
   const hasFullAdminAccess = isAdmin && (
     user?.adminRole === "cto" ||
-    user?.adminRole === "support_manager"
+    user?.adminRole === "branch_manager"
   );
 
   const universityNavItems = [

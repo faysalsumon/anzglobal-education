@@ -70,7 +70,7 @@ export function TeamWorkloadPanel() {
   const getRoleLabel = (role?: string | null) => {
     const roleLabels: Record<string, string> = {
       cto: "CTO",
-      support_manager: "Support Manager",
+      branch_manager: "Branch Manager",
       consultant: "Consultant",
     };
     return roleLabels[role || ""] || role || "Unknown";
@@ -78,7 +78,7 @@ export function TeamWorkloadPanel() {
 
   const getRoleBadgeVariant = (role?: string | null): "default" | "secondary" | "outline" => {
     if (role === "cto") return "default";
-    if (role === "support_manager") return "secondary";
+    if (role === "branch_manager") return "secondary";
     return "outline";
   };
 

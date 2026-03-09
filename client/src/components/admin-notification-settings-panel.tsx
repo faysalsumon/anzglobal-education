@@ -82,7 +82,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 const ROLE_LABELS: Record<string, string> = {
   cto: "CTO",
-  support_manager: "Support Manager",
+  branch_manager: "Branch Manager",
   education_consultant: "Education Consultant",
   marketing_officer: "Marketing Officer",
   accounts_officer: "Accounts Officer",

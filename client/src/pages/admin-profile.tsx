@@ -480,7 +480,7 @@ export default function AdminProfile() {
     if (profile?.roleName) return profile.roleName;
     // Fallback to legacy role field
     if (profile?.role === "cto") return "CTO";
-    if (profile?.role === "support_manager") return "Support Manager";
+    if (profile?.role === "branch_manager") return "Branch Manager";
     if (profile?.role === "content_editor") return "Content Editor";
     return "Team Member";
   };
