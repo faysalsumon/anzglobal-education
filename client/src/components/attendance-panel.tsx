@@ -458,6 +458,31 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                   </tr>
                 ))}
               </tbody>
+              {records.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-muted/30">
+                    <td className="p-3">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Page Total
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({records.length} shift{records.length !== 1 ? "s" : ""})
+                      </span>
+                    </td>
+                    <td className="hidden sm:table-cell" />
+                    <td />
+                    <td />
+                    <td className="p-3 hidden md:table-cell" data-testid="text-page-total-hours">
+                      <span className="font-semibold">
+                        {formatMinutes(records.reduce((sum, r) => sum + (r.totalMinutes ?? 0), 0) || null)}
+                      </span>
+                    </td>
+                    <td className="hidden lg:table-cell" />
+                    <td className="hidden xl:table-cell" />
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
