@@ -153,10 +153,11 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
     queryKey: ["/api/admin/attendance/stats", { dateFrom, dateTo, ...(filterUserId ? { userId: filterUserId } : {}), ...(filterBranchId ? { branchId: filterBranchId } : {}) }],
   });
 
-  const { data: usersData } = useQuery<{ id: string; firstName: string | null; lastName: string | null; email: string | null }[]>({
+  const { data: usersResponse } = useQuery<{ users: { id: string; firstName: string | null; lastName: string | null; email: string | null }[] }>({
     queryKey: ["/api/admin/users"],
     enabled: hasFullAdminAccess || !!userBranchId,
   });
+  const usersData = usersResponse?.users ?? [];
 
   const { data: branchesData } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/admin/branches"],
