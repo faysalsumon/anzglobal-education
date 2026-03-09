@@ -66,7 +66,8 @@ import {
   Star,
   Link2,
   Bookmark,
-  Save
+  Save,
+  CheckCircle2
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { SavedFilter } from "@shared/schema";
@@ -1807,6 +1808,7 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
   const [courseSearch, setCourseSearch] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [applicationNotes, setApplicationNotes] = useState("");
+  const [courseInstitutionFilter, setCourseInstitutionFilter] = useState("");
 
   const [, navigate] = useLocation();
 
@@ -1836,10 +1838,17 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
 
   // Fetch courses for Create Application dialog
   const { data: coursesData, isLoading: isLoadingCourses } = useQuery<{ courses: any[]; total: number }>({
-    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published' }],
-    enabled: isCreateApplicationOpen && courseSearch.length > 1,
+    queryKey: ["/api/courses", { search: courseSearch, limit: 20, publishStatus: 'published', universityId: courseInstitutionFilter || undefined }],
+    enabled: isCreateApplicationOpen && (courseSearch.length > 1 || !!courseInstitutionFilter),
   });
   const searchCourses = coursesData?.courses || [];
+
+  // Fetch institutions for the course institution filter
+  const { data: courseInstitutionsData } = useQuery<{ universities: any[] }>({
+    queryKey: ["/api/institutions", { limit: 100, includePrivate: 'true' }],
+    enabled: isCreateApplicationOpen,
+  });
+  const courseInstitutionOptions = courseInstitutionsData?.universities ?? [];
 
   // Fetch applications for this contact (only for 'clients' type)
   const { data: applicationsData, isLoading: isLoadingApplications, isError: isApplicationsError } = useQuery<{
@@ -2545,7 +2554,15 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
       </Dialog>
 
       {/* Create Application Dialog */}
-      <Dialog open={isCreateApplicationOpen} onOpenChange={setIsCreateApplicationOpen}>
+      <Dialog open={isCreateApplicationOpen} onOpenChange={(open) => {
+        setIsCreateApplicationOpen(open);
+        if (!open) {
+          setCourseSearch("");
+          setSelectedCourseId(null);
+          setApplicationNotes("");
+          setCourseInstitutionFilter("");
+        }
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Create Application</DialogTitle>
@@ -2554,48 +2571,129 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
+
+            {/* Institution filter */}
+            <div className="space-y-1.5">
+              <Label>Filter by Institution</Label>
+              <Select
+                value={courseInstitutionFilter}
+                onValueChange={(v) => {
+                  setCourseInstitutionFilter(v === "_all" ? "" : v);
+                  setSelectedCourseId(null);
+                }}
+              >
+                <SelectTrigger data-testid="select-institution-filter">
+                  <SelectValue placeholder="All Institutions">
+                    {courseInstitutionFilter ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.logo || undefined} />
+                          <AvatarFallback className="text-[9px]">
+                            {courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name?.slice(0,2).toUpperCase() ?? "IN"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{courseInstitutionOptions.find(i => i.id === courseInstitutionFilter)?.name}</span>
+                      </div>
+                    ) : "All Institutions"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Institutions</SelectItem>
+                  {courseInstitutionOptions.map((inst: any) => (
+                    <SelectItem key={inst.id} value={inst.id} data-testid={`institution-option-${inst.id}`}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5 shrink-0">
+                          <AvatarImage src={inst.logo || undefined} />
+                          <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0,2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{inst.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Course search */}
+            <div className="space-y-1.5">
               <Label>Search Course *</Label>
               <Input
-                placeholder="Type to search courses..."
+                placeholder={courseInstitutionFilter ? "Filter by name within institution..." : "Type to search courses..."}
                 value={courseSearch}
-                onChange={(e) => setCourseSearch(e.target.value)}
+                onChange={(e) => { setCourseSearch(e.target.value); setSelectedCourseId(null); }}
                 data-testid="input-course-search"
               />
-              {isLoadingCourses && courseSearch.length > 1 && (
-                <p className="text-sm text-muted-foreground">Searching courses...</p>
+
+              {/* Results list */}
+              {isLoadingCourses && (
+                <p className="text-xs text-muted-foreground py-2">Searching courses...</p>
               )}
               {!isLoadingCourses && searchCourses.length > 0 && (
-                <ScrollArea className="h-48 border rounded-md">
-                  <div className="p-2 space-y-1">
-                    {searchCourses.map((course: any) => (
-                      <div
-                        key={course.id}
-                        className={`p-3 rounded cursor-pointer hover-elevate ${
-                          selectedCourseId === course.id ? "bg-primary/10 border border-primary" : ""
-                        }`}
-                        onClick={() => setSelectedCourseId(course.id)}
-                        data-testid={`course-option-${course.id}`}
-                      >
-                        <p className="font-medium">{course.title}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {course.universityName && <span>{course.universityName}</span>}
-                          {course.level && (
-                            <>
-                              <span>•</span>
-                              <Badge variant="outline" className="text-xs">{course.level}</Badge>
-                            </>
-                          )}
+                <ScrollArea className="h-52 border rounded-md">
+                  <div className="p-1.5 space-y-1">
+                    {searchCourses.map((course: any) => {
+                      const uni = course.university;
+                      const isSelected = selectedCourseId === course.id;
+                      return (
+                        <div
+                          key={course.id}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer hover-elevate ${
+                            isSelected ? "bg-primary/10 border border-primary/30" : "border border-transparent"
+                          }`}
+                          onClick={() => setSelectedCourseId(isSelected ? null : course.id)}
+                          data-testid={`course-option-${course.id}`}
+                        >
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarImage src={uni?.logo || undefined} alt={uni?.name || "Institution"} />
+                            <AvatarFallback className="text-xs font-medium bg-muted">
+                              {uni?.name?.slice(0, 2).toUpperCase() ?? "IN"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium leading-tight">{course.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              {uni?.name && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[160px]">{uni.name}</span>
+                              )}
+                              {course.level && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 no-default-active-elevate">{course.level}</Badge>
+                              )}
+                              {course.duration && (
+                                <span className="text-xs text-muted-foreground">{course.duration}</span>
+                              )}
+                            </div>
+                          </div>
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
-              {!isLoadingCourses && courseSearch.length > 1 && searchCourses.length === 0 && (
-                <p className="text-sm text-muted-foreground">No courses found. Try a different search term.</p>
+              {!isLoadingCourses && (courseSearch.length > 1 || !!courseInstitutionFilter) && searchCourses.length === 0 && (
+                <p className="text-xs text-muted-foreground py-1">No courses found. Try adjusting your search or institution filter.</p>
               )}
             </div>
+
+            {/* Selected course preview */}
+            {selectedCourseId && (() => {
+              const sel = searchCourses.find((c: any) => c.id === selectedCourseId);
+              if (!sel) return null;
+              return (
+                <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-md px-3 py-2.5" data-testid="selected-course-preview">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={sel.university?.logo || undefined} />
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{sel.university?.name?.slice(0,2).toUpperCase() ?? "IN"}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Selected course</p>
+                    <p className="text-sm font-medium leading-tight truncate">{sel.title}</p>
+                    {sel.university?.name && <p className="text-xs text-muted-foreground truncate">{sel.university.name}</p>}
+                  </div>
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                </div>
+              );
+            })()}
             <div className="space-y-2">
               <Label>Notes (Optional)</Label>
               <Textarea
@@ -2609,11 +2707,12 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
+            <Button type="button" variant="outline" onClick={() => {
               setIsCreateApplicationOpen(false);
               setSelectedCourseId(null);
               setCourseSearch("");
               setApplicationNotes("");
+              setCourseInstitutionFilter("");
             }}>
               Cancel
             </Button>

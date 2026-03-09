@@ -271,6 +271,7 @@ export function ApplicationDetailsPanel({
   const [addCourseDialogOpen, setAddCourseDialogOpen] = useState(false);
   const [selectedCourseToAdd, setSelectedCourseToAdd] = useState("");
   const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [addCourseInstitutionFilter, setAddCourseInstitutionFilter] = useState("");
 
   const { data: consultantsData } = useQuery<{ consultants: Consultant[] }>({
     queryKey: ["/api/admin/consultants"],
@@ -308,10 +309,16 @@ export function ApplicationDetailsPanel({
     };
   }
   const { data: courseSearchData, isLoading: courseSearchLoading } = useQuery<{ courses: SearchCourse[]; total: number }>({
-    queryKey: ["/api/courses", { search: courseSearchQuery, limit: 10 }],
-    enabled: addCourseDialogOpen && courseSearchQuery.length >= 2,
+    queryKey: ["/api/courses", { search: courseSearchQuery, limit: 20, universityId: addCourseInstitutionFilter || undefined }],
+    enabled: addCourseDialogOpen && (courseSearchQuery.length >= 2 || !!addCourseInstitutionFilter),
   });
   const searchableCourses = courseSearchData?.courses || [];
+
+  const { data: addCourseInstitutionsData } = useQuery<{ universities: any[] }>({
+    queryKey: ["/api/institutions", { limit: 100, includePrivate: 'true' }],
+    enabled: addCourseDialogOpen,
+  });
+  const addCourseInstitutions = addCourseInstitutionsData?.universities ?? [];
   
   const consultants = consultantsData?.consultants || [];
 
@@ -1387,6 +1394,7 @@ export function ApplicationDetailsPanel({
         if (!open) {
           setCourseSearchQuery("");
           setSelectedCourseToAdd("");
+          setAddCourseInstitutionFilter("");
         }
       }}>
         <DialogContent data-testid="dialog-add-course" className="max-w-lg">
@@ -1397,6 +1405,49 @@ export function ApplicationDetailsPanel({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+
+            {/* Institution filter */}
+            <div className="space-y-1.5">
+              <Label>Filter by Institution</Label>
+              <Select
+                value={addCourseInstitutionFilter}
+                onValueChange={(v) => {
+                  setAddCourseInstitutionFilter(v === "_all" ? "" : v);
+                  setSelectedCourseToAdd("");
+                }}
+              >
+                <SelectTrigger data-testid="select-add-course-institution-filter">
+                  <SelectValue placeholder="All Institutions">
+                    {addCourseInstitutionFilter ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={addCourseInstitutions.find((i: any) => i.id === addCourseInstitutionFilter)?.logo || undefined} />
+                          <AvatarFallback className="text-[9px] bg-muted">
+                            {addCourseInstitutions.find((i: any) => i.id === addCourseInstitutionFilter)?.name?.slice(0,2).toUpperCase() ?? "IN"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{addCourseInstitutions.find((i: any) => i.id === addCourseInstitutionFilter)?.name}</span>
+                      </div>
+                    ) : "All Institutions"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Institutions</SelectItem>
+                  {addCourseInstitutions.map((inst: any) => (
+                    <SelectItem key={inst.id} value={inst.id} data-testid={`add-course-inst-${inst.id}`}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5 shrink-0">
+                          <AvatarImage src={inst.logo || undefined} />
+                          <AvatarFallback className="text-[9px] bg-muted">{inst.name?.slice(0,2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{inst.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="course-search">Search Courses</Label>
               <Input
@@ -1407,12 +1458,12 @@ export function ApplicationDetailsPanel({
                 data-testid="input-course-search"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Search by course name to find published courses.
+                Search by name or filter by institution to find published courses.
               </p>
             </div>
             
             {/* Search Results */}
-            {courseSearchQuery.length >= 2 && (
+            {(courseSearchQuery.length >= 2 || !!addCourseInstitutionFilter) && (
               <div className="border rounded-md max-h-60 overflow-y-auto">
                 {courseSearchLoading ? (
                   <div className="p-4 text-center text-muted-foreground">
