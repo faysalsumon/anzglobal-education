@@ -177,6 +177,7 @@ import {
   notifyDocumentRejected,
   notifyDocumentRequested,
   notifyDocumentUploadedToAdmin,
+  notifyTaskAssigned,
 } from "./notifications";
 import { sendContactInquiryEmails, sendProfileCompletionReminder, sendNewLeadAdminNotification, sendTaskAssignedEmail, sendTaskDueReminderEmail, sendTaskCompletedEmail, sendLeadAssignedEmail, sendApplicationAssignedEmail, sendDocumentUploadedAdminEmail } from "./email-service";
 import { logActivity, logApprove, logReject, logCreate, logDelete, logUpdate, logStatusChange } from "./activity-logger";
@@ -17168,6 +17169,36 @@ Sitemap: ${baseUrl}/sitemap.xml
         content: content.trim(),
         mentionedUserIds: mentionedUserIds || null,
       });
+
+      // Send real-time in-app notifications for @mentions
+      if (Array.isArray(note.mentionedUserIds) && note.mentionedUserIds.length > 0) {
+        const author = await storage.getUser(userId);
+        const authorName = getUserDisplayName(author || { email: 'Someone' });
+        const task = await storage.getTaskById(req.params.id);
+        const taskTitle = task?.title || 'a task';
+        const allAdminMembers = await storage.getAllAdminTeamMembers();
+        const validAdminUserIds = new Set(allAdminMembers.filter(m => m.isActive).map(m => m.userId));
+
+        for (const mentionedUserId of note.mentionedUserIds) {
+          if (mentionedUserId !== userId && validAdminUserIds.has(mentionedUserId)) {
+            createNotification({
+              userId: mentionedUserId,
+              type: 'internal_note_mention',
+              title: 'You were mentioned in a task note',
+              message: `${authorName} mentioned you in a note on task: ${taskTitle}`,
+              metadata: {
+                noteId: note.id,
+                entityType: 'task',
+                entityId: req.params.id,
+                taskId: req.params.id,
+                mentionedBy: userId,
+                mentionedByName: authorName,
+              },
+            }).catch(err => console.error('[Notification] Failed to send task mention notification:', err));
+          }
+        }
+      }
+
       res.status(201).json(note);
     } catch (error: any) {
       console.error("Error creating task note:", error);
@@ -17284,7 +17315,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         entityName: task.title,
       });
 
-      // Send email notification to assigned team member
+      // Send email + in-app notification to assigned team member
       if (task.assignedToId && task.assignedToId !== userId) {
         const assignee = await storage.getUser(task.assignedToId);
         if (assignee?.email) {
@@ -17296,6 +17327,13 @@ Sitemap: ${baseUrl}/sitemap.xml
             dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
           }).catch(err => console.error('[Email] Failed to send task assigned email:', err));
         }
+        notifyTaskAssigned({
+          userId: task.assignedToId,
+          taskId: task.id,
+          taskTitle: task.title,
+          assignedByName,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+        }).catch(err => console.error('[Notification] Failed to send task assigned notification:', err));
       }
       
       res.json(task);
@@ -17339,19 +17377,27 @@ Sitemap: ${baseUrl}/sitemap.xml
         newData: task,
       });
 
-      // Send email if task was reassigned to a different person
+      // Send email + in-app notification if task was reassigned to a different person
       if (task.assignedToId && task.assignedToId !== existingTask.assignedToId && task.assignedToId !== userId) {
         const assignee = await storage.getUser(task.assignedToId);
         const updater = await storage.getUser(userId);
+        const updaterName = getUserDisplayName(updater || { email: 'Admin' });
         if (assignee?.email) {
           sendTaskAssignedEmail({
             recipientEmail: assignee.email,
             recipientName: getUserDisplayName(assignee),
             taskTitle: task.title,
-            assignedByName: getUserDisplayName(updater || { email: 'Admin' }),
+            assignedByName: updaterName,
             dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
           }).catch(err => console.error('[Email] Failed to send task reassigned email:', err));
         }
+        notifyTaskAssigned({
+          userId: task.assignedToId,
+          taskId: task.id,
+          taskTitle: task.title,
+          assignedByName: updaterName,
+          dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : undefined,
+        }).catch(err => console.error('[Notification] Failed to send task reassigned notification:', err));
       }
       
       res.json(task);

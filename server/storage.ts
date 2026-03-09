@@ -2029,6 +2029,7 @@ export class DatabaseStorage implements IStorage {
             id: users.id,
             firstName: users.firstName,
             lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
           }).from(users).where(eq(users.id, task.createdById));
           createdBy = user || null;
         }

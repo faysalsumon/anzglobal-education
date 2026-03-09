@@ -85,13 +85,14 @@ const NOTIFICATION_LINK_REGISTRY: Record<NotificationType, NotificationLinkGener
     if (data.entityType === 'lead') return `/admin?tab=crm-leads&leadId=${data.entityId}&showNotes=true`;
     if (data.entityType === 'application') return `/admin/applications/${data.entityId}`;
     if (data.entityType === 'institution') return `/admin?tab=institutions&institutionId=${data.entityId}`;
+    if (data.entityType === 'task') return `/admin?tab=my-tasks&taskId=${data.entityId}&showComments=true`;
     return `/admin`;
   },
   
   // Task notifications
-  task_assigned: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
-  task_due_reminder: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
-  task_completed: (data) => `/admin?tab=tasks&taskId=${data.taskId}`,
+  task_assigned: (data) => `/admin?tab=my-tasks&taskId=${data.taskId}`,
+  task_due_reminder: (data) => `/admin?tab=my-tasks&taskId=${data.taskId}`,
+  task_completed: (data) => `/admin?tab=my-tasks&taskId=${data.taskId}`,
   
   // General fallback (no auto-link)
   general: null,

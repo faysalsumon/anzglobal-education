@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSearch, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -27,8 +29,9 @@ import {
   Bell,
   Edit,
   ArrowRight,
-  UserCircle,
   MessageSquare,
+  Crown,
+  User,
 } from "lucide-react";
 import { TaskInlineNotes } from "@/components/task-inline-notes";
 import { format, formatDistanceToNow, isPast, isToday, isTomorrow } from "date-fns";
@@ -40,7 +43,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { Task, FollowUpReminder } from "@shared/schema";
 
 interface TaskWithRelations extends Task {
-  assignee?: {
+  assignedTo?: {
     id: string;
     firstName?: string | null;
     lastName?: string | null;
@@ -51,6 +54,7 @@ interface TaskWithRelations extends Task {
     id: string;
     firstName?: string | null;
     lastName?: string | null;
+    profileImageUrl?: string | null;
   } | null;
   application?: {
     id: string;
@@ -81,10 +85,24 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
 };
 
+function getInitials(firstName?: string | null, lastName?: string | null, email?: string | null): string {
+  const f = firstName?.charAt(0) || "";
+  const l = lastName?.charAt(0) || "";
+  if (f || l) return `${f}${l}`.toUpperCase();
+  return email?.charAt(0)?.toUpperCase() || "?";
+}
+
+function getDisplayName(firstName?: string | null, lastName?: string | null, email?: string | null): string {
+  const full = `${firstName || ""} ${lastName || ""}`.trim();
+  return full || email || "Unknown";
+}
+
 export function MyTasksPanel() {
   const { toast } = useToast();
   const { user } = useAuth();
   const currentUserId = user?.id;
+  const searchString = useSearch();
+  const [, navigate] = useLocation();
 
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -100,23 +118,37 @@ export function MyTasksPanel() {
     queryKey: ["/api/reminders/upcoming"],
   });
 
+  // Deep-link: handle ?taskId=xxx&showComments=true from notification clicks
+  useEffect(() => {
+    if (tasksLoading || !tasks.length) return;
+    const params = new URLSearchParams(searchString);
+    const taskId = params.get("taskId");
+    const showComments = params.get("showComments");
+    if (!taskId) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (showComments === "true") {
+      setExpandedNoteTaskId(taskId);
+    } else {
+      setEditingTask(task);
+      setTaskDialogOpen(true);
+    }
+    // Clean up the URL so back-navigation works cleanly
+    navigate("/admin?tab=my-tasks", { replace: true });
+  }, [searchString, tasks, tasksLoading]);
+
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
       return apiRequest("POST", `/api/tasks/${taskId}/complete`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/my-tasks"] });
-      toast({
-        title: "Task completed",
-        description: "The task has been marked as complete",
-      });
+      toast({ title: "Task completed", description: "The task has been marked as complete" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to complete task",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to complete task", variant: "destructive" });
     },
   });
 
@@ -126,17 +158,10 @@ export function MyTasksPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reminders/upcoming"] });
-      toast({
-        title: "Reminder completed",
-        description: "The reminder has been marked as complete",
-      });
+      toast({ title: "Reminder completed", description: "The reminder has been marked as complete" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to complete reminder",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to complete reminder", variant: "destructive" });
     },
   });
 
@@ -146,17 +171,13 @@ export function MyTasksPanel() {
     } else if (statusFilter !== "all" && task.status !== statusFilter) {
       return false;
     }
-    if (priorityFilter !== "all" && task.priority !== priorityFilter) {
-      return false;
-    }
+    if (priorityFilter !== "all" && task.priority !== priorityFilter) return false;
     return true;
   });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-    if (a.dueDate && b.dueDate) {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-    }
+    if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     if (a.dueDate) return -1;
     if (b.dueDate) return 1;
     return priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -169,18 +190,13 @@ export function MyTasksPanel() {
     const due = new Date(t.dueDate);
     return !isPast(due) && !isToday(due);
   });
+  const noDueTasks = sortedTasks.filter(t => !t.dueDate && t.status !== "completed");
 
   const getDueDateDisplay = (dueDate: Date | string) => {
-    const date = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
-    if (isPast(date)) {
-      return { text: `Overdue by ${formatDistanceToNow(date)}`, className: "text-red-600 dark:text-red-400" };
-    }
-    if (isToday(date)) {
-      return { text: "Due today", className: "text-orange-600 dark:text-orange-400" };
-    }
-    if (isTomorrow(date)) {
-      return { text: "Due tomorrow", className: "text-yellow-600 dark:text-yellow-400" };
-    }
+    const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+    if (isPast(date)) return { text: `Overdue by ${formatDistanceToNow(date)}`, className: "text-red-600 dark:text-red-400" };
+    if (isToday(date)) return { text: "Due today", className: "text-orange-600 dark:text-orange-400" };
+    if (isTomorrow(date)) return { text: "Due tomorrow", className: "text-yellow-600 dark:text-yellow-400" };
     return { text: `Due ${format(date, "MMM d")}`, className: "text-muted-foreground" };
   };
 
@@ -200,15 +216,20 @@ export function MyTasksPanel() {
     const PriorityIcon = priority.icon;
     const dueDisplay = task.dueDate ? getDueDateDisplay(task.dueDate) : null;
 
-    const isCreator = currentUserId && task.createdById === currentUserId;
-    const isAssignee = currentUserId && task.assignedToId === currentUserId;
+    const isOwner = currentUserId && task.createdById === currentUserId;
+    const isSelfAssigned = task.createdById === task.assignedToId;
 
-    const assigneeName = task.assignee
-      ? `${task.assignee.firstName || ''} ${task.assignee.lastName || ''}`.trim() || task.assignee.email
-      : null;
-    const creatorName = task.createdBy
-      ? `${task.createdBy.firstName || ''} ${task.createdBy.lastName || ''}`.trim()
-      : null;
+    const owner = task.createdBy;
+    const assignee = task.assignedTo;
+
+    const ownerName = owner
+      ? getDisplayName(owner.firstName, owner.lastName)
+      : "Unknown";
+    const assigneeName = assignee
+      ? getDisplayName(assignee.firstName, assignee.lastName, assignee.email)
+      : task.assignedToId ? "Assigned" : null;
+
+    const canComplete = !!isOwner && task.status !== "completed";
 
     return (
       <div
@@ -216,45 +237,60 @@ export function MyTasksPanel() {
         data-testid={`task-item-${task.id}`}
       >
         <div className="flex items-start gap-3 p-3">
-          <Checkbox
-            checked={task.status === "completed"}
-            onCheckedChange={() => completeTaskMutation.mutate(task.id)}
-            disabled={completeTaskMutation.isPending || task.status === "completed"}
-            data-testid={`checkbox-task-${task.id}`}
-          />
+          {/* Completion checkbox — owner only */}
+          <div className="pt-0.5 shrink-0">
+            {canComplete || task.status === "completed" ? (
+              <Checkbox
+                checked={task.status === "completed"}
+                onCheckedChange={() => canComplete && completeTaskMutation.mutate(task.id)}
+                disabled={completeTaskMutation.isPending || task.status === "completed"}
+                data-testid={`checkbox-task-${task.id}`}
+              />
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Checkbox
+                      checked={task.status === "completed"}
+                      disabled
+                      data-testid={`checkbox-task-${task.id}`}
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">
+                  Only the task owner can mark this complete
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
+          {/* Main content */}
           <div className="flex-1 min-w-0">
+            {/* Title + badges */}
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`font-medium text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
                 {task.title}
               </span>
-              <Badge className={priority.color} variant="outline">
+              <Badge className={`${priority.color} no-default-active-elevate`} variant="outline">
                 <PriorityIcon className="h-3 w-3 mr-1" />
                 {priority.label}
               </Badge>
-              <Badge className={status.color} variant="outline">
+              <Badge className={`${status.color} no-default-active-elevate`} variant="outline">
                 {status.label}
               </Badge>
             </div>
+
+            {/* Description */}
             {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-1 mb-1">{task.description}</p>
+              <p className="text-sm text-muted-foreground line-clamp-1 mb-1.5">{task.description}</p>
             )}
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+
+            {/* Metadata row */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2">
               {dueDisplay && (
                 <span className={`flex items-center gap-1 ${dueDisplay.className}`}>
                   <Clock className="h-3 w-3" />
                   {dueDisplay.text}
-                </span>
-              )}
-              {isCreator && !isAssignee && assigneeName && (
-                <span className="flex items-center gap-1 text-primary">
-                  <ArrowRight className="h-3 w-3" />
-                  {assigneeName}
-                </span>
-              )}
-              {isAssignee && !isCreator && creatorName && (
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <UserCircle className="h-3 w-3" />
-                  from {creatorName}
                 </span>
               )}
               {task.application && (
@@ -266,12 +302,68 @@ export function MyTasksPanel() {
                 </Link>
               )}
               {task.category && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs no-default-active-elevate">
                   {task.category.replace(/_/g, " ")}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center pt-1.5 mt-1.5 border-t border-border/40">
+
+            {/* Owner / Assignee avatars */}
+            <div className="flex items-center gap-3 mb-2">
+              {/* Owner */}
+              <div className="flex items-center gap-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative">
+                      <Avatar className="h-6 w-6 ring-2 ring-background">
+                        <AvatarImage src={owner?.profileImageUrl ?? undefined} alt={ownerName} />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {owner ? getInitials(owner.firstName, owner.lastName) : <Crown className="h-3 w-3" />}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background flex items-center justify-center">
+                        <Crown className="h-2 w-2 text-amber-500" />
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Owner: {ownerName}
+                  </TooltipContent>
+                </Tooltip>
+                <span className="text-xs text-muted-foreground truncate max-w-[90px]">{ownerName}</span>
+              </div>
+
+              {/* Arrow + Assignee (only if assigned and not self-assigned) */}
+              {!isSelfAssigned && assigneeName && (
+                <>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-6 w-6 ring-2 ring-background">
+                          <AvatarImage src={assignee?.profileImageUrl ?? undefined} alt={assigneeName} />
+                          <AvatarFallback className="text-[10px] bg-secondary text-secondary-foreground">
+                            {assignee ? getInitials(assignee.firstName, assignee.lastName, assignee.email) : <User className="h-3 w-3" />}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Assigned to: {assigneeName}
+                      </TooltipContent>
+                    </Tooltip>
+                    <span className="text-xs text-muted-foreground truncate max-w-[90px]">{assigneeName}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Self-assigned badge */}
+              {isSelfAssigned && (
+                <span className="text-xs text-muted-foreground italic">Self-assigned</span>
+              )}
+            </div>
+
+            {/* Comments toggle */}
+            <div className="flex items-center pt-1.5 border-t border-border/40">
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
@@ -283,7 +375,10 @@ export function MyTasksPanel() {
               </button>
             </div>
           </div>
+
+          {/* Edit button */}
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="shrink-0"
@@ -293,6 +388,8 @@ export function MyTasksPanel() {
             <Edit className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Inline comments thread */}
         {isExpanded && (
           <div className="border-t border-border/40 px-4 py-3">
             <TaskInlineNotes taskId={task.id} currentUserId={user?.id ?? null} />
@@ -311,17 +408,27 @@ export function MyTasksPanel() {
             <Skeleton className="h-4 w-48 mt-2" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const renderTaskGroup = (taskList: TaskWithRelations[]) =>
+    taskList.map(task => (
+      <TaskItem
+        key={task.id}
+        task={task}
+        onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
+        isExpanded={expandedNoteTaskId === task.id}
+        onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
+      />
+    ));
+
   return (
     <div className="space-y-4">
+      {/* Stats strip */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Card className="p-3">
           <div className="flex items-center justify-between">
@@ -332,7 +439,6 @@ export function MyTasksPanel() {
             <ListTodo className="h-4 w-4 text-muted-foreground" />
           </div>
         </Card>
-
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -342,7 +448,6 @@ export function MyTasksPanel() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </div>
         </Card>
-
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -352,7 +457,6 @@ export function MyTasksPanel() {
             <Calendar className="h-4 w-4 text-orange-500" />
           </div>
         </Card>
-
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <div>
@@ -364,6 +468,7 @@ export function MyTasksPanel() {
         </Card>
       </div>
 
+      {/* Reminders */}
       {reminders.length > 0 && (
         <Card>
           <CardHeader className="py-3 px-4">
@@ -403,9 +508,10 @@ export function MyTasksPanel() {
         </Card>
       )}
 
+      {/* Tasks list */}
       <Card>
         <CardHeader className="py-3 px-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between flex-wrap">
             <div>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <ListTodo className="h-4 w-4" />
@@ -415,10 +521,8 @@ export function MyTasksPanel() {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
-                onClick={() => {
-                  setEditingTask(null);
-                  setTaskDialogOpen(true);
-                }}
+                type="button"
+                onClick={() => { setEditingTask(null); setTaskDialogOpen(true); }}
                 size="sm"
                 data-testid="button-create-task"
               >
@@ -455,79 +559,47 @@ export function MyTasksPanel() {
         </CardHeader>
         <CardContent className="px-4 pb-3">
           {sortedTasks.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground">
               <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-green-500" />
               <p className="text-sm font-medium">All caught up!</p>
               <p className="text-xs">No tasks match the current filters</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {overdueTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-red-600 flex items-center gap-1">
-                    <AlertTriangle className="h-4 w-4" />
+                  <h4 className="text-sm font-medium text-red-600 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5" />
                     Overdue ({overdueTasks.length})
                   </h4>
-                  {overdueTasks.map(task => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
-                      isExpanded={expandedNoteTaskId === task.id}
-                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
-                    />
-                  ))}
+                  {renderTaskGroup(overdueTasks)}
                 </div>
               )}
               {todayTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-orange-600 flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
+                  <h4 className="text-sm font-medium text-orange-600 flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
                     Due Today ({todayTasks.length})
                   </h4>
-                  {todayTasks.map(task => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
-                      isExpanded={expandedNoteTaskId === task.id}
-                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
-                    />
-                  ))}
+                  {renderTaskGroup(todayTasks)}
                 </div>
               )}
               {upcomingTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
                     Upcoming ({upcomingTasks.length})
                   </h4>
-                  {upcomingTasks.map(task => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
-                      isExpanded={expandedNoteTaskId === task.id}
-                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
-                    />
-                  ))}
+                  {renderTaskGroup(upcomingTasks)}
                 </div>
               )}
-              {sortedTasks.filter(t => !t.dueDate && t.status !== "completed").length > 0 && (
+              {noDueTasks.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Circle className="h-4 w-4" />
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Circle className="h-3.5 w-3.5" />
                     No Due Date
                   </h4>
-                  {sortedTasks.filter(t => !t.dueDate && t.status !== "completed").map(task => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onEdit={(t) => { setEditingTask(t); setTaskDialogOpen(true); }}
-                      isExpanded={expandedNoteTaskId === task.id}
-                      onToggleExpand={() => setExpandedNoteTaskId(prev => prev === task.id ? null : task.id)}
-                    />
-                  ))}
+                  {renderTaskGroup(noDueTasks)}
                 </div>
               )}
             </div>
