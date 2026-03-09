@@ -11,6 +11,36 @@ import {
 } from "@shared/schema";
 import { eq, and, isNull, isNotNull, gte, lte, desc, count, sum, sql } from "drizzle-orm";
 
+function getClientIp(req: any): string | null {
+  const forwarded = req.headers["x-forwarded-for"] as string | undefined;
+  const ip = forwarded?.split(",")[0]?.trim() || req.ip || null;
+  return ip || null;
+}
+
+async function geolocateIp(ip: string | null): Promise<string | null> {
+  if (!ip) return null;
+  // Skip private/loopback IPs — no meaningful geo result
+  if (ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.") ||
+      ip.startsWith("192.168.") || ip.startsWith("::ffff:127.") || ip.startsWith("172.")) {
+    return "Local Network";
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=status,city,regionName,country`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    const data = await resp.json() as { status: string; city?: string; regionName?: string; country?: string };
+    if (data.status !== "success") return null;
+    const parts = [data.city, data.regionName, data.country].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
+  } catch {
+    return null;
+  }
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -107,6 +137,9 @@ export function registerAttendanceRoutes(app: Express) {
         const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         const branchId = user?.branchId ?? null;
 
+        // Capture IP
+        const ipAddress = getClientIp(req);
+
         // Upload photo
         const photoPath = await uploadPhotoToStorage(req.file.buffer, userId, "in");
 
@@ -119,10 +152,23 @@ export function registerAttendanceRoutes(app: Express) {
             clockInAt: now,
             clockInPhotoPath: photoPath,
             workDate: formatWorkDate(now),
+            ipAddress,
           })
           .returning();
 
         res.json({ record });
+
+        // Fire geo lookup after responding — best-effort, non-blocking
+        if (ipAddress && record?.id) {
+          geolocateIp(ipAddress).then((location) => {
+            if (location) {
+              db.update(attendanceRecords)
+                .set({ location })
+                .where(eq(attendanceRecords.id, record.id))
+                .catch((err) => console.error("[Attendance] Geo update error:", err));
+            }
+          }).catch(() => null);
+        }
       } catch (err) {
         console.error("[Attendance] POST /clock-in error:", err);
         res.status(500).json({ message: "Failed to clock in" });
@@ -234,6 +280,8 @@ export function registerAttendanceRoutes(app: Express) {
             totalMinutes: attendanceRecords.totalMinutes,
             workDate: attendanceRecords.workDate,
             notes: attendanceRecords.notes,
+            ipAddress: attendanceRecords.ipAddress,
+            location: attendanceRecords.location,
             createdAt: attendanceRecords.createdAt,
             firstName: users.firstName,
             lastName: users.lastName,

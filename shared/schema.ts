@@ -5282,6 +5282,8 @@ export const attendanceRecords = pgTable("attendance_records", {
   totalMinutes: integer("total_minutes"),
   workDate: varchar("work_date", { length: 10 }).notNull(),
   notes: varchar("notes"),
+  ipAddress: varchar("ip_address"),
+  location: varchar("location"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

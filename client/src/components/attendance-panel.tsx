@@ -21,6 +21,7 @@ import {
   Trash2,
   Loader2,
   ImageOff,
+  MapPin,
 } from "lucide-react";
 
 interface AttendanceRecord {
@@ -38,6 +39,8 @@ interface AttendanceRecord {
   email: string | null;
   profileImageUrl: string | null;
   branchName: string | null;
+  ipAddress: string | null;
+  location: string | null;
 }
 
 interface AttendanceStats {
@@ -366,6 +369,8 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                   <th className="text-left p-3 font-medium text-muted-foreground">Clock In</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Clock Out</th>
                   <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Hours</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Location</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden xl:table-cell">IP Address</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Photos</th>
                 </tr>
               </thead>
@@ -412,6 +417,23 @@ export function AttendancePanel({ hasFullAdminAccess, isCTO, userBranchId }: Att
                     </td>
                     <td className="p-3 hidden md:table-cell" data-testid={`text-hours-${record.id}`}>
                       {formatMinutes(record.totalMinutes)}
+                    </td>
+                    <td className="p-3 hidden lg:table-cell" data-testid={`text-location-${record.id}`}>
+                      {record.location ? (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-teal-500" />
+                          <span className="text-xs">{record.location}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 hidden xl:table-cell" data-testid={`text-ip-${record.id}`}>
+                      {record.ipAddress ? (
+                        <span className="font-mono text-xs text-muted-foreground">{record.ipAddress}</span>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1">
