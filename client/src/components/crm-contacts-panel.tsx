@@ -624,6 +624,8 @@ export function CrmContactsPanel() {
         onBack={() => setSelectedContact(null)}
         onEdit={() => openEditPage(selectedContact)}
         onDelete={() => setIsDeleteOpen(true)}
+        admins={admins || []}
+        onAssign={(contactId, adminId) => updateMutation.mutate({ id: contactId, data: { assignedTo: adminId } })}
       />
     );
   }
@@ -1882,6 +1884,8 @@ interface ContactDetailViewProps {
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  admins: { id: string; firstName: string; lastName: string; userType: string }[];
+  onAssign: (contactId: string, adminId: string | null) => void;
 }
 
 const CONTACT_ROLES = [
@@ -1897,7 +1901,7 @@ const CONTACT_ROLES = [
 const roleNeedsInstitution = (contactType: ContactType) => 
   ['providers_rep', 'partner', 'external'].includes(contactType);
 
-function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailViewProps) {
+function ContactDetailView({ contact, onBack, onEdit, onDelete, admins, onAssign }: ContactDetailViewProps) {
   const { toast } = useToast();
   const [isAddInstitutionOpen, setIsAddInstitutionOpen] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState("");
@@ -2316,18 +2320,60 @@ function ContactDetailView({ contact, onBack, onEdit, onDelete }: ContactDetailV
                 </div>
               </div>
             )}
-            {contact.assignedUser && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Assigned To</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
-                    <AvatarFallback>{contact.assignedUser.firstName?.[0]}</AvatarFallback>
-                  </Avatar>
-                  <span>{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
-                </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Assigned To</span>
+              <div className="flex items-center gap-2">
+                {contact.assignedUser ? (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={contact.assignedUser.profileImageUrl || undefined} />
+                      <AvatarFallback className="text-[10px]">{contact.assignedUser.firstName?.[0]}{contact.assignedUser.lastName?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{contact.assignedUser.firstName} {contact.assignedUser.lastName}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground italic">Not assigned</span>
+                )}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" data-testid="button-detail-assign">
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-1 z-50">
+                    <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">Assign to team member</p>
+                    {contact.assignedTo && (
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate text-destructive"
+                        onClick={() => onAssign(contact.id, null)}
+                      >
+                        <UserMinus className="h-4 w-4 shrink-0" />
+                        <span>Unassign</span>
+                      </button>
+                    )}
+                    <div className="max-h-48 overflow-y-auto">
+                      {admins.map((admin) => (
+                        <button
+                          key={admin.id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover-elevate ${contact.assignedTo === admin.id ? 'bg-primary/10 text-primary font-medium' : ''}`}
+                          onClick={() => onAssign(contact.id, admin.id)}
+                          data-testid={`option-detail-assign-${admin.id}`}
+                        >
+                          <Avatar className="h-5 w-5 shrink-0">
+                            <AvatarFallback className="text-[10px]">
+                              {admin.firstName?.[0]}{admin.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{admin.firstName} {admin.lastName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-            )}
+            </div>
             {contact.sourceLead && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Source Lead</span>
