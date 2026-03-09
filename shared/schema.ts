@@ -4584,6 +4584,7 @@ export interface TaskWithRelations extends Task {
     id: string;
     firstName: string | null;
     lastName: string | null;
+    profileImageUrl?: string | null;
   } | null;
   application?: {
     id: string;
